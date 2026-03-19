@@ -2982,25 +2982,44 @@ async function icSearchPlayers(val){
     results.innerHTML='<div class="ic-empty">Searching…</div>';
     const myEmail = getMyEmail();
     try{
-      // Search by first_name, last_name, or email (case insensitive)
-      const q = encodeURIComponent(val.trim());
-      const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/registrations?or=(first_name.ilike.*${q}*,last_name.ilike.*${q}*,nickname.ilike.*${q}*)&select=first_name,last_name,email,nickname,skill_level,dupr_rating,gender,city,state,photo_url,court_name&limit=20`,
+      const q = val.trim();
+      // Build OR filter for name/nickname search
+      const filter = 'or=(first_name.ilike.'+encodeURIComponent('*'+q+'*')+
+                     ',last_name.ilike.'+encodeURIComponent('*'+q+'*')+
+                     ',nickname.ilike.'+encodeURIComponent('*'+q+'*')+')';
+      const url = `${SUPABASE_URL}/rest/v1/registrations?${filter}&select=first_name,last_name,email,nickname,skill_level,dupr_rating,gender,city,state,court_name&limit=20`;
+      console.log('🔍 Searching:', url);
+      const res = await fetch(url,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
       );
-      if(!res.ok){ results.innerHTML='<div class="ic-empty">Search failed.</div>'; return; }
+      console.log('🔍 Response status:', res.status);
+      if(!res.ok){
+        const err = await res.text();
+        console.error('Search error:', err);
+        results.innerHTML='<div class="ic-empty">Search failed: '+res.status+'</div>';
+        return;
+      }
       const players = await res.json();
-      // Filter out self
-      const filtered = players.filter(p => (p.email||'').toLowerCase() !== myEmail);
-      if(!filtered.length){ results.innerHTML='<div class="ic-empty">No players found.</div>'; return; }
-
-      // Get existing connections to show correct button state
-      const connRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/connections?or=(requester_email.eq.${encodeURIComponent(myEmail)},recipient_email.eq.${encodeURIComponent(myEmail)})&select=*`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
-      );
-      const conns = connRes.ok ? await connRes.json() : [];
-
+      console.log('🔍 Players found:', players.length, players);
+      // Filter out self only if we have an email
+      const filtered = myEmail
+        ? players.filter(p => (p.email||'').toLowerCase() !== myEmail)
+        : players;
+      if(!filtered.length){
+        results.innerHTML='<div class="ic-empty">No players found matching "'+val+'".</div>';
+        return;
+      }
+      // Get existing connections if logged in
+      let conns = [];
+      if(myEmail){
+        try{
+          const connRes = await fetch(
+            `${SUPABASE_URL}/rest/v1/connections?or=(requester_email.eq.${encodeURIComponent(myEmail)},recipient_email.eq.${encodeURIComponent(myEmail)})&select=*`,
+            {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+          );
+          if(connRes.ok) conns = await connRes.json();
+        }catch(e){}
+      }
       results.innerHTML = '';
       filtered.forEach(p => {
         const pEmail = (p.email||'').toLowerCase();
@@ -3012,6 +3031,7 @@ async function icSearchPlayers(val){
         results.appendChild(card);
       });
     }catch(e){
+      console.error('Search exception:', e);
       results.innerHTML='<div class="ic-empty">Search error: '+e.message+'</div>';
     }
   }, 400);
