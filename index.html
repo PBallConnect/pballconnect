@@ -576,6 +576,47 @@
   .ic-tag-gender{background:rgba(255,255,255,0.07);color:var(--dim);}
   .ic-tag-court{background:rgba(76,100,200,0.12);color:#a78bfa;}
   .ic-tag-nickname{background:rgba(250,200,80,0.12);color:#fbbf24;}
+  /* ── Player Card ──────────────────────────────────── */
+  .pc-card-modal{background:var(--dark,#0f1710);border:1px solid var(--border);
+    border-radius:20px;width:100%;max-width:420px;position:relative;overflow:hidden;}
+  .pc-banner{height:80px;background:linear-gradient(135deg,#0F6E56,#1D9E75);}
+  .pc-avatar-outer{position:absolute;bottom:-36px;left:20px;}
+  .pc-card-avatar{width:72px;height:72px;border-radius:50%;
+    border:3px solid rgba(15,23,16,0.9);background:rgba(76,175,125,0.2);
+    display:flex;align-items:center;justify-content:center;
+    font-size:30px;overflow:hidden;cursor:pointer;}
+  .pc-card-avatar img{width:100%;height:100%;object-fit:cover;}
+  .pc-card-body{padding:44px 20px 20px;}
+  .pc-card-name{color:#fff;font-size:18px;font-weight:700;margin:0 0 2px;}
+  .pc-card-nick{color:var(--green);font-size:13px;font-style:italic;margin:0 0 12px;}
+  .pc-card-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
+  .pc-card-tag{font-size:10px;font-weight:700;padding:3px 9px;border-radius:999px;border:1px solid;}
+  .pc-tag-green{background:rgba(76,175,125,0.12);color:var(--green);border-color:rgba(76,175,125,0.3);}
+  .pc-tag-dim{background:rgba(255,255,255,0.06);color:var(--dim);border-color:var(--border);}
+  .pc-tag-purple{background:rgba(100,80,200,0.12);color:#a78bfa;border-color:rgba(100,80,200,0.25);}
+  .pc-stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+  .pc-stat-box{background:rgba(255,255,255,0.04);border:1px solid var(--border);
+    border-radius:10px;padding:10px 12px;}
+  .pc-stat-lbl{font-size:10px;font-weight:700;text-transform:uppercase;
+    letter-spacing:.07em;color:var(--dim);margin-bottom:4px;}
+  .pc-stat-val{font-size:13px;font-weight:600;color:#fff;}
+  .pc-stat-val.green{color:var(--green);}
+  .pc-home-court{display:flex;align-items:center;gap:10px;
+    background:rgba(100,80,200,0.08);border:1px solid rgba(100,80,200,0.2);
+    border-radius:10px;padding:10px 14px;margin-bottom:16px;}
+  .pc-card-actions{display:flex;gap:8px;}
+  .pc-btn-add{flex:1;padding:11px;border-radius:10px;border:1px solid rgba(76,175,125,0.4);
+    background:rgba(76,175,125,0.12);color:var(--green);font-size:13px;font-weight:600;
+    cursor:pointer;font-family:'DM Sans',sans-serif;}
+  .pc-btn-play{flex:1;padding:11px;border-radius:10px;border:1px solid var(--border);
+    background:transparent;color:var(--dim);font-size:13px;cursor:pointer;
+    font-family:'DM Sans',sans-serif;}
+  /* Emoji picker in registration */
+  .emoji-reg-grid{display:flex;flex-wrap:wrap;gap:6px;padding:6px 0;}
+  .emoji-reg-opt{width:38px;height:38px;border-radius:8px;border:1px solid var(--border);
+    background:rgba(255,255,255,0.04);cursor:pointer;display:flex;align-items:center;
+    justify-content:center;font-size:20px;transition:all .15s;}
+  .emoji-reg-opt:hover,.emoji-reg-opt.on{border-color:var(--green);background:rgba(76,175,125,0.12);}
 </style>
 </head>
 <body>
@@ -671,6 +712,16 @@
     <div class="field">
       <label>Pickleball Nickname <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— optional</span></label>
       <input type="text" id="nickname" placeholder="e.g. The Dink King, Smash Queen…"/>
+    </div>
+    <div class="field">
+      <label>Avatar Emoji <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— optional · shown on your player card</span></label>
+      <div style="margin-top:8px;">
+        <div id="emojiPreview" style="width:52px;height:52px;border-radius:50%;background:rgba(76,175,125,0.15);border:2px solid rgba(76,175,125,0.3);display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:10px;cursor:pointer;" onclick="document.getElementById('emojiPickerRow').style.display='flex';">🎾</div>
+        <div id="emojiPickerRow" style="display:none;flex-wrap:wrap;gap:6px;max-width:340px;">
+          <div id="emojiPickerGrid"></div>
+        </div>
+        <input type="hidden" id="avatarEmoji" value="🎾"/>
+      </div>
     </div>
     <div class="field"><label>Email Address</label><input type="email" id="email" placeholder="jane@example.com" autocomplete="off" oninput="chk1()"/></div>
     <div class="grid2">
@@ -1137,6 +1188,19 @@
       </div>
     </div>
 
+    <!-- Player Card Modal -->
+    <div id="playerCardModal" style="display:none;position:absolute;top:0;left:0;right:0;
+      min-height:100%;background:rgba(0,0,0,0.75);z-index:300;
+      align-items:flex-start;justify-content:center;padding:40px 16px;">
+      <div class="pc-card-modal">
+        <button onclick="closePlayerCard()" style="position:absolute;top:12px;right:12px;
+          background:rgba(255,255,255,0.1);border:none;color:#fff;width:28px;height:28px;
+          border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;
+          justify-content:center;">✕</button>
+        <div id="playerCardContent"></div>
+      </div>
+    </div>
+
     <!-- Player Confirmation Modal -->
     <div id="icConfirmModal" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;
       background:rgba(0,0,0,0.7);z-index:200;display:none;align-items:flex-start;
@@ -1399,7 +1463,7 @@
 const S={gender:'',skill:'',schedule:new Set(),anytime:false,partner:false,
   waiver:false,photoSrc:null,state:'',stateFips:'',county:'',city:'',
   court:'',courtName:'',duprVal:null,venues:new Set(),driveDistance:'25 miles',
-  playStyle:'',handedness:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null};
+  playStyle:'',handedness:'',avatarEmoji:'🎾',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null};
 
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const TIMES=['Early AM','Morning','Afternoon','Evening'];
@@ -1959,6 +2023,7 @@ async function submitForm(){
       drive_distance_miles: S.driveDistance || null,
       play_style:          S.playStyle || null,
       handedness:          S.handedness || null,
+      avatar_emoji:        S.avatarEmoji || '🎾',
       wants_to_improve:    S.wantsToImprove || null,
       goal_rating:         S.goalRating || null,
       has_had_lesson:      S.hasHadLesson || null,
@@ -3797,6 +3862,167 @@ document.addEventListener('click', function(e){
   const modal = document.getElementById('icConfirmModal');
   if(modal && e.target === modal) closeIcModal();
 });
+
+// ══════════════════════════════════════════════════════
+// PLAYER CARD
+// ══════════════════════════════════════════════════════
+
+const AVATAR_EMOJIS = ['🎾','🏓','🏆','⚡','🔥','💪','🦅','🐉','🌟','👑',
+  '🎯','🤾','🏃','🦁','🐯','🦊','🧠','💥','🌊','🎪','🦋','🎸','🍕','🌈','🤙'];
+
+// ── Init emoji picker in registration form ─────────────
+document.addEventListener('DOMContentLoaded', ()=>{
+  const grid = document.getElementById('emojiPickerGrid');
+  if(!grid) return;
+  const preview = document.getElementById('emojiPreview');
+  const input   = document.getElementById('avatarEmoji');
+  const row     = document.getElementById('emojiPickerRow');
+  if(row) row.style.display='flex';
+
+  AVATAR_EMOJIS.forEach(e=>{
+    const btn = document.createElement('div');
+    btn.className='emoji-reg-opt'+(e==='🎾'?' on':'');
+    btn.textContent=e;
+    btn.onclick=()=>{
+      grid.querySelectorAll('.emoji-reg-opt').forEach(b=>b.classList.remove('on'));
+      btn.classList.add('on');
+      if(preview) preview.textContent=e;
+      if(input) input.value=e;
+      S.avatarEmoji=e;
+    };
+    grid.appendChild(btn);
+  });
+});
+
+// ── Open full player card ──────────────────────────────
+function openPlayerCard(player, connection, myEmail){
+  const modal   = document.getElementById('playerCardModal');
+  const content = document.getElementById('playerCardContent');
+  if(!modal || !content) return;
+
+  const name = ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim()||'Player';
+  const emoji = player.avatar_emoji || '🎾';
+  const initials = name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
+  const pEmail = (player.email||'').toLowerCase();
+
+  // Tags
+  const tags = [];
+  if(player.skill_level) tags.push({cls:'pc-tag-green', label:'⭐ '+player.skill_level+' Rating'});
+  if(player.dupr_rating) tags.push({cls:'pc-tag-green', label:'DUPR '+player.dupr_rating});
+  if(player.gender)      tags.push({cls:'pc-tag-dim',   label:player.gender});
+  if(player.handedness)  tags.push({cls:'pc-tag-dim',   label:player.handedness});
+  if(player.play_style)  tags.push({cls:'pc-tag-dim',   label:player.play_style});
+  const tagsHtml = tags.map(t=>'<span class="pc-card-tag '+t.cls+'">'+t.label+'</span>').join('');
+
+  // Stats grid
+  const stats = [
+    {label:'Location',  value: player.city?(player.city+(player.state?', '+player.state:'')):'—', green:false},
+    {label:'Available', value: player.availability_window||'—',  green:!!player.availability_window},
+    {label:'Prefers',   value: player.preferred_format||'—',     green:false},
+    {label:'Target',    value: player.goal_rating?player.goal_rating+' goal':'—', green:!!player.goal_rating},
+  ];
+  const statsHtml = stats.map(s=>
+    '<div class="pc-stat-box">'+
+      '<div class="pc-stat-lbl">'+s.label+'</div>'+
+      '<div class="pc-stat-val'+(s.green?' green':'')+'">'+s.value+'</div>'+
+    '</div>'
+  ).join('');
+
+  // Court
+  const courtHtml = player.court_name
+    ? '<div class="pc-home-court">'+
+        '<span style="font-size:18px;">🏟</span>'+
+        '<div><div style="color:#fff;font-size:13px;font-weight:600;">'+player.court_name+'</div>'+
+        '<div style="color:var(--dim);font-size:11px;">Home court</div></div>'+
+      '</div>'
+    : '';
+
+  // Action button
+  const actionDiv = document.createElement('div');
+  actionDiv.className='pc-card-actions';
+  const addBtn = document.createElement('button');
+  addBtn.className='pc-btn-add';
+  if(connection && connection.status==='approved'){
+    addBtn.textContent='✓ In Your Circle';
+    addBtn.disabled=true;
+    addBtn.style.opacity='.6';
+  } else if(connection && connection.status==='pending'){
+    addBtn.textContent='Request Pending';
+    addBtn.disabled=true;
+    addBtn.style.opacity='.6';
+  } else {
+    addBtn.textContent='+ Add to Inner Circle';
+    addBtn.onclick=()=>{
+      closePlayerCard();
+      openIcConfirmModal(player);
+    };
+  }
+  const playBtn = document.createElement('button');
+  playBtn.className='pc-btn-play';
+  playBtn.textContent='🎾 Play';
+  playBtn.onclick=()=>{
+    closePlayerCard();
+    MS.playerType='inner';
+    IC_MATCH.selectedPlayers.clear();
+    IC_MATCH.selectedPlayers.add(pEmail);
+    showPage('setupMatch');
+    matchGoTo(2);
+    showToast('Setting up a match with '+name,'#4CAF7D');
+  };
+  actionDiv.appendChild(addBtn);
+  actionDiv.appendChild(playBtn);
+
+  content.innerHTML =
+    '<div class="pc-banner"></div>'+
+    '<div style="position:relative;">'+
+      '<div class="pc-avatar-outer">'+
+        '<div class="pc-card-avatar">'+
+          (player.photo_url
+            ? '<img src="'+player.photo_url+'" alt="'+name+'">'
+            : '<span style="font-size:30px;">'+emoji+'</span>')+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="pc-card-body">'+
+      '<p class="pc-card-name">'+name+'</p>'+
+      (player.nickname?'<p class="pc-card-nick">"'+player.nickname+'"</p>':'')+
+      '<div class="pc-card-tags">'+tagsHtml+'</div>'+
+      '<div class="pc-stats-grid">'+statsHtml+'</div>'+
+      courtHtml+
+    '</div>';
+
+  content.appendChild(actionDiv);
+  // Add padding below button
+  const pad = document.createElement('div');
+  pad.style.height='20px';
+  content.appendChild(pad);
+
+  modal.style.display='flex';
+}
+
+function closePlayerCard(){
+  const modal = document.getElementById('playerCardModal');
+  if(modal) modal.style.display='none';
+}
+
+// Close on backdrop click
+document.addEventListener('click', function(e){
+  const modal = document.getElementById('playerCardModal');
+  if(modal && e.target===modal) closePlayerCard();
+});
+
+// ── Make search result cards clickable to open full card ─
+const _origBuildSearchResultCard = buildSearchResultCard;
+function buildSearchResultCard(player, connection, myEmail){
+  const div = _origBuildSearchResultCard(player, connection, myEmail);
+  // Make the info area clickable to open full card
+  const infoArea = div.querySelector('.ic-player-info') || div.querySelector('div[style*="flex:1"]');
+  if(infoArea){
+    infoArea.style.cursor='pointer';
+    infoArea.onclick=function(){openPlayerCard(player, connection, myEmail);};
+  }
+  return div;
+}
 </script>
 </body>
 </html>
