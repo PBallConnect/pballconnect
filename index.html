@@ -617,6 +617,90 @@
     background:rgba(255,255,255,0.04);cursor:pointer;display:flex;align-items:center;
     justify-content:center;font-size:20px;transition:all .15s;}
   .emoji-reg-opt:hover,.emoji-reg-opt.on{border-color:var(--green);background:rgba(76,175,125,0.12);}
+  /* ── Inner Circle Rich List ───────────────────────── */
+  .ic-member-card{display:grid;grid-template-columns:52px 1fr auto;gap:0 14px;
+    align-items:center;padding:14px 0;border-bottom:1px solid var(--border);}
+  .ic-member-card:last-child{border-bottom:none;}
+  .ic-member-avatar{width:46px;height:46px;border-radius:50%;
+    background:rgba(76,175,125,0.15);border:2px solid rgba(76,175,125,0.25);
+    display:flex;align-items:center;justify-content:center;
+    font-size:20px;font-weight:700;color:var(--green);cursor:pointer;
+    transition:border-color .2s;flex-shrink:0;}
+  .ic-member-avatar:hover{border-color:rgba(76,175,125,0.6);}
+  .ic-member-main{min-width:0;}
+  .ic-member-name{color:#fff;font-size:14px;font-weight:700;
+    cursor:pointer;transition:color .15s;}
+  .ic-member-name:hover{color:var(--green);}
+  .ic-member-nick{color:var(--green);font-size:12px;font-style:italic;margin-top:1px;}
+  .ic-member-details{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center;}
+  .ic-member-tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;}
+  .ic-tag-court{background:rgba(100,80,200,0.12);color:#a78bfa;}
+  .ic-tag-skill{background:rgba(76,175,125,0.12);color:var(--green);}
+  .ic-last-played{font-size:10px;color:var(--dim);margin-top:3px;}
+  .ic-last-played span{color:#fbbf24;}
+  .ic-member-actions{display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0;}
+  .ic-member-btn{padding:6px 12px;border-radius:8px;font-size:11px;font-weight:600;
+    cursor:pointer;font-family:'DM Sans',sans-serif;border:1px solid;white-space:nowrap;}
+  .ic-mem-btn-play{background:rgba(76,175,125,0.12);color:var(--green);
+    border-color:rgba(76,175,125,0.3);}
+  .ic-mem-btn-play:hover{background:rgba(76,175,125,0.22);}
+  .ic-mem-btn-remove{background:transparent;color:var(--dim);
+    border-color:var(--border);font-size:10px;}
+  .ic-mem-btn-remove:hover{color:#f87171;border-color:rgba(239,68,68,0.3);}
+  .ic-circle-empty{text-align:center;padding:32px 0;color:var(--dim);font-size:13px;}
+  .ic-circle-empty-icon{font-size:32px;margin-bottom:8px;}
+  .ic-member-count{font-size:11px;color:var(--dim);margin-bottom:12px;}
+  /* ── Find Players — Tabs ──────────────────────────── */
+  .ic-find-tabs{display:flex;gap:8px;margin-bottom:16px;}
+  .ic-find-tab{padding:8px 16px;border-radius:10px;border:1px solid var(--border);
+    background:transparent;color:var(--dim);font-size:12px;font-weight:600;
+    cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;}
+  .ic-find-tab.active{background:rgba(76,175,125,0.12);color:var(--green);
+    border-color:rgba(76,175,125,0.4);}
+  .ic-nearby-controls{background:rgba(255,255,255,0.03);border:1px solid var(--border);
+    border-radius:12px;padding:12px 16px;margin-bottom:14px;}
+  .ic-nearby-slider-row{display:flex;align-items:center;gap:4px;}
+
+  /* ── Skill grid ───────────────────────────────────── */
+  .ic-skill-grid-header{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:6px;}
+  .ic-skill-col-head{text-align:center;padding:8px 4px;border-radius:10px;}
+  .ic-col-below{background:rgba(250,175,50,0.08);border:1px solid rgba(250,175,50,0.2);}
+  .ic-col-my{background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.3);}
+  .ic-col-above{background:rgba(160,100,240,0.08);border:1px solid rgba(160,100,240,0.2);}
+  .ic-col-head-label{font-size:9px;font-weight:700;text-transform:uppercase;
+    letter-spacing:.08em;color:var(--dim);margin-bottom:3px;}
+  .ic-col-head-rating{font-size:15px;font-weight:700;}
+  .ic-col-below .ic-col-head-rating{color:#fbbf24;}
+  .ic-col-my .ic-col-head-rating{color:var(--green);}
+  .ic-col-above .ic-col-head-rating{color:#a78bfa;}
+  .ic-skill-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;
+    max-height:480px;overflow-y:auto;}
+  .ic-skill-col{display:flex;flex-direction:column;gap:6px;}
+
+  /* ── Player mini card in grid ─────────────────────── */
+  .ic-mini-card{background:rgba(255,255,255,0.03);border:1px solid var(--border);
+    border-radius:10px;padding:10px;transition:border-color .15s;cursor:pointer;}
+  .ic-mini-card:hover{border-color:rgba(76,175,125,0.4);}
+  .ic-mini-card.col-below{border-left:2px solid rgba(250,175,50,0.4);}
+  .ic-mini-card.col-my{border-left:2px solid rgba(76,175,125,0.5);}
+  .ic-mini-card.col-above{border-left:2px solid rgba(160,100,240,0.4);}
+  .ic-mini-top{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+  .ic-mini-avatar{width:28px;height:28px;border-radius:50%;
+    background:rgba(76,175,125,0.15);display:flex;align-items:center;
+    justify-content:center;font-size:13px;flex-shrink:0;}
+  .ic-mini-name{color:#fff;font-size:12px;font-weight:700;line-height:1.3;}
+  .ic-mini-nick{color:var(--green);font-size:10px;font-style:italic;}
+  .ic-mini-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;}
+  .ic-mini-tag{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;}
+  .ic-mini-tag-venue{background:rgba(100,80,200,0.12);color:#a78bfa;}
+  .ic-mini-tag-avail{background:rgba(76,175,125,0.1);color:var(--green);}
+  .ic-mini-add{width:100%;padding:5px;border-radius:6px;border:1px solid rgba(76,175,125,0.3);
+    background:rgba(76,175,125,0.08);color:var(--green);font-size:10px;font-weight:700;
+    cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;}
+  .ic-mini-add:hover{background:rgba(76,175,125,0.18);}
+  .ic-mini-add:disabled{opacity:.5;cursor:default;}
+  .ic-col-empty{color:var(--dim);font-size:11px;text-align:center;
+    padding:16px 8px;border:1px dashed var(--border);border-radius:8px;}
 </style>
 </head>
 <body>
@@ -725,7 +809,7 @@
     </div>
     <div class="field"><label>Email Address</label><input type="email" id="email" placeholder="jane@example.com" autocomplete="off" oninput="chk1()"/></div>
     <div class="grid2">
-      <div class="field"><label>Phone Number</label><input type="tel" id="phone" placeholder="(555) 000-0000" autocomplete="off" oninput="chk1()"/></div>
+      <div class="field"><label>Phone Number</label><input type="tel" id="phone" placeholder="(555) 000-0000" autocomplete="off" oninput="formatPhone(this);chk1()" maxlength="14"/></div>
       <div class="field"><label>Date of Birth</label><input type="date" id="dob" oninput="chk1()" onchange="chk1()"/></div>
     </div>
 
@@ -1149,16 +1233,69 @@
         <p>Your approved pickleball players</p>
       </div>
 
-      <!-- Search for players -->
-      <div class="ic-search-card">
-        <div class="ic-section-label">Find a player to add</div>
-        <div class="ic-search-row">
-          <input type="text" id="icSearchInput" placeholder="Search by name or email…"
-            autocomplete="off" oninput="icSearchPlayers(this.value)"
-            style="flex:1;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;"/>
-          <button class="ic-search-btn" onclick="icSearchPlayers(document.getElementById('icSearchInput').value)">Search</button>
+      <!-- Find Players -->
+      <div class="ic-search-card" style="max-width:100%;">
+        <div class="ic-section-label">Find players to add</div>
+
+        <!-- Tab switcher -->
+        <div class="ic-find-tabs">
+          <button class="ic-find-tab active" id="tabNearby" onclick="switchFindTab('nearby')">📍 Nearby by skill</button>
+          <button class="ic-find-tab" id="tabSearch" onclick="switchFindTab('search')">🔍 Search by name</button>
         </div>
-        <div id="icSearchResults" style="margin-top:12px;"></div>
+
+        <!-- TAB 1: Nearby by skill grid -->
+        <div id="icNearbyPanel">
+          <div class="ic-nearby-controls">
+            <div class="ic-nearby-slider-row">
+              <span style="font-size:12px;color:var(--dim);">Within</span>
+              <input type="range" id="icRadiusSlider" min="5" max="30" step="5" value="15"
+                oninput="document.getElementById('icRadiusLabel').textContent=this.value+' mi';loadNearbyPlayers();"
+                style="flex:1;margin:0 10px;"/>
+              <span id="icRadiusLabel" style="font-size:13px;font-weight:700;color:var(--green);min-width:40px;">15 mi</span>
+            </div>
+            <div style="font-size:11px;color:var(--dim);margin-top:4px;" id="icNearbySubtitle">
+              Showing players near you grouped by skill level
+            </div>
+          </div>
+
+          <!-- 3-column skill grid -->
+          <div class="ic-skill-grid-header">
+            <div class="ic-skill-col-head ic-col-below">
+              <div class="ic-col-head-label">One below</div>
+              <div class="ic-col-head-rating" id="colBelowLabel">—</div>
+            </div>
+            <div class="ic-skill-col-head ic-col-my">
+              <div class="ic-col-head-label">My level</div>
+              <div class="ic-col-head-rating" id="colMyLabel">—</div>
+            </div>
+            <div class="ic-skill-col-head ic-col-above">
+              <div class="ic-col-head-label">One above</div>
+              <div class="ic-col-head-rating" id="colAboveLabel">—</div>
+            </div>
+          </div>
+          <div class="ic-skill-grid" id="icSkillGrid">
+            <div class="ic-skill-col" id="colBelow"></div>
+            <div class="ic-skill-col" id="colMy"></div>
+            <div class="ic-skill-col" id="colAbove"></div>
+          </div>
+          <div id="icNearbyEmpty" style="display:none;" class="ic-circle-empty">
+            <div class="ic-circle-empty-icon">🔍</div>
+            No players found nearby at these skill levels.<br>
+            <span style="color:var(--green);font-size:12px;">Try increasing the distance slider.</span>
+          </div>
+        </div>
+
+        <!-- TAB 2: Search by name -->
+        <div id="icSearchPanel" style="display:none;">
+          <div class="ic-search-row" style="margin-top:12px;">
+            <input type="text" id="icSearchInput" placeholder="Search by name or nickname…"
+              autocomplete="off" oninput="icSearchPlayers(this.value)"
+              style="flex:1;padding:10px 14px;border-radius:10px;border:1px solid var(--border);
+              background:rgba(255,255,255,0.07);color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;"/>
+            <button class="ic-search-btn" onclick="icSearchPlayers(document.getElementById('icSearchInput').value)">Search</button>
+          </div>
+          <div id="icSearchResults" style="margin-top:12px;"></div>
+        </div>
       </div>
 
       <!-- Pending requests received -->
@@ -1168,10 +1305,24 @@
       </div>
 
       <!-- My Inner Circle -->
-      <div class="ic-card">
-        <div class="ic-section-label">✅ My Inner Circle <span id="icApprovedBadge" class="ic-badge"></span></div>
+      <div class="ic-card" style="max-width:700px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div class="ic-section-label" style="margin-bottom:0;">✅ My Inner Circle <span id="icApprovedBadge" class="ic-badge"></span></div>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="icCircleSearch" placeholder="Filter circle…" oninput="filterInnerCircle(this.value)"
+              style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);
+              color:#fff;font-size:12px;font-family:'DM Sans',sans-serif;width:140px;"/>
+            <select id="icCircleSort" onchange="sortInnerCircle(this.value)"
+              style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);
+              color:#fff;font-size:12px;font-family:'DM Sans',sans-serif;">
+              <option value="name">Sort: Name</option>
+              <option value="skill">Sort: Rating</option>
+              <option value="recent">Sort: Last Played</option>
+            </select>
+          </div>
+        </div>
         <div id="icApprovedList">
-          <div class="ic-empty">Your approved players will appear here.<br>Search above to find players and send connection requests.</div>
+          <div class="ic-empty">Your Inner Circle is empty.<br>Search above to find players and add them.</div>
         </div>
       </div>
 
@@ -2003,7 +2154,7 @@ async function submitForm(){
       last_name:           v('lastName'),
       nickname:            v('nickname')||null,
       email:               v('email'),
-      phone:               v('phone'),
+      phone:               (v('phone')||'').replace(/\D/g,''),
       dob:                 v('dob'),
       gender:              S.gender,
       address:             v('addressSearch'),
@@ -3160,14 +3311,17 @@ async function icSendRequest(recipientEmail, recipientName, btn){
         recipient_email: recipientEmail,
         requester_name: getMyName(),
         recipient_name: recipientName,
-        status: 'pending'
+        status: 'approved',
+        responded_at: new Date().toISOString()
       })
     });
     if(res.ok || res.status===201){
-      btn.textContent = 'Sent ✓';
+      btn.textContent = '✓ In Circle';
       btn.className = 'ic-action-btn';
       btn.style.color = 'var(--green)';
-      showToast('Connection request sent!','#4CAF7D');
+      btn.disabled = true;
+      showToast('✅ Added to your Inner Circle!','#4CAF7D');
+      setTimeout(()=>loadInnerCircle(), 800);
     } else {
       const err = await res.text();
       if(err.includes('duplicate') || err.includes('unique')){
@@ -3211,37 +3365,213 @@ async function icRemoveConnection(otherEmail, btn){
   }catch(e){ btn.disabled=false; btn.textContent='Remove'; }
 }
 
-// ── Load approved connections ─────────────────────────
+// ── Load approved connections — rich card list ────────
+let IC_MEMBERS = []; // cache for filter/sort
+
 async function loadIcApproved(){
   const myEmail = getMyEmail();
-  const list = document.getElementById('icApprovedList');
-  const badge = document.getElementById('icApprovedBadge');
+  const list    = document.getElementById('icApprovedList');
+  const badge   = document.getElementById('icApprovedBadge');
+  if(!list) return;
+  list.innerHTML = '<div class="ic-empty" style="padding:20px 0;">Loading your circle…</div>';
   try{
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/connections?or=(requester_email.eq.${encodeURIComponent(myEmail)},recipient_email.eq.${encodeURIComponent(myEmail)})&status=eq.approved&select=*`,
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
     );
-    if(!res.ok){ return; }
+    if(!res.ok){ list.innerHTML='<div class="ic-empty">Could not load.</div>'; return; }
     const conns = await res.json();
-    badge.textContent = conns.length || '';
+    if(badge) badge.textContent = conns.length || '';
+
     if(!conns.length){
-      list.innerHTML='<div class="ic-empty">No approved players yet. Search above to add players to your Inner Circle.</div>';
+      list.innerHTML =
+        '<div class="ic-circle-empty">'+
+          '<div class="ic-circle-empty-icon">👥</div>'+
+          'Your Inner Circle is empty.<br>'+
+          '<span style="color:var(--green);font-size:12px;">Search above to find players and add them.</span>'+
+        '</div>';
+      IC_MEMBERS = [];
       return;
     }
-    list.innerHTML='';
-    // Look up player details for each connection
-    for(const conn of conns){
+
+    // Fetch full player details for all connections in parallel
+    const memberPromises = conns.map(async conn => {
       const otherEmail = conn.requester_email===myEmail ? conn.recipient_email : conn.requester_email;
       const otherName  = conn.requester_email===myEmail ? conn.recipient_name  : conn.requester_name;
-      const pRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(otherEmail)}&select=first_name,last_name,email,skill_level,city,state&limit=1`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
-      );
-      const players = pRes.ok ? await pRes.json() : [];
-      const player = players[0] || {first_name:otherName?.split(' ')[0]||'?', last_name:otherName?.split(' ')[1]||'', email:otherEmail};
-      list.appendChild(buildPlayerCard(player, conn, myEmail, 'approved'));
+      try{
+        const pRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(otherEmail)}&select=first_name,last_name,email,nickname,skill_level,dupr_rating,court_name,city,state,avatar_emoji,gender,handedness&limit=1`,
+          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+        );
+        const players = pRes.ok ? await pRes.json() : [];
+        const player = players[0] || {
+          first_name: otherName?.split(' ')[0]||'?',
+          last_name:  otherName?.split(' ').slice(1).join(' ')||'',
+          email: otherEmail
+        };
+        return { player, conn, lastPlayed: null }; // lastPlayed will come from match results later
+      }catch(e){ return null; }
+    });
+
+    IC_MEMBERS = (await Promise.all(memberPromises)).filter(Boolean);
+
+    // Sort by name by default
+    IC_MEMBERS.sort((a,b)=>{
+      const an = (a.player.first_name||'')+(a.player.last_name||'');
+      const bn = (b.player.first_name||'')+(b.player.last_name||'');
+      return an.localeCompare(bn);
+    });
+
+    renderInnerCircleList(IC_MEMBERS, myEmail);
+  }catch(e){ list.innerHTML='<div class="ic-empty">Error loading circle.</div>'; }
+}
+
+function renderInnerCircleList(members, myEmail){
+  const list = document.getElementById('icApprovedList');
+  if(!list) return;
+  if(!members.length){
+    list.innerHTML='<div class="ic-circle-empty"><div class="ic-circle-empty-icon">🔍</div>No players match your filter.</div>';
+    return;
+  }
+  list.innerHTML = '<div class="ic-member-count">'+members.length+' player'+(members.length!==1?'s':'')+' in your circle</div>';
+  members.forEach(({player, conn, lastPlayed})=>{
+    const card = buildIcMemberCard(player, conn, myEmail, lastPlayed);
+    list.appendChild(card);
+  });
+}
+
+function buildIcMemberCard(player, conn, myEmail, lastPlayed){
+  const div = document.createElement('div');
+  div.className = 'ic-member-card';
+  const name = ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim()||'Unknown';
+  const initials = name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
+  const emoji = player.avatar_emoji || null;
+  const pEmail = (player.email||'').toLowerCase();
+
+  // Avatar
+  const avatarDiv = document.createElement('div');
+  avatarDiv.className = 'ic-member-avatar';
+  avatarDiv.textContent = emoji || initials;
+  avatarDiv.onclick = ()=> openPlayerCard(player, conn, myEmail);
+
+  // Main info
+  const mainDiv = document.createElement('div');
+  mainDiv.className = 'ic-member-main';
+
+  const nameEl = document.createElement('div');
+  nameEl.className = 'ic-member-name';
+  nameEl.textContent = name;
+  nameEl.onclick = ()=> openPlayerCard(player, conn, myEmail);
+
+  const nickEl = document.createElement('div');
+  nickEl.className = 'ic-member-nick';
+  nickEl.textContent = player.nickname ? '"'+player.nickname+'"' : '';
+
+  const detailsEl = document.createElement('div');
+  detailsEl.className = 'ic-member-details';
+
+  if(player.skill_level){
+    const s = document.createElement('span');
+    s.className='ic-member-tag ic-tag-skill';
+    s.textContent='⭐ '+player.skill_level;
+    detailsEl.appendChild(s);
+  }
+  if(player.court_name){
+    const c = document.createElement('span');
+    c.className='ic-member-tag ic-tag-court';
+    c.textContent='🏟 '+player.court_name;
+    detailsEl.appendChild(c);
+  } else if(player.city){
+    const c = document.createElement('span');
+    c.className='ic-member-tag ic-tag-court';
+    c.textContent='📍 '+(player.city+(player.state?', '+player.state:''));
+    detailsEl.appendChild(c);
+  }
+
+  const lastEl = document.createElement('div');
+  lastEl.className = 'ic-last-played';
+  lastEl.innerHTML = 'Last played together: <span>'+(lastPlayed||'Never — play soon! 🎾')+'</span>';
+
+  mainDiv.appendChild(nameEl);
+  if(player.nickname) mainDiv.appendChild(nickEl);
+  mainDiv.appendChild(detailsEl);
+  mainDiv.appendChild(lastEl);
+
+  // Actions
+  const actionsDiv = document.createElement('div');
+  actionsDiv.className = 'ic-member-actions';
+
+  const playBtn = document.createElement('button');
+  playBtn.className='ic-member-btn ic-mem-btn-play';
+  playBtn.textContent='🎾 Play';
+  playBtn.onclick=()=>{
+    MS.playerType='inner';
+    IC_MATCH.selectedPlayers.clear();
+    IC_MATCH.selectedPlayers.add(pEmail);
+    showPage('setupMatch');
+    matchGoTo(2);
+    showToast('Setting up a match with '+(player.first_name||'them'),'#4CAF7D');
+  };
+
+  const removeBtn = document.createElement('button');
+  removeBtn.className='ic-member-btn ic-mem-btn-remove';
+  removeBtn.textContent='Remove';
+  removeBtn.onclick=()=>{
+    if(confirm('Remove '+name+' from your Inner Circle?')){
+      icRemoveConnection(pEmail, removeBtn);
+      setTimeout(()=>loadIcApproved(), 800);
     }
-  }catch(e){ list.innerHTML='<div class="ic-empty">Could not load.</div>'; }
+  };
+
+  actionsDiv.appendChild(playBtn);
+  actionsDiv.appendChild(removeBtn);
+
+  div.appendChild(avatarDiv);
+  div.appendChild(mainDiv);
+  div.appendChild(actionsDiv);
+  return div;
+}
+
+// ── Filter Inner Circle list ───────────────────────────
+function filterInnerCircle(val){
+  const myEmail = getMyEmail();
+  if(!val.trim()){
+    renderInnerCircleList(IC_MEMBERS, myEmail);
+    return;
+  }
+  const q = val.toLowerCase();
+  const filtered = IC_MEMBERS.filter(({player})=>{
+    const name = ((player.first_name||'')+(player.last_name||'')).toLowerCase();
+    const nick  = (player.nickname||'').toLowerCase();
+    const court = (player.court_name||'').toLowerCase();
+    return name.includes(q) || nick.includes(q) || court.includes(q);
+  });
+  renderInnerCircleList(filtered, myEmail);
+}
+
+// ── Sort Inner Circle list ─────────────────────────────
+function sortInnerCircle(by){
+  const myEmail = getMyEmail();
+  const sorted = [...IC_MEMBERS];
+  if(by==='name'){
+    sorted.sort((a,b)=>{
+      const an=(a.player.first_name||'')+(a.player.last_name||'');
+      const bn=(b.player.first_name||'')+(b.player.last_name||'');
+      return an.localeCompare(bn);
+    });
+  } else if(by==='skill'){
+    sorted.sort((a,b)=>parseFloat(b.player.skill_level||0)-parseFloat(a.player.skill_level||0));
+  } else if(by==='recent'){
+    // When match results are built, sort by lastPlayed date
+    // For now sort by name as fallback
+    sorted.sort((a,b)=>{
+      if(a.lastPlayed && !b.lastPlayed) return -1;
+      if(!a.lastPlayed && b.lastPlayed) return 1;
+      return 0;
+    });
+  }
+  IC_MEMBERS = sorted;
+  renderInnerCircleList(IC_MEMBERS, myEmail);
 }
 
 // ── Load pending (received) requests ──────────────────
@@ -4022,6 +4352,247 @@ function buildSearchResultCard(player, connection, myEmail){
     infoArea.onclick=function(){openPlayerCard(player, connection, myEmail);};
   }
   return div;
+}
+
+// ── Phone number formatter ─────────────────────────────
+function formatPhone(input){
+  // Strip everything except digits
+  let digits = input.value.replace(/\D/g,'');
+  // Limit to 10 digits
+  if(digits.length > 10) digits = digits.substring(0,10);
+  // Format as (XXX) XXX-XXXX
+  let formatted = '';
+  if(digits.length === 0){
+    formatted = '';
+  } else if(digits.length <= 3){
+    formatted = '('+digits;
+  } else if(digits.length <= 6){
+    formatted = '('+digits.substring(0,3)+') '+digits.substring(3);
+  } else {
+    formatted = '('+digits.substring(0,3)+') '+digits.substring(3,6)+'-'+digits.substring(6);
+  }
+  input.value = formatted;
+}
+
+// ══════════════════════════════════════════════════════
+// INNER CIRCLE — NEARBY SKILL GRID
+// ══════════════════════════════════════════════════════
+
+const SKILL_LEVELS = [2.0,2.25,2.5,2.75,3.0,3.25,3.5,3.75,4.0,4.25,4.5,4.75,5.0,5.5,6.0,6.5,7.0];
+
+function getAdjacentSkills(mySkill){
+  const val = parseFloat(mySkill);
+  const idx  = SKILL_LEVELS.findIndex(s => Math.abs(s - val) < 0.01);
+  if(idx < 0) return { below: null, my: val, above: null };
+  return {
+    below: idx > 0                       ? SKILL_LEVELS[idx-1] : null,
+    my:    val,
+    above: idx < SKILL_LEVELS.length - 1 ? SKILL_LEVELS[idx+1] : null,
+  };
+}
+
+function switchFindTab(tab){
+  const nearby  = document.getElementById('icNearbyPanel');
+  const search  = document.getElementById('icSearchPanel');
+  const tabNear = document.getElementById('tabNearby');
+  const tabSrch = document.getElementById('tabSearch');
+  if(tab === 'nearby'){
+    nearby.style.display  = 'block';
+    search.style.display  = 'none';
+    tabNear.classList.add('active');
+    tabSrch.classList.remove('active');
+    loadNearbyPlayers();
+  } else {
+    nearby.style.display  = 'none';
+    search.style.display  = 'block';
+    tabNear.classList.remove('active');
+    tabSrch.classList.add('active');
+  }
+}
+
+let nearbyDebounce = null;
+async function loadNearbyPlayers(){
+  clearTimeout(nearbyDebounce);
+  nearbyDebounce = setTimeout(async ()=>{
+    const myEmail   = getMyEmail();
+    const mySkill   = S.skill || document.getElementById('skillSliderVal')?.textContent || '';
+    const radiusMi  = parseInt(document.getElementById('icRadiusSlider')?.value||15);
+
+    // Update column headers
+    const skills = getAdjacentSkills(mySkill);
+    document.getElementById('colBelowLabel').textContent = skills.below !== null ? skills.below : '—';
+    document.getElementById('colMyLabel').textContent    = skills.my    !== null ? skills.my    : '—';
+    document.getElementById('colAboveLabel').textContent = skills.above !== null ? skills.above : '—';
+
+    if(!mySkill){
+      ['colBelow','colMy','colAbove'].forEach(id=>{
+        document.getElementById(id).innerHTML =
+          '<div class="ic-col-empty">Complete your profile to see skill-matched players</div>';
+      });
+      return;
+    }
+
+    // Show loading
+    ['colBelow','colMy','colAbove'].forEach(id=>{
+      document.getElementById(id).innerHTML =
+        '<div class="ic-col-empty" style="color:var(--green);">Loading…</div>';
+    });
+    document.getElementById('icNearbyEmpty').style.display = 'none';
+
+    // Get city lat/lon
+    const cityData = getCityLatLon();
+    const addrCity  = document.getElementById('addrCity')?.value  || S.city  || '';
+    const addrState = document.getElementById('addrState')?.value || S.state || '';
+
+    try{
+      // Fetch players within radius using PostGIS OR state fallback
+      let nearbyPlayers = [];
+
+      if(cityData){
+        // Try PostGIS radius function
+        const rpcRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_players_within_radius`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY},
+          body: JSON.stringify({t_lat:cityData.lat, t_long:cityData.lon, radius_miles:radiusMi})
+        });
+        if(rpcRes.ok){
+          nearbyPlayers = await rpcRes.json();
+        }
+      }
+
+      // Fallback: state query
+      if(!nearbyPlayers.length){
+        const stateQ = encodeURIComponent(addrState||'NH');
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/registrations?state=eq.${stateQ}&select=first_name,last_name,email,nickname,skill_level,play_venues,court_name,city,state,avatar_emoji,waiver_agreed&limit=500`,
+          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+        );
+        if(res.ok) nearbyPlayers = await res.json();
+      }
+
+      // Filter out self
+      nearbyPlayers = nearbyPlayers.filter(p=>(p.email||'').toLowerCase() !== myEmail);
+
+      // Get my existing connections
+      let myConns = [];
+      if(myEmail){
+        const cr = await fetch(
+          `${SUPABASE_URL}/rest/v1/connections?or=(requester_email.eq.${encodeURIComponent(myEmail)},recipient_email.eq.${encodeURIComponent(myEmail)})&select=*`,
+          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+        );
+        if(cr.ok) myConns = await cr.json();
+      }
+
+      // Split into three skill buckets
+      const buckets = { below:[], my:[], above:[] };
+      nearbyPlayers.forEach(p=>{
+        const pSkill = parseFloat(p.skill_level||0);
+        if(skills.below !== null && Math.abs(pSkill - skills.below) < 0.01) buckets.below.push(p);
+        else if(Math.abs(pSkill - skills.my) < 0.01)                        buckets.my.push(p);
+        else if(skills.above !== null && Math.abs(pSkill - skills.above) < 0.01) buckets.above.push(p);
+      });
+
+      const subtitle = document.getElementById('icNearbySubtitle');
+      const total = buckets.below.length + buckets.my.length + buckets.above.length;
+      if(subtitle) subtitle.textContent =
+        total + ' player'+(total!==1?'s':'')+' found within '+radiusMi+' miles at these skill levels';
+
+      const colIds = { below:'colBelow', my:'colMy', above:'colAbove' };
+      const colClasses = { below:'col-below', my:'col-my', above:'col-above' };
+
+      Object.entries(buckets).forEach(([key, players])=>{
+        const col = document.getElementById(colIds[key]);
+        col.innerHTML = '';
+        if(!players.length){
+          col.innerHTML='<div class="ic-col-empty">No players at this level nearby</div>';
+          return;
+        }
+        // Shuffle so it's not always the same people at top
+        players.sort(()=>Math.random()-0.5);
+        players.slice(0,20).forEach(p=>{
+          const card = buildMiniPlayerCard(p, myConns, myEmail, colClasses[key]);
+          col.appendChild(card);
+        });
+      });
+
+      // Show empty state if no players at all
+      if(total === 0){
+        document.getElementById('icNearbyEmpty').style.display='block';
+      }
+
+    }catch(e){
+      ['colBelow','colMy','colAbove'].forEach(id=>{
+        document.getElementById(id).innerHTML='<div class="ic-col-empty">Error loading players.</div>';
+      });
+      console.error('loadNearbyPlayers error:', e);
+    }
+  }, 500);
+}
+
+function buildMiniPlayerCard(player, myConns, myEmail, colClass){
+  const div = document.createElement('div');
+  div.className = 'ic-mini-card '+colClass;
+
+  const name = ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim();
+  const emoji = player.avatar_emoji || null;
+  const initials = name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
+  const pEmail = (player.email||'').toLowerCase();
+
+  // Check connection status
+  const conn = myConns.find(c=>
+    (c.requester_email===(myEmail||'') && c.recipient_email===pEmail) ||
+    (c.recipient_email===(myEmail||'') && c.requester_email===pEmail)
+  );
+
+  // Venue preference tag
+  const venueRaw = (player.play_venues||player.court_name||'').toLowerCase();
+  let venueLabel = '';
+  if(venueRaw.includes('indoor') && venueRaw.includes('outdoor')) venueLabel='🏢 Indoor & Outdoor';
+  else if(venueRaw.includes('indoor'))  venueLabel='🏢 Indoor';
+  else if(venueRaw.includes('outdoor')) venueLabel='🌳 Outdoor';
+  else if(player.court_name)            venueLabel='🏟 '+player.court_name.substring(0,20);
+
+  // Click card to open full player card
+  div.onclick = function(e){
+    if(e.target.tagName==='BUTTON') return;
+    openPlayerCard(player, conn, myEmail);
+  };
+
+  div.innerHTML =
+    '<div class="ic-mini-top">'+
+      '<div class="ic-mini-avatar">'+(emoji||initials)+'</div>'+
+      '<div>'+
+        '<div class="ic-mini-name">'+name+'</div>'+
+        (player.nickname?'<div class="ic-mini-nick">"'+player.nickname+'"</div>':'')+
+      '</div>'+
+    '</div>'+
+    (venueLabel?'<div class="ic-mini-tags"><span class="ic-mini-tag ic-mini-tag-venue">'+venueLabel+'</span></div>':'')+
+    '<div class="ic-mini-add-wrap"></div>';
+
+  // Add button
+  const addWrap = div.querySelector('.ic-mini-add-wrap');
+  const addBtn = document.createElement('button');
+  addBtn.className='ic-mini-add';
+
+  if(conn){
+    addBtn.textContent = conn.status==='approved' ? '✓ In Your Circle' : 'Pending';
+    addBtn.disabled = true;
+  } else {
+    addBtn.textContent = '+ Add to Circle';
+    addBtn.onclick = function(e){
+      e.stopPropagation();
+      openIcConfirmModal(player);
+    };
+  }
+  addWrap.appendChild(addBtn);
+  return div;
+}
+
+// Auto-load nearby grid when Inner Circle page opens
+const _origLoadInnerCircle = loadInnerCircle;
+async function loadInnerCircle(){
+  await _origLoadInnerCircle();
+  loadNearbyPlayers();
 }
 </script>
 </body>
