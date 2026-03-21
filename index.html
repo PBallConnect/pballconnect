@@ -4543,39 +4543,26 @@ let nearbyDebounce = null;
 async function loadNearbyPlayers(){
   clearTimeout(nearbyDebounce);
   nearbyDebounce = setTimeout(async ()=>{
-    const myEmail   = getMyEmail();
-    // Get skill from S state (set by login or registration)
-    const rawSkill  = S.skill ||
-                      document.getElementById('skillSlider') &&
-                      SKILL_STEPS ? SKILL_STEPS[parseInt(document.getElementById('skillSlider')?.value||0)] : null;
-    const mySkill   = rawSkill ? String(rawSkill) : '';
-    const radiusMi  = parseInt(document.getElementById('icRadiusSlider')?.value||15);
+    const myEmail  = getMyEmail();
+    const mySkill  = S.skill ? String(S.skill) : '';
+    const radiusMi = parseInt(document.getElementById('icRadiusSlider')?.value||15);
 
-    // If no skill set, show helpful message
+    // Update column headers
+    const skills = getAdjacentSkills(mySkill || '3.5');
+    document.getElementById('colBelowLabel').textContent = mySkill && skills.below !== null ? skills.below : '—';
+    document.getElementById('colMyLabel').textContent    = mySkill ? skills.my    : '—';
+    document.getElementById('colAboveLabel').textContent = mySkill && skills.above !== null ? skills.above : '—';
+
+    // If no skill set show message
     if(!mySkill){
       ['colBelow','colMy','colAbove'].forEach(id=>{
         const el = document.getElementById(id);
-        if(el) el.innerHTML='<div class="ic-col-empty">Sign in or complete your<br>Player Profile first</div>';
-      });
-      document.getElementById('colBelowLabel').textContent='—';
-      document.getElementById('colMyLabel').textContent='—';
-      document.getElementById('colAboveLabel').textContent='—';
-      return;
-    }
-
-    // Update column headers
-    const skills = getAdjacentSkills(mySkill);
-    document.getElementById('colBelowLabel').textContent = skills.below !== null ? skills.below : '—';
-    document.getElementById('colMyLabel').textContent    = skills.my    !== null ? skills.my    : '—';
-    document.getElementById('colAboveLabel').textContent = skills.above !== null ? skills.above : '—';
-
-    if(!mySkill){
-      ['colBelow','colMy','colAbove'].forEach(id=>{
-        document.getElementById(id).innerHTML =
-          '<div class="ic-col-empty">Complete your profile to see skill-matched players</div>';
+        if(el) el.innerHTML='<div class="ic-col-empty">Sign in to see<br>skill-matched players</div>';
       });
       return;
     }
+
+    console.log('🏓 loadNearbyPlayers — mySkill:', mySkill, '| radius:', radiusMi, '| S.skill:', S.skill, '| S.state:', S.state);
 
     // Show loading
     ['colBelow','colMy','colAbove'].forEach(id=>{
@@ -4605,15 +4592,27 @@ async function loadNearbyPlayers(){
         }
       }
 
-      // Fallback: state query
+      // Fallback: state query — try both abbreviation and full name
       if(!nearbyPlayers.length){
-        const stateQ = encodeURIComponent(addrState||'NH');
-        const res = await fetch(
-          `${SUPABASE_URL}/rest/v1/registrations?state=eq.${stateQ}&select=first_name,last_name,email,nickname,skill_level,play_venues,court_name,city,state,avatar_emoji,waiver_agreed&limit=500`,
-          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
-        );
-        if(res.ok) nearbyPlayers = await res.json();
+        const stateAbbr = (addrState||'NH').length===2
+          ? addrState.toUpperCase()
+          : Object.entries(STATE_INFO).find(([k,v])=>
+              v[1].toLowerCase()===(addrState||'').toLowerCase())?.[0] || 'NH';
+        // Try abbreviation first, then full name
+        for(const sq of [stateAbbr, addrState||'New Hampshire']){
+          const res = await fetch(
+            `${SUPABASE_URL}/rest/v1/registrations?state=eq.${encodeURIComponent(sq)}&select=first_name,last_name,email,nickname,skill_level,play_venues,court_name,city,state,avatar_emoji&order=skill_level&limit=500`,
+            {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+          );
+          if(res.ok){
+            const data = await res.json();
+            if(data.length){ nearbyPlayers = data; break; }
+          }
+        }
+        console.log('📍 State fallback found:', nearbyPlayers.length, 'players');
       }
+
+      console.log('🏓 Players fetched:', nearbyPlayers.length, '| buckets will use skills:', skills);
 
       // Filter out self
       nearbyPlayers = nearbyPlayers.filter(p=>(p.email||'').toLowerCase() !== myEmail);
@@ -4632,10 +4631,13 @@ async function loadNearbyPlayers(){
       const buckets = { below:[], my:[], above:[] };
       nearbyPlayers.forEach(p=>{
         const pSkill = parseFloat(p.skill_level||0);
-        if(skills.below !== null && Math.abs(pSkill - skills.below) < 0.01) buckets.below.push(p);
-        else if(Math.abs(pSkill - skills.my) < 0.01)                        buckets.my.push(p);
-        else if(skills.above !== null && Math.abs(pSkill - skills.above) < 0.01) buckets.above.push(p);
+        const rounded = Math.round(pSkill * 100) / 100;
+        if(skills.below !== null && Math.abs(rounded - skills.below) < 0.13)      buckets.below.push(p);
+        else if(Math.abs(rounded - skills.my) < 0.13)                             buckets.my.push(p);
+        else if(skills.above !== null && Math.abs(rounded - skills.above) < 0.13) buckets.above.push(p);
       });
+      console.log('🎯 Buckets — below:', buckets.below.length, 'my:', buckets.my.length, 'above:', buckets.above.length);
+      console.log('🎯 My skill:', mySkill, 'adjacent:', skills);
 
       const subtitle = document.getElementById('icNearbySubtitle');
       const total = buckets.below.length + buckets.my.length + buckets.above.length;
