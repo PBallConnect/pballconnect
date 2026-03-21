@@ -662,19 +662,19 @@
   .ic-nearby-slider-row{display:flex;align-items:center;gap:4px;}
 
   /* ── Skill grid ───────────────────────────────────── */
-  .ic-skill-grid-header{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:6px;}
-  .ic-skill-col-head{text-align:center;padding:8px 4px;border-radius:10px;}
+  /* Skill grid wrapper — 3 equal columns */
+  .ic-skill-grid-wrap{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+  .ic-skill-column{display:flex;flex-direction:column;gap:8px;}
+  .ic-skill-col-head{text-align:center;padding:10px 6px;border-radius:10px;}
   .ic-col-below{background:rgba(250,175,50,0.08);border:1px solid rgba(250,175,50,0.2);}
   .ic-col-my{background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.3);}
   .ic-col-above{background:rgba(160,100,240,0.08);border:1px solid rgba(160,100,240,0.2);}
   .ic-col-head-label{font-size:9px;font-weight:700;text-transform:uppercase;
-    letter-spacing:.08em;color:var(--dim);margin-bottom:3px;}
-  .ic-col-head-rating{font-size:15px;font-weight:700;}
+    letter-spacing:.08em;color:var(--dim);margin-bottom:4px;}
+  .ic-col-head-rating{font-size:20px;font-weight:700;line-height:1;}
   .ic-col-below .ic-col-head-rating{color:#fbbf24;}
   .ic-col-my .ic-col-head-rating{color:var(--green);}
   .ic-col-above .ic-col-head-rating{color:#a78bfa;}
-  .ic-skill-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;
-    max-height:480px;overflow-y:auto;}
   .ic-skill-col{display:flex;flex-direction:column;gap:6px;}
 
   /* ── Player mini card in grid ─────────────────────── */
@@ -1313,24 +1313,31 @@
           </div>
 
           <!-- 3-column skill grid -->
-          <div class="ic-skill-grid-header">
-            <div class="ic-skill-col-head ic-col-below">
-              <div class="ic-col-head-label">One below</div>
-              <div class="ic-col-head-rating" id="colBelowLabel">—</div>
+          <div class="ic-skill-grid-wrap">
+            <!-- Column: One Below -->
+            <div class="ic-skill-column">
+              <div class="ic-skill-col-head ic-col-below">
+                <div class="ic-col-head-label">One below</div>
+                <div class="ic-col-head-rating" id="colBelowLabel">—</div>
+              </div>
+              <div class="ic-skill-col" id="colBelow"></div>
             </div>
-            <div class="ic-skill-col-head ic-col-my">
-              <div class="ic-col-head-label">My level</div>
-              <div class="ic-col-head-rating" id="colMyLabel">—</div>
+            <!-- Column: My Level -->
+            <div class="ic-skill-column">
+              <div class="ic-skill-col-head ic-col-my">
+                <div class="ic-col-head-label">My level</div>
+                <div class="ic-col-head-rating" id="colMyLabel">—</div>
+              </div>
+              <div class="ic-skill-col" id="colMy"></div>
             </div>
-            <div class="ic-skill-col-head ic-col-above">
-              <div class="ic-col-head-label">One above</div>
-              <div class="ic-col-head-rating" id="colAboveLabel">—</div>
+            <!-- Column: One Above -->
+            <div class="ic-skill-column">
+              <div class="ic-skill-col-head ic-col-above">
+                <div class="ic-col-head-label">One above</div>
+                <div class="ic-col-head-rating" id="colAboveLabel">—</div>
+              </div>
+              <div class="ic-skill-col" id="colAbove"></div>
             </div>
-          </div>
-          <div class="ic-skill-grid" id="icSkillGrid">
-            <div class="ic-skill-col" id="colBelow"></div>
-            <div class="ic-skill-col" id="colMy"></div>
-            <div class="ic-skill-col" id="colAbove"></div>
           </div>
           <div id="icNearbyEmpty" style="display:none;" class="ic-circle-empty">
             <div class="ic-circle-empty-icon">🔍</div>
@@ -2492,6 +2499,14 @@ function toggleNav(){
 // ── My Courts ──────────────────────────────────────────
 const myCourtsState = { private:[], public:[], selected:new Set(), members:new Set() };
 
+function isGenericCourtName(name){
+  if(!name) return true;
+  // Filter out generic OSM auto-generated names
+  const generic = /^Pickleball Courts? [\(\-]/i;
+  const tooShort = name.trim().length < 5;
+  return generic.test(name) || tooShort;
+}
+
 async function loadMyCourts(){
   // Need lat/lon from profile city — stored in S
   const addrCity=(document.getElementById('addrCity')?.value||S.city||'').trim();
@@ -2533,7 +2548,7 @@ async function loadMyCourts(){
       if(rpcRes.ok){
         const data = await rpcRes.json();
         if(Array.isArray(data)){
-          dbCourts = data.map(c=>({...c,source:'db'}));
+          dbCourts = data.map(c=>({...c,source:'db'})).filter(c=>!isGenericCourtName(c.name));
           console.log(`✅ PostGIS RPC: ${dbCourts.length} courts within ${radiusMiles} miles`);
           loaded = true;
         }
@@ -2561,7 +2576,8 @@ async function loadMyCourts(){
               const dist = haversine(cityData.lat,cityData.lon,parseFloat(c.latitude),parseFloat(c.longitude));
               return dist <= radiusMiles * 1.60934;
             }).map(c=>({...c,source:'db'}));
-            console.log(`✅ State fallback (${stateAbbr}): ${dbCourts.length}/${all.length} courts within radius`);
+            dbCourts = dbCourts.filter(c=> !isGenericCourtName(c.name));
+          console.log(`✅ State fallback (${stateAbbr}): ${dbCourts.length}/${all.length} courts within radius`);
             loaded = true;
           }
         }
@@ -2581,7 +2597,7 @@ async function loadMyCourts(){
             if(!c.latitude||!c.longitude) return false;
             const dist = haversine(cityData.lat,cityData.lon,parseFloat(c.latitude),parseFloat(c.longitude));
             return dist <= radiusMiles * 1.60934;
-          }).map(c=>({...c,source:'db'}));
+          }).map(c=>({...c,source:'db'})).filter(c=>!isGenericCourtName(c.name));
           console.log(`✅ All courts fallback: ${dbCourts.length}/${all.length} within radius`);
           loaded = true;
         }
@@ -2615,7 +2631,9 @@ async function loadMyCourts(){
   // Merge — deduplicate by name
   const seen=new Set();
   const allCourts=[...dbCourts.map(c=>({...c,source:'db'})),...overpassCourts]
-    .filter(c=>{ if(seen.has(c.name)) return false; seen.add(c.name); return true; });
+    .filter(c=>!isGenericCourtName(c.name) && !seen.has(c.name) && seen.add(c.name));
+  // legacy dedup removed
+  const _x=[...[]].filter(c=>{ if(seen.has(c.name)) return false; seen.add(c.name); return true; });
 
   myCourtsState.private = allCourts.filter(c=>c.is_private);
   myCourtsState.public  = allCourts.filter(c=>!c.is_private);
@@ -4526,8 +4544,24 @@ async function loadNearbyPlayers(){
   clearTimeout(nearbyDebounce);
   nearbyDebounce = setTimeout(async ()=>{
     const myEmail   = getMyEmail();
-    const mySkill   = S.skill || document.getElementById('skillSliderVal')?.textContent || '';
+    // Get skill from S state (set by login or registration)
+    const rawSkill  = S.skill ||
+                      document.getElementById('skillSlider') &&
+                      SKILL_STEPS ? SKILL_STEPS[parseInt(document.getElementById('skillSlider')?.value||0)] : null;
+    const mySkill   = rawSkill ? String(rawSkill) : '';
     const radiusMi  = parseInt(document.getElementById('icRadiusSlider')?.value||15);
+
+    // If no skill set, show helpful message
+    if(!mySkill){
+      ['colBelow','colMy','colAbove'].forEach(id=>{
+        const el = document.getElementById(id);
+        if(el) el.innerHTML='<div class="ic-col-empty">Sign in or complete your<br>Player Profile first</div>';
+      });
+      document.getElementById('colBelowLabel').textContent='—';
+      document.getElementById('colMyLabel').textContent='—';
+      document.getElementById('colAboveLabel').textContent='—';
+      return;
+    }
 
     // Update column headers
     const skills = getAdjacentSkills(mySkill);
