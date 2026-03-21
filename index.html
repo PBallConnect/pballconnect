@@ -714,6 +714,28 @@
   .login-field{margin-bottom:12px;}
   .login-label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;
     letter-spacing:.07em;color:var(--dim);margin-bottom:6px;}
+  /* ── Top Header Bar ───────────────────────────────── */
+  .top-header{display:flex;align-items:center;justify-content:space-between;
+    padding:0 20px;height:52px;background:#0a120b;
+    border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;
+    flex-shrink:0;}
+  .top-header-left{display:flex;align-items:center;gap:10px;}
+  .top-logo-icon{font-size:22px;line-height:1;}
+  .top-logo-text{font-family:'Playfair Display',serif;font-size:16px;
+    font-weight:700;color:#fff;white-space:nowrap;}
+  .top-logo-text span{color:var(--green);}
+  .top-header-right{display:flex;align-items:center;gap:12px;}
+  .top-signin-btn{display:flex;align-items:center;gap:8px;padding:7px 14px;
+    border-radius:20px;border:1px solid rgba(76,175,125,0.4);
+    background:rgba(76,175,125,0.08);cursor:pointer;transition:all .2s;
+    white-space:nowrap;}
+  .top-signin-btn:hover{background:rgba(76,175,125,0.18);}
+  .top-signin-btn.signed-in{background:rgba(76,175,125,0.15);
+    border-color:rgba(76,175,125,0.6);}
+  #navLoginLabel{color:var(--green);font-size:13px;font-weight:700;}
+
+  /* ── Adjust app shell to account for top bar ─────── */
+  .app-shell{height:calc(100vh - 52px);top:52px;}
 </style>
 </head>
 <body>
@@ -722,19 +744,24 @@
 <button class="nav-toggle" onclick="toggleNav()">☰</button>
 <div class="nav-overlay" id="navOverlay" onclick="toggleNav()"></div>
 
+<div class="top-header">
+  <div class="top-header-left">
+    <div class="top-logo-icon">🏓</div>
+    <div class="top-logo-text">Pickleball <span>Registry</span></div>
+  </div>
+  <div class="top-header-right">
+    <div id="navLoginBtn" class="top-signin-btn" onclick="openLoginModal()">
+      <span id="navLoginEmoji" style="font-size:16px;">👤</span>
+      <span id="navLoginLabel">Sign In</span>
+    </div>
+  </div>
+</div>
+
 <div class="app-shell">
   <!-- Left Navigation -->
   <nav class="left-nav" id="leftNav">
     <div class="nav-logo">
-      <div class="nav-logo-icon">🏓</div>
-      <div class="nav-logo-title">Pickleball<br><span>Registry</span></div>
-      <div class="nav-logo-sub">Community Platform</div>
-    </div>
-    <div class="nav-login-area">
-      <div id="navLoginBtn" class="nav-login-btn" onclick="openLoginModal()">
-        <span style="font-size:14px;">👤</span>
-        <span id="navLoginLabel">Sign In</span>
-      </div>
+      <div class="nav-logo-title" style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);padding:16px 16px 8px;">Navigation</div>
     </div>
     <div class="nav-items">
       <div class="nav-item active" onclick="showPage('playerProfile')" id="nav-playerProfile">
@@ -4849,14 +4876,14 @@ async function restoreSession(email, playerData){
     if(photoEl) photoEl.src = player.photo_url;
   }
 
-  // Update nav button to show name
+  // Update top bar sign in button
   const navBtn = document.getElementById('navLoginBtn');
   const navLabel = document.getElementById('navLoginLabel');
-  if(navBtn && navLabel){
+  const navEmoji = document.getElementById('navLoginEmoji');
+  if(navBtn){
     navBtn.classList.add('signed-in');
-    const emoji = player.avatar_emoji || '👤';
-    navBtn.querySelector('span:first-child').textContent = emoji;
-    navLabel.textContent = player.first_name || 'My Profile';
+    if(navEmoji) navEmoji.textContent = player.avatar_emoji || '👤';
+    if(navLabel) navLabel.textContent = (player.first_name||'My Profile')+' ▾';
   }
 
   // Show toast
