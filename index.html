@@ -2453,7 +2453,7 @@ function showPage(page){
   // Page-specific loaders
   if(page==='myCourts')    loadMyCourts();
   if(page==='lessons')     renderLessonsPage();
-  if(page==='innerCircle') loadInnerCircle();
+  if(page==='innerCircle'){ loadInnerCircle(); loadNearbyPlayers(); }
   if(page==='findPlayers')  initFindPlayers();
 }
 
@@ -4735,12 +4735,7 @@ function buildMiniPlayerCard(player, myConns, myEmail, colClass){
   return div;
 }
 
-// Auto-load nearby grid when Inner Circle page opens
-const _origLoadInnerCircle = loadInnerCircle;
-async function loadInnerCircle(){
-  await _origLoadInnerCircle();
-  loadNearbyPlayers();
-}
+// loadNearbyPlayers hooked into showPage below
 
 // ══════════════════════════════════════════════════════
 // LOGIN SYSTEM
