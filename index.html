@@ -746,6 +746,65 @@
   .ic-mini-court{font-size:9px;color:#a78bfa;margin-top:4px;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .ic-mini-tag-gender{background:rgba(255,255,255,0.06);color:var(--dim);}
+  /* ── Court right side on mini card ───────────────── */
+  .ic-mini-court-right{flex-shrink:0;text-align:right;font-size:9px;
+    color:#a78bfa;max-width:70px;line-height:1.3;}
+  .ic-mini-court-right span{font-size:9px;display:block;
+    word-break:break-word;white-space:normal;}
+
+  /* ── Stats Dashboard ──────────────────────────────── */
+  .ic-stats-dashboard{margin-bottom:16px;}
+  .ic-stats-grid{display:flex;flex-wrap:wrap;gap:10px;}
+  .ic-stats-section{background:rgba(255,255,255,0.03);border:1px solid var(--border);
+    border-radius:14px;padding:12px 14px;flex:1;min-width:160px;}
+  .ic-stats-section-label{font-size:9px;font-weight:700;text-transform:uppercase;
+    letter-spacing:.08em;color:var(--dim);margin-bottom:10px;}
+  .ic-stats-row{display:flex;gap:8px;flex-wrap:wrap;}
+  .ic-stat-pill{text-align:center;padding:8px 12px;border-radius:10px;
+    border:1px solid;min-width:52px;}
+  .ic-stat-num{font-size:20px;font-weight:700;line-height:1;}
+  .ic-stat-lbl{font-size:9px;font-weight:600;text-transform:uppercase;
+    letter-spacing:.06em;margin-top:3px;}
+  .ic-stat-below{background:rgba(250,175,50,0.08);border-color:rgba(250,175,50,0.2);}
+  .ic-stat-below .ic-stat-num{color:#fbbf24;}
+  .ic-stat-below .ic-stat-lbl{color:rgba(250,175,50,0.6);}
+  .ic-stat-my{background:rgba(76,175,125,0.1);border-color:rgba(76,175,125,0.3);}
+  .ic-stat-my .ic-stat-num{color:var(--green);}
+  .ic-stat-my .ic-stat-lbl{color:rgba(76,175,125,0.6);}
+  .ic-stat-above{background:rgba(160,100,240,0.08);border-color:rgba(160,100,240,0.2);}
+  .ic-stat-above .ic-stat-num{color:#a78bfa;}
+  .ic-stat-above .ic-stat-lbl{color:rgba(160,100,240,0.6);}
+  .ic-stat-male{background:rgba(59,130,246,0.08);border-color:rgba(59,130,246,0.2);}
+  .ic-stat-male .ic-stat-num,.ic-stat-male .ic-stat-lbl{color:#60a5fa;}
+  .ic-stat-female{background:rgba(236,72,153,0.08);border-color:rgba(236,72,153,0.2);}
+  .ic-stat-female .ic-stat-num,.ic-stat-female .ic-stat-lbl{color:#f472b6;}
+  .ic-stat-other{background:rgba(255,255,255,0.04);border-color:var(--border);}
+  .ic-stat-other .ic-stat-num,.ic-stat-other .ic-stat-lbl{color:var(--dim);}
+  .ic-stat-total{background:rgba(76,175,125,0.12);border-color:rgba(76,175,125,0.4);}
+  .ic-stat-total .ic-stat-num{color:var(--green);font-size:24px;}
+  .ic-stat-total .ic-stat-lbl{color:rgba(76,175,125,0.7);}
+  .ic-stat-pending{background:rgba(251,191,36,0.08);border-color:rgba(251,191,36,0.2);}
+  .ic-stat-pending .ic-stat-num,.ic-stat-pending .ic-stat-lbl{color:#fbbf24;}
+
+  /* ── Pending invites card ─────────────────────────── */
+  .ic-pending-invites-card{border-color:rgba(251,191,36,0.25) !important;}
+  .ic-invite-row{display:flex;align-items:center;gap:12px;padding:10px 0;
+    border-bottom:1px solid var(--border);}
+  .ic-invite-row:last-child{border-bottom:none;}
+  .ic-invite-avatar{width:36px;height:36px;border-radius:50%;
+    background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.3);
+    display:flex;align-items:center;justify-content:center;
+    font-size:16px;font-weight:700;color:#fbbf24;flex-shrink:0;}
+  .ic-invite-name{color:#fff;font-size:13px;font-weight:600;}
+  .ic-invite-meta{color:var(--dim);font-size:11px;margin-top:2px;}
+  .ic-invite-status{margin-left:auto;font-size:10px;font-weight:700;
+    color:#fbbf24;background:rgba(251,191,36,0.1);
+    border:1px solid rgba(251,191,36,0.3);padding:3px 8px;border-radius:6px;}
+  /* ── Mini card right column ───────────────────────── */
+  .ic-mini-right-col{display:flex;flex-direction:column;align-items:flex-end;
+    gap:4px;flex-shrink:0;max-width:72px;}
+  .ic-mini-since{font-size:9px;color:#fbbf24;text-align:right;line-height:1.3;}
+  .ic-mini-since span{font-size:11px;font-weight:700;display:block;}
 </style>
 </head>
 <body>
@@ -1030,6 +1089,79 @@
         <option>L</option><option>XL</option><option>2XL</option><option>3XL</option>
       </select>
     </div>
+    <div class="field">
+      <label>Playing Since <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— what year did you start playing?</span></label>
+      <select id="playingSince" onchange="S.playingSince=this.value">
+        <option value="">Select year</option>
+        <option>2026</option>
+        <option>2025</option>
+        <option>2024</option>
+        <option>2023</option>
+        <option>2022</option>
+        <option>2021</option>
+        <option>2020</option>
+        <option>2019</option>
+        <option>2018</option>
+        <option>2017</option>
+        <option>2016</option>
+        <option>2015</option>
+        <option>2014</option>
+        <option>2013</option>
+        <option>2012</option>
+        <option>2011</option>
+        <option>2010</option>
+        <option>2009</option>
+        <option>2008</option>
+        <option>2007</option>
+        <option>2006</option>
+        <option>2005</option>
+        <option>2004</option>
+        <option>2003</option>
+        <option>2002</option>
+        <option>2001</option>
+        <option>2000</option>
+        <option>1999</option>
+        <option>1998</option>
+        <option>1997</option>
+        <option>1996</option>
+        <option>1995</option>
+        <option>1994</option>
+        <option>1993</option>
+        <option>1992</option>
+        <option>1991</option>
+        <option>1990</option>
+        <option>1989</option>
+        <option>1988</option>
+        <option>1987</option>
+        <option>1986</option>
+        <option>1985</option>
+        <option>1984</option>
+        <option>1983</option>
+        <option>1982</option>
+        <option>1981</option>
+        <option>1980</option>
+        <option>1979</option>
+        <option>1978</option>
+        <option>1977</option>
+        <option>1976</option>
+        <option>1975</option>
+        <option>1974</option>
+        <option>1973</option>
+        <option>1972</option>
+        <option>1971</option>
+        <option>1970</option>
+        <option>1969</option>
+        <option>1968</option>
+        <option>1967</option>
+        <option>1966</option>
+        <option>1965</option>
+        <option>1964</option>
+        <option>1963</option>
+        <option>1962</option>
+        <option>1961</option>
+        <option>1960</option>
+      </select>
+    </div>
     <div class="divider"></div>
     <div class="field">
       <label>Preferred Playing Days &amp; Times</label>
@@ -1297,6 +1429,59 @@
         <p>Your approved pickleball players</p>
       </div>
 
+      <!-- Inner Circle Stats Dashboard -->
+      <div class="ic-stats-dashboard" id="icStatsDashboard" style="display:none;">
+        <div class="ic-stats-grid">
+          <div class="ic-stats-section">
+            <div class="ic-stats-section-label">By skill level</div>
+            <div class="ic-stats-row">
+              <div class="ic-stat-pill ic-stat-below">
+                <div class="ic-stat-num" id="statBelow">0</div>
+                <div class="ic-stat-lbl">Below</div>
+              </div>
+              <div class="ic-stat-pill ic-stat-my">
+                <div class="ic-stat-num" id="statMy">0</div>
+                <div class="ic-stat-lbl">My level</div>
+              </div>
+              <div class="ic-stat-pill ic-stat-above">
+                <div class="ic-stat-num" id="statAbove">0</div>
+                <div class="ic-stat-lbl">Above</div>
+              </div>
+            </div>
+          </div>
+          <div class="ic-stats-section">
+            <div class="ic-stats-section-label">By gender</div>
+            <div class="ic-stats-row">
+              <div class="ic-stat-pill ic-stat-male">
+                <div class="ic-stat-num" id="statMale">0</div>
+                <div class="ic-stat-lbl">Male</div>
+              </div>
+              <div class="ic-stat-pill ic-stat-female">
+                <div class="ic-stat-num" id="statFemale">0</div>
+                <div class="ic-stat-lbl">Female</div>
+              </div>
+              <div class="ic-stat-pill ic-stat-other">
+                <div class="ic-stat-num" id="statOther">0</div>
+                <div class="ic-stat-lbl">Private</div>
+              </div>
+            </div>
+          </div>
+          <div class="ic-stats-section">
+            <div class="ic-stats-section-label">Total</div>
+            <div class="ic-stats-row">
+              <div class="ic-stat-pill ic-stat-total">
+                <div class="ic-stat-num" id="statTotal">0</div>
+                <div class="ic-stat-lbl">Members</div>
+              </div>
+              <div class="ic-stat-pill ic-stat-pending">
+                <div class="ic-stat-num" id="statPending">0</div>
+                <div class="ic-stat-lbl">Pending</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Find Players -->
       <div class="ic-search-card" style="max-width:100%;">
         <div class="ic-section-label">Find players to add</div>
@@ -1450,9 +1635,20 @@
         <div id="icPendingList"></div>
       </div>
 
-      <!-- Sent requests -->
-      <div class="ic-card" id="icSentCard" style="display:none;">
-        <div class="ic-section-label">📤 Sent requests</div>
+      <!-- Inner Circle Invites (Pending Sent) -->
+      <div class="ic-card ic-pending-invites-card" id="icInvitesCard" style="display:none;max-width:700px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div class="ic-section-label" style="margin-bottom:0;">
+            ⏳ Inner Circle Invites
+            <span id="icInvitesBadge" class="ic-badge"></span>
+          </div>
+          <div style="font-size:11px;color:var(--dim);">Awaiting acceptance</div>
+        </div>
+        <div id="icInvitesList"></div>
+      </div>
+
+      <!-- Sent requests (hidden — replaced by invites above) -->
+      <div id="icSentCard" style="display:none;">
         <div id="icSentList"></div>
       </div>
 
@@ -1793,7 +1989,7 @@
 const S={gender:'',skill:'',schedule:new Set(),anytime:false,partner:false,
   waiver:false,photoSrc:null,state:'',stateFips:'',county:'',city:'',
   court:'',courtName:'',duprVal:null,venues:new Set(),driveDistance:'25 miles',
-  playStyle:'',handedness:'',avatarEmoji:'🎾',venuePref:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null};
+  playStyle:'',handedness:'',avatarEmoji:'🎾',venuePref:'',playingSince:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null};
 
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const TIMES=['Early AM','Morning','Afternoon','Evening'];
@@ -2356,6 +2552,7 @@ async function submitForm(){
       handedness:          S.handedness || null,
       avatar_emoji:        S.avatarEmoji || '🎾',
       play_venues:         S.venuePref   || null,
+      playing_since:       S.playingSince || null,
       wants_to_improve:    S.wantsToImprove || null,
       goal_rating:         S.goalRating || null,
       has_had_lesson:      S.hasHadLesson || null,
@@ -3395,7 +3592,7 @@ async function icSearchPlayers(val){
       const filter = 'or=(first_name.ilike.'+encodeURIComponent('*'+q+'*')+
                      ',last_name.ilike.'+encodeURIComponent('*'+q+'*')+
                      ',nickname.ilike.'+encodeURIComponent('*'+q+'*')+')';
-      const url = `${SUPABASE_URL}/rest/v1/registrations?${filter}&select=first_name,last_name,email,nickname,skill_level,dupr_rating,gender,city,state,court_name&limit=20`;
+      const url = `${SUPABASE_URL}/rest/v1/registrations?${filter}&select=first_name,last_name,email,nickname,skill_level,dupr_rating,gender,city,state,court_name,playing_since&limit=20`;
       console.log('🔍 Searching:', url);
       const res = await fetch(url,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
@@ -3592,7 +3789,7 @@ async function loadIcApproved(){
       const otherName  = conn.requester_email===myEmail ? conn.recipient_name  : conn.requester_name;
       try{
         const pRes = await fetch(
-          `${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(otherEmail)}&select=first_name,last_name,email,nickname,skill_level,dupr_rating,court_name,city,state,avatar_emoji,gender,handedness&limit=1`,
+          `${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(otherEmail)}&select=first_name,last_name,email,nickname,skill_level,dupr_rating,court_name,city,state,avatar_emoji,gender,handedness,playing_since&limit=1`,
           {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
         );
         const players = pRes.ok ? await pRes.json() : [];
@@ -4438,10 +4635,10 @@ function openPlayerCard(player, connection, myEmail){
 
   // Stats grid
   const stats = [
-    {label:'Location',  value: player.city?(player.city+(player.state?', '+player.state:'')):'—', green:false},
-    {label:'Available', value: player.availability_window||'—',  green:!!player.availability_window},
-    {label:'Prefers',   value: player.preferred_format||'—',     green:false},
-    {label:'Target',    value: player.goal_rating?player.goal_rating+' goal':'—', green:!!player.goal_rating},
+    {label:'Location',      value: player.city?(player.city+(player.state?', '+player.state:'')):'—', green:false},
+    {label:'Playing since', value: player.playing_since||'—',    green:!!player.playing_since},
+    {label:'Prefers',       value: player.preferred_format||player.play_venues||'—', green:false},
+    {label:'Goal rating',   value: player.goal_rating?player.goal_rating+' goal':'—', green:!!player.goal_rating},
   ];
   const statsHtml = stats.map(s=>
     '<div class="pc-stat-box">'+
@@ -4667,7 +4864,7 @@ async function loadNearbyPlayers(){
           ? (S.state||addrState||'NH').toUpperCase() : 'NH';
         console.log('🔄 State fallback for:', stateAbbr);
         const res = await fetch(
-          `${SUPABASE_URL}/rest/v1/registrations?state=eq.${encodeURIComponent(stateAbbr)}&select=first_name,last_name,email,nickname,skill_level,dupr_rating,play_venues,court_name,city,state,avatar_emoji,gender,handedness,lat,lon&limit=2000`,
+          `${SUPABASE_URL}/rest/v1/registrations?state=eq.${encodeURIComponent(stateAbbr)}&select=first_name,last_name,email,nickname,skill_level,dupr_rating,play_venues,court_name,city,state,avatar_emoji,gender,handedness,playing_since,lat,lon&limit=2000`,
           {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
         );
         if(res.ok){
@@ -4802,9 +4999,12 @@ function buildMiniPlayerCard(player, myConns, myEmail, colClass){
         '<div class="ic-mini-name">'+name+'</div>'+
         (player.nickname?'<div class="ic-mini-nick">"'+player.nickname+'"</div>':'')+
       '</div>'+
+      '<div class="ic-mini-right-col">'+
+        (courtShort?'<div class="ic-mini-court-right">🏟<br><span>'+courtShort+'</span></div>':'')+
+        (player.playing_since?'<div class="ic-mini-since">Since<br><span>'+player.playing_since+'</span></div>':'')+
+      '</div>'+
     '</div>'+
     (tagsHtml?'<div class="ic-mini-tags">'+tagsHtml+'</div>':'')+
-    (courtShort?'<div class="ic-mini-court">🏟 '+courtShort+'</div>':'')+
     '<div class="ic-mini-add-wrap"></div>';
 
   // Add button
@@ -4958,6 +5158,7 @@ async function restoreSession(email, playerData){
   S.driveDistance= player.drive_distance_miles
                    ? player.drive_distance_miles+' miles' : '25 miles';
   S.venuePref    = player.play_venues || '';
+  S.playingSince = player.playing_since || '';
   S.addrLat      = player.lat         || null;
   S.addrLon      = player.lon         || null;
   S.playStyle    = player.play_style  || '';
@@ -4977,6 +5178,11 @@ async function restoreSession(email, playerData){
     addrState:  player.state,
     addrZip:    player.zip_code,
   };
+  // Restore playing since dropdown
+  if(player.playing_since){
+    const psEl = document.getElementById('playingSince');
+    if(psEl) psEl.value = player.playing_since;
+  }
   Object.entries(fields).forEach(([id, val])=>{
     const el = document.getElementById(id);
     if(el && val) el.value = val;
@@ -5175,6 +5381,123 @@ function filterNearbyGrid(val){
       col.appendChild(buildMiniPlayerCard(p, nearbyMyConns, nearbyMyEmail, colClasses[key]));
     });
   });
+}
+
+// ══════════════════════════════════════════════════════
+// INNER CIRCLE STATS + PENDING INVITES
+// ══════════════════════════════════════════════════════
+
+function updateIcStats(){
+  const mySkill = S.skill || '';
+  const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
+  const dashboard = document.getElementById('icStatsDashboard');
+
+  if(!IC_MEMBERS.length){
+    if(dashboard) dashboard.style.display='none';
+    return;
+  }
+  if(dashboard) dashboard.style.display='block';
+
+  // Skill counts
+  let below=0, my=0, above=0, other=0;
+  let male=0, female=0, privateG=0;
+
+  IC_MEMBERS.forEach(({player})=>{
+    // Skill bucket
+    if(skills){
+      const pSkill = parseFloat(player.skill_level||0);
+      if(skills.below!==null && Math.abs(pSkill-skills.below)<0.13)      below++;
+      else if(Math.abs(pSkill-skills.my)<0.13)                           my++;
+      else if(skills.above!==null && Math.abs(pSkill-skills.above)<0.13) above++;
+      else other++;
+    }
+    // Gender
+    const g = (player.gender||'').toLowerCase();
+    if(g==='male')         male++;
+    else if(g==='female')  female++;
+    else                   privateG++;
+  });
+
+  // Update stat pills
+  const set = (id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
+  set('statBelow',  below);
+  set('statMy',     my + (other>0?' (+'+other+')':''));
+  set('statAbove',  above);
+  set('statMale',   male);
+  set('statFemale', female);
+  set('statOther',  privateG);
+  set('statTotal',  IC_MEMBERS.length);
+}
+
+async function loadIcInvites(){
+  const myEmail   = getMyEmail();
+  const card      = document.getElementById('icInvitesCard');
+  const list      = document.getElementById('icInvitesList');
+  const badge     = document.getElementById('icInvitesBadge');
+  const statPend  = document.getElementById('statPending');
+  if(!card||!list) return;
+
+  try{
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(myEmail)}&status=eq.pending&select=*&order=created_at.desc`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+    );
+    if(!res.ok) return;
+    const pending = await res.json();
+
+    if(statPend) statPend.textContent = pending.length;
+
+    if(!pending.length){
+      card.style.display='none';
+      return;
+    }
+    card.style.display='block';
+    if(badge) badge.textContent = pending.length;
+    list.innerHTML='';
+
+    pending.forEach(conn=>{
+      const name    = conn.recipient_name || conn.recipient_email;
+      const initials= name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
+      const sentAt  = conn.created_at
+        ? new Date(conn.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})
+        : '';
+
+      const row = document.createElement('div');
+      row.className='ic-invite-row';
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className='ic-member-btn ic-mem-btn-remove';
+      cancelBtn.style.marginLeft='auto';
+      cancelBtn.textContent='Cancel';
+      cancelBtn.onclick=async function(){
+        cancelBtn.disabled=true; cancelBtn.textContent='Cancelling…';
+        await fetch(
+          `${SUPABASE_URL}/rest/v1/connections?id=eq.${conn.id}`,
+          {method:'DELETE',headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+        );
+        showToast('Invite cancelled','#f59e0b');
+        loadIcInvites();
+      };
+
+      row.innerHTML =
+        '<div class="ic-invite-avatar">'+initials+'</div>'+
+        '<div>'+
+          '<div class="ic-invite-name">'+name+'</div>'+
+          '<div class="ic-invite-meta">'+(sentAt?'Sent '+sentAt:'Pending')+'</div>'+
+        '</div>'+
+        '<span class="ic-invite-status">Awaiting</span>';
+      row.appendChild(cancelBtn);
+      list.appendChild(row);
+    });
+  }catch(e){ console.warn('loadIcInvites error:', e); }
+}
+
+// Hook into loadInnerCircle to also load stats + invites
+const _origLoadIcApproved = loadIcApproved;
+async function loadIcApproved(){
+  await _origLoadIcApproved();
+  updateIcStats();
+  loadIcInvites();
 }
 </script>
 </body>
