@@ -1443,7 +1443,7 @@
       </div>
 
       <!-- Inner Circle Stats Dashboard -->
-      <div class="ic-stats-dashboard" id="icStatsDashboard">
+      <div class="ic-stats-dashboard" id="icStatsDashboard" style="position:sticky;top:0;z-index:50;background:#0a120b;padding-bottom:8px;">
         <div class="ic-two-grids">
 
           <!-- Grid 1: Gender -->
@@ -3625,7 +3625,13 @@ async function loadInnerCircle(){
       '<div class="ic-empty">Complete your Player Profile first to use Inner Circle.</div>';
     return;
   }
-  await Promise.all([loadIcApproved(), loadIcPending(), loadIcSent()]);
+  // Load members first, then invites (so stats get both)
+  await loadIcApproved();
+  await loadIcInvites();
+  await loadIcPending();
+  // Final stats refresh with all data
+  updateIcStats(IC_PENDING_PLAYERS);
+  updateNavCircleBadges(IC_MEMBERS.length, IC_PENDING_PLAYERS ? IC_PENDING_PLAYERS.length : 0);
 }
 
 // ── Search players ─────────────────────────────────────
@@ -3761,7 +3767,11 @@ async function icSendRequest(recipientEmail, recipientName, btn){
       btn.style.color = 'var(--green)';
       btn.disabled = true;
       showToast('✅ Added to your Inner Circle!','#4CAF7D');
-      setTimeout(()=>loadInnerCircle(), 800);
+      setTimeout(async()=>{
+        await loadInnerCircle();
+        updateIcStats(IC_PENDING_PLAYERS);
+        updateNavCircleBadges(IC_MEMBERS.length, IC_PENDING_PLAYERS ? IC_PENDING_PLAYERS.length : 0);
+      }, 800);
     } else {
       const err = await res.text();
       if(err.includes('duplicate') || err.includes('unique')){
@@ -5607,13 +5617,7 @@ async function loadIcInvites(){
   }catch(e){ console.warn('loadIcInvites error:', e); }
 }
 
-// Hook into loadInnerCircle to also load stats + invites
-const _origLoadIcApproved = loadIcApproved;
-async function loadIcApproved(){
-  await _origLoadIcApproved();
-  updateIcStats();
-  loadIcInvites();
-}
+
 
 // ══════════════════════════════════════════════════════
 // TOP BAR + NAV BADGES + PROFILE JUMP LINKS
