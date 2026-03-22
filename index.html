@@ -4649,7 +4649,7 @@ async function loadNearbyPlayers(){
           ? (S.state||addrState||'NH').toUpperCase() : 'NH';
         console.log('🔄 State fallback for:', stateAbbr);
         const res = await fetch(
-          `${SUPABASE_URL}/rest/v1/registrations?state=eq.${encodeURIComponent(stateAbbr)}&select=first_name,last_name,email,nickname,skill_level,play_venues,court_name,city,state,avatar_emoji,lat,lon&limit=2000`,
+          `${SUPABASE_URL}/rest/v1/registrations?state=eq.${encodeURIComponent(stateAbbr)}&select=first_name,last_name,email,nickname,skill_level,dupr_rating,play_venues,court_name,city,state,avatar_emoji,gender,handedness,lat,lon&limit=2000`,
           {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
         );
         if(res.ok){
@@ -4743,12 +4743,18 @@ function buildMiniPlayerCard(player, myConns, myEmail, colClass){
   );
 
   // Venue preference tag
-  const venueRaw = (player.play_venues||player.court_name||'').toLowerCase();
+  const venueRaw = (player.play_venues||'').toLowerCase();
   let venueLabel = '';
   if(venueRaw.includes('indoor') && venueRaw.includes('outdoor')) venueLabel='🏢 Indoor & Outdoor';
-  else if(venueRaw.includes('indoor'))  venueLabel='🏢 Indoor';
-  else if(venueRaw.includes('outdoor')) venueLabel='🌳 Outdoor';
-  else if(player.court_name)            venueLabel='🏟 '+player.court_name.substring(0,20);
+  else if(venueRaw.includes('indoor'))  venueLabel='🏢 Indoors';
+  else if(venueRaw.includes('outdoor')) venueLabel='🌳 Outdoors';
+  else if(venueRaw.includes('both'))    venueLabel='🏢🌳 Both';
+
+  // Build all tags
+  const miniTags = [];
+  if(player.dupr_rating) miniTags.push({cls:'ic-mini-tag-avail', label:'DUPR '+player.dupr_rating});
+  if(player.gender && player.gender!=='Prefer not to say') miniTags.push({cls:'ic-mini-tag-venue', label:player.gender});
+  if(venueLabel)         miniTags.push({cls:'ic-mini-tag-venue', label:venueLabel});
 
   // Click card to open full player card
   div.onclick = function(e){
@@ -4756,15 +4762,16 @@ function buildMiniPlayerCard(player, myConns, myEmail, colClass){
     openPlayerCard(player, conn, myEmail);
   };
 
+  const tagsHtml = miniTags.map(t=>'<span class="ic-mini-tag '+t.cls+'">'+t.label+'</span>').join('');
   div.innerHTML =
     '<div class="ic-mini-top">'+
       '<div class="ic-mini-avatar">'+(emoji||initials)+'</div>'+
-      '<div>'+
+      '<div style="min-width:0;">'+
         '<div class="ic-mini-name">'+name+'</div>'+
         (player.nickname?'<div class="ic-mini-nick">"'+player.nickname+'"</div>':'')+
       '</div>'+
     '</div>'+
-    (venueLabel?'<div class="ic-mini-tags"><span class="ic-mini-tag ic-mini-tag-venue">'+venueLabel+'</span></div>':'')+
+    (tagsHtml?'<div class="ic-mini-tags">'+tagsHtml+'</div>':'')+
     '<div class="ic-mini-add-wrap"></div>';
 
   // Add button
