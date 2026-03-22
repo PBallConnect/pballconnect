@@ -3802,7 +3802,7 @@ async function loadIcApproved(){
       const otherName  = conn.requester_email===myEmail ? conn.recipient_name  : conn.requester_name;
       try{
         const pRes = await fetch(
-          `${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(otherEmail)}&select=first_name,last_name,email,nickname,skill_level,dupr_rating,court_name,city,state,avatar_emoji,gender,handedness,playing_since&limit=1`,
+          `${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(otherEmail)}&select=first_name,last_name,email,nickname,skill_level,dupr_rating,court_name,city,state,avatar_emoji,gender,handedness,playing_since,play_venues,goal_rating&limit=1`,
           {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
         );
         const players = pRes.ok ? await pRes.json() : [];
@@ -4649,9 +4649,9 @@ function openPlayerCard(player, connection, myEmail){
   // Stats grid
   const stats = [
     {label:'Location',      value: player.city?(player.city+(player.state?', '+player.state:'')):'—', green:false},
-    {label:'Playing since', value: player.playing_since||'—',    green:!!player.playing_since},
-    {label:'Prefers',       value: player.preferred_format||player.play_venues||'—', green:false},
-    {label:'Goal rating',   value: player.goal_rating?player.goal_rating+' goal':'—', green:!!player.goal_rating},
+    {label:'Playing since', value: player.playing_since ? player.playing_since : '—', green:!!player.playing_since},
+    {label:'Venue',         value: player.play_venues||'—',   green:false},
+    {label:'Goal rating',   value: player.goal_rating ? player.goal_rating+' goal' : '—', green:!!player.goal_rating},
   ];
   const statsHtml = stats.map(s=>
     '<div class="pc-stat-box">'+
@@ -5224,14 +5224,17 @@ async function restoreSession(email, playerData){
     if(photoEl) photoEl.src = player.photo_url;
   }
 
-  // Update top bar sign in button
+  // Update top bar sign in button with name + skill + nickname
   const navBtn = document.getElementById('navLoginBtn');
   const navLabel = document.getElementById('navLoginLabel');
   const navEmoji = document.getElementById('navLoginEmoji');
   if(navBtn){
     navBtn.classList.add('signed-in');
     if(navEmoji) navEmoji.textContent = player.avatar_emoji || '👤';
-    if(navLabel) navLabel.textContent = (player.first_name||'My Profile')+' ▾';
+    const nick = player.nickname ? ' "'+player.nickname+'"' : '';
+    const skill = player.skill_level ? ' · '+player.skill_level : '';
+    const since = player.playing_since ? ' · Since '+player.playing_since : '';
+    if(navLabel) navLabel.textContent = (player.first_name||'Player')+nick+skill+since+' ▾';
   }
 
   // Show toast
