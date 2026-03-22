@@ -665,7 +665,8 @@
   /* Skill grid wrapper — 3 equal columns */
   .ic-skill-grid-wrap{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
   .ic-skill-column{display:flex;flex-direction:column;gap:8px;}
-  .ic-skill-col-head{text-align:center;padding:10px 6px;border-radius:10px;}
+  .ic-skill-col-head{text-align:center;padding:10px 6px;border-radius:10px;
+    position:sticky;top:0;z-index:10;backdrop-filter:blur(8px);}
   .ic-col-below{background:rgba(250,175,50,0.08);border:1px solid rgba(250,175,50,0.2);}
   .ic-col-my{background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.3);}
   .ic-col-above{background:rgba(160,100,240,0.08);border:1px solid rgba(160,100,240,0.2);}
@@ -742,6 +743,9 @@
     cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;}
   .ic-view-tab.active{background:rgba(76,175,125,0.12);color:var(--green);
     border-color:rgba(76,175,125,0.4);}
+  .ic-mini-court{font-size:9px;color:#a78bfa;margin-top:4px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ic-mini-tag-gender{background:rgba(255,255,255,0.06);color:var(--dim);}
 </style>
 </head>
 <body>
@@ -1313,7 +1317,21 @@
                 style="flex:1;margin:0 10px;"/>
               <span id="icRadiusLabel" style="font-size:13px;font-weight:700;color:var(--green);min-width:40px;">15 mi</span>
             </div>
-            <div style="font-size:11px;color:var(--dim);margin-top:4px;" id="icNearbySubtitle">
+            <!-- Search/filter box -->
+            <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
+              <input type="text" id="icNearbySearch"
+                placeholder="Filter by name, nickname, court or rating…"
+                oninput="filterNearbyGrid(this.value)"
+                autocomplete="off"
+                style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);
+                background:rgba(255,255,255,0.07);color:#fff;font-size:12px;
+                font-family:'DM Sans',sans-serif;"/>
+              <button onclick="document.getElementById('icNearbySearch').value='';filterNearbyGrid('');"
+                style="padding:7px 10px;border-radius:8px;border:1px solid var(--border);
+                background:transparent;color:var(--dim);font-size:11px;cursor:pointer;
+                font-family:'DM Sans',sans-serif;">Clear</button>
+            </div>
+            <div style="font-size:11px;color:var(--dim);margin-top:6px;" id="icNearbySubtitle">
               Showing players near you grouped by skill level
             </div>
           </div>
@@ -4667,6 +4685,9 @@ async function loadNearbyPlayers(){
 
       // Filter out self
       nearbyPlayers = nearbyPlayers.filter(p=>(p.email||'').toLowerCase() !== myEmail);
+      // Cache for live filter function
+      nearbyAllPlayers = nearbyPlayers;
+      nearbyMyEmail    = myEmail;
 
       // Get my existing connections
       let myConns = [];
@@ -4753,7 +4774,7 @@ function buildMiniPlayerCard(player, myConns, myEmail, colClass){
   // Build all tags
   const miniTags = [];
   if(player.dupr_rating) miniTags.push({cls:'ic-mini-tag-avail', label:'DUPR '+player.dupr_rating});
-  if(player.gender && player.gender!=='Prefer not to say') miniTags.push({cls:'ic-mini-tag-venue', label:player.gender});
+  // gender tag added below after miniTags array
   if(venueLabel)         miniTags.push({cls:'ic-mini-tag-venue', label:venueLabel});
 
   // Click card to open full player card
@@ -4762,16 +4783,28 @@ function buildMiniPlayerCard(player, myConns, myEmail, colClass){
     openPlayerCard(player, conn, myEmail);
   };
 
+  // Gender tag — always show including Prefer not to say
+  const genderLabel = player.gender === 'Prefer not to say' ? '⚪ Private'
+                    : player.gender === 'Male'   ? '♂ Male'
+                    : player.gender === 'Female' ? '♀ Female'
+                    : '';
+  if(genderLabel) miniTags.push({cls:'ic-mini-tag-gender', label:genderLabel});
+
   const tagsHtml = miniTags.map(t=>'<span class="ic-mini-tag '+t.cls+'">'+t.label+'</span>').join('');
+
+  // Court — shown on right side
+  const courtShort = player.court_name ? player.court_name.substring(0,22)+(player.court_name.length>22?'…':'') : '';
+
   div.innerHTML =
     '<div class="ic-mini-top">'+
       '<div class="ic-mini-avatar">'+(emoji||initials)+'</div>'+
-      '<div style="min-width:0;">'+
+      '<div style="flex:1;min-width:0;">'+
         '<div class="ic-mini-name">'+name+'</div>'+
         (player.nickname?'<div class="ic-mini-nick">"'+player.nickname+'"</div>':'')+
       '</div>'+
     '</div>'+
     (tagsHtml?'<div class="ic-mini-tags">'+tagsHtml+'</div>':'')+
+    (courtShort?'<div class="ic-mini-court">🏟 '+courtShort+'</div>':'')+
     '<div class="ic-mini-add-wrap"></div>';
 
   // Add button
@@ -5089,6 +5122,59 @@ function renderCircleSkillColumns(){
       }
     });
   }
+}
+
+// ── Filter nearby skill grid ───────────────────────────
+let nearbyAllPlayers = []; // cache all fetched players
+let nearbyMyConns    = [];
+let nearbyMyEmail    = '';
+
+function filterNearbyGrid(val){
+  const q = val.trim().toLowerCase();
+  const mySkill = S.skill || '';
+  const skills  = getAdjacentSkills(mySkill);
+
+  let filtered = q
+    ? nearbyAllPlayers.filter(p=>{
+        const name   = ((p.first_name||'')+(p.last_name||'')).toLowerCase();
+        const nick   = (p.nickname||'').toLowerCase();
+        const court  = (p.court_name||'').toLowerCase();
+        const rating = (p.skill_level||'').toLowerCase();
+        const dupr   = (p.dupr_rating||'').toLowerCase();
+        return name.includes(q)||nick.includes(q)||court.includes(q)||
+               rating.includes(q)||dupr.includes(q);
+      })
+    : nearbyAllPlayers;
+
+  // Re-bucket and re-render
+  const buckets = { below:[], my:[], above:[] };
+  filtered.forEach(p=>{
+    const pSkill = parseFloat(p.skill_level||0);
+    if(skills.below!==null && Math.abs(pSkill-skills.below)<0.13)      buckets.below.push(p);
+    else if(Math.abs(pSkill-skills.my)<0.13)                           buckets.my.push(p);
+    else if(skills.above!==null && Math.abs(pSkill-skills.above)<0.13) buckets.above.push(p);
+  });
+
+  const total = buckets.below.length+buckets.my.length+buckets.above.length;
+  const subtitle = document.getElementById('icNearbySubtitle');
+  if(subtitle) subtitle.textContent = q
+    ? total+' player'+(total!==1?'s':'')+' match "'+val+'"'
+    : total+' players within '+document.getElementById('icRadiusSlider')?.value+' miles';
+
+  const colIds    = {below:'colBelow', my:'colMy', above:'colAbove'};
+  const colClasses= {below:'col-below', my:'col-my', above:'col-above'};
+  Object.entries(buckets).forEach(([key,players])=>{
+    const col = document.getElementById(colIds[key]);
+    if(!col) return;
+    col.innerHTML='';
+    if(!players.length){
+      col.innerHTML='<div class="ic-col-empty">No matches</div>';
+      return;
+    }
+    players.slice(0,20).forEach(p=>{
+      col.appendChild(buildMiniPlayerCard(p, nearbyMyConns, nearbyMyEmail, colClasses[key]));
+    });
+  });
 }
 </script>
 </body>
