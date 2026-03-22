@@ -853,6 +853,7 @@
         <span class="nav-icon">👥</span>
         <span class="nav-label">Inner Circle</span>
         <span id="innerCircleBadge" style="display:none;background:#ef4444;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:999px;margin-left:4px;"></span>
+        <span id="innerCirclePendingBadge" style="display:none;background:#f59e0b;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:999px;margin-left:2px;"></span>
       </div>
       <div class="nav-item" onclick="showPage('setupMatch')" id="nav-setupMatch">
         <span class="nav-icon">🎯</span>
@@ -1091,7 +1092,7 @@
     </div>
     <div class="field">
       <label>Playing Since <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— what year did you start playing?</span></label>
-      <select id="playingSince" onchange="S.playingSince=this.value">
+      <select id="playingSince" onchange="S.playingSince=this.value;chk2()">
         <option value="">Select year</option>
         <option>2026</option>
         <option>2025</option>
@@ -1430,7 +1431,7 @@
       </div>
 
       <!-- Inner Circle Stats Dashboard -->
-      <div class="ic-stats-dashboard" id="icStatsDashboard" style="display:none;">
+      <div class="ic-stats-dashboard" id="icStatsDashboard">
         <div class="ic-stats-grid">
           <div class="ic-stats-section">
             <div class="ic-stats-section-label">By skill level</div>
@@ -2417,7 +2418,7 @@ function toggleWaiver(){S.waiver=!S.waiver;document.getElementById('checkBox').c
 
 function v(id){return document.getElementById(id).value.trim();}
 function chk1(){document.getElementById('next1').disabled=!(v('firstName')&&v('lastName')&&v('email')&&v('phone')&&v('dob')&&S.gender&&v('addrCity')&&v('addrState')&&v('addrZip'));}
-function chk2(){document.getElementById('next2').disabled=!(v('shirtSize')&&(S.anytime||S.schedule.size>0));}
+function chk2(){document.getElementById('next2').disabled=!(v('shirtSize')&&v('playingSince')&&(S.anytime||S.schedule.size>0));}
 
 function goTo(n){
   [1,2,3].forEach(i=>{
@@ -2466,17 +2467,29 @@ async function saveRegistration(payload){
   console.log('🔵 Payload:', JSON.stringify(payload).substring(0,200));
   
   try{
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-        'Prefer': 'return=minimal,resolution=merge-duplicates',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
+    // Check if player already exists — use PATCH if so, POST if new
+    const checkRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(payload.email)}&select=id&limit=1`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+    );
+    const existing = checkRes.ok ? await checkRes.json() : [];
+    const isUpdate = existing.length > 0;
+
+    const res = await fetch(
+      isUpdate
+        ? `${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(payload.email)}`
+        : url,
+      {
+        method: isUpdate ? 'PATCH' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(payload)
+      }
+    );
     console.log('🔵 Response status:', res.status, res.statusText);
     console.log('🔵 Response headers:', [...res.headers.entries()].map(([k,v])=>k+':'+v).join(', '));
     if(res.ok){
@@ -2713,7 +2726,7 @@ function showPage(page){
   // Page-specific loaders
   if(page==='myCourts')    loadMyCourts();
   if(page==='lessons')     renderLessonsPage();
-  if(page==='innerCircle'){ loadInnerCircle(); loadNearbyPlayers(); }
+  if(page==='innerCircle'){ loadInnerCircle(); loadNearbyPlayers(); updateIcStats(); loadIcInvites(); }
   if(page==='findPlayers')  initFindPlayers();
 }
 
@@ -4648,11 +4661,18 @@ function openPlayerCard(player, connection, myEmail){
   ).join('');
 
   // Court
-  const courtHtml = player.court_name
-    ? '<div class="pc-home-court">'+
-        '<span style="font-size:18px;">🏟</span>'+
-        '<div><div style="color:#fff;font-size:13px;font-weight:600;">'+player.court_name+'</div>'+
-        '<div style="color:var(--dim);font-size:11px;">Home court</div></div>'+
+  const courtHtml =
+    (player.court_name || player.playing_since)
+    ? '<div class="pc-home-court" style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap;">'+
+        '<span style="font-size:16px;flex-shrink:0;">🏟</span>'+
+        '<div style="flex:1;min-width:0;">'+
+          (player.court_name
+            ? '<div style="color:#fff;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+player.court_name+'</div>'
+            : '')+
+          (player.playing_since
+            ? '<div style="color:#fbbf24;font-size:11px;margin-top:2px;">Playing since '+player.playing_since+'</div>'
+            : '<div style="color:var(--dim);font-size:11px;">Home court</div>')+
+        '</div>'+
       '</div>'
     : '';
 
@@ -5392,11 +5412,10 @@ function updateIcStats(){
   const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
   const dashboard = document.getElementById('icStatsDashboard');
 
-  if(!IC_MEMBERS.length){
-    if(dashboard) dashboard.style.display='none';
-    return;
-  }
   if(dashboard) dashboard.style.display='block';
+  if(!IC_MEMBERS.length){
+    // Still show dashboard but with zeros
+  }
 
   // Skill counts
   let below=0, my=0, above=0, other=0;
@@ -5446,6 +5465,17 @@ async function loadIcInvites(){
     const pending = await res.json();
 
     if(statPend) statPend.textContent = pending.length;
+
+    // Update nav badge
+    const navPendBadge = document.getElementById('innerCirclePendingBadge');
+    if(navPendBadge){
+      if(pending.length > 0){
+        navPendBadge.style.display='inline-block';
+        navPendBadge.textContent = pending.length;
+      } else {
+        navPendBadge.style.display='none';
+      }
+    }
 
     if(!pending.length){
       card.style.display='none';
