@@ -736,6 +736,12 @@
 
   /* ── Adjust app shell to account for top bar ─────── */
   .app-shell{height:calc(100vh - 52px);top:52px;}
+  /* ── Circle view tabs ─────────────────────────────── */
+  .ic-view-tab{padding:6px 14px;border-radius:8px;border:1px solid var(--border);
+    background:transparent;color:var(--dim);font-size:11px;font-weight:600;
+    cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;}
+  .ic-view-tab.active{background:rgba(76,175,125,0.12);color:var(--green);
+    border-color:rgba(76,175,125,0.4);}
 </style>
 </head>
 <body>
@@ -1359,20 +1365,16 @@
         </div>
       </div>
 
-      <!-- Pending requests received -->
-      <div class="ic-card" id="icPendingCard" style="display:none;">
-        <div class="ic-section-label">🔔 Pending requests <span id="icPendingBadge" class="ic-badge"></span></div>
-        <div id="icPendingList"></div>
-      </div>
 
-      <!-- My Inner Circle -->
-      <div class="ic-card" style="max-width:700px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+
+      <!-- My Inner Circle — Skill Columns -->
+      <div class="ic-card" style="max-width:100%;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
           <div class="ic-section-label" style="margin-bottom:0;">✅ My Inner Circle <span id="icApprovedBadge" class="ic-badge"></span></div>
           <div style="display:flex;gap:8px;">
-            <input type="text" id="icCircleSearch" placeholder="Filter circle…" oninput="filterInnerCircle(this.value)"
+            <input type="text" id="icCircleSearch" placeholder="Filter…" oninput="filterInnerCircle(this.value)"
               style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);
-              color:#fff;font-size:12px;font-family:'DM Sans',sans-serif;width:140px;"/>
+              color:#fff;font-size:12px;font-family:'DM Sans',sans-serif;width:120px;"/>
             <select id="icCircleSort" onchange="sortInnerCircle(this.value)"
               style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.06);
               color:#fff;font-size:12px;font-family:'DM Sans',sans-serif;">
@@ -1382,9 +1384,52 @@
             </select>
           </div>
         </div>
-        <div id="icApprovedList">
-          <div class="ic-empty">Your Inner Circle is empty.<br>Search above to find players and add them.</div>
+
+        <!-- View toggle: List vs Skill Columns -->
+        <div class="ic-view-tabs" style="display:flex;gap:8px;margin-bottom:16px;">
+          <button class="ic-view-tab active" id="viewTabList" onclick="switchCircleView('list')">📋 List view</button>
+          <button class="ic-view-tab" id="viewTabColumns" onclick="switchCircleView('columns')">📊 By skill level</button>
         </div>
+
+        <!-- List view -->
+        <div id="icCircleListView">
+          <div id="icApprovedList">
+            <div class="ic-empty">Your Inner Circle is empty.<br>Use the Find Players grid above to add players.</div>
+          </div>
+        </div>
+
+        <!-- Skill columns view -->
+        <div id="icCircleColumnsView" style="display:none;">
+          <div class="ic-skill-grid-wrap">
+            <div class="ic-skill-column">
+              <div class="ic-skill-col-head ic-col-below">
+                <div class="ic-col-head-label">One below</div>
+                <div class="ic-col-head-rating" id="circleColBelowLabel">—</div>
+              </div>
+              <div class="ic-skill-col" id="circleColBelow"></div>
+            </div>
+            <div class="ic-skill-column">
+              <div class="ic-skill-col-head ic-col-my">
+                <div class="ic-col-head-label">My level</div>
+                <div class="ic-col-head-rating" id="circleColMyLabel">—</div>
+              </div>
+              <div class="ic-skill-col" id="circleColMy"></div>
+            </div>
+            <div class="ic-skill-column">
+              <div class="ic-skill-col-head ic-col-above">
+                <div class="ic-col-head-label">One above</div>
+                <div class="ic-col-head-rating" id="circleColAboveLabel">—</div>
+              </div>
+              <div class="ic-skill-col" id="circleColAbove"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pending requests received -->
+      <div class="ic-card" id="icPendingCard" style="display:none;max-width:700px;">
+        <div class="ic-section-label">🔔 Pending requests <span id="icPendingBadge" class="ic-badge"></span></div>
+        <div id="icPendingList"></div>
       </div>
 
       <!-- Sent requests -->
@@ -4577,42 +4622,48 @@ async function loadNearbyPlayers(){
     const addrState = document.getElementById('addrState')?.value || S.state || '';
 
     try{
-      // Fetch players within radius using PostGIS OR state fallback
+      // Fetch players — PostGIS RPC first, then state+haversine fallback
       let nearbyPlayers = [];
 
+      // Try PostGIS RPC
       if(cityData){
-        // Try PostGIS radius function
-        const rpcRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_players_within_radius`,{
-          method:'POST',
-          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY},
-          body: JSON.stringify({t_lat:cityData.lat, t_long:cityData.lon, radius_miles:radiusMi})
-        });
-        if(rpcRes.ok){
-          nearbyPlayers = await rpcRes.json();
-        }
-      }
-
-      // Fallback: state query — try both abbreviation and full name
-      if(!nearbyPlayers.length){
-        const stateAbbr = (addrState||'NH').length===2
-          ? addrState.toUpperCase()
-          : Object.entries(STATE_INFO).find(([k,v])=>
-              v[1].toLowerCase()===(addrState||'').toLowerCase())?.[0] || 'NH';
-        // Try abbreviation first, then full name
-        for(const sq of [stateAbbr, addrState||'New Hampshire']){
-          const res = await fetch(
-            `${SUPABASE_URL}/rest/v1/registrations?state=eq.${encodeURIComponent(sq)}&select=first_name,last_name,email,nickname,skill_level,play_venues,court_name,city,state,avatar_emoji&order=skill_level&limit=500`,
-            {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
-          );
-          if(res.ok){
-            const data = await res.json();
-            if(data.length){ nearbyPlayers = data; break; }
+        try{
+          const rpcRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_players_within_radius`,{
+            method:'POST',
+            headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY},
+            body: JSON.stringify({t_lat:cityData.lat, t_long:cityData.lon, radius_miles:radiusMi})
+          });
+          if(rpcRes.ok){
+            const data = await rpcRes.json();
+            if(Array.isArray(data) && data.length > 0){
+              nearbyPlayers = data;
+              console.log('✅ RPC players found:', nearbyPlayers.length);
+            }
           }
-        }
-        console.log('📍 State fallback found:', nearbyPlayers.length, 'players');
+        }catch(e){ console.warn('RPC failed:', e.message); }
       }
 
-      console.log('🏓 Players fetched:', nearbyPlayers.length, '| buckets will use skills:', skills);
+      // Fallback: load state players and filter by distance
+      if(!nearbyPlayers.length){
+        const stateAbbr = (S.state||addrState||'NH').length===2
+          ? (S.state||addrState||'NH').toUpperCase() : 'NH';
+        console.log('🔄 State fallback for:', stateAbbr);
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/registrations?state=eq.${encodeURIComponent(stateAbbr)}&select=first_name,last_name,email,nickname,skill_level,play_venues,court_name,city,state,avatar_emoji,lat,lon&limit=2000`,
+          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+        );
+        if(res.ok){
+          const all = await res.json();
+          console.log('State query:', all.length, 'players total');
+          nearbyPlayers = cityData
+            ? all.filter(p=>{
+                if(!p.lat||!p.lon) return true;
+                return haversine(cityData.lat, cityData.lon, parseFloat(p.lat), parseFloat(p.lon)) <= radiusMi * 1.60934;
+              })
+            : all;
+          console.log('After distance filter:', nearbyPlayers.length, 'within', radiusMi, 'miles');
+        }
+      }
 
       // Filter out self
       nearbyPlayers = nearbyPlayers.filter(p=>(p.email||'').toLowerCase() !== myEmail);
@@ -4960,6 +5011,78 @@ function signOut(){
 
 // Init on page load
 document.addEventListener('DOMContentLoaded', initLogin);
+
+// ── Circle view toggle ─────────────────────────────────
+function switchCircleView(view){
+  const listView    = document.getElementById('icCircleListView');
+  const colsView    = document.getElementById('icCircleColumnsView');
+  const tabList     = document.getElementById('viewTabList');
+  const tabCols     = document.getElementById('viewTabColumns');
+  if(view==='list'){
+    listView.style.display='block'; colsView.style.display='none';
+    tabList.classList.add('active'); tabCols.classList.remove('active');
+  } else {
+    listView.style.display='none'; colsView.style.display='block';
+    tabList.classList.remove('active'); tabCols.classList.add('active');
+    renderCircleSkillColumns();
+  }
+}
+
+// ── Render approved members in skill columns ───────────
+function renderCircleSkillColumns(){
+  const mySkill = S.skill || '';
+  if(!mySkill){ return; }
+  const skills = getAdjacentSkills(mySkill);
+
+  document.getElementById('circleColBelowLabel').textContent = skills.below !== null ? skills.below : '—';
+  document.getElementById('circleColMyLabel').textContent    = skills.my    !== null ? skills.my    : '—';
+  document.getElementById('circleColAboveLabel').textContent = skills.above !== null ? skills.above : '—';
+
+  const myEmail = getMyEmail();
+  const buckets = { below:[], my:[], above:[], other:[] };
+
+  IC_MEMBERS.forEach(({player, conn, lastPlayed})=>{
+    const pSkill = parseFloat(player.skill_level||0);
+    if(skills.below !== null && Math.abs(pSkill - skills.below) < 0.13) buckets.below.push({player,conn,lastPlayed});
+    else if(Math.abs(pSkill - skills.my) < 0.13)                        buckets.my.push({player,conn,lastPlayed});
+    else if(skills.above !== null && Math.abs(pSkill - skills.above) < 0.13) buckets.above.push({player,conn,lastPlayed});
+    else buckets.other.push({player,conn,lastPlayed});
+  });
+
+  ['below','my','above'].forEach(key=>{
+    const colId = 'circleCol'+key.charAt(0).toUpperCase()+key.slice(1);
+    const col = document.getElementById(colId);
+    if(!col) return;
+    col.innerHTML='';
+    if(!buckets[key].length){
+      col.innerHTML='<div class="ic-col-empty">No circle members<br>at this level</div>';
+      return;
+    }
+    buckets[key].forEach(({player,conn,lastPlayed})=>{
+      const card = buildIcMemberCard(player, conn, myEmail, lastPlayed);
+      // Make card more compact for column view
+      card.style.padding='10px 0';
+      col.appendChild(card);
+    });
+  });
+
+  // Show "other" players below if any don't fit the three buckets
+  if(buckets.other.length){
+    ['below','my','above'].forEach(key=>{
+      const colId = 'circleCol'+key.charAt(0).toUpperCase()+key.slice(1);
+      const col = document.getElementById(colId);
+      if(col && key==='my'){
+        const label = document.createElement('div');
+        label.style.cssText='font-size:10px;color:var(--dim);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);';
+        label.textContent='Other levels ('+buckets.other.length+')';
+        col.appendChild(label);
+        buckets.other.forEach(({player,conn,lastPlayed})=>{
+          col.appendChild(buildIcMemberCard(player, conn, myEmail, lastPlayed));
+        });
+      }
+    });
+  }
+}
 </script>
 </body>
 </html>
