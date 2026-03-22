@@ -752,39 +752,28 @@
   .ic-mini-court-right span{font-size:9px;display:block;
     word-break:break-word;white-space:normal;}
 
-  /* ── Stats Dashboard ──────────────────────────────── */
+  /* ── Stats Dashboard 2-grid ───────────────────────── */
   .ic-stats-dashboard{margin-bottom:16px;}
-  .ic-stats-grid{display:flex;flex-wrap:wrap;gap:10px;}
-  .ic-stats-section{background:rgba(255,255,255,0.03);border:1px solid var(--border);
-    border-radius:14px;padding:12px 14px;flex:1;min-width:160px;}
-  .ic-stats-section-label{font-size:9px;font-weight:700;text-transform:uppercase;
+  .ic-two-grids{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media(max-width:600px){.ic-two-grids{grid-template-columns:1fr;}}
+  .ic-grid-card{background:rgba(255,255,255,0.03);border:1px solid var(--border);
+    border-radius:14px;padding:14px;}
+  .ic-grid-title{font-size:10px;font-weight:700;text-transform:uppercase;
     letter-spacing:.08em;color:var(--dim);margin-bottom:10px;}
-  .ic-stats-row{display:flex;gap:8px;flex-wrap:wrap;}
-  .ic-stat-pill{text-align:center;padding:8px 12px;border-radius:10px;
-    border:1px solid;min-width:52px;}
-  .ic-stat-num{font-size:20px;font-weight:700;line-height:1;}
-  .ic-stat-lbl{font-size:9px;font-weight:600;text-transform:uppercase;
-    letter-spacing:.06em;margin-top:3px;}
-  .ic-stat-below{background:rgba(250,175,50,0.08);border-color:rgba(250,175,50,0.2);}
-  .ic-stat-below .ic-stat-num{color:#fbbf24;}
-  .ic-stat-below .ic-stat-lbl{color:rgba(250,175,50,0.6);}
-  .ic-stat-my{background:rgba(76,175,125,0.1);border-color:rgba(76,175,125,0.3);}
-  .ic-stat-my .ic-stat-num{color:var(--green);}
-  .ic-stat-my .ic-stat-lbl{color:rgba(76,175,125,0.6);}
-  .ic-stat-above{background:rgba(160,100,240,0.08);border-color:rgba(160,100,240,0.2);}
-  .ic-stat-above .ic-stat-num{color:#a78bfa;}
-  .ic-stat-above .ic-stat-lbl{color:rgba(160,100,240,0.6);}
-  .ic-stat-male{background:rgba(59,130,246,0.08);border-color:rgba(59,130,246,0.2);}
-  .ic-stat-male .ic-stat-num,.ic-stat-male .ic-stat-lbl{color:#60a5fa;}
-  .ic-stat-female{background:rgba(236,72,153,0.08);border-color:rgba(236,72,153,0.2);}
-  .ic-stat-female .ic-stat-num,.ic-stat-female .ic-stat-lbl{color:#f472b6;}
-  .ic-stat-other{background:rgba(255,255,255,0.04);border-color:var(--border);}
-  .ic-stat-other .ic-stat-num,.ic-stat-other .ic-stat-lbl{color:var(--dim);}
-  .ic-stat-total{background:rgba(76,175,125,0.12);border-color:rgba(76,175,125,0.4);}
-  .ic-stat-total .ic-stat-num{color:var(--green);font-size:24px;}
-  .ic-stat-total .ic-stat-lbl{color:rgba(76,175,125,0.7);}
-  .ic-stat-pending{background:rgba(251,191,36,0.08);border-color:rgba(251,191,36,0.2);}
-  .ic-stat-pending .ic-stat-num,.ic-stat-pending .ic-stat-lbl{color:#fbbf24;}
+  .ic-stat-table{width:100%;border-collapse:collapse;font-size:12px;}
+  .ic-stat-table th{font-size:10px;font-weight:700;padding:4px 6px;
+    text-align:center;border-bottom:1px solid var(--border);}
+  .ic-stat-table td{padding:6px 6px;text-align:center;font-weight:600;font-size:13px;}
+  .ic-row-label{text-align:left !important;font-size:10px;font-weight:600;
+    text-transform:uppercase;letter-spacing:.06em;color:var(--dim);width:60px;}
+  .ic-stat-table tr:last-child td{border-top:1px solid var(--border);}
+  .ic-th-male{color:#60a5fa;}
+  .ic-th-female{color:#f472b6;}
+  .ic-th-other{color:var(--dim);}
+  .ic-th-total{color:var(--green);font-weight:700;}
+  .ic-th-below{color:#fbbf24;}
+  .ic-th-my{color:var(--green);}
+  .ic-th-above{color:#a78bfa;}
 
   /* ── Pending invites card ─────────────────────────── */
   .ic-pending-invites-card{border-color:rgba(251,191,36,0.25) !important;}
@@ -805,6 +794,10 @@
     gap:4px;flex-shrink:0;max-width:72px;}
   .ic-mini-since{font-size:9px;color:#fbbf24;text-align:right;line-height:1.3;}
   .ic-mini-since span{font-size:11px;font-weight:700;display:block;}
+  .top-edit-btn{padding:7px 12px;border-radius:20px;border:1px solid var(--border);
+    background:transparent;color:var(--dim);font-size:12px;cursor:pointer;
+    transition:all .2s;white-space:nowrap;}
+  .top-edit-btn:hover{border-color:rgba(76,175,125,0.4);color:var(--green);}
 </style>
 </head>
 <body>
@@ -819,6 +812,9 @@
     <div class="top-logo-text">Pickleball <span>Registry</span></div>
   </div>
   <div class="top-header-right">
+    <div id="editProfileBtn" style="display:none;">
+      <div class="top-edit-btn" onclick="showPage('playerProfile')">✏️ Edit Profile</div>
+    </div>
     <div id="navLoginBtn" class="top-signin-btn" onclick="openLoginModal()">
       <span id="navLoginEmoji" style="font-size:16px;">👤</span>
       <span id="navLoginLabel">Sign In</span>
@@ -1432,54 +1428,72 @@
 
       <!-- Inner Circle Stats Dashboard -->
       <div class="ic-stats-dashboard" id="icStatsDashboard">
-        <div class="ic-stats-grid">
-          <div class="ic-stats-section">
-            <div class="ic-stats-section-label">By skill level</div>
-            <div class="ic-stats-row">
-              <div class="ic-stat-pill ic-stat-below">
-                <div class="ic-stat-num" id="statBelow">0</div>
-                <div class="ic-stat-lbl">Below</div>
-              </div>
-              <div class="ic-stat-pill ic-stat-my">
-                <div class="ic-stat-num" id="statMy">0</div>
-                <div class="ic-stat-lbl">My level</div>
-              </div>
-              <div class="ic-stat-pill ic-stat-above">
-                <div class="ic-stat-num" id="statAbove">0</div>
-                <div class="ic-stat-lbl">Above</div>
-              </div>
-            </div>
+        <div class="ic-two-grids">
+
+          <!-- Grid 1: Gender -->
+          <div class="ic-grid-card">
+            <div class="ic-grid-title">Gender</div>
+            <table class="ic-stat-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th class="ic-th-male">♂ Male</th>
+                  <th class="ic-th-female">♀ Female</th>
+                  <th class="ic-th-other">⚪ Private</th>
+                  <th class="ic-th-total">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="ic-row-label">Members</td>
+                  <td class="ic-th-male" id="gMaleMember">0</td>
+                  <td class="ic-th-female" id="gFemaleMember">0</td>
+                  <td class="ic-th-other" id="gOtherMember">0</td>
+                  <td class="ic-th-total" id="gTotalMember">0</td>
+                </tr>
+                <tr>
+                  <td class="ic-row-label">Invited</td>
+                  <td class="ic-th-male" id="gMaleInvited">0</td>
+                  <td class="ic-th-female" id="gFemaleInvited">0</td>
+                  <td class="ic-th-other" id="gOtherInvited">0</td>
+                  <td class="ic-th-total" id="gTotalInvited">0</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-          <div class="ic-stats-section">
-            <div class="ic-stats-section-label">By gender</div>
-            <div class="ic-stats-row">
-              <div class="ic-stat-pill ic-stat-male">
-                <div class="ic-stat-num" id="statMale">0</div>
-                <div class="ic-stat-lbl">Male</div>
-              </div>
-              <div class="ic-stat-pill ic-stat-female">
-                <div class="ic-stat-num" id="statFemale">0</div>
-                <div class="ic-stat-lbl">Female</div>
-              </div>
-              <div class="ic-stat-pill ic-stat-other">
-                <div class="ic-stat-num" id="statOther">0</div>
-                <div class="ic-stat-lbl">Private</div>
-              </div>
-            </div>
+
+          <!-- Grid 2: Playing Levels -->
+          <div class="ic-grid-card">
+            <div class="ic-grid-title">Playing levels</div>
+            <table class="ic-stat-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th class="ic-th-below">🟡 Below</th>
+                  <th class="ic-th-my">🟢 My level</th>
+                  <th class="ic-th-above">🟣 Above</th>
+                  <th class="ic-th-total">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="ic-row-label">Members</td>
+                  <td class="ic-th-below" id="lBelowMember">0</td>
+                  <td class="ic-th-my" id="lMyMember">0</td>
+                  <td class="ic-th-above" id="lAboveMember">0</td>
+                  <td class="ic-th-total" id="lTotalMember">0</td>
+                </tr>
+                <tr>
+                  <td class="ic-row-label">Invited</td>
+                  <td class="ic-th-below" id="lBelowInvited">0</td>
+                  <td class="ic-th-my" id="lMyInvited">0</td>
+                  <td class="ic-th-above" id="lAboveInvited">0</td>
+                  <td class="ic-th-total" id="lTotalInvited">0</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-          <div class="ic-stats-section">
-            <div class="ic-stats-section-label">Total</div>
-            <div class="ic-stats-row">
-              <div class="ic-stat-pill ic-stat-total">
-                <div class="ic-stat-num" id="statTotal">0</div>
-                <div class="ic-stat-lbl">Members</div>
-              </div>
-              <div class="ic-stat-pill ic-stat-pending">
-                <div class="ic-stat-num" id="statPending">0</div>
-                <div class="ic-stat-lbl">Pending</div>
-              </div>
-            </div>
-          </div>
+
         </div>
       </div>
 
@@ -5230,6 +5244,8 @@ async function restoreSession(email, playerData){
   const navEmoji = document.getElementById('navLoginEmoji');
   if(navBtn){
     navBtn.classList.add('signed-in');
+    const editBtn = document.getElementById('editProfileBtn');
+    if(editBtn) editBtn.style.display='block';
     if(navEmoji) navEmoji.textContent = player.avatar_emoji || '👤';
     const nick = player.nickname ? ' "'+player.nickname+'"' : '';
     const skill = player.skill_level ? ' · '+player.skill_level : '';
@@ -5410,46 +5426,72 @@ function filterNearbyGrid(val){
 // INNER CIRCLE STATS + PENDING INVITES
 // ══════════════════════════════════════════════════════
 
-function updateIcStats(){
+function updateIcStats(pendingMembers){
   const mySkill = S.skill || '';
   const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
-  const dashboard = document.getElementById('icStatsDashboard');
+  const set = (id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
 
-  if(dashboard) dashboard.style.display='block';
-  if(!IC_MEMBERS.length){
-    // Still show dashboard but with zeros
-  }
-
-  // Skill counts
-  let below=0, my=0, above=0, other=0;
-  let male=0, female=0, privateG=0;
+  // ── Members (approved) ────────────────────────────────
+  let mBelow=0, mMy=0, mAbove=0;
+  let mMale=0, mFemale=0, mOther=0;
 
   IC_MEMBERS.forEach(({player})=>{
-    // Skill bucket
+    const g = (player.gender||'').toLowerCase();
+    if(g==='male')        mMale++;
+    else if(g==='female') mFemale++;
+    else                  mOther++;
+
     if(skills){
       const pSkill = parseFloat(player.skill_level||0);
-      if(skills.below!==null && Math.abs(pSkill-skills.below)<0.13)      below++;
-      else if(Math.abs(pSkill-skills.my)<0.13)                           my++;
-      else if(skills.above!==null && Math.abs(pSkill-skills.above)<0.13) above++;
-      else other++;
+      if(skills.below!==null && Math.abs(pSkill-skills.below)<0.13)      mBelow++;
+      else if(Math.abs(pSkill-skills.my)<0.13)                           mMy++;
+      else if(skills.above!==null && Math.abs(pSkill-skills.above)<0.13) mAbove++;
+      else mMy++; // other levels count toward my bucket
     }
-    // Gender
-    const g = (player.gender||'').toLowerCase();
-    if(g==='male')         male++;
-    else if(g==='female')  female++;
-    else                   privateG++;
   });
 
-  // Update stat pills
-  const set = (id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
-  set('statBelow',  below);
-  set('statMy',     my + (other>0?' (+'+other+')':''));
-  set('statAbove',  above);
-  set('statMale',   male);
-  set('statFemale', female);
-  set('statOther',  privateG);
-  set('statTotal',  IC_MEMBERS.length);
+  // ── Pending invites ───────────────────────────────────
+  const pending = pendingMembers || IC_PENDING_PLAYERS || [];
+  let pBelow=0, pMy=0, pAbove=0;
+  let pMale=0, pFemale=0, pOther=0;
+
+  pending.forEach(player=>{
+    const g = (player.gender||'').toLowerCase();
+    if(g==='male')        pMale++;
+    else if(g==='female') pFemale++;
+    else                  pOther++;
+
+    if(skills && player.skill_level){
+      const pSkill = parseFloat(player.skill_level||0);
+      if(skills.below!==null && Math.abs(pSkill-skills.below)<0.13)      pBelow++;
+      else if(Math.abs(pSkill-skills.my)<0.13)                           pMy++;
+      else if(skills.above!==null && Math.abs(pSkill-skills.above)<0.13) pAbove++;
+      else pMy++;
+    }
+  });
+
+  // Gender grid
+  set('gMaleMember',    mMale);   set('gFemaleMember',   mFemale);  set('gOtherMember',  mOther);
+  set('gTotalMember',   IC_MEMBERS.length);
+  set('gMaleInvited',   pMale);   set('gFemaleInvited',  pFemale);  set('gOtherInvited', pOther);
+  set('gTotalInvited',  pending.length);
+
+  // Level grid
+  set('lBelowMember',   mBelow);  set('lMyMember',       mMy);      set('lAboveMember',  mAbove);
+  set('lTotalMember',   IC_MEMBERS.length);
+  set('lBelowInvited',  pBelow);  set('lMyInvited',      pMy);      set('lAboveInvited', pAbove);
+  set('lTotalInvited',  pending.length);
+
+  // Nav badge
+  const navPendBadge = document.getElementById('innerCirclePendingBadge');
+  if(navPendBadge){
+    navPendBadge.style.display = pending.length>0 ? 'inline-block' : 'none';
+    navPendBadge.textContent   = pending.length||'';
+  }
 }
+
+// Cache of pending player details for stats
+let IC_PENDING_PLAYERS = [];
 
 async function loadIcInvites(){
   const myEmail   = getMyEmail();
@@ -5488,9 +5530,25 @@ async function loadIcInvites(){
     if(badge) badge.textContent = pending.length;
     list.innerHTML='';
 
-    pending.forEach(conn=>{
+    // Fetch player details for pending invites (for stats grid)
+    const playerDetails = await Promise.all(pending.map(async conn=>{
+      try{
+        const pRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(conn.recipient_email)}&select=first_name,last_name,email,skill_level,gender,avatar_emoji,playing_since&limit=1`,
+          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+        );
+        const rows = pRes.ok ? await pRes.json() : [];
+        return rows[0] || {email:conn.recipient_email, first_name:conn.recipient_name?.split(' ')[0]||'?'};
+      }catch(e){ return {email:conn.recipient_email}; }
+    }));
+    IC_PENDING_PLAYERS = playerDetails;
+    updateIcStats(playerDetails); // refresh stats with pending data
+
+    pending.forEach((conn, idx)=>{
+      const player  = playerDetails[idx] || {};
       const name    = conn.recipient_name || conn.recipient_email;
       const initials= name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
+      const emoji   = player.avatar_emoji || null;
       const sentAt  = conn.created_at
         ? new Date(conn.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})
         : '';
@@ -5509,13 +5567,19 @@ async function loadIcInvites(){
           {method:'DELETE',headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
         );
         showToast('Invite cancelled','#f59e0b');
+        IC_PENDING_PLAYERS = IC_PENDING_PLAYERS.filter(p=>p.email!==conn.recipient_email);
         loadIcInvites();
       };
 
+      const skillTag = player.skill_level
+        ? '<span style="font-size:10px;color:var(--green);margin-left:6px;">⭐'+player.skill_level+'</span>' : '';
+      const genderTag = player.gender && player.gender!=='Prefer not to say'
+        ? '<span style="font-size:10px;color:var(--dim);margin-left:4px;">· '+player.gender+'</span>' : '';
+
       row.innerHTML =
-        '<div class="ic-invite-avatar">'+initials+'</div>'+
-        '<div>'+
-          '<div class="ic-invite-name">'+name+'</div>'+
+        '<div class="ic-invite-avatar">'+(emoji||initials)+'</div>'+
+        '<div style="flex:1;">'+
+          '<div class="ic-invite-name">'+name+skillTag+genderTag+'</div>'+
           '<div class="ic-invite-meta">'+(sentAt?'Sent '+sentAt:'Pending')+'</div>'+
         '</div>'+
         '<span class="ic-invite-status">Awaiting</span>';
