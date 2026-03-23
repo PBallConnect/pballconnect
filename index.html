@@ -816,6 +816,26 @@
   .profile-menu-item:hover{background:rgba(76,175,125,0.12);}
   .profile-menu-signout{border-top:1px solid var(--border);color:#f87171 !important;}
   .profile-menu-signout:hover{background:rgba(239,68,68,0.08) !important;}
+  /* ── Top requests button ──────────────────────────── */
+  .top-requests-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;
+    border-radius:20px;border:1px solid rgba(124,58,237,0.5);
+    background:rgba(124,58,237,0.12);cursor:pointer;transition:all .2s;
+    white-space:nowrap;}
+  .top-requests-btn:hover{background:rgba(124,58,237,0.22);}
+  #topRequestsLabel{color:#a78bfa;font-size:12px;font-weight:700;}
+
+  /* ── IC view mode toolbar ─────────────────────────── */
+  .ic-view-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:14px;
+    padding:10px 14px;background:rgba(255,255,255,0.03);
+    border:1px solid var(--border);border-radius:12px;flex-wrap:wrap;}
+  .ic-view-toolbar-title{font-size:12px;font-weight:700;flex:1;}
+  .ic-view-toolbar-title.green{color:var(--green);}
+  .ic-view-toolbar-title.yellow{color:#f59e0b;}
+  .ic-view-toolbar-title.purple{color:#a78bfa;}
+  .ic-back-btn{padding:6px 14px;border-radius:8px;border:1px solid var(--border);
+    background:transparent;color:var(--dim);font-size:11px;font-weight:600;
+    cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;white-space:nowrap;}
+  .ic-back-btn:hover{border-color:rgba(76,175,125,0.4);color:var(--green);}
 </style>
 </head>
 <body>
@@ -832,6 +852,13 @@
   <div class="top-header-right">
     <div id="editProfileBtn" style="display:none;">
       <div class="top-edit-btn" onclick="showPage('playerProfile')">✏️ Edit Profile</div>
+    </div>
+    <div id="viewRequestsBtn" style="display:none;">
+      <div class="top-requests-btn" id="topRequestsBtn" onclick="showIcView('incoming')">
+        <span>🟣</span>
+        <span id="topRequestsLabel">View Member Requests</span>
+        <span id="topRequestsBadge" style="display:none;background:#7c3aed;color:#fff;font-size:9px;font-weight:800;padding:1px 6px;border-radius:999px;margin-left:4px;"></span>
+      </div>
     </div>
     <div id="navLoginBtn" class="top-signin-btn" onclick="S.email||getMyEmail()?openProfileMenu():openLoginModal()">
       <span id="navLoginEmoji" style="font-size:16px;">👤</span>
@@ -4114,6 +4141,12 @@ async function loadIcPending(){
       }
       pb.style.display = 'inline-flex';
     }
+    // Update top bar requests button
+    const topBadge = document.getElementById('topRequestsBadge');
+    if(topBadge){
+      topBadge.textContent = pending.length;
+      topBadge.style.display = pending.length > 0 ? 'inline-block' : 'none';
+    }
 
     if(!pending.length){ if(card) card.style.display='none'; return; }
     if(card) card.style.display='block';
@@ -5436,6 +5469,8 @@ async function restoreSession(email, playerData){
   if(navBtn) navBtn.classList.add('signed-in');
   const editBtn = document.getElementById('editProfileBtn');
   if(editBtn) editBtn.style.display='block';
+  const reqBtn = document.getElementById('viewRequestsBtn');
+  if(reqBtn) reqBtn.style.display='block';
   updateTopBar(player);
 
   // Show toast
@@ -6055,6 +6090,130 @@ async function loadCommunitySnapshot(){
     if(loading) loading.style.display='none';
   }
 }
+
+// ══════════════════════════════════════════════════════
+// INNER CIRCLE — VIEW MODE (filter by badge click)
+// ══════════════════════════════════════════════════════
+
+// View modes: 'all' | 'members' | 'invited' | 'incoming'
+let IC_VIEW_MODE = 'all';
+
+function showIcView(mode){
+  IC_VIEW_MODE = mode;
+  showPage('innerCircle');
+
+  // Wait for page to render then apply view
+  setTimeout(()=>{
+    applyIcViewMode(mode);
+  }, 300);
+}
+
+function applyIcViewMode(mode){
+  const page = document.getElementById('page-innerCircle');
+  if(!page) return;
+
+  // Remove existing toolbar if any
+  const existing = document.getElementById('icViewToolbar');
+  if(existing) existing.remove();
+
+  if(mode === 'all') return; // show everything normally
+
+  // Build toolbar
+  const toolbar = document.createElement('div');
+  toolbar.id = 'icViewToolbar';
+  toolbar.className = 'ic-view-toolbar';
+
+  const configs = {
+    members:  { label:'✅ Showing: Active Inner Circle Members', cls:'green',  section:'icCircleListView' },
+    invited:  { label:'⏳ Showing: Invites Awaiting Acceptance', cls:'yellow', section:'icInvitesCard'    },
+    incoming: { label:'🟣 Showing: Member Requests Sent to You', cls:'purple', section:'icPendingCard'    },
+  };
+  const cfg = configs[mode];
+
+  const title = document.createElement('span');
+  title.className = 'ic-view-toolbar-title '+cfg.cls;
+  title.textContent = cfg.label;
+
+  const backBtn = document.createElement('button');
+  backBtn.className = 'ic-back-btn';
+  backBtn.textContent = '← Back to all';
+  backBtn.onclick = ()=>{ IC_VIEW_MODE='all'; applyIcViewMode('all'); };
+
+  toolbar.appendChild(title);
+  toolbar.appendChild(backBtn);
+
+  // Insert toolbar at top of Inner Circle page content (after page-header)
+  const pageHeader = page.querySelector('.page-header');
+  if(pageHeader){
+    pageHeader.after(toolbar);
+  } else {
+    page.insertBefore(toolbar, page.firstChild);
+  }
+
+  // Show only the relevant section — hide others
+  const sections = {
+    icStatsDashboard:    mode === 'all',
+    icCircleListView:    mode === 'members' || mode === 'all',
+    icCircleColumnsView: false,
+    icInvitesCard:       mode === 'invited'  || mode === 'all',
+    icPendingCard:       mode === 'incoming' || mode === 'all',
+    icNearbyPanel:       mode === 'all',
+    icSearchPanel:       mode === 'all',
+  };
+
+  // Get the search card (Find Players)
+  const searchCard = page.querySelector('.ic-search-card');
+  const viewTabsCard = page.querySelector('.ic-card:first-of-type');
+
+  // For mode-specific: hide non-relevant content
+  if(mode !== 'all'){
+    // Hide stats, search, find players
+    const statsEl = document.getElementById('icStatsDashboard');
+    if(statsEl) statsEl.style.display = 'none';
+    if(searchCard) searchCard.style.display = 'none';
+
+    // Hide the approved circle card except in members mode
+    const approvedCard = document.getElementById('icCircleListView')?.closest('.ic-card');
+    if(approvedCard){
+      approvedCard.style.display = mode === 'members' ? 'block' : 'none';
+    }
+
+    // Show/hide invites card
+    const invitesCard = document.getElementById('icInvitesCard');
+    if(invitesCard) invitesCard.style.display = mode === 'invited' ? 'block' : 'none';
+
+    // Show/hide pending requests card
+    const pendingCard = document.getElementById('icPendingCard');
+    if(pendingCard) pendingCard.style.display = mode === 'incoming' ? 'block' : 'none';
+
+    // Scroll to the relevant section
+    const target = document.getElementById(cfg.section);
+    if(target) setTimeout(()=>target.scrollIntoView({behavior:'smooth', block:'start'}), 200);
+
+  } else {
+    // Restore all sections
+    const statsEl = document.getElementById('icStatsDashboard');
+    if(statsEl) statsEl.style.display = '';
+    if(searchCard) searchCard.style.display = '';
+    const approvedCard = document.getElementById('icCircleListView')?.closest('.ic-card');
+    if(approvedCard) approvedCard.style.display = '';
+    const invitesCard = document.getElementById('icInvitesCard');
+    // Only show if has content
+    if(invitesCard) invitesCard.style.display = IC_PENDING_PLAYERS?.length > 0 ? 'block' : 'none';
+    const pendingCard = document.getElementById('icPendingCard');
+    if(pendingCard) pendingCard.style.display = IC_INCOMING_COUNT > 0 ? 'block' : 'none';
+  }
+}
+
+// ── Make nav badges clickable ─────────────────────────
+document.addEventListener('DOMContentLoaded', ()=>{
+  const gb = document.getElementById('icNavGreenBadge');
+  const yb = document.getElementById('icNavYellowBadge');
+  const pb = document.getElementById('icNavPurpleBadge');
+  if(gb) gb.style.cursor='pointer', gb.onclick=()=>showIcView('members');
+  if(yb) yb.style.cursor='pointer', yb.onclick=()=>showIcView('invited');
+  if(pb) pb.style.cursor='pointer', pb.onclick=()=>showIcView('incoming');
+});
 </script>
 </body>
 </html>
