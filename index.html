@@ -800,10 +800,11 @@
   .top-edit-btn:hover{border-color:rgba(76,175,125,0.4);color:var(--green);}
   /* ── Nav circle badges ────────────────────────────── */
   .nav-circle-badge{display:inline-flex;align-items:center;justify-content:center;
-    width:18px;height:18px;border-radius:50%;font-size:9px;font-weight:800;
-    margin-left:4px;flex-shrink:0;}
-  .nav-circle-green{background:var(--green);color:#fff;}
-  .nav-circle-yellow{background:#f59e0b;color:#000;}
+    min-width:18px;height:18px;border-radius:9px;padding:0 4px;font-size:9px;font-weight:900;
+    margin-left:4px;flex-shrink:0;line-height:18px;}
+  .nav-circle-green{background:#22c55e;color:#fff;}
+  .nav-circle-yellow{background:#f59e0b;color:#1a1200;border:1px solid #b45309;}
+  .nav-circle-purple{background:#7c3aed;color:#fff;}
 
   /* ── Profile quick menu ───────────────────────────── */
   .profile-quick-menu{position:fixed;z-index:500;background:#0f1a10;
@@ -864,8 +865,9 @@
       <div class="nav-item" onclick="showPage('innerCircle')" id="nav-innerCircle">
         <span class="nav-icon">👥</span>
         <span class="nav-label">Inner Circle</span>
-        <span id="innerCircleBadge" style="display:none;background:#ef4444;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:999px;margin-left:4px;"></span>
-        <span id="innerCirclePendingBadge" style="display:none;background:#f59e0b;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:999px;margin-left:2px;"></span>
+        <span id="icNavGreenBadge" class="nav-circle-badge nav-circle-green" style="display:none;"></span>
+        <span id="icNavYellowBadge" class="nav-circle-badge nav-circle-yellow" style="display:none;"></span>
+        <span id="icNavPurpleBadge" class="nav-circle-badge nav-circle-purple" style="display:none;"></span>
       </div>
       <div class="nav-item" onclick="showPage('setupMatch')" id="nav-setupMatch">
         <span class="nav-icon">🎯</span>
@@ -1662,7 +1664,12 @@
 
       <!-- Pending requests received -->
       <div class="ic-card" id="icPendingCard" style="display:none;max-width:700px;">
-        <div class="ic-section-label">🔔 Pending requests <span id="icPendingBadge" class="ic-badge"></span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div class="ic-section-label" style="margin-bottom:0;color:#a78bfa;">
+            🟣 Inner Circle Requests <span id="icPendingBadge" class="ic-badge" style="background:rgba(124,58,237,0.2);color:#a78bfa;"></span>
+          </div>
+          <div style="font-size:11px;color:var(--dim);">People who want to join your circle</div>
+        </div>
         <div id="icPendingList"></div>
       </div>
 
@@ -4027,33 +4034,100 @@ function sortInnerCircle(by){
 // ── Load pending (received) requests ──────────────────
 async function loadIcPending(){
   const myEmail = getMyEmail();
-  const card = document.getElementById('icPendingCard');
-  const list = document.getElementById('icPendingList');
-  const badge = document.getElementById('icPendingBadge');
-  const navBadge = document.getElementById('innerCircleBadge');
+  const card    = document.getElementById('icPendingCard');
+  const list    = document.getElementById('icPendingList');
+  const badge   = document.getElementById('icPendingBadge');
   try{
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/connections?recipient_email=eq.${encodeURIComponent(myEmail)}&status=eq.pending&select=*`,
+      `${SUPABASE_URL}/rest/v1/connections?recipient_email=eq.${encodeURIComponent(myEmail)}&status=eq.pending&select=*&order=created_at.desc`,
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
     );
     if(!res.ok) return;
     const pending = await res.json();
-    if(!pending.length){ card.style.display='none'; if(navBadge) navBadge.style.display='none'; return; }
-    card.style.display='block';
-    badge.textContent = pending.length;
-    // Show badge on nav item
-    if(navBadge){ navBadge.style.display='inline-block'; navBadge.textContent=pending.length+' new'; }
+
+    // Update purple nav badge
+    const pb = document.getElementById('icNavPurpleBadge');
+    if(pb){
+      pb.textContent   = pending.length;
+      pb.style.display = pending.length > 0 ? 'inline-flex' : 'none';
+    }
+
+    if(!pending.length){ if(card) card.style.display='none'; return; }
+    if(card) card.style.display='block';
+    if(badge) badge.textContent = pending.length;
+
     list.innerHTML='';
     for(const conn of pending){
       const pRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(conn.requester_email)}&select=first_name,last_name,email,skill_level,city,state&limit=1`,
+        `${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(conn.requester_email)}&select=first_name,last_name,email,skill_level,gender,avatar_emoji,city,state,court_name,playing_since&limit=1`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
       );
       const players = pRes.ok ? await pRes.json() : [];
-      const player = players[0] || {first_name:conn.requester_name?.split(' ')[0]||'?',last_name:conn.requester_name?.split(' ')[1]||'',email:conn.requester_email};
-      list.appendChild(buildPlayerCard(player, conn, myEmail, 'pending'));
+      const player  = players[0] || {
+        first_name: conn.requester_name?.split(' ')[0]||'?',
+        last_name:  conn.requester_name?.split(' ').slice(1).join(' ')||'',
+        email: conn.requester_email
+      };
+      // Build a rich pending request row
+      const row = buildPendingRequestRow(player, conn, myEmail);
+      list.appendChild(row);
     }
-  }catch(e){}
+  }catch(e){ console.warn('loadIcPending error:', e); }
+}
+
+function buildPendingRequestRow(player, conn, myEmail){
+  const div = document.createElement('div');
+  div.className = 'ic-invite-row';
+  const name    = ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim();
+  const initials= name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
+  const emoji   = player.avatar_emoji || null;
+  const skill   = player.skill_level ? '⭐ '+player.skill_level : '';
+  const location= [player.city, player.state].filter(Boolean).join(', ');
+  const since   = player.playing_since ? 'Since '+player.playing_since : '';
+  const sentAt  = conn.created_at
+    ? new Date(conn.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})
+    : '';
+
+  // Accept button
+  const acceptBtn = document.createElement('button');
+  acceptBtn.className = 'ic-member-btn ic-mem-btn-play';
+  acceptBtn.style.cssText = 'padding:6px 12px;font-size:11px;';
+  acceptBtn.textContent = '✓ Accept';
+  acceptBtn.onclick = async function(){
+    acceptBtn.disabled = true; acceptBtn.textContent = 'Accepting…';
+    await icRespond(conn.id, 'approved', acceptBtn);
+    showToast('✅ '+name+' added to your Inner Circle!', '#4CAF7D');
+    loadInnerCircle();
+  };
+
+  // Decline button
+  const declineBtn = document.createElement('button');
+  declineBtn.className = 'ic-member-btn ic-mem-btn-remove';
+  declineBtn.style.cssText = 'padding:6px 10px;font-size:11px;';
+  declineBtn.textContent = '✕ Decline';
+  declineBtn.onclick = async function(){
+    declineBtn.disabled = true;
+    await icRespond(conn.id, 'declined', declineBtn);
+    showToast('Request declined', '#f59e0b');
+    loadIcPending();
+  };
+
+  const metaParts = [skill, location, since].filter(Boolean).join(' · ');
+
+  div.innerHTML =
+    '<div class="ic-invite-avatar" style="background:rgba(124,58,237,0.15);border-color:rgba(124,58,237,0.3);color:#a78bfa;">'+(emoji||initials)+'</div>'+
+    '<div style="flex:1;">'+
+      '<div class="ic-invite-name">'+name+'</div>'+
+      '<div class="ic-invite-meta">'+(metaParts||'Wants to join your circle')+
+        (sentAt?' · Sent '+sentAt:'')+'</div>'+
+    '</div>';
+
+  const btnWrap = document.createElement('div');
+  btnWrap.style.cssText='display:flex;gap:6px;flex-shrink:0;';
+  btnWrap.appendChild(acceptBtn);
+  btnWrap.appendChild(declineBtn);
+  div.appendChild(btnWrap);
+  return div;
 }
 
 // ── Load sent requests ─────────────────────────────────
@@ -4500,7 +4574,7 @@ async function checkInnerCircleNotifications(){
     );
     if(res.ok){
       const pending = await res.json();
-      const navBadge = document.getElementById('innerCircleBadge');
+      const navBadge = document.getElementById('icNavGreenBadge');
       if(navBadge){
         if(pending.length > 0){
           navBadge.style.display='inline-block';
@@ -5303,6 +5377,24 @@ async function restoreSession(email, playerData){
 
   // Show toast
   showToast('Welcome back, '+(player.first_name||'Player')+'! 🎾','#4CAF7D');
+  // Check for incoming requests after login
+  setTimeout(async()=>{
+    const myEmail = (player.email||'').toLowerCase();
+    try{
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/connections?recipient_email=eq.${encodeURIComponent(myEmail)}&status=eq.pending&select=id`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+      );
+      if(r.ok){
+        const reqs = await r.json();
+        if(reqs.length > 0){
+          const pb = document.getElementById('icNavPurpleBadge');
+          if(pb){ pb.textContent=reqs.length; pb.style.display='inline-flex'; }
+          setTimeout(()=>showToast('🟣 You have '+reqs.length+' Inner Circle request'+(reqs.length>1?'s':'')+'!','#7c3aed'), 1500);
+        }
+      }
+    }catch(e){}
+  }, 500);
 
   // Geocode city if no lat/lon stored
   if(!S.addrLat && player.city && player.state){
@@ -5531,7 +5623,7 @@ function updateIcStats(pendingMembers){
   set('lTotalInvited',  pending.length);
 
   // Nav badge
-  const navPendBadge = document.getElementById('innerCirclePendingBadge');
+  const navPendBadge = document.getElementById('icNavYellowBadge');
   if(navPendBadge){
     navPendBadge.style.display = pending.length>0 ? 'inline-block' : 'none';
     navPendBadge.textContent   = pending.length||'';
@@ -5560,7 +5652,7 @@ async function loadIcInvites(){
     if(statPend) statPend.textContent = pending.length;
 
     // Update nav badge
-    const navPendBadge = document.getElementById('innerCirclePendingBadge');
+    const navPendBadge = document.getElementById('icNavYellowBadge');
     if(navPendBadge){
       if(pending.length > 0){
         navPendBadge.style.display='inline-block';
@@ -5657,24 +5749,23 @@ function updateTopBar(player){
 }
 
 // ── Update Inner Circle nav badges ────────────────────
-function updateNavCircleBadges(memberCount, pendingCount){
-  const nav = document.getElementById('nav-innerCircle');
-  if(!nav) return;
-
-  // Remove existing badges
-  nav.querySelectorAll('.nav-circle-badge').forEach(b=>b.remove());
-
-  if(memberCount > 0){
-    const gb = document.createElement('span');
-    gb.className='nav-circle-badge nav-circle-green';
-    gb.textContent = memberCount;
-    nav.appendChild(gb);
+function updateNavCircleBadges(memberCount, pendingCount, incomingCount){
+  const gb = document.getElementById('icNavGreenBadge');
+  const yb = document.getElementById('icNavYellowBadge');
+  const pb = document.getElementById('icNavPurpleBadge');
+  if(gb){
+    gb.textContent   = memberCount;
+    gb.style.display = memberCount  > 0 ? 'inline-flex' : 'none';
   }
-  if(pendingCount > 0){
-    const yb = document.createElement('span');
-    yb.className='nav-circle-badge nav-circle-yellow';
-    yb.textContent = pendingCount;
-    nav.appendChild(yb);
+  if(yb){
+    yb.textContent   = pendingCount;
+    yb.style.display = pendingCount > 0 ? 'inline-flex' : 'none';
+  }
+  if(pb){
+    // Purple = incoming requests TO this user (placeholder — always 0 for now)
+    const incoming = incomingCount || 0;
+    pb.textContent   = incoming;
+    pb.style.display = incoming > 0 ? 'inline-flex' : 'none';
   }
 }
 
