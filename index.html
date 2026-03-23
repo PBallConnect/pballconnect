@@ -4194,10 +4194,12 @@ async function loadIcPending(){
 
 function buildPendingRequestRow(player, conn, myEmail){
   const div = document.createElement('div');
-  const mySkill     = parseFloat(S.skill || '0');
+  // Get my skill — from S state, or from the personal rating display
+  const mySkillRaw = S.skill || document.getElementById('personalRatingDisplay')?.textContent?.match(/[\d\.]+/)?.[0] || '0';
+  const mySkill     = parseFloat(mySkillRaw);
   const playerSkill = parseFloat(player.skill_level || '0');
-  const isHigher    = playerSkill > mySkill + 0.01; // strictly higher
-  console.log('Pulse check:', player.first_name, 'skill:', playerSkill, 'vs mine:', mySkill, 'isHigher:', isHigher);
+  const isHigher    = playerSkill > mySkill + 0.01;
+  console.log('🎾 Pulse check:', player.first_name, '| their skill:', playerSkill, '| my skill:', mySkill, '| pulsing:', isHigher);
   div.className = 'ic-invite-row' + (isHigher ? ' higher-rated' : '');
   const name    = ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim();
   const initials= name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
@@ -5451,7 +5453,19 @@ async function restoreSession(email, playerData){
   S.wantsToImprove = player.wants_to_improve || '';
   S.goalRating   = player.goal_rating || null;
 
-  // Restore form fields
+  // ── Helper: restore a chip group by matching text ───────
+  function restoreChip(groupId, value){
+    if(!value) return;
+    // Strip emoji from chip text for comparison
+    const clean = s => s.replace(/[^a-zA-Z0-9\s\-\.]/g,'').trim().toLowerCase();
+    document.querySelectorAll('#'+groupId+' .chip, #'+groupId+' .chip-rect').forEach(btn=>{
+      if(clean(btn.textContent) === clean(value)){
+        btn.classList.add('on');
+      }
+    });
+  }
+
+  // ── Restore text fields ───────────────────────────────
   const fields = {
     firstName:  player.first_name,
     lastName:   player.last_name,
@@ -5463,16 +5477,49 @@ async function restoreSession(email, playerData){
     addrCity:   player.city,
     addrState:  player.state,
     addrZip:    player.zip_code,
+    county:     player.county,
   };
-  // Restore playing since dropdown
-  if(player.playing_since){
-    const psEl = document.getElementById('playingSince');
-    if(psEl) psEl.value = player.playing_since;
-  }
   Object.entries(fields).forEach(([id, val])=>{
     const el = document.getElementById(id);
     if(el && val) el.value = val;
   });
+
+  // ── Restore dropdowns ─────────────────────────────────
+  const dropdowns = {
+    playingSince: player.playing_since,
+    shirtSize:    player.shirt_size,
+  };
+  Object.entries(dropdowns).forEach(([id, val])=>{
+    const el = document.getElementById(id);
+    if(el && val) el.value = val;
+  });
+
+  // ── Restore chip selections ───────────────────────────
+  restoreChip('genderChips',      player.gender);
+  restoreChip('handednessChips',  player.handedness);
+  restoreChip('venuePrefChips',   player.play_venues);
+  restoreChip('playStyleChips',   player.play_style);
+
+  // ── Restore avatar emoji picker ───────────────────────
+  if(player.avatar_emoji){
+    const preview = document.getElementById('emojiPreview');
+    if(preview) preview.textContent = player.avatar_emoji;
+    const input = document.getElementById('avatarEmoji');
+    if(input) input.value = player.avatar_emoji;
+    // Highlight the selected emoji in the grid
+    document.querySelectorAll('.emoji-reg-opt').forEach(btn=>{
+      btn.classList.toggle('on', btn.textContent.trim() === player.avatar_emoji);
+    });
+  }
+
+  // ── Restore drive distance slider ────────────────────
+  if(player.drive_distance_miles){
+    const dd = document.getElementById('driveDistance');
+    if(dd){
+      dd.value = player.drive_distance_miles;
+      onDriveChange(player.drive_distance_miles);
+    }
+  }
 
   // Restore personal rating slider
   if(player.skill_level){
