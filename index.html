@@ -1515,6 +1515,98 @@
         </div>
       </div>
 
+      <!-- Community Snapshot -->
+      <div class="ic-stats-dashboard" id="icCommunitySnapshot" style="display:none;margin-top:0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);">
+            🌐 Community snapshot
+            <span id="communityRadiusLabel" style="color:var(--green);margin-left:6px;font-size:9px;"></span>
+          </div>
+          <div id="communityLoading" style="font-size:10px;color:var(--dim);display:none;">Loading…</div>
+        </div>
+        <div class="ic-two-grids">
+
+          <!-- Community Playing Levels -->
+          <div class="ic-grid-card">
+            <div class="ic-grid-title">Players near me by level</div>
+            <table class="ic-stat-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th class="ic-th-below">🟡 Below</th>
+                  <th class="ic-th-my">🟢 My level</th>
+                  <th class="ic-th-above">🟣 Above</th>
+                  <th class="ic-th-total">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="ic-row-label">Nearby</td>
+                  <td class="ic-th-below" id="cmBelowTotal">—</td>
+                  <td class="ic-th-my" id="cmMyTotal">—</td>
+                  <td class="ic-th-above" id="cmAboveTotal">—</td>
+                  <td class="ic-th-total" id="cmLevelTotal">—</td>
+                </tr>
+                <tr>
+                  <td class="ic-row-label">My circle</td>
+                  <td class="ic-th-below" id="cmBelowCircle">0</td>
+                  <td class="ic-th-my" id="cmMyCircle">0</td>
+                  <td class="ic-th-above" id="cmAboveCircle">0</td>
+                  <td class="ic-th-total" id="cmLevelCircle">0</td>
+                </tr>
+                <tr>
+                  <td class="ic-row-label" style="color:var(--green);">Connected</td>
+                  <td class="ic-th-below" id="cmBelowPct">—</td>
+                  <td class="ic-th-my" id="cmMyPct">—</td>
+                  <td class="ic-th-above" id="cmAbovePct">—</td>
+                  <td class="ic-th-total" id="cmLevelPct">—</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Community Gender -->
+          <div class="ic-grid-card">
+            <div class="ic-grid-title">Players near me by gender</div>
+            <table class="ic-stat-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th class="ic-th-male">♂ Male</th>
+                  <th class="ic-th-female">♀ Female</th>
+                  <th class="ic-th-other">⚪ Other</th>
+                  <th class="ic-th-total">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="ic-row-label">Nearby</td>
+                  <td class="ic-th-male" id="cmMaleTotal">—</td>
+                  <td class="ic-th-female" id="cmFemaleTotal">—</td>
+                  <td class="ic-th-other" id="cmOtherTotal">—</td>
+                  <td class="ic-th-total" id="cmGenderTotal">—</td>
+                </tr>
+                <tr>
+                  <td class="ic-row-label">My circle</td>
+                  <td class="ic-th-male" id="cmMaleCircle">0</td>
+                  <td class="ic-th-female" id="cmFemaleCircle">0</td>
+                  <td class="ic-th-other" id="cmOtherCircle">0</td>
+                  <td class="ic-th-total" id="cmGenderCircle">0</td>
+                </tr>
+                <tr>
+                  <td class="ic-row-label" style="color:var(--green);">Connected</td>
+                  <td class="ic-th-male" id="cmMalePct">—</td>
+                  <td class="ic-th-female" id="cmFemalePct">—</td>
+                  <td class="ic-th-other" id="cmOtherPct">—</td>
+                  <td class="ic-th-total" id="cmGenderPct">—</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+
       <!-- Find Players -->
       <div class="ic-search-card" style="max-width:100%;">
         <div class="ic-section-label">Find players to add</div>
@@ -2771,7 +2863,7 @@ function showPage(page){
   // Page-specific loaders
   if(page==='myCourts')    loadMyCourts();
   if(page==='lessons')     renderLessonsPage();
-  if(page==='innerCircle'){ loadInnerCircle(); loadNearbyPlayers(); updateIcStats(); loadIcInvites(); }
+  if(page==='innerCircle'){ loadInnerCircle(); loadNearbyPlayers(); updateIcStats(); loadIcInvites(); setTimeout(loadCommunitySnapshot, 1200); }
   if(page==='findPlayers')  initFindPlayers();
 }
 
@@ -3638,7 +3730,7 @@ async function loadInnerCircle(){
   await loadIcPending();
   // Final stats refresh with all data
   updateIcStats(IC_PENDING_PLAYERS);
-  updateNavCircleBadges(IC_MEMBERS.length, IC_PENDING_PLAYERS ? IC_PENDING_PLAYERS.length : 0);
+  updateNavCircleBadges(IC_MEMBERS.length, IC_PENDING_PLAYERS ? IC_PENDING_PLAYERS.length : 0, IC_INCOMING_COUNT);
 }
 
 // ── Search players ─────────────────────────────────────
@@ -3776,7 +3868,7 @@ async function icSendRequest(recipientEmail, recipientName, btn){
       setTimeout(async()=>{
         await loadInnerCircle();
         updateIcStats(IC_PENDING_PLAYERS);
-        updateNavCircleBadges(IC_MEMBERS.length, IC_PENDING_PLAYERS ? IC_PENDING_PLAYERS.length : 0);
+        updateNavCircleBadges(IC_MEMBERS.length, IC_PENDING_PLAYERS ? IC_PENDING_PLAYERS.length : 0, IC_INCOMING_COUNT);
       }, 800);
     } else {
       const err = await res.text();
@@ -3879,7 +3971,7 @@ async function loadIcApproved(){
     });
 
     renderInnerCircleList(IC_MEMBERS, myEmail);
-  updateNavCircleBadges(IC_MEMBERS.length, IC_PENDING_PLAYERS ? IC_PENDING_PLAYERS.length : 0);
+  updateNavCircleBadges(IC_MEMBERS.length, IC_PENDING_PLAYERS ? IC_PENDING_PLAYERS.length : 0, IC_INCOMING_COUNT);
   }catch(e){ list.innerHTML='<div class="ic-empty">Error loading circle.</div>'; }
 }
 
@@ -4045,7 +4137,8 @@ async function loadIcPending(){
     if(!res.ok) return;
     const pending = await res.json();
 
-    // Update purple nav badge
+    // Update purple nav badge and global count
+    IC_INCOMING_COUNT = pending.length;
     const pb = document.getElementById('icNavPurpleBadge');
     if(pb){
       pb.textContent   = pending.length;
@@ -5396,6 +5489,9 @@ async function restoreSession(email, playerData){
     }catch(e){}
   }, 500);
 
+  // Check incoming requests and set purple badge on login
+  loadIcPending();
+
   // Geocode city if no lat/lon stored
   if(!S.addrLat && player.city && player.state){
     geocodeCityForSession(player.city, player.state);
@@ -5632,6 +5728,7 @@ function updateIcStats(pendingMembers){
 
 // Cache of pending player details for stats
 let IC_PENDING_PLAYERS = [];
+let IC_INCOMING_COUNT  = 0; // requests coming IN to this user
 
 async function loadIcInvites(){
   const myEmail   = getMyEmail();
@@ -5845,6 +5942,119 @@ function openProfileMenu(){
       }
     });
   }, 100);
+}
+
+// ══════════════════════════════════════════════════════
+// COMMUNITY SNAPSHOT
+// ══════════════════════════════════════════════════════
+
+async function loadCommunitySnapshot(){
+  const myEmail  = getMyEmail();
+  const mySkill  = S.skill || '';
+  const cityData = getCityLatLon();
+  const radiusMi = parseInt(document.getElementById('icRadiusSlider')?.value || 25);
+  const section  = document.getElementById('icCommunitySnapshot');
+  const loading  = document.getElementById('communityLoading');
+  const radLabel = document.getElementById('communityRadiusLabel');
+
+  if(!mySkill || !cityData){ 
+    if(section) section.style.display='none';
+    return;
+  }
+  if(section) section.style.display='block';
+  if(loading) loading.style.display='block';
+  if(radLabel) radLabel.textContent = 'within '+radiusMi+' miles';
+
+  const skills = getAdjacentSkills(mySkill);
+  const set = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
+  const pct = (circle, total) => total > 0 ? Math.round(circle/total*100)+'%' : '0%';
+
+  try{
+    // Fetch all nearby players using state+haversine (same as nearby grid)
+    const stateAbbr = (S.state||'NH').length===2 ? S.state.toUpperCase() : 'NH';
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/registrations?state=eq.${encodeURIComponent(stateAbbr)}&select=email,skill_level,gender,lat,lon&limit=2000`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+    );
+    if(!res.ok) throw new Error('Failed to fetch community data');
+
+    const all = await res.json();
+    // Filter by distance
+    const nearby = all.filter(p=>{
+      if(p.email===myEmail) return false; // exclude self
+      if(!p.lat||!p.lon) return false;
+      return haversine(cityData.lat, cityData.lon, parseFloat(p.lat), parseFloat(p.lon)) <= radiusMi * 1.60934;
+    });
+
+    // ── Level buckets ──────────────────────────────────
+    let cmBelow=0, cmMy=0, cmAbove=0;
+    nearby.forEach(p=>{
+      const pSkill = parseFloat(p.skill_level||0);
+      if(skills.below!==null && Math.abs(pSkill-skills.below)<0.13)      cmBelow++;
+      else if(Math.abs(pSkill-skills.my)<0.13)                           cmMy++;
+      else if(skills.above!==null && Math.abs(pSkill-skills.above)<0.13) cmAbove++;
+    });
+    const cmLevelTotal = cmBelow + cmMy + cmAbove;
+
+    // ── Gender buckets ─────────────────────────────────
+    let cmMale=0, cmFemale=0, cmOther=0;
+    nearby.forEach(p=>{
+      const g = (p.gender||'').toLowerCase();
+      if(g==='male')        cmMale++;
+      else if(g==='female') cmFemale++;
+      else                  cmOther++;
+    });
+    const cmGenderTotal = nearby.length;
+
+    // ── My circle buckets (from IC_MEMBERS) ───────────
+    let circBelow=0, circMy=0, circAbove=0;
+    let circMale=0, circFemale=0, circOther=0;
+    IC_MEMBERS.forEach(({player})=>{
+      const pSkill = parseFloat(player.skill_level||0);
+      if(skills.below!==null && Math.abs(pSkill-skills.below)<0.13)      circBelow++;
+      else if(Math.abs(pSkill-skills.my)<0.13)                           circMy++;
+      else if(skills.above!==null && Math.abs(pSkill-skills.above)<0.13) circAbove++;
+      const g = (player.gender||'').toLowerCase();
+      if(g==='male')        circMale++;
+      else if(g==='female') circFemale++;
+      else                  circOther++;
+    });
+    const circTotal  = IC_MEMBERS.length;
+
+    // ── Update level grid ──────────────────────────────
+    set('cmBelowTotal',  cmBelow);
+    set('cmMyTotal',     cmMy);
+    set('cmAboveTotal',  cmAbove);
+    set('cmLevelTotal',  cmLevelTotal);
+    set('cmBelowCircle', circBelow);
+    set('cmMyCircle',    circMy);
+    set('cmAboveCircle', circAbove);
+    set('cmLevelCircle', circTotal);
+    set('cmBelowPct',    pct(circBelow, cmBelow));
+    set('cmMyPct',       pct(circMy,    cmMy));
+    set('cmAbovePct',    pct(circAbove, cmAbove));
+    set('cmLevelPct',    pct(circTotal, cmLevelTotal));
+
+    // ── Update gender grid ─────────────────────────────
+    set('cmMaleTotal',   cmMale);
+    set('cmFemaleTotal', cmFemale);
+    set('cmOtherTotal',  cmOther);
+    set('cmGenderTotal', cmGenderTotal);
+    set('cmMaleCircle',  circMale);
+    set('cmFemaleCircle',circFemale);
+    set('cmOtherCircle', circOther);
+    set('cmGenderCircle',circTotal);
+    set('cmMalePct',     pct(circMale,   cmMale));
+    set('cmFemalePct',   pct(circFemale, cmFemale));
+    set('cmOtherPct',    pct(circOther,  cmOther));
+    set('cmGenderPct',   pct(circTotal,  cmGenderTotal));
+
+    console.log(`✅ Community snapshot: ${nearby.length} players within ${radiusMi} miles`);
+  }catch(e){
+    console.warn('Community snapshot error:', e);
+  } finally {
+    if(loading) loading.style.display='none';
+  }
 }
 </script>
 </body>
