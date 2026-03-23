@@ -1685,7 +1685,7 @@
 
 
       <!-- My Inner Circle — Skill Columns -->
-      <div class="ic-card" style="max-width:100%;">
+      <div class="ic-card" id="icApprovedCard" style="max-width:100%;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
           <div class="ic-section-label" style="margin-bottom:0;">✅ My Inner Circle <span id="icApprovedBadge" class="ic-badge"></span></div>
           <div style="display:flex;gap:8px;">
@@ -6112,23 +6112,43 @@ function applyIcViewMode(mode){
   const page = document.getElementById('page-innerCircle');
   if(!page) return;
 
-  // Remove existing toolbar if any
+  // Remove existing toolbar
   const existing = document.getElementById('icViewToolbar');
   if(existing) existing.remove();
 
-  if(mode === 'all') return; // show everything normally
+  // Elements to show/hide
+  const els = {
+    stats:    document.getElementById('icStatsDashboard'),
+    search:   document.getElementById('page-innerCircle').querySelector('.ic-search-card'),
+    approved: document.getElementById('icApprovedCard'),
+    invites:  document.getElementById('icInvitesCard'),
+    pending:  document.getElementById('icPendingCard'),
+  };
 
-  // Build toolbar
+  if(mode === 'all'){
+    // Show everything — restore full view
+    if(els.stats)    els.stats.style.display    = '';
+    if(els.search)   els.search.style.display   = '';
+    if(els.approved) els.approved.style.display = '';
+    if(els.invites)  els.invites.style.display  = IC_PENDING_PLAYERS?.length > 0 ? 'block' : 'none';
+    if(els.pending)  els.pending.style.display  = IC_INCOMING_COUNT > 0 ? 'block' : 'none';
+    // Scroll to top
+    page.scrollTop = 0;
+    window.scrollTo(0,0);
+    return;
+  }
+
+  // Build toolbar with back button
+  const configs = {
+    members:  { label:'✅ Active Inner Circle Members',  cls:'green',  target:'icCircleListView' },
+    invited:  { label:'⏳ Invites Awaiting Acceptance',  cls:'yellow', target:'icInvitesCard'    },
+    incoming: { label:'🟣 Member Requests Sent to You',  cls:'purple', target:'icPendingCard'    },
+  };
+  const cfg = configs[mode];
+
   const toolbar = document.createElement('div');
   toolbar.id = 'icViewToolbar';
   toolbar.className = 'ic-view-toolbar';
-
-  const configs = {
-    members:  { label:'✅ Showing: Active Inner Circle Members', cls:'green',  section:'icCircleListView' },
-    invited:  { label:'⏳ Showing: Invites Awaiting Acceptance', cls:'yellow', section:'icInvitesCard'    },
-    incoming: { label:'🟣 Showing: Member Requests Sent to You', cls:'purple', section:'icPendingCard'    },
-  };
-  const cfg = configs[mode];
 
   const title = document.createElement('span');
   title.className = 'ic-view-toolbar-title '+cfg.cls;
@@ -6136,73 +6156,26 @@ function applyIcViewMode(mode){
 
   const backBtn = document.createElement('button');
   backBtn.className = 'ic-back-btn';
-  backBtn.textContent = '← Back to all';
+  backBtn.innerHTML = '← Search Inner Circle Members';
   backBtn.onclick = ()=>{ IC_VIEW_MODE='all'; applyIcViewMode('all'); };
 
   toolbar.appendChild(title);
   toolbar.appendChild(backBtn);
 
-  // Insert toolbar at top of Inner Circle page content (after page-header)
   const pageHeader = page.querySelector('.page-header');
-  if(pageHeader){
-    pageHeader.after(toolbar);
-  } else {
-    page.insertBefore(toolbar, page.firstChild);
-  }
+  if(pageHeader) pageHeader.after(toolbar);
+  else page.insertBefore(toolbar, page.firstChild);
 
-  // Show only the relevant section — hide others
-  const sections = {
-    icStatsDashboard:    mode === 'all',
-    icCircleListView:    mode === 'members' || mode === 'all',
-    icCircleColumnsView: false,
-    icInvitesCard:       mode === 'invited'  || mode === 'all',
-    icPendingCard:       mode === 'incoming' || mode === 'all',
-    icNearbyPanel:       mode === 'all',
-    icSearchPanel:       mode === 'all',
-  };
+  // Hide everything except the relevant section
+  if(els.stats)    els.stats.style.display    = 'none';
+  if(els.search)   els.search.style.display   = 'none';
+  if(els.approved) els.approved.style.display = mode==='members' ? 'block' : 'none';
+  if(els.invites)  els.invites.style.display  = mode==='invited'  ? 'block' : 'none';
+  if(els.pending)  els.pending.style.display  = mode==='incoming' ? 'block' : 'none';
 
-  // Get the search card (Find Players)
-  const searchCard = page.querySelector('.ic-search-card');
-  const viewTabsCard = page.querySelector('.ic-card:first-of-type');
-
-  // For mode-specific: hide non-relevant content
-  if(mode !== 'all'){
-    // Hide stats, search, find players
-    const statsEl = document.getElementById('icStatsDashboard');
-    if(statsEl) statsEl.style.display = 'none';
-    if(searchCard) searchCard.style.display = 'none';
-
-    // Hide the approved circle card except in members mode
-    const approvedCard = document.getElementById('icCircleListView')?.closest('.ic-card');
-    if(approvedCard){
-      approvedCard.style.display = mode === 'members' ? 'block' : 'none';
-    }
-
-    // Show/hide invites card
-    const invitesCard = document.getElementById('icInvitesCard');
-    if(invitesCard) invitesCard.style.display = mode === 'invited' ? 'block' : 'none';
-
-    // Show/hide pending requests card
-    const pendingCard = document.getElementById('icPendingCard');
-    if(pendingCard) pendingCard.style.display = mode === 'incoming' ? 'block' : 'none';
-
-    // Scroll to the relevant section
-    const target = document.getElementById(cfg.section);
-    if(target) setTimeout(()=>target.scrollIntoView({behavior:'smooth', block:'start'}), 200);
-
-  } else {
-    // Restore all sections
-    const statsEl = document.getElementById('icStatsDashboard');
-    if(statsEl) statsEl.style.display = '';
-    if(searchCard) searchCard.style.display = '';
-    const approvedCard = document.getElementById('icCircleListView')?.closest('.ic-card');
-    if(approvedCard) approvedCard.style.display = '';
-    const invitesCard = document.getElementById('icInvitesCard');
-    // Only show if has content
-    if(invitesCard) invitesCard.style.display = IC_PENDING_PLAYERS?.length > 0 ? 'block' : 'none';
-    const pendingCard = document.getElementById('icPendingCard');
-    if(pendingCard) pendingCard.style.display = IC_INCOMING_COUNT > 0 ? 'block' : 'none';
-  }
+  // Scroll to relevant section
+  const target = document.getElementById(cfg.target);
+  if(target) setTimeout(()=>target.scrollIntoView({behavior:'smooth', block:'start'}), 150);
 }
 
 // ── Make nav badges clickable ─────────────────────────
