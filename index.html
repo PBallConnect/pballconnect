@@ -805,6 +805,7 @@
   .nav-circle-green{background:#22c55e;color:#fff;}
   .nav-circle-yellow{background:#f59e0b;color:#1a1200;border:1px solid #b45309;}
   .nav-circle-purple{background:#7c3aed;color:#fff;}
+  .nav-circle-purple.placeholder{background:rgba(124,58,237,0.25);color:rgba(255,255,255,0.5);}
 
   /* ── Profile quick menu ───────────────────────────── */
   .profile-quick-menu{position:fixed;z-index:500;background:#0f1a10;
@@ -867,7 +868,7 @@
         <span class="nav-label">Inner Circle</span>
         <span id="icNavGreenBadge" class="nav-circle-badge nav-circle-green" style="display:none;"></span>
         <span id="icNavYellowBadge" class="nav-circle-badge nav-circle-yellow" style="display:none;"></span>
-        <span id="icNavPurpleBadge" class="nav-circle-badge nav-circle-purple" style="display:none;"></span>
+        <span id="icNavPurpleBadge" class="nav-circle-badge nav-circle-purple placeholder" title="Inner Circle requests">0</span>
       </div>
       <div class="nav-item" onclick="showPage('setupMatch')" id="nav-setupMatch">
         <span class="nav-icon">🎯</span>
@@ -1347,11 +1348,64 @@
 
     <!-- PLAYER STATISTICS PAGE -->
     <div class="page-section" id="page-playerStats">
-      <div class="coming-soon">
-        <div class="coming-soon-icon">📊</div>
-        <h2>Player Statistics</h2>
-        <p>Track your wins, losses, match history, and rating progression over time.</p>
-        <div class="coming-soon-badge">Coming Soon</div>
+      <div class="page-header">
+        <h1>Player <span>Statistics</span></h1>
+        <p>Your performance and community insights</p>
+      </div>
+
+      <div class="ic-card" style="max-width:600px;margin-bottom:16px;">
+        <div class="ic-section-label">🏆 Match Record</div>
+        <div class="ic-empty">Win/loss record and match history coming soon.<br>
+          <span style="color:var(--green);font-size:11px;">Available once match results are recorded.</span>
+        </div>
+      </div>
+
+      <div class="ic-card" style="max-width:600px;margin-bottom:16px;">
+        <div class="ic-section-label">📈 Skill Progression</div>
+        <div class="ic-empty">Rating history and improvement tracking coming soon.</div>
+      </div>
+
+      <div class="ic-card" style="max-width:100%;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+          <div class="ic-section-label" style="margin-bottom:0;">🌐 Community Snapshot</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:11px;color:var(--dim);">Within</span>
+            <input type="range" id="communityRadiusSlider" min="5" max="50" step="5" value="25"
+              oninput="document.getElementById('communityRadiusLabel').textContent=this.value+' mi';loadCommunitySnapshot();"
+              style="width:120px;"/>
+            <span id="communityRadiusLabel" style="font-size:12px;font-weight:700;color:var(--green);min-width:40px;">25 mi</span>
+            <span id="communityLoading" style="font-size:11px;color:var(--dim);display:none;">Loading…</span>
+          </div>
+        </div>
+        <div id="icCommunitySnapshot">
+          <div class="ic-two-grids">
+            <div class="ic-grid-card">
+              <div class="ic-grid-title">Players near me by level</div>
+              <table class="ic-stat-table">
+                <thead><tr><th></th><th class="ic-th-below">🟡 Below</th><th class="ic-th-my">🟢 My level</th><th class="ic-th-above">🟣 Above</th><th class="ic-th-total">Total</th></tr></thead>
+                <tbody>
+                  <tr><td class="ic-row-label">Nearby</td><td class="ic-th-below" id="cmBelowTotal">—</td><td class="ic-th-my" id="cmMyTotal">—</td><td class="ic-th-above" id="cmAboveTotal">—</td><td class="ic-th-total" id="cmLevelTotal">—</td></tr>
+                  <tr><td class="ic-row-label">My circle</td><td class="ic-th-below" id="cmBelowCircle">0</td><td class="ic-th-my" id="cmMyCircle">0</td><td class="ic-th-above" id="cmAboveCircle">0</td><td class="ic-th-total" id="cmLevelCircle">0</td></tr>
+                  <tr><td class="ic-row-label" style="color:var(--green);">Connected</td><td class="ic-th-below" id="cmBelowPct">—</td><td class="ic-th-my" id="cmMyPct">—</td><td class="ic-th-above" id="cmAbovePct">—</td><td class="ic-th-total" id="cmLevelPct">—</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="ic-grid-card">
+              <div class="ic-grid-title">Players near me by gender</div>
+              <table class="ic-stat-table">
+                <thead><tr><th></th><th class="ic-th-male">♂ Male</th><th class="ic-th-female">♀ Female</th><th class="ic-th-other">⚪ Other</th><th class="ic-th-total">Total</th></tr></thead>
+                <tbody>
+                  <tr><td class="ic-row-label">Nearby</td><td class="ic-th-male" id="cmMaleTotal">—</td><td class="ic-th-female" id="cmFemaleTotal">—</td><td class="ic-th-other" id="cmOtherTotal">—</td><td class="ic-th-total" id="cmGenderTotal">—</td></tr>
+                  <tr><td class="ic-row-label">My circle</td><td class="ic-th-male" id="cmMaleCircle">0</td><td class="ic-th-female" id="cmFemaleCircle">0</td><td class="ic-th-other" id="cmOtherCircle">0</td><td class="ic-th-total" id="cmGenderCircle">0</td></tr>
+                  <tr><td class="ic-row-label" style="color:var(--green);">Connected</td><td class="ic-th-male" id="cmMalePct">—</td><td class="ic-th-female" id="cmFemalePct">—</td><td class="ic-th-other" id="cmOtherPct">—</td><td class="ic-th-total" id="cmGenderPct">—</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div id="communitySnapshotEmpty" class="ic-empty" style="display:none;">
+          Sign in and complete your profile to see your community snapshot.
+        </div>
       </div>
     </div>
 
@@ -1507,98 +1561,6 @@
                   <td class="ic-th-my" id="lMyInvited">0</td>
                   <td class="ic-th-above" id="lAboveInvited">0</td>
                   <td class="ic-th-total" id="lTotalInvited">0</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- Community Snapshot -->
-      <div class="ic-stats-dashboard" id="icCommunitySnapshot" style="display:none;margin-top:0;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);">
-            🌐 Community snapshot
-            <span id="communityRadiusLabel" style="color:var(--green);margin-left:6px;font-size:9px;"></span>
-          </div>
-          <div id="communityLoading" style="font-size:10px;color:var(--dim);display:none;">Loading…</div>
-        </div>
-        <div class="ic-two-grids">
-
-          <!-- Community Playing Levels -->
-          <div class="ic-grid-card">
-            <div class="ic-grid-title">Players near me by level</div>
-            <table class="ic-stat-table">
-              <thead>
-                <tr>
-                  <th></th>
-                  <th class="ic-th-below">🟡 Below</th>
-                  <th class="ic-th-my">🟢 My level</th>
-                  <th class="ic-th-above">🟣 Above</th>
-                  <th class="ic-th-total">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td class="ic-row-label">Nearby</td>
-                  <td class="ic-th-below" id="cmBelowTotal">—</td>
-                  <td class="ic-th-my" id="cmMyTotal">—</td>
-                  <td class="ic-th-above" id="cmAboveTotal">—</td>
-                  <td class="ic-th-total" id="cmLevelTotal">—</td>
-                </tr>
-                <tr>
-                  <td class="ic-row-label">My circle</td>
-                  <td class="ic-th-below" id="cmBelowCircle">0</td>
-                  <td class="ic-th-my" id="cmMyCircle">0</td>
-                  <td class="ic-th-above" id="cmAboveCircle">0</td>
-                  <td class="ic-th-total" id="cmLevelCircle">0</td>
-                </tr>
-                <tr>
-                  <td class="ic-row-label" style="color:var(--green);">Connected</td>
-                  <td class="ic-th-below" id="cmBelowPct">—</td>
-                  <td class="ic-th-my" id="cmMyPct">—</td>
-                  <td class="ic-th-above" id="cmAbovePct">—</td>
-                  <td class="ic-th-total" id="cmLevelPct">—</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Community Gender -->
-          <div class="ic-grid-card">
-            <div class="ic-grid-title">Players near me by gender</div>
-            <table class="ic-stat-table">
-              <thead>
-                <tr>
-                  <th></th>
-                  <th class="ic-th-male">♂ Male</th>
-                  <th class="ic-th-female">♀ Female</th>
-                  <th class="ic-th-other">⚪ Other</th>
-                  <th class="ic-th-total">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td class="ic-row-label">Nearby</td>
-                  <td class="ic-th-male" id="cmMaleTotal">—</td>
-                  <td class="ic-th-female" id="cmFemaleTotal">—</td>
-                  <td class="ic-th-other" id="cmOtherTotal">—</td>
-                  <td class="ic-th-total" id="cmGenderTotal">—</td>
-                </tr>
-                <tr>
-                  <td class="ic-row-label">My circle</td>
-                  <td class="ic-th-male" id="cmMaleCircle">0</td>
-                  <td class="ic-th-female" id="cmFemaleCircle">0</td>
-                  <td class="ic-th-other" id="cmOtherCircle">0</td>
-                  <td class="ic-th-total" id="cmGenderCircle">0</td>
-                </tr>
-                <tr>
-                  <td class="ic-row-label" style="color:var(--green);">Connected</td>
-                  <td class="ic-th-male" id="cmMalePct">—</td>
-                  <td class="ic-th-female" id="cmFemalePct">—</td>
-                  <td class="ic-th-other" id="cmOtherPct">—</td>
-                  <td class="ic-th-total" id="cmGenderPct">—</td>
                 </tr>
               </tbody>
             </table>
@@ -2863,8 +2825,9 @@ function showPage(page){
   // Page-specific loaders
   if(page==='myCourts')    loadMyCourts();
   if(page==='lessons')     renderLessonsPage();
-  if(page==='innerCircle'){ loadInnerCircle(); loadNearbyPlayers(); updateIcStats(); loadIcInvites(); setTimeout(loadCommunitySnapshot, 1200); }
+  if(page==='innerCircle'){ loadInnerCircle(); loadNearbyPlayers(); updateIcStats(); loadIcInvites(); }
   if(page==='findPlayers')  initFindPlayers();
+  if(page==='playerStats')   { loadCommunitySnapshot(); }
 }
 
 function unlockLessonsNav(){
@@ -4141,8 +4104,15 @@ async function loadIcPending(){
     IC_INCOMING_COUNT = pending.length;
     const pb = document.getElementById('icNavPurpleBadge');
     if(pb){
-      pb.textContent   = pending.length;
-      pb.style.display = pending.length > 0 ? 'inline-flex' : 'none';
+      pb.textContent = pending.length;
+      if(pending.length > 0){
+        pb.classList.remove('placeholder');
+        pb.style.opacity = '1';
+      } else {
+        pb.classList.add('placeholder');
+        pb.style.opacity = '0.5';
+      }
+      pb.style.display = 'inline-flex';
     }
 
     if(!pending.length){ if(card) card.style.display='none'; return; }
@@ -5859,10 +5829,16 @@ function updateNavCircleBadges(memberCount, pendingCount, incomingCount){
     yb.style.display = pendingCount > 0 ? 'inline-flex' : 'none';
   }
   if(pb){
-    // Purple = incoming requests TO this user (placeholder — always 0 for now)
     const incoming = incomingCount || 0;
-    pb.textContent   = incoming;
-    pb.style.display = incoming > 0 ? 'inline-flex' : 'none';
+    pb.textContent = incoming;
+    if(incoming > 0){
+      pb.classList.remove('placeholder');
+      pb.style.opacity = '1';
+    } else {
+      pb.classList.add('placeholder');
+      pb.style.opacity = '0.5';
+    }
+    pb.style.display = 'inline-flex'; // always show
   }
 }
 
@@ -5919,6 +5895,29 @@ function openProfileMenu(){
     item.onclick=()=>{ menu.remove(); jumpToField(f.field); };
     menu.appendChild(item);
   });
+
+  // Divider
+  const divider = document.createElement('div');
+  divider.style.cssText='height:1px;background:var(--border);margin:4px 0;';
+  menu.appendChild(divider);
+
+  // View Member Requests button
+  const reqRow = document.createElement('div');
+  reqRow.className='profile-menu-item';
+  reqRow.style.cssText='color:#a78bfa;display:flex;align-items:center;justify-content:space-between;';
+  const reqCount = IC_INCOMING_COUNT || 0;
+  reqRow.innerHTML = '🟣 View Member Requests' +
+    (reqCount > 0 ? '<span style="background:#7c3aed;color:#fff;font-size:9px;font-weight:800;padding:2px 7px;border-radius:999px;">'+reqCount+'</span>' : '');
+  reqRow.onclick=()=>{
+    menu.remove();
+    showPage('innerCircle');
+    // Scroll to pending section after page loads
+    setTimeout(()=>{
+      const pending = document.getElementById('icPendingCard');
+      if(pending) pending.scrollIntoView({behavior:'smooth', block:'start'});
+    }, 400);
+  };
+  menu.appendChild(reqRow);
 
   const signOutRow = document.createElement('div');
   signOutRow.className='profile-menu-item profile-menu-signout';
