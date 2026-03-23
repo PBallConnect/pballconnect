@@ -2712,14 +2712,20 @@ async function submitForm(){
     });
     console.log('✅ Registration saved');
     showToast('✅ Profile saved!', '#4CAF7D');
-    // Update top bar with new values
-    updateTopBar({
-      first_name:    document.getElementById('firstName')?.value || '',
-      nickname:      document.getElementById('nickname')?.value  || '',
-      skill_level:   S.skill || '',
-      playing_since: S.playingSince || document.getElementById('playingSince')?.value || '',
-      avatar_emoji:  S.avatarEmoji || '🎾'
-    });
+    // Re-fetch the saved record and restore to ensure top bar is accurate
+    const savedEmail = v('email') || getMyEmail();
+    if(savedEmail){
+      try{
+        const fr = await fetch(
+          `${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(savedEmail)}&select=*&limit=1`,
+          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+        );
+        if(fr.ok){
+          const rows = await fr.json();
+          if(rows.length) updateTopBar(rows[0]);
+        }
+      }catch(e){}
+    }
   }catch(err){
     console.error('❌ Save failed:', err);
     showToast('⚠️ Could not save: ' + err.message);
@@ -5466,59 +5472,82 @@ async function restoreSession(email, playerData){
   }
 
   // ── Restore text fields ───────────────────────────────
-  const fields = {
-    firstName:  player.first_name,
-    lastName:   player.last_name,
-    nickname:   player.nickname,
-    email:      player.email,
-    phone:      player.phone ? formatPhoneDisplay(player.phone) : '',
-    dob:        player.dob,
-    addrLine:   player.address,
-    addrCity:   player.city,
-    addrState:  player.state,
-    addrZip:    player.zip_code,
-    county:     player.county,
+  const textFields = {
+    firstName:     player.first_name,
+    lastName:      player.last_name,
+    nickname:      player.nickname,
+    email:         player.email,
+    phone:         player.phone ? formatPhoneDisplay(player.phone) : '',
+    dob:           player.dob,
+    addressSearch: player.address,
+    addrCity:      player.city,
+    addrState:     player.state,
+    addrZip:       player.zip_code,
+    addrCounty:    player.county,
   };
-  Object.entries(fields).forEach(([id, val])=>{
+  Object.entries(textFields).forEach(([id, val])=>{
     const el = document.getElementById(id);
     if(el && val) el.value = val;
   });
 
   // ── Restore dropdowns ─────────────────────────────────
-  const dropdowns = {
-    playingSince: player.playing_since,
-    shirtSize:    player.shirt_size,
-  };
+  const dropdowns = { playingSince: player.playing_since, shirtSize: player.shirt_size };
   Object.entries(dropdowns).forEach(([id, val])=>{
     const el = document.getElementById(id);
     if(el && val) el.value = val;
   });
 
   // ── Restore chip selections ───────────────────────────
-  restoreChip('genderChips',      player.gender);
-  restoreChip('handednessChips',  player.handedness);
-  restoreChip('venuePrefChips',   player.play_venues);
-  restoreChip('playStyleChips',   player.play_style);
+  restoreChip('genderChips',     player.gender);
+  restoreChip('handednessChips', player.handedness);
+  restoreChip('venuePrefChips',  player.play_venues);
+  restoreChip('playStyleChips',  player.play_style);
+  restoreChip('improveChips',    player.wants_to_improve);
 
-  // ── Restore avatar emoji picker ───────────────────────
+  // ── Restore DUPR slider ───────────────────────────────
+  if(player.dupr_rating){
+    const duprIdx = DUPR_VALS.findIndex(v=>String(v)===String(player.dupr_rating));
+    if(duprIdx >= 0){
+      const ds = document.getElementById('duprSlider');
+      if(ds){ ds.value=duprIdx; ds.style.setProperty('--pct',Math.round(duprIdx/21*100)+'%'); }
+      const dd = document.getElementById('duprDisplay');
+      if(dd) dd.innerHTML = player.dupr_rating+' <span>DUPR</span>';
+    }
+  }
+
+  // ── Restore schedule ──────────────────────────────────
+  if(player.schedule){
+    try{
+      const sched = typeof player.schedule==='string' ? JSON.parse(player.schedule) : player.schedule;
+      if(Array.isArray(sched)){
+        sched.forEach(slot=>{
+          const btn = document.querySelector('[data-slot="'+slot+'"]');
+          if(btn){ btn.classList.add('on'); S.schedule.add(slot); }
+        });
+      }
+    }catch(e){}
+  }
+  if(player.anytime){
+    S.anytime = true;
+    const anyBtn = document.getElementById('anytimeBtn');
+    if(anyBtn) anyBtn.classList.add('on');
+  }
+
+  // ── Restore avatar emoji ──────────────────────────────
   if(player.avatar_emoji){
     const preview = document.getElementById('emojiPreview');
     if(preview) preview.textContent = player.avatar_emoji;
     const input = document.getElementById('avatarEmoji');
     if(input) input.value = player.avatar_emoji;
-    // Highlight the selected emoji in the grid
     document.querySelectorAll('.emoji-reg-opt').forEach(btn=>{
-      btn.classList.toggle('on', btn.textContent.trim() === player.avatar_emoji);
+      btn.classList.toggle('on', btn.textContent.trim()===player.avatar_emoji);
     });
   }
 
-  // ── Restore drive distance slider ────────────────────
+  // ── Restore drive distance ────────────────────────────
   if(player.drive_distance_miles){
     const dd = document.getElementById('driveDistance');
-    if(dd){
-      dd.value = player.drive_distance_miles;
-      onDriveChange(player.drive_distance_miles);
-    }
+    if(dd){ dd.value=player.drive_distance_miles; onDriveChange(player.drive_distance_miles); }
   }
 
   // Restore personal rating slider
