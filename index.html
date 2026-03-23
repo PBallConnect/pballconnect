@@ -893,9 +893,9 @@
       <div class="nav-item" onclick="showPage('innerCircle')" id="nav-innerCircle">
         <span class="nav-icon">👥</span>
         <span class="nav-label">Inner Circle</span>
-        <span id="icNavGreenBadge" class="nav-circle-badge nav-circle-green" style="display:none;"></span>
-        <span id="icNavYellowBadge" class="nav-circle-badge nav-circle-yellow" style="display:none;"></span>
-        <span id="icNavPurpleBadge" class="nav-circle-badge nav-circle-purple placeholder" title="Inner Circle requests">0</span>
+        <span id="icNavGreenBadge" class="nav-circle-badge nav-circle-green" style="display:none;cursor:pointer;" onclick="showIcView('members')"></span>
+        <span id="icNavYellowBadge" class="nav-circle-badge nav-circle-yellow" style="display:none;cursor:pointer;" onclick="showIcView('invited')"></span>
+        <span id="icNavPurpleBadge" class="nav-circle-badge nav-circle-purple placeholder" title="Inner Circle requests" style="cursor:pointer;" onclick="showIcView('incoming')">0</span>
       </div>
       <div class="nav-item" onclick="showPage('setupMatch')" id="nav-setupMatch">
         <span class="nav-icon">🎯</span>
@@ -6100,12 +6100,15 @@ let IC_VIEW_MODE = 'all';
 
 function showIcView(mode){
   IC_VIEW_MODE = mode;
-  showPage('innerCircle');
-
-  // Wait for page to render then apply view
-  setTimeout(()=>{
+  const alreadyOnPage = document.getElementById('page-innerCircle')?.classList.contains('active');
+  if(alreadyOnPage){
+    // Already on the page — just apply the view filter
     applyIcViewMode(mode);
-  }, 300);
+  } else {
+    // Navigate to page first then apply
+    showPage('innerCircle');
+    setTimeout(()=>applyIcViewMode(mode), 400);
+  }
 }
 
 function applyIcViewMode(mode){
@@ -6179,13 +6182,13 @@ function applyIcViewMode(mode){
 }
 
 // ── Make nav badges clickable ─────────────────────────
+// Badge onclick set directly in HTML via updateNavCircleBadges
+// Ensure clicks work after DOM ready
 document.addEventListener('DOMContentLoaded', ()=>{
-  const gb = document.getElementById('icNavGreenBadge');
-  const yb = document.getElementById('icNavYellowBadge');
-  const pb = document.getElementById('icNavPurpleBadge');
-  if(gb) gb.style.cursor='pointer', gb.onclick=()=>showIcView('members');
-  if(yb) yb.style.cursor='pointer', yb.onclick=()=>showIcView('invited');
-  if(pb) pb.style.cursor='pointer', pb.onclick=()=>showIcView('incoming');
+  ['icNavGreenBadge','icNavYellowBadge','icNavPurpleBadge'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.style.cursor='pointer';
+  });
 });
 </script>
 </body>
