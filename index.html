@@ -836,6 +836,27 @@
     background:transparent;color:var(--dim);font-size:11px;font-weight:600;
     cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;white-space:nowrap;}
   .ic-back-btn:hover{border-color:rgba(76,175,125,0.4);color:var(--green);}
+  /* ── Pulse for higher-rated incoming requests ─────── */
+  @keyframes ic-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(124,58,237,0.4); }
+    70%  { box-shadow: 0 0 0 8px rgba(124,58,237,0); }
+    100% { box-shadow: 0 0 0 0 rgba(124,58,237,0); }
+  }
+  @media (prefers-reduced-motion: no-preference){
+    .ic-invite-row.higher-rated {
+      animation: ic-pulse 2s ease-in-out infinite;
+      border-radius: 10px;
+    }
+  }
+  .ic-invite-row.higher-rated .ic-invite-avatar{
+    border-color:rgba(124,58,237,0.6);
+    background:rgba(124,58,237,0.18);
+  }
+  .ic-invite-row.higher-rated .ic-invite-name::after{
+    content:' ⬆';
+    font-size:10px;
+    color:#a78bfa;
+  }
 </style>
 </head>
 <body>
@@ -1749,7 +1770,7 @@
           <div class="ic-section-label" style="margin-bottom:0;color:#a78bfa;">
             🟣 Inner Circle Requests <span id="icPendingBadge" class="ic-badge" style="background:rgba(124,58,237,0.2);color:#a78bfa;"></span>
           </div>
-          <div style="font-size:11px;color:var(--dim);">People who want to join your circle</div>
+          <div style="font-size:11px;color:var(--dim);">Players that want you to join their Inner Circle</div>
         </div>
         <div id="icPendingList"></div>
       </div>
@@ -4173,7 +4194,10 @@ async function loadIcPending(){
 
 function buildPendingRequestRow(player, conn, myEmail){
   const div = document.createElement('div');
-  div.className = 'ic-invite-row';
+  const mySkill     = parseFloat(S.skill || 0);
+  const playerSkill = parseFloat(player.skill_level || 0);
+  const isHigher    = playerSkill > mySkill;
+  div.className = 'ic-invite-row' + (isHigher ? ' higher-rated' : '');
   const name    = ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim();
   const initials= name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
   const emoji   = player.avatar_emoji || null;
