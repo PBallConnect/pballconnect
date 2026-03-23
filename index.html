@@ -2129,7 +2129,7 @@
 const S={gender:'',skill:'',schedule:new Set(),anytime:false,partner:false,
   waiver:false,photoSrc:null,state:'',stateFips:'',county:'',city:'',
   court:'',courtName:'',duprVal:null,venues:new Set(),driveDistance:'25 miles',
-  playStyle:'',handedness:'',avatarEmoji:'🎾',venuePref:'',playingSince:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null};
+  playStyle:'',handedness:'',avatarEmoji:'🎾',venuePref:'',playingSince:'',nickname:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null};
 
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const TIMES=['Early AM','Morning','Afternoon','Evening'];
@@ -4194,9 +4194,10 @@ async function loadIcPending(){
 
 function buildPendingRequestRow(player, conn, myEmail){
   const div = document.createElement('div');
-  const mySkill     = parseFloat(S.skill || 0);
-  const playerSkill = parseFloat(player.skill_level || 0);
-  const isHigher    = playerSkill > mySkill;
+  const mySkill     = parseFloat(S.skill || '0');
+  const playerSkill = parseFloat(player.skill_level || '0');
+  const isHigher    = playerSkill > mySkill + 0.01; // strictly higher
+  console.log('Pulse check:', player.first_name, 'skill:', playerSkill, 'vs mine:', mySkill, 'isHigher:', isHigher);
   div.className = 'ic-invite-row' + (isHigher ? ' higher-rated' : '');
   const name    = ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim();
   const initials= name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
@@ -5442,6 +5443,7 @@ async function restoreSession(email, playerData){
   S.driveDistance= player.drive_distance_miles
                    ? player.drive_distance_miles+' miles' : '25 miles';
   S.venuePref    = player.play_venues || '';
+  S.nickname     = player.nickname || '';
   S.playingSince = player.playing_since || '';
   S.addrLat      = player.lat         || null;
   S.addrLon      = player.lon         || null;
@@ -5472,12 +5474,18 @@ async function restoreSession(email, playerData){
     if(el && val) el.value = val;
   });
 
-  // Restore skill slider
+  // Restore personal rating slider
   if(player.skill_level){
-    const skillSlider = document.getElementById('skillSlider');
-    if(skillSlider){
-      const idx = SKILL_STEPS ? SKILL_STEPS.findIndex(s=>String(s)===String(player.skill_level)) : -1;
-      if(idx>=0) skillSlider.value = idx;
+    const sliderIdx = DUPR_VALS.findIndex(v=>String(v)===String(player.skill_level));
+    if(sliderIdx >= 0){
+      const prs = document.getElementById('personalRatingSlider');
+      if(prs){
+        prs.value = sliderIdx;
+        const pct = Math.round((sliderIdx / 21) * 100);
+        prs.style.setProperty('--pct', pct+'%');
+      }
+      const prd = document.getElementById('personalRatingDisplay');
+      if(prd) prd.innerHTML = player.skill_level+' <span>Personal Rating</span>';
     }
   }
 
@@ -5866,12 +5874,19 @@ function updateTopBar(player){
   const navLabel = document.getElementById('navLoginLabel');
   const navEmoji = document.getElementById('navLoginEmoji');
   if(!navLabel) return;
-  const emoji = player.avatar_emoji || '👤';
-  const nick  = player.nickname    ? ' "'+player.nickname+'"' : '';
-  const skill = player.skill_level ? ' · ⭐'+player.skill_level : '';
-  const since = player.playing_since ? ' · Since '+player.playing_since : '';
+  // Use passed player data OR fall back to S state (after profile edit)
+  const emoji    = player.avatar_emoji  || S.avatarEmoji  || '👤';
+  const nickname = player.nickname      || S.nickname      || document.getElementById('nickname')?.value || '';
+  const skill    = player.skill_level   || S.skill         || '';
+  const since    = player.playing_since || S.playingSince  || document.getElementById('playingSince')?.value || '';
+  const fname    = player.first_name    || document.getElementById('firstName')?.value || 'Player';
+  const nick  = nickname ? ' "'+nickname+'"' : '';
+  const skillTxt = skill ? ' · ⭐'+skill : '';
+  const sinceTxt = since ? ' · Since '+since : '';
   if(navEmoji) navEmoji.textContent = emoji;
-  navLabel.textContent = (player.first_name||'Player')+nick+skill+since+' ▾';
+  navLabel.textContent = fname+nick+skillTxt+sinceTxt+' ▾';
+  // Keep S state in sync
+  if(nickname) S.nickname = nickname;
 }
 
 // ── Update Inner Circle nav badges ────────────────────
