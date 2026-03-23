@@ -1769,7 +1769,7 @@
         <div class="ic-modal-actions">
           <button class="ic-action-btn ic-btn-decline" onclick="closeIcModal()">Cancel</button>
           <button class="ic-action-btn ic-btn-approve" id="icModalConfirmBtn" style="margin-left:8px;">
-            ✓ Yes, send request
+            📨 Send invite
           </button>
         </div>
       </div>
@@ -3757,16 +3757,15 @@ async function icSendRequest(recipientEmail, recipientName, btn){
         recipient_email: recipientEmail,
         requester_name: getMyName(),
         recipient_name: recipientName,
-        status: 'approved',
-        responded_at: new Date().toISOString()
+        status: 'pending'
       })
     });
     if(res.ok || res.status===201){
-      btn.textContent = '✓ In Circle';
+      btn.textContent = '⏳ Invited';
       btn.className = 'ic-action-btn';
-      btn.style.color = 'var(--green)';
+      btn.style.color = '#f59e0b';
       btn.disabled = true;
-      showToast('✅ Added to your Inner Circle!','#4CAF7D');
+      showToast('📨 Invite sent — awaiting their approval','#f59e0b');
       setTimeout(async()=>{
         await loadInnerCircle();
         updateIcStats(IC_PENDING_PLAYERS);
@@ -4556,8 +4555,16 @@ function buildSearchResultCard(player, connection, myEmail){
   if(connection){
     actionEl = document.createElement('span');
     actionEl.className='ic-status-sent';
-    actionEl.textContent = connection.status==='approved'?'✓ In Circle':
-                           connection.status==='pending'?'Pending':'—';
+    const connLabel = connection.status==='approved' ? '✓ In Circle'
+                    : connection.status==='pending' && connection.requester_email===myEmail ? '⏳ Invited'
+                    : connection.status==='pending' ? '🔔 Approve?'
+                    : '—';
+    actionEl.textContent = connLabel;
+    if(connection.status==='pending' && connection.requester_email!==myEmail){
+      actionEl.style.color='var(--green)';
+      actionEl.style.cursor='pointer';
+      actionEl.onclick=()=>openPlayerCard({...player, _conn:connection}, connection, myEmail);
+    }
   } else {
     actionEl = document.createElement('button');
     actionEl.className='ic-action-btn ic-btn-add';
@@ -5082,8 +5089,22 @@ function buildMiniPlayerCard(player, myConns, myEmail, colClass){
   addBtn.className='ic-mini-add';
 
   if(conn){
-    addBtn.textContent = conn.status==='approved' ? '✓ In Your Circle' : 'Pending';
-    addBtn.disabled = true;
+    if(conn.status==='approved'){
+      addBtn.textContent = '✓ In Circle';
+      addBtn.style.color = 'var(--green)';
+    } else if(conn.status==='pending' && conn.requester_email===myEmail){
+      addBtn.textContent = '⏳ Invited';
+      addBtn.style.color = '#f59e0b';
+    } else if(conn.status==='pending'){
+      addBtn.textContent = '🔔 Approve';
+      addBtn.style.color = 'var(--green)';
+      addBtn.disabled = false;
+      addBtn.onclick = function(e){
+        e.stopPropagation();
+        icRespond(conn.id, 'approved', addBtn);
+      };
+    }
+    addBtn.disabled = conn.status==='approved' || (conn.status==='pending' && conn.requester_email===myEmail);
   } else {
     addBtn.textContent = '+ Add to Circle';
     addBtn.onclick = function(e){
