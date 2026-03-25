@@ -2757,7 +2757,13 @@ async function submitForm(){
   if(S.courtName){document.getElementById('cCourtStat').style.display='block';document.getElementById('cCourt').textContent=S.courtName;}
   const av=document.getElementById('confirmAvatar');
   av.innerHTML=S.photoSrc?`<img class="confirm-avatar" src="${S.photoSrc}"/>`:`<div class="confirm-avatar-ph">👤</div>`;
-  document.getElementById('confirmOverlay').style.display='flex';
+  // If editing existing profile, skip overlay — go straight to inner circle
+  if(SESSION_PLAYER){
+    showPage('innerCircle');
+    showToast('✅ Profile updated!', '#4CAF7D');
+  } else {
+    document.getElementById('confirmOverlay').style.display='flex';
+  }
 }
 
 function resetForm(){
@@ -5445,11 +5451,12 @@ function restoreProfileForm(player){
 
   function restoreChip(groupId, value){
     if(!value) return;
-    const clean = s => (s||'').replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
+    // Strip emoji/symbols, keep letters+numbers+spaces, exact match only
+    const clean = s => (s||'').replace(/[^a-zA-Z0-9\s]/g,'').trim().toLowerCase();
     const cleanVal = clean(value);
     document.querySelectorAll('#'+groupId+' .chip, #'+groupId+' .chip-rect').forEach(btn=>{
       const btnClean = clean(btn.textContent);
-      if(btnClean===cleanVal || btnClean.includes(cleanVal) || cleanVal.includes(btnClean)){
+      if(btnClean === cleanVal){
         btn.classList.add('on');
       }
     });
@@ -5532,12 +5539,8 @@ function restoreProfileForm(player){
       // Schedule saved as "Mon, Tue, Wed" — find all cells for those days
       const days = schedStr.split(',').map(s=>s.trim());
       days.forEach(day=>{
-        // Select all time slots for this day
-        document.querySelectorAll('[data-key^="'+day+'|"]').forEach(btn=>{
-          btn.classList.add('on');
-          S.schedule.add(btn.dataset.key);
-        });
-        // Also try just day name match (day-only buttons)
+        // Only restore day-level selections (data-key="Mon" etc)
+        // NOT time-slot cells (data-key="Mon|Morning") to avoid selecting everything
         document.querySelectorAll('[data-key="'+day+'"]').forEach(btn=>{
           btn.classList.add('on');
           S.schedule.add(btn.dataset.key);
