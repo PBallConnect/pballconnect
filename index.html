@@ -2533,7 +2533,11 @@ function removePhoto(){
 // ── Chips ─────────────────────────────────────────────
 function selChip(gid,el,key){
   document.querySelectorAll('#'+gid+' .chip,#'+gid+' .chip-rect').forEach(c=>c.classList.remove('on'));
-  el.classList.add('on'); S[key]=el.textContent.trim();
+  el.classList.add('on');
+  // Strip emoji and extra whitespace for clean DB storage
+  const raw = el.textContent.trim();
+  const clean = raw.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27FF}\u{2B00}-\u{2BFF}\u{FE00}-\u{FEFF}\u{1F900}-\u{1FAFF}]|[\uD83C-\uDBFF][\uDC00-\uDFFF]/gu,'').trim();
+  S[key] = clean || raw;
   if(key==='gender') chk1();
   if(key==='skill')  chk2();
 }
@@ -2687,7 +2691,12 @@ async function submitForm(){
       gender:              S.gender,
       address:             v('addressSearch'),
       city:                v('addrCity')||S.city,
-      state:               v('addrState')||S.state,
+      state:               (()=>{ 
+        const st = v('addrState')||S.state||'';
+        // Convert full state name to abbreviation
+        const abbr = Object.entries(STATE_INFO).find(([k,v])=>v[1]&&v[1].toLowerCase()===st.toLowerCase());
+        return abbr ? abbr[0] : (st.length===2 ? st.toUpperCase() : st);
+      })(),
       zip_code:            v('addrZip'),
       county:              v('addrCounty')||S.county,
       court_name:          S.courtName || null,
@@ -2698,7 +2707,7 @@ async function submitForm(){
       anytime:             S.anytime,
       photo_url:           null,
       waiver_agreed:       S.waiver,
-      play_venues:         S.venues.size>0 ? [...S.venues].join(', ') : null,
+      play_venues:         S.venuePref || (S.venues&&S.venues.size>0 ? [...S.venues].join(', ') : null),
       drive_distance_miles: S.driveDistance || null,
       play_style:          S.playStyle || null,
       handedness:          S.handedness || null,
@@ -5442,7 +5451,11 @@ async function restoreSession(email, playerData){
 
   // Restore all S state from player record
   S.city         = player.city        || '';
-  S.state        = player.state       || '';
+  S.state        = (()=>{ 
+    const st = player.state||'';
+    const abbr = Object.entries(STATE_INFO).find(([k,v])=>v[1]&&v[1].toLowerCase()===st.toLowerCase());
+    return abbr ? abbr[0] : st;
+  })();
   S.skill        = player.skill_level || '';
   S.duprVal      = player.dupr_rating || null;
   S.avatarEmoji  = player.avatar_emoji|| '🎾';
@@ -5462,11 +5475,15 @@ async function restoreSession(email, playerData){
   // ── Helper: restore a chip group by matching text ───────
   function restoreChip(groupId, value){
     if(!value) return;
-    // Strip emoji from chip text for comparison
-    const clean = s => s.replace(/[^a-zA-Z0-9\s\-\.]/g,'').trim().toLowerCase();
+    // Strip ALL non-alphanumeric for robust comparison
+    const clean = s => (s||'').replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
+    const cleanVal = clean(value);
     document.querySelectorAll('#'+groupId+' .chip, #'+groupId+' .chip-rect').forEach(btn=>{
-      if(clean(btn.textContent) === clean(value)){
+      const btnClean = clean(btn.textContent);
+      // Match if DB value is contained in chip text or chip text contains DB value
+      if(btnClean === cleanVal || btnClean.includes(cleanVal) || cleanVal.includes(btnClean)){
         btn.classList.add('on');
+        // Also update S state
       }
     });
   }
@@ -5481,7 +5498,7 @@ async function restoreSession(email, playerData){
     dob:           player.dob,
     addressSearch: player.address,
     addrCity:      player.city,
-    addrState:     player.state,
+    addrState:     (()=>{ const st=player.state||''; const abbr=Object.entries(STATE_INFO).find(([k,v])=>v[1]&&v[1].toLowerCase()===st.toLowerCase()); return abbr?abbr[0]:st; })(),
     addrZip:       player.zip_code,
     addrCounty:    player.county,
   };
