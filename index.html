@@ -872,7 +872,7 @@
   </div>
   <div class="top-header-right">
     <div id="editProfileBtn" style="display:none;">
-      <div class="top-edit-btn" onclick="showPage('playerProfile')">✏️ Edit Profile</div>
+      <div class="top-edit-btn" onclick="openEditProfile()">✏️ Edit Profile</div>
     </div>
     <div id="viewRequestsBtn" style="display:none;">
       <div class="top-requests-btn" id="topRequestsBtn" onclick="showIcView('incoming')">
@@ -2898,9 +2898,14 @@ function showPage(page){
   if(page==='myCourts')    loadMyCourts();
   if(page==='lessons')     renderLessonsPage();
   if(page==='innerCircle'){ loadInnerCircle(); loadNearbyPlayers(); }
-  if(page==='playerProfile' && SESSION_PLAYER){ 
-    // Small delay to let the page become visible before restoring
-    setTimeout(()=>restoreProfileForm(SESSION_PLAYER), 50); 
+  if(page==='playerProfile'){
+    if(SESSION_PLAYER){
+      setTimeout(()=>restoreProfileForm(SESSION_PLAYER), 50);
+    } else {
+      // Try to load from localStorage email
+      const em = localStorage.getItem('pb_email');
+      if(em) fetchAndRestoreProfile(em);
+    }
   }
   if(page==='findPlayers')  initFindPlayers();
   if(page==='playerStats')   { loadCommunitySnapshot(); }
@@ -6378,6 +6383,43 @@ document.addEventListener('DOMContentLoaded', ()=>{
     if(el) el.style.cursor='pointer';
   });
 });
+
+// ══════════════════════════════════════════════════════
+// EDIT PROFILE — always fetches fresh data
+// ══════════════════════════════════════════════════════
+async function openEditProfile(){
+  const email = localStorage.getItem('pb_email') || getMyEmail();
+  if(!email){
+    showPage('playerProfile');
+    return;
+  }
+  showToast('Loading your profile…', '#4CAF7D');
+  await fetchAndRestoreProfile(email);
+}
+
+async function fetchAndRestoreProfile(email){
+  try{
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(email)}&select=*&limit=1`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+    );
+    if(res.ok){
+      const rows = await res.json();
+      if(rows.length){
+        SESSION_PLAYER = rows[0];
+        showPage('playerProfile');
+        // Wait for page to be visible then restore
+        setTimeout(()=>{
+          restoreProfileForm(SESSION_PLAYER);
+          updateTopBar(SESSION_PLAYER);
+        }, 100);
+        return;
+      }
+    }
+  }catch(e){ console.warn('fetchAndRestoreProfile error:', e); }
+  // Fallback — just show the page
+  showPage('playerProfile');
+}
 </script>
 </body>
 </html>
