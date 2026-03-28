@@ -2097,7 +2097,7 @@
         </div>
 
 
-        <button class="match-next-btn" id="matchNext1" disabled onclick="matchGoTo(2)" style="margin-top:20px;">Continue →</button>
+        <button class="match-next-btn" id="matchNext1" onclick="matchGoTo(2)" style="margin-top:20px;">Continue →</button>
       </div>
 
       <!-- STEP 2: WHEN -->
@@ -7321,7 +7321,8 @@ function selectMatchFormat(fmt, el){
   el.classList.remove('dim');
   el.classList.add('on');
   if(MS.group==='specific') buildSpecificPicker();
-  checkMatchStep1();
+  const next1 = document.getElementById('matchNext1');
+  if(next1) next1.disabled = false;
 }
 
 // ── Duration +/- ───────────────────────────────────────
@@ -7844,6 +7845,9 @@ function initSetupMatch(){
     dateEl.value = dateStr;
   }
   // All 5 steps visible
+  // Step 1 Continue always enabled (Doubles pre-selected)
+  const next1 = document.getElementById('matchNext1');
+  if(next1) next1.disabled = false;
 }
 
 // ══════════════════════════════════════════════════════
