@@ -905,16 +905,16 @@
   </div>
   <div class="top-header-right">
     <div id="editProfileBtn" style="display:none;">
-      <div class="top-edit-btn" onclick="openEditProfile()">✏️ Edit Profile</div>
+      <div class="top-edit-btn" onclick="openEditProfile()" title="Edit Profile Button — update your info, nickname, emoji and schedule">✏️ Edit Profile</div>
     </div>
     <div id="viewRequestsBtn" style="display:none;">
-      <div class="top-requests-btn" id="topRequestsBtn" onclick="showIcView('incoming')">
+      <div class="top-requests-btn" id="topRequestsBtn" onclick="showIcView('incoming')" title="Member Requests Button — players who want you to join their Inner Circle">
         <span>🟣</span>
         <span id="topRequestsLabel">View Member Requests</span>
         <span id="topRequestsBadge" style="display:none;background:#7c3aed;color:#fff;font-size:9px;font-weight:800;padding:1px 6px;border-radius:999px;margin-left:4px;"></span>
       </div>
     </div>
-    <div id="navLoginBtn" class="top-signin-btn" onclick="S.email||getMyEmail()?openProfileMenu():openLoginModal()">
+    <div id="navLoginBtn" class="top-signin-btn" title="Your Profile — click to edit or sign out" onclick="S.email||getMyEmail()?openProfileMenu():openLoginModal()">
       <span id="navLoginEmoji" style="font-size:16px;">👤</span>
       <span id="navLoginLabel">Sign In</span>
     </div>
@@ -928,34 +928,34 @@
       <div class="nav-logo-title" style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);padding:16px 16px 8px;">Navigation</div>
     </div>
     <div class="nav-items">
-      <div class="nav-item active" onclick="showPage('playerProfile')" id="nav-playerProfile">
+      <div class="nav-item active" onclick="showPage('playerProfile')" id="nav-playerProfile" title="Player Profile — your registration and playing preferences">
         <span class="nav-icon">👤</span>
         <span class="nav-label">Player Profile</span>
       </div>
-      <div class="nav-item" onclick="showPage('myCourts')" id="nav-myCourts">
+      <div class="nav-item" onclick="showPage('myCourts')" id="nav-myCourts" title="My Courts — find pickleball courts near you">
         <span class="nav-icon">🏟️</span>
         <span class="nav-label">My Courts</span>
       </div>
-      <div class="nav-item" onclick="showPage('playerStats')" id="nav-playerStats">
+      <div class="nav-item" onclick="showPage('playerStats')" id="nav-playerStats" title="Player Statistics — your performance and community snapshot">
         <span class="nav-icon">📊</span>
         <span class="nav-label">Player Statistics</span>
       </div>
-      <div class="nav-item" onclick="showPage('findPlayers')" id="nav-findPlayers">
+      <div class="nav-item" onclick="showPage('findPlayers')" id="nav-findPlayers" title="Find Players — search for players wanting to play">
         <span class="nav-icon">🔍</span>
         <span class="nav-label">Players Wanting to Play</span>
       </div>
-      <div class="nav-item" onclick="showPage('innerCircle')" id="nav-innerCircle">
+      <div class="nav-item" onclick="showPage('innerCircle')" id="nav-innerCircle" title="Inner Circle — your trusted pickleball connections">
         <span class="nav-icon">👥</span>
         <span class="nav-label">Inner Circle</span>
-        <span id="icNavGreenBadge" class="nav-circle-badge nav-circle-green placeholder" style="cursor:pointer;opacity:0.4;" onclick="showIcView('members')">0</span>
-        <span id="icNavYellowBadge" class="nav-circle-badge nav-circle-yellow placeholder" style="cursor:pointer;opacity:0.4;" onclick="showIcView('invited')">0</span>
-        <span id="icNavPurpleBadge" class="nav-circle-badge nav-circle-purple placeholder" title="Inner Circle requests" style="cursor:pointer;" onclick="showIcView('incoming')">0</span>
+        <span id="icNavGreenBadge" class="nav-circle-badge nav-circle-green placeholder" style="cursor:pointer;opacity:0.4;" onclick="showIcView('members')" title="Green Circle — your approved Inner Circle members (click to view)">0</span>
+        <span id="icNavYellowBadge" class="nav-circle-badge nav-circle-yellow placeholder" style="cursor:pointer;opacity:0.4;" onclick="showIcView('invited')" title="Yellow Circle — invites you sent awaiting acceptance (click to view)">0</span>
+        <span id="icNavPurpleBadge" class="nav-circle-badge nav-circle-purple placeholder" title="Purple Circle — players requesting YOU to join their Inner Circle (click to view)" style="cursor:pointer;" onclick="showIcView('incoming')">0</span>
       </div>
-      <div class="nav-item" onclick="showPage('setupMatch')" id="nav-setupMatch">
+      <div class="nav-item" onclick="showPage('setupMatch')" id="nav-setupMatch" title="Set Up A Match — organize a game with your Inner Circle">
         <span class="nav-icon">🎯</span>
         <span class="nav-label">Set Up A Match</span>
       </div>
-      <div class="nav-item nav-lessons-dim" onclick="showPage('lessons')" id="nav-lessons">
+      <div class="nav-item nav-lessons-dim" onclick="showPage('lessons')" id="nav-lessons" title="Get Lessons — find instructors near you">
         <span class="nav-icon">🎓</span>
         <span class="nav-label">Get Lessons</span>
         <span class="nav-lessons-badge" id="lessonsNavBadge" style="display:none;">New</span>
@@ -1459,7 +1459,7 @@
           </div>
         </div>
         <div id="icCommunitySnapshot">
-          <div class="ic-two-grids">
+          <div class="ic-two-grids" title="Inner Circle Overview — click any number to see those players">
             <div class="ic-grid-card">
               <div class="ic-grid-title">Players near me by level</div>
               <table class="ic-stat-table">
@@ -1584,7 +1584,7 @@
         <!-- Action bar above grids -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
           <div style="font-size:11px;color:var(--dim);">Inner Circle Overview</div>
-          <button class="ic-view-toggle-btn" id="icListToggleBtn" onclick="toggleIcListView()">
+          <button class="ic-view-toggle-btn" id="icListToggleBtn" onclick="toggleIcListView()" title="Circle List Toggle — shows your members sorted by skill level in 3 columns">
             📋 See Current Inner Circle List
           </button>
         </div>
@@ -2795,7 +2795,9 @@ async function submitForm(){
     const _savedNickname  = v('nickname') || S.nickname || '';
     const _savedEmoji     = document.getElementById('avatarEmoji')?.value || S.avatarEmoji || '🎾';
     const _savedFirstName = v('firstName') || '';
-    const _savedSkill     = S.skill || '';
+    // Read skill from slider display (most accurate source)
+    const _sliderDisplay = document.getElementById('personalRatingDisplay')?.textContent?.match(/[\d\.]+/)?.[0];
+    const _savedSkill    = _sliderDisplay || S.skill || SESSION_PLAYER?.skill_level || '';
     const _savedSince     = document.getElementById('playingSince')?.value || S.playingSince || '';
     // Update S state immediately
     S.nickname    = _savedNickname;
@@ -2804,7 +2806,6 @@ async function submitForm(){
     // Persist to localStorage so values survive page reloads/deploys
     localStorage.setItem('pb_nickname', _savedNickname);
     localStorage.setItem('pb_emoji',    _savedEmoji);
-    localStorage.setItem('pb_skill',    _savedSkill);
     // Update top bar immediately
     updateTopBar({ first_name: _savedFirstName, nickname: _savedNickname,
                    skill_level: _savedSkill, playing_since: _savedSince,
@@ -5775,7 +5776,7 @@ async function restoreSession(email, playerData){
   // then fall back to DB, then empty
   S.nickname    = localStorage.getItem('pb_nickname') || player.nickname || '';
   S.avatarEmoji = localStorage.getItem('pb_emoji')    || player.avatar_emoji || '🎾';
-  S.skill       = localStorage.getItem('pb_skill')    || player.skill_level  || '';
+  S.skill       = player.skill_level || '';  // always trust DB for skill level
   S.playingSince = player.playing_since || '';
   S.addrLat      = player.lat         || null;
   S.addrLon      = player.lon         || null;
@@ -6194,8 +6195,9 @@ function updateTopBar(player){
                 || S.nickname
                 || player.nickname
                 || '';
-  const skill    = S.skill
-                || player.skill_level
+  const skill    = player.skill_level
+                || S.skill
+                || SESSION_PLAYER?.skill_level
                 || '';
   const since    = document.getElementById('playingSince')?.value
                 || S.playingSince
