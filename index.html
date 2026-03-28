@@ -2052,14 +2052,31 @@
       </div>
 
       <!-- STEP INDICATOR -->
-      <div class="match-steps" id="matchSteps">
-        <div class="match-step-dot active" id="msd1">1</div>
+      <div class="match-steps" id="matchSteps" style="margin-bottom:20px;">
+        <div style="text-align:center;">
+          <div class="match-step-dot active" id="msd1">1</div>
+          <div style="font-size:9px;color:var(--dim);margin-top:2px;">Format</div>
+        </div>
         <div class="match-step-line" id="msl1"></div>
-        <div class="match-step-dot" id="msd2">2</div>
+        <div style="text-align:center;">
+          <div class="match-step-dot" id="msd2">2</div>
+          <div style="font-size:9px;color:var(--dim);margin-top:2px;">When</div>
+        </div>
         <div class="match-step-line" id="msl2"></div>
-        <div class="match-step-dot" id="msd3">3</div>
+        <div style="text-align:center;">
+          <div class="match-step-dot" id="msd3">3</div>
+          <div style="font-size:9px;color:var(--dim);margin-top:2px;">Where</div>
+        </div>
         <div class="match-step-line" id="msl3"></div>
-        <div class="match-step-dot" id="msd4">4</div>
+        <div style="text-align:center;">
+          <div class="match-step-dot" id="msd4">4</div>
+          <div style="font-size:9px;color:var(--dim);margin-top:2px;">Who</div>
+        </div>
+        <div class="match-step-line" id="msl4"></div>
+        <div style="text-align:center;">
+          <div class="match-step-dot" id="msd5">5</div>
+          <div style="font-size:9px;color:var(--dim);margin-top:2px;">Review</div>
+        </div>
       </div>
 
       <!-- STEP 1: FORMAT + WHO -->
@@ -2079,8 +2096,14 @@
           </div>
         </div>
 
-        <!-- When — right after format -->
-        <div class="match-q" style="margin-top:20px;">When?</div>
+
+        <button class="match-next-btn" id="matchNext1" disabled onclick="matchGoTo(2)" style="margin-top:20px;">Continue →</button>
+      </div>
+
+      <!-- STEP 2: WHEN -->
+      <div class="match-card" id="matchStep2" style="display:none;">
+        <div class="match-q">When?</div>
+
 
 
 
@@ -2091,7 +2114,7 @@
               style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);
                      background:rgba(255,255,255,0.07);color:#fff;font-size:13px;
                      box-sizing:border-box;font-family:'DM Sans',sans-serif;"
-              oninput="checkMatchStep1()"/>
+              oninput="checkMatchStep2()"/>
           </div>
 
         </div>
@@ -2107,7 +2130,7 @@
             <div>
               <label style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;
                             letter-spacing:.1em;display:block;margin-bottom:6px;">Start time</label>
-              <select id="matchTimeStart" onchange="onMatchStartTimeChange(this.value);checkMatchStep1()"
+              <select id="matchTimeStart" onchange="onMatchStartTimeChange(this.value);checkMatchStep2()"
                 style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);
                        background:#0f1f12;color:#fff;font-size:14px;font-weight:600;
                        font-family:'DM Sans',sans-serif;outline:none;appearance:none;
@@ -2139,7 +2162,7 @@
             <div>
               <label style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;
                             letter-spacing:.1em;display:block;margin-bottom:6px;">End time</label>
-              <select id="matchTimeEnd" onchange="validateMatchTimes();checkMatchStep1()"
+              <select id="matchTimeEnd" onchange="validateMatchTimes();checkMatchStep2()"
                 style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);
                        background:#0f1f12;color:#fff;font-size:14px;font-weight:600;
                        font-family:'DM Sans',sans-serif;outline:none;appearance:none;
@@ -2153,10 +2176,62 @@
             ⚠️ End time cannot be before start time
           </div>
         </div>
+        <div class="match-btn-row" style="margin-top:20px;">
+          <button class="match-back-btn" onclick="matchGoTo(1)">← Back</button>
+          <button class="match-next-btn" id="matchNext3" disabled onclick="matchGoTo(4)">Continue →</button>
+        </div>
+      </div>
 
+      <!-- STEP 3: WHERE -->
+      <div class="match-card" id="matchStep3" style="display:none;">
+        <div class="match-q">Where do you want to play?</div>
+        <div class="match-options" style="margin-bottom:16px;">
+          <div class="match-option on" id="matchLocMyCourts" onclick="selectMatchLocation('my_courts',this)">
+            <div class="match-option-icon">📍</div>
+            <div class="match-option-title">My Courts</div>
+            <div class="match-option-sub">Pick from your saved courts</div>
+          </div>
+          <div class="match-option" id="matchLocTbd" onclick="selectMatchLocation('tbd',this)">
+            <div class="match-option-icon">🤷</div>
+            <div class="match-option-title">TBD</div>
+            <div class="match-option-sub">Decide with the group</div>
+          </div>
+        </div>
 
+        <div id="matchMyCourtsSection">
+          <div style="font-size:11px;color:var(--dim);margin-bottom:12px;">
+            Select one or more courts. If multiple, check ⭐ to mark your preferred.
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div>
+              <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">🌳 Free / Public</div>
+              <div id="matchPublicCourts"></div>
+            </div>
+            <div>
+              <div style="font-size:10px;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">🏢 Private</div>
+              <div id="matchPrivateCourts"></div>
+              <div style="margin-top:8px;padding:7px 10px;background:rgba(251,191,36,0.05);border:1px solid rgba(251,191,36,0.15);border-radius:8px;font-size:10px;color:var(--dim);">🔮 CourtReserve booking coming soon</div>
+            </div>
+          </div>
+          <div id="matchNoCourts" class="ic-empty" style="display:none;">
+            No courts saved yet.
+            <button class="match-add-courts-btn" onclick="showPage('myCourts')" style="margin-left:8px;">Find Courts →</button>
+          </div>
+          <div id="matchSelectedCourtsWrap" style="display:none;margin-top:14px;padding:12px 14px;background:rgba(76,175,125,0.06);border:1px solid rgba(76,175,125,0.2);border-radius:10px;">
+            <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Selected courts</div>
+            <div id="matchSelectedCourtsList"></div>
+          </div>
+        </div>
 
-        <div class="match-q" style="margin-top:20px;">Who to invite?</div>
+        <div class="match-btn-row" style="margin-top:20px;">
+          <button class="match-back-btn" onclick="matchGoTo(2)">← Back</button>
+          <button class="match-next-btn" id="matchNext3" disabled onclick="matchGoTo(4)">Continue →</button>
+        </div>
+      </div>
+
+      <!-- STEP 4: WHO -->
+      <div class="match-card" id="matchStep4" style="display:none;">
+        <div class="match-q">Who to invite?</div>
         <div class="match-options" id="matchGroupOptions">
           <div class="match-option" onclick="selectMatchGroup('all',this)">
             <div class="match-option-icon">👥</div>
@@ -2191,77 +2266,18 @@
             <div class="match-section-label" style="margin:0;">Select players</div>
             <div id="matchSpecificCount" style="font-size:12px;color:var(--green);font-weight:700;"></div>
           </div>
-          <div id="matchSpecificWarning" style="display:none;padding:8px 12px;background:rgba(239,68,68,0.1);
-            border:1px solid rgba(239,68,68,0.3);border-radius:8px;font-size:12px;color:#f87171;margin-bottom:10px;">
-          </div>
+          <div id="matchSpecificWarning" style="display:none;padding:8px 12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;font-size:12px;color:#f87171;margin-bottom:10px;"></div>
           <div id="matchSpecificList" class="match-court-list" style="max-height:300px;overflow-y:auto;"></div>
         </div>
 
-        <button class="match-next-btn" id="matchNext1" disabled onclick="matchGoTo(2)">Continue →</button>
-      </div>
-
-      <!-- STEP 2: WHERE -->
-      <div class="match-card" id="matchStep2" style="display:none;">
-        <div class="match-q">Where do you want to play?</div>
-        <div class="match-options" style="margin-bottom:16px;">
-          <div class="match-option on" id="matchLocMyCourts" onclick="selectMatchLocation('my_courts',this)">
-            <div class="match-option-icon">📍</div>
-            <div class="match-option-title">My Courts</div>
-            <div class="match-option-sub">Pick from your saved courts</div>
-          </div>
-          <div class="match-option" id="matchLocTbd" onclick="selectMatchLocation('tbd',this)">
-            <div class="match-option-icon">🤷</div>
-            <div class="match-option-title">TBD</div>
-            <div class="match-option-sub">Decide with the group</div>
-          </div>
-        </div>
-
-        <div id="matchMyCourtsSection">
-          <div style="font-size:11px;color:var(--dim);margin-bottom:12px;">
-            Select one or more courts. If multiple, check ⭐ to mark your preferred.
-          </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <!-- Public courts -->
-            <div>
-              <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;
-                          letter-spacing:.08em;margin-bottom:10px;">🌳 Free / Public</div>
-              <div id="matchPublicCourts"></div>
-            </div>
-            <!-- Private courts -->
-            <div>
-              <div style="font-size:10px;font-weight:700;color:#fbbf24;text-transform:uppercase;
-                          letter-spacing:.08em;margin-bottom:10px;">🏢 Private</div>
-              <div id="matchPrivateCourts"></div>
-              <div style="margin-top:8px;padding:7px 10px;background:rgba(251,191,36,0.05);
-                border:1px solid rgba(251,191,36,0.15);border-radius:8px;font-size:10px;color:var(--dim);">
-                🔮 CourtReserve booking coming soon
-              </div>
-            </div>
-          </div>
-
-          <div id="matchNoCourts" class="ic-empty" style="display:none;">
-            No courts saved yet.
-            <button class="match-add-courts-btn" onclick="showPage('myCourts')" style="margin-left:8px;">Find Courts →</button>
-          </div>
-
-          <!-- Selected courts summary -->
-          <div id="matchSelectedCourtsWrap" style="display:none;margin-top:14px;padding:12px 14px;
-            background:rgba(76,175,125,0.06);border:1px solid rgba(76,175,125,0.2);border-radius:10px;">
-            <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;
-                        letter-spacing:.08em;margin-bottom:8px;">Selected courts</div>
-            <div id="matchSelectedCourtsList"></div>
-          </div>
-        </div>
-
         <div class="match-btn-row" style="margin-top:20px;">
-          <button class="match-back-btn" onclick="matchGoTo(1)">← Back</button>
-          <button class="match-next-btn" id="matchNext2" disabled onclick="matchGoTo(3)">Continue →</button>
+          <button class="match-back-btn" onclick="matchGoTo(3)">← Back</button>
+          <button class="match-next-btn" id="matchNext4" disabled onclick="matchGoTo(5)">Continue →</button>
         </div>
       </div>
 
-      <!-- STEP 3: REVIEW + SEND -->
-      <div class="match-card" id="matchStep3" style="display:none;">
+      <!-- STEP 5: REVIEW + SEND -->
+      <div class="match-card" id="matchStep5" style="display:none;">
         <div class="match-q">Review &amp; Send</div>
         <div id="matchSummary" class="match-summary" style="margin-bottom:16px;"></div>
         <div class="field">
@@ -2273,7 +2289,7 @@
         </div>
         <div id="matchInviteePreview" style="margin-top:16px;"></div>
         <div class="match-btn-row" style="margin-top:20px;">
-          <button class="match-back-btn" onclick="matchGoTo(2)">← Back</button>
+          <button class="match-back-btn" onclick="matchGoTo(4)">← Back</button>
           <button class="match-next-btn" id="matchSendBtn"
             style="background:var(--green);color:var(--dark);font-weight:700;"
             onclick="submitMatch()">🎾 Send Match Invite</button>
@@ -2281,7 +2297,7 @@
         <div id="matchSendStatus" style="font-size:12px;color:var(--dim);margin-top:8px;text-align:center;"></div>
       </div>
 
-      <!-- Sent matches -->
+            <!-- Sent matches -->
       <div id="matchSentSection" style="display:none;margin-top:24px;">
         <div class="ic-section-label">📅 Your Match Invites</div>
         <div id="matchSentList"></div>
@@ -3407,7 +3423,21 @@ function getCityLatLon(){
   return null;
 }
 
-function renderCourtsContainers(){
+async function renderCourtsContainers(){
+  // Load player's previously saved courts and pre-check them
+  const myEmail = getMyEmail();
+  if(myEmail){
+    try{
+      const savedRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(myEmail)}&select=court_id`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+      );
+      if(savedRes.ok){
+        const savedRows = await savedRes.json();
+        savedRows.forEach(r=>{ if(r.court_id) myCourtsState.selected.add(r.court_id); });
+      }
+    }catch(e){}
+  }
   renderCourtsList('privateCourtsBody', myCourtsState.private, 'private');
   renderCourtsList('publicCourtsBody',  myCourtsState.public,  'public');
 }
@@ -3497,7 +3527,7 @@ async function addCustomCourt(type){
   const is_indoor=document.getElementById(indoorId)?.checked||false;
   const num_courts=parseInt(document.getElementById(numId)?.value)||0;
   const notes=(document.getElementById(notesId)?.value||'').trim();
-  const playerEmail=document.getElementById('email')?.value||'';
+  const playerEmail=getMyEmail()||document.getElementById('email')?.value||'';
   const newCourt={
     id:'custom_'+Date.now(), name, address,
     is_private:type==='private', is_indoor, num_courts, source:'user'
@@ -3542,7 +3572,7 @@ async function addCustomCourt(type){
 
 async function saveMyCourts(){
   if(myCourtsState.selected.size===0){showToast('⚠️ No courts selected yet.','#f59e0b');return;}
-  const playerEmail=document.getElementById('email')?.value||'';
+  const playerEmail=getMyEmail()||document.getElementById('email')?.value||'';
   const promises=[...myCourtsState.selected].map(id=>{
     const court=[...myCourtsState.private,...myCourtsState.public].find(c=>(c.id||c.name)===id);
     return fetch(`${SUPABASE_URL}/rest/v1/player_courts`,{
@@ -7263,8 +7293,7 @@ const MS = {
 
 // ── Step navigation ────────────────────────────────────
 function matchGoTo(step){
-  const totalSteps = 3;
-  [1,2,3].forEach(i=>{
+  [1,2,3,4,5].forEach(i=>{
     const s   = document.getElementById('matchStep'+i);
     const dot = document.getElementById('msd'+i);
     const line= document.getElementById('msl'+i);
@@ -7275,8 +7304,9 @@ function matchGoTo(step){
     }
     if(line) line.classList.toggle('done', i<step);
   });
-  if(step===2) loadMatchCourts();
-  if(step===3) buildMatchSummary();
+  if(step===3) loadMatchCourts();
+  if(step===4) updateMatchGroupLabels();
+  if(step===5) buildMatchSummary();
   const stepsEl = document.getElementById('matchSteps');
   if(stepsEl) window.scrollTo({top:stepsEl.offsetTop-70, behavior:'smooth'});
 }
@@ -7626,7 +7656,7 @@ async function loadMatchCourts(){
 }
 
 function updateMatchCourtsNext(){
-  document.getElementById('matchNext2').disabled = MS.selectedCourts.size === 0 && MS.location !== 'tbd';
+  document.getElementById('matchNext3').disabled = MS.selectedCourts.size === 0 && MS.location !== 'tbd';
 }
 
 function updateMatchCourtsSummary(){
@@ -7813,9 +7843,7 @@ function initSetupMatch(){
     dateEl.min   = now.toISOString().split('T')[0];
     dateEl.value = dateStr;
   }
-  // Update step indicators to 3 steps
-  document.getElementById('msd4') && (document.getElementById('msd4').style.display='none');
-  document.getElementById('msl3') && (document.getElementById('msl3').style.display='none');
+  // All 5 steps visible
 }
 
 // ══════════════════════════════════════════════════════
@@ -7906,6 +7934,21 @@ function showMatchResponseBanner(match, myEmail){
       `<button onclick="document.getElementById('matchResponseBanner').remove()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:18px;flex-shrink:0;padding:0;">✕</button>`+
     '</div>';
 
+  // Add court offer if court exists
+  if(match.court_id && match.court_name){
+    const offerDiv = document.createElement('div');
+    offerDiv.id = 'matchAddCourtOffer';
+    offerDiv.style.cssText = 'margin-top:10px;padding:8px 12px;background:rgba(76,175,125,0.06);border-radius:8px;display:flex;align-items:center;gap:10px;';
+    offerDiv.innerHTML =
+      '<span style="font-size:13px;">📍</span>'+
+      '<span style="font-size:11px;color:var(--dim);flex:1;">'+match.court_name+' not in your courts?</span>'+
+      '<button style="font-size:11px;color:var(--green);background:none;border:1px solid var(--green);border-radius:6px;padding:4px 10px;cursor:pointer;font-family:sans-serif;white-space:nowrap;">+ Add to My Courts</button>';
+    offerDiv.querySelector('button').onclick = function(){
+      addMatchCourtToMyCourts(match.court_id, match.court_name, match.court_address||'', this);
+    };
+    banner.querySelector('div').appendChild(offerDiv);
+  }
+
   document.body.appendChild(banner);
 }
 
@@ -7992,6 +8035,28 @@ function addHours(timeStr, hrs){
 document.addEventListener('DOMContentLoaded', ()=>{
   setTimeout(checkMatchToken, 1000); // After session restore
 });
+
+async function addMatchCourtToMyCourts(courtId, courtName, courtAddress, btn){
+  const myEmail = getMyEmail();
+  if(!myEmail){ showToast('Please sign in first','#f59e0b'); return; }
+  btn.disabled = true; btn.textContent = 'Adding…';
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/player_courts`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+               'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+      body: JSON.stringify({player_email:myEmail, court_id:courtId, is_member:false})
+    });
+    btn.textContent = '✅ Added!';
+    btn.style.color = 'var(--green)';
+    showToast('✅ '+courtName+' added to My Courts!','#4CAF7D');
+    const offer = document.getElementById('matchAddCourtOffer');
+    setTimeout(()=>{ if(offer) offer.style.display='none'; }, 2000);
+  }catch(e){
+    btn.disabled=false; btn.textContent='+ Add to My Courts';
+    showToast('Error: '+e.message,'#f87171');
+  }
+}
 </script>
 </body>
 </html>
