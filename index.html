@@ -2675,8 +2675,8 @@ async function submitForm(){
   let schedStr = 'Not specified';
   if(S.anytime) schedStr = 'Anytime';
   else if(S.schedule.size > 0){
-    const days = [...new Set([...S.schedule].map(k=>k.split('|')[0]))];
-    schedStr = days.join(', ');
+    // Save full keys (Mon|Morning, Mon|Afternoon etc) to preserve time detail
+    schedStr = [...S.schedule].join(', ');
   }
 
   // Save to Supabase via direct REST call
@@ -5555,21 +5555,32 @@ function restoreProfileForm(player){
     const anyBtn=document.getElementById('anytimeBtn');
     if(anyBtn) anyBtn.classList.add('on');
   } else if(player.schedule && player.schedule !== 'Not specified'){
-    const days = String(player.schedule).split(',').map(s=>s.trim()).filter(Boolean);
-    days.forEach(day=>{
-      // Use toggleDay to properly select all cells for this day
-      // Highlight the day button
-      document.querySelectorAll('.day-btn').forEach(btn=>{
-        if(btn.textContent.trim()===day) btn.classList.add('on');
+    const parts = String(player.schedule).split(',').map(s=>s.trim()).filter(Boolean);
+    const hasTimeSlots = parts.some(p=>p.includes('|'));
+    if(hasTimeSlots){
+      // New format: "Mon|Morning, Mon|Afternoon"
+      parts.forEach(key=>{
+        const cell = document.querySelector('[data-key="'+key+'"]');
+        if(cell){ cell.classList.add('on'); S.schedule.add(key); }
+        const day = key.split('|')[0];
+        document.querySelectorAll('.day-btn').forEach(btn=>{
+          if(btn.textContent.trim()===day) btn.classList.add('on');
+        });
       });
-      // Select all time-slot cells for this day
-      document.querySelectorAll('.sched-cell').forEach(cell=>{
-        if(cell.dataset.key && cell.dataset.key.startsWith(day+'|')){
-          cell.classList.add('on');
-          S.schedule.add(cell.dataset.key);
-        }
+    } else {
+      // Old format: "Mon, Tue" — select all slots for those days
+      parts.forEach(day=>{
+        document.querySelectorAll('.day-btn').forEach(btn=>{
+          if(btn.textContent.trim()===day) btn.classList.add('on');
+        });
+        document.querySelectorAll('.sched-cell').forEach(cell=>{
+          if(cell.dataset.key && cell.dataset.key.startsWith(day+'|')){
+            cell.classList.add('on');
+            S.schedule.add(cell.dataset.key);
+          }
+        });
       });
-    });
+    }
   }
 
   // ── Drive distance ────────────────────────────────────
