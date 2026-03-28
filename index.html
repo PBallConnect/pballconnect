@@ -2099,7 +2099,7 @@
         <!-- Specific start time -->
         <div id="matchSpecificTime" style="margin-top:12px;">
           <div class="match-q" style="font-size:14px;margin-bottom:8px;">Start time</div>
-          <div class="match-time-grid" id="matchTimeGrid"></div>
+
           <!-- Start → Duration → End row -->
           <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:end;margin-top:10px;">
 
@@ -2109,9 +2109,10 @@
                             letter-spacing:.1em;display:block;margin-bottom:6px;">Start time</label>
               <select id="matchTimeStart" onchange="onMatchStartTimeChange(this.value);checkMatchStep1()"
                 style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);
-                       background:rgba(255,255,255,0.07);color:#fff;font-size:13px;
-                       font-family:'DM Sans',sans-serif;outline:none;appearance:none;">
-                <option value="">Select…</option>
+                       background:#0f1f12;color:#fff;font-size:14px;font-weight:600;
+                       font-family:'DM Sans',sans-serif;outline:none;appearance:none;
+                       cursor:pointer;">
+                <option value="" style="background:#0f1f12;">Select start time…</option>
               </select>
             </div>
 
@@ -2140,9 +2141,10 @@
                             letter-spacing:.1em;display:block;margin-bottom:6px;">End time</label>
               <select id="matchTimeEnd" onchange="validateMatchTimes();checkMatchStep1()"
                 style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);
-                       background:rgba(255,255,255,0.07);color:#fff;font-size:13px;
-                       font-family:'DM Sans',sans-serif;outline:none;appearance:none;">
-                <option value="">—</option>
+                       background:#0f1f12;color:#fff;font-size:14px;font-weight:600;
+                       font-family:'DM Sans',sans-serif;outline:none;appearance:none;
+                       cursor:pointer;">
+                <option value="" style="background:#0f1f12;">—</option>
               </select>
             </div>
 
@@ -7290,28 +7292,7 @@ function adjustDuration(delta){
 
 // ── Time selects with 15-min increments ───────────────
 function buildMatchTimeChips(){
-  // Build quick-tap common time chips
-  const grid = document.getElementById('matchTimeGrid');
-  if(!grid) return;
-  const quickTimes = ['7:00','8:00','9:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'];
-  grid.innerHTML = '';
-  grid.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;';
-  quickTimes.forEach(t=>{
-    const btn = document.createElement('button');
-    btn.className = 'chip';
-    btn.style.cssText = 'font-size:11px;padding:5px 10px;';
-    btn.textContent = fmt12(t);
-    btn.onclick = ()=>{
-      grid.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
-      btn.classList.add('on');
-      const sel = document.getElementById('matchTimeStart');
-      if(sel) sel.value = t;
-      onMatchStartTimeChange(t);
-      checkMatchStep1();
-    };
-    grid.appendChild(btn);
-  });
-  // Build start time dropdown (all day in 15-min increments)
+  // Build time dropdowns (no chips)
   buildTimeSelect('matchTimeStart', '06:00', '23:45');
   buildTimeSelect('matchTimeEnd',   '06:00', '24:00');
 }
@@ -7334,6 +7315,7 @@ function buildTimeSelect(selectId, startHH, endHH){
     opt.value = val;
     // Special case for midnight
     opt.textContent = h === 24 ? 'Midnight' : fmt12(val);
+    opt.style.cssText='background:#0f1f12;color:#fff;';
     sel.appendChild(opt);
   }
   if(current) sel.value = current;
@@ -7352,11 +7334,7 @@ function onMatchStartTimeChange(startVal){
   if(endSel) endSel.value = endVal;
   MS.timeEnd = endVal;
   validateMatchTimes();
-  // Sync chip selection
-  document.querySelectorAll('#matchTimeGrid .chip').forEach(btn=>{
-    const chipTime = btn.dataset?.time || '';
-    btn.classList.toggle('on', chipTime === startVal);
-  });
+
 }
 
 function validateMatchTimes(){
