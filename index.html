@@ -2534,9 +2534,9 @@ function removePhoto(){
 function selChip(gid,el,key){
   document.querySelectorAll('#'+gid+' .chip,#'+gid+' .chip-rect').forEach(c=>c.classList.remove('on'));
   el.classList.add('on');
-  // Strip emoji and extra whitespace for clean DB storage
+  // Strip ALL emoji and symbols — save only clean text to S state and DB
   const raw = el.textContent.trim();
-  const clean = raw.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27FF}\u{2B00}-\u{2BFF}\u{FE00}-\u{FEFF}\u{1F900}-\u{1FAFF}]|[\uD83C-\uDBFF][\uDC00-\uDFFF]/gu,'').trim();
+  const clean = raw.replace(/[^a-zA-Z0-9 ]/g,'').replace(/\s+/g,' ').trim();
   S[key] = clean || raw;
   if(key==='gender') chk1();
   if(key==='skill')  chk2();
@@ -2898,7 +2898,10 @@ function showPage(page){
   if(page==='myCourts')    loadMyCourts();
   if(page==='lessons')     renderLessonsPage();
   if(page==='innerCircle'){ loadInnerCircle(); loadNearbyPlayers(); }
-  if(page==='playerProfile' && SESSION_PLAYER){ restoreProfileForm(SESSION_PLAYER); }
+  if(page==='playerProfile' && SESSION_PLAYER){ 
+    // Small delay to let the page become visible before restoring
+    setTimeout(()=>restoreProfileForm(SESSION_PLAYER), 50); 
+  }
   if(page==='findPlayers')  initFindPlayers();
   if(page==='playerStats')   { loadCommunitySnapshot(); }
 }
@@ -5451,8 +5454,8 @@ function restoreProfileForm(player){
 
   function restoreChip(groupId, value){
     if(!value) return;
-    // Strip emoji/symbols, keep letters+numbers+spaces, exact match only
-    const clean = s => (s||'').replace(/[^a-zA-Z0-9\s]/g,'').trim().toLowerCase();
+    // Strip emojis and symbols from both sides, then exact match
+    const clean = s => (s||'').replace(/[^a-zA-Z0-9 ]/g,'').replace(/\s+/g,' ').trim().toLowerCase();
     const cleanVal = clean(value);
     document.querySelectorAll('#'+groupId+' .chip, #'+groupId+' .chip-rect').forEach(btn=>{
       const btnClean = clean(btn.textContent);
@@ -5498,7 +5501,7 @@ function restoreProfileForm(player){
   S.gender       = player.gender       || '';
   S.handedness   = player.handedness   || '';
   S.venuePref    = player.play_venues  || '';
-  S.playStyle    = player.play_style   || '';
+  S.playStyle    = player.play_style   || ''; // Already clean from DB
   S.wantsToImprove = player.wants_to_improve || '';
 
   // ── Personal rating slider ────────────────────────────
@@ -5581,6 +5584,18 @@ function restoreProfileForm(player){
     }
   }
 
+  // Verify chips were set correctly
+  const verifyChip = (groupId, expected) => {
+    const on = document.querySelector('#'+groupId+' .chip.on, #'+groupId+' .chip-rect.on');
+    console.log('🔍 '+groupId+': expected="'+expected+'" found="'+(on?on.textContent.trim():'NONE')+'"');
+  };
+  verifyChip('handednessChips', player.handedness);
+  verifyChip('venuePrefChips',  player.play_venues);
+  verifyChip('playStyleChips',  player.play_style);
+  verifyChip('genderChips',     player.gender);
+  verifyChip('improveChips',    player.wants_to_improve);
+  const psEl = document.getElementById('playingSince');
+  console.log('🔍 playingSince: value="'+(psEl?psEl.value:'NO ELEMENT')+'" expected="'+player.playing_since+'"');
   console.log('✅ Profile form restored for', player.email);
 }
 
