@@ -898,6 +898,8 @@
   .match-summary-row span:first-child{color:var(--dim);font-size:11px;font-weight:700;
     text-transform:uppercase;letter-spacing:.06em;}
   .match-summary-row span:last-child{color:#fff;font-weight:600;}
+  /* ── Match time chips ─────────────────────────────── */
+  .match-time-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <script>
@@ -2059,17 +2061,106 @@
 
       <!-- STEP 1: FORMAT + WHO -->
       <div class="match-card" id="matchStep1">
+
         <div class="match-q">What kind of match?</div>
-        <div class="match-options">
+        <div class="match-options" id="matchFormatOptions">
           <div class="match-option on" id="matchOptDoubles" onclick="selectMatchFormat('doubles',this)">
             <div class="match-option-icon">🏓🏓</div>
             <div class="match-option-title">Doubles</div>
-            <div class="match-option-sub">4 players · need 3 others</div>
+            <div class="match-option-sub">Need 3 others · 4 total</div>
           </div>
           <div class="match-option" id="matchOptSingles" onclick="selectMatchFormat('singles',this)">
             <div class="match-option-icon">🏓</div>
             <div class="match-option-title">Singles</div>
-            <div class="match-option-sub">2 players · need 1 other</div>
+            <div class="match-option-sub">Need 1 other · 2 total</div>
+          </div>
+        </div>
+
+        <!-- When — right after format -->
+        <div class="match-q" style="margin-top:20px;">When?</div>
+
+        <!-- Feeler toggle -->
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:12px 16px;
+             background:rgba(76,175,125,0.06);border:1px solid rgba(76,175,125,0.2);border-radius:12px;">
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:700;color:#fff;">Send as a "feeler"?</div>
+            <div style="font-size:11px;color:var(--dim);margin-top:2px;">Ask who's free in a time window rather than a fixed time</div>
+          </div>
+          <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;flex-shrink:0;">
+            <input type="checkbox" id="matchFeelerToggle" onchange="toggleMatchFeeler(this.checked)"
+              style="opacity:0;width:0;height:0;">
+            <span style="position:absolute;top:0;left:0;right:0;bottom:0;background:var(--border);
+              border-radius:24px;transition:.3s;" id="matchFeelerSlider">
+              <span style="position:absolute;height:18px;width:18px;left:3px;bottom:3px;
+                background:#fff;border-radius:50%;transition:.3s;" id="matchFeelerThumb"></span>
+            </span>
+          </label>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;margin-bottom:4px;">
+          <div class="field" style="margin:0;">
+            <label>Date</label>
+            <input type="date" id="matchDate"
+              style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);
+                     background:rgba(255,255,255,0.07);color:#fff;font-size:13px;
+                     box-sizing:border-box;font-family:'DM Sans',sans-serif;"
+              oninput="checkMatchStep1()"/>
+          </div>
+          <div id="matchDurationBox" style="min-width:160px;">
+            <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;
+                        letter-spacing:.1em;margin-bottom:6px;">Duration</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <button onclick="adjustDuration(-0.5)"
+                style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);
+                       background:transparent;color:#fff;font-size:18px;cursor:pointer;
+                       font-family:'DM Sans',sans-serif;line-height:1;">−</button>
+              <span id="matchDurationDisplay"
+                style="min-width:48px;text-align:center;font-size:15px;font-weight:700;color:#fff;">2 hrs</span>
+              <button onclick="adjustDuration(0.5)"
+                style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);
+                       background:transparent;color:#fff;font-size:18px;cursor:pointer;
+                       font-family:'DM Sans',sans-serif;line-height:1;">+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Specific start time -->
+        <div id="matchSpecificTime" style="margin-top:12px;">
+          <div class="match-q" style="font-size:14px;margin-bottom:8px;">Start time</div>
+          <div class="match-time-grid" id="matchTimeGrid"></div>
+          <div style="margin-top:8px;">
+            <label style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;
+                          letter-spacing:.1em;display:block;margin-bottom:6px;">Or enter a specific time</label>
+            <input type="time" id="matchTimeStart"
+              style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);
+                     background:rgba(255,255,255,0.07);color:#fff;font-size:13px;
+                     font-family:'DM Sans',sans-serif;outline:none;"
+              oninput="selectMatchTime(this.value);checkMatchStep1()"/>
+          </div>
+        </div>
+
+        <!-- Feeler time range -->
+        <div id="matchFeelerTime" style="display:none;margin-top:12px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="field">
+              <label>Earliest start</label>
+              <input type="time" id="matchTimeRangeStart"
+                style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);
+                       background:rgba(255,255,255,0.07);color:#fff;font-size:13px;
+                       box-sizing:border-box;font-family:'DM Sans',sans-serif;"
+                oninput="checkMatchStep1()"/>
+            </div>
+            <div class="field">
+              <label>Latest start</label>
+              <input type="time" id="matchTimeRangeEnd"
+                style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);
+                       background:rgba(255,255,255,0.07);color:#fff;font-size:13px;
+                       box-sizing:border-box;font-family:'DM Sans',sans-serif;"
+                oninput="checkMatchStep1()"/>
+            </div>
+          </div>
+          <div style="margin-top:6px;font-size:11px;color:#fbbf24;">
+            💡 Players respond: "I'm free anytime in this window"
           </div>
         </div>
 
@@ -2088,94 +2179,73 @@
           <div class="match-option" onclick="selectMatchGroup('below',this)">
             <div class="match-option-icon">🟡</div>
             <div class="match-option-title">Below My Level</div>
-            <div class="match-option-sub" id="matchBelowSub">One level below me</div>
+            <div class="match-option-sub" id="matchBelowSub">One level below</div>
           </div>
           <div class="match-option" onclick="selectMatchGroup('above',this)">
             <div class="match-option-icon">🟣</div>
             <div class="match-option-title">Above My Level</div>
-            <div class="match-option-sub" id="matchAboveSub">One level above me</div>
+            <div class="match-option-sub" id="matchAboveSub">One level above</div>
           </div>
           <div class="match-option" onclick="selectMatchGroup('specific',this)">
             <div class="match-option-icon">🎯</div>
             <div class="match-option-title">Specific Players</div>
-            <div class="match-option-sub">Hand-pick from my circle</div>
+            <div class="match-option-sub" id="matchSpecificSub">Hand-pick from my circle</div>
           </div>
         </div>
 
         <!-- Specific player picker -->
         <div id="matchSpecificPicker" style="display:none;margin-top:16px;">
-          <div class="match-section-label">Select players from your Inner Circle</div>
-          <div id="matchSpecificList" class="match-court-list" style="max-height:280px;"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div class="match-section-label" style="margin:0;">Select players</div>
+            <div id="matchSpecificCount" style="font-size:12px;color:var(--green);font-weight:700;"></div>
+          </div>
+          <div id="matchSpecificWarning" style="display:none;padding:8px 12px;background:rgba(239,68,68,0.1);
+            border:1px solid rgba(239,68,68,0.3);border-radius:8px;font-size:12px;color:#f87171;margin-bottom:10px;">
+          </div>
+          <div id="matchSpecificList" class="match-court-list" style="max-height:300px;overflow-y:auto;"></div>
         </div>
 
         <button class="match-next-btn" id="matchNext1" disabled onclick="matchGoTo(2)">Continue →</button>
       </div>
 
-      <!-- STEP 2: WHEN -->
+      <!-- STEP 2: WHERE -->
       <div class="match-card" id="matchStep2" style="display:none;">
-        <div class="match-q">When do you want to play?</div>
-
-        <!-- Feeler toggle -->
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:12px 16px;
-             background:rgba(76,175,125,0.06);border:1px solid rgba(76,175,125,0.2);border-radius:12px;">
-          <div style="flex:1;">
-            <div style="font-size:13px;font-weight:700;color:#fff;">Send as a "feeler"?</div>
-            <div style="font-size:11px;color:var(--dim);margin-top:2px;">Ask who's free in a time range rather than a specific time</div>
+        <div class="match-q">Where do you want to play?</div>
+        <div class="match-options" style="margin-bottom:16px;">
+          <div class="match-option on" id="matchLocMyCourts" onclick="selectMatchLocation('my_courts',this)">
+            <div class="match-option-icon">📍</div>
+            <div class="match-option-title">My Courts</div>
+            <div class="match-option-sub">Pick from your saved courts</div>
           </div>
-          <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;">
-            <input type="checkbox" id="matchFeelerToggle" onchange="toggleMatchFeeler(this.checked)"
-              style="opacity:0;width:0;height:0;">
-            <span id="matchFeelerSlider" style="position:absolute;top:0;left:0;right:0;bottom:0;
-              background:var(--border);border-radius:24px;transition:.3s;">
-              <span style="position:absolute;height:18px;width:18px;left:3px;bottom:3px;
-                background:#fff;border-radius:50%;transition:.3s;" id="matchFeelerThumb"></span>
-            </span>
-          </label>
-        </div>
-
-        <div class="field">
-          <label>Date</label>
-          <input type="date" id="matchDate"
-            style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);
-                   background:rgba(255,255,255,0.07);color:#fff;font-size:13px;
-                   box-sizing:border-box;font-family:'DM Sans',sans-serif;"
-            oninput="checkMatchStep2()"/>
-        </div>
-
-        <!-- Specific time (default) -->
-        <div id="matchSpecificTime" style="margin-top:12px;">
-          <div class="field">
-            <label>Start Time</label>
-            <input type="time" id="matchTimeStart"
-              style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);
-                     background:rgba(255,255,255,0.07);color:#fff;font-size:13px;
-                     box-sizing:border-box;font-family:'DM Sans',sans-serif;"
-              oninput="checkMatchStep2()"/>
+          <div class="match-option" id="matchLocTbd" onclick="selectMatchLocation('tbd',this)">
+            <div class="match-option-icon">🤷</div>
+            <div class="match-option-title">TBD</div>
+            <div class="match-option-sub">Decide with the group</div>
           </div>
         </div>
 
-        <!-- Feeler time range (shown when feeler toggled) -->
-        <div id="matchFeelerTime" style="display:none;margin-top:12px;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <div class="field">
-              <label>Earliest</label>
-              <input type="time" id="matchTimeRangeStart"
-                style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);
-                       background:rgba(255,255,255,0.07);color:#fff;font-size:13px;
-                       box-sizing:border-box;font-family:'DM Sans',sans-serif;"
-                oninput="checkMatchStep2()"/>
+        <div id="matchMyCourtsSection">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <!-- Free/Public courts -->
+            <div>
+              <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;
+                          letter-spacing:.08em;margin-bottom:10px;">🌳 Free / Public Courts</div>
+              <div id="matchPublicCourts"></div>
             </div>
-            <div class="field">
-              <label>Latest</label>
-              <input type="time" id="matchTimeRangeEnd"
-                style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);
-                       background:rgba(255,255,255,0.07);color:#fff;font-size:13px;
-                       box-sizing:border-box;font-family:'DM Sans',sans-serif;"
-                oninput="checkMatchStep2()"/>
+            <!-- Private courts -->
+            <div>
+              <div style="font-size:10px;font-weight:700;color:#fbbf24;text-transform:uppercase;
+                          letter-spacing:.08em;margin-bottom:10px;">🏢 Private Courts</div>
+              <div id="matchPrivateCourts"></div>
+              <div style="margin-top:8px;padding:8px 10px;background:rgba(251,191,36,0.05);
+                border:1px solid rgba(251,191,36,0.15);border-radius:8px;font-size:10px;color:var(--dim);">
+                🔮 CourtReserve integration coming — book private courts directly
+              </div>
             </div>
           </div>
-          <div style="margin-top:8px;font-size:11px;color:#fbbf24;">
-            💡 Players will be asked who's free anytime in this window
+          <div id="matchNoCourts" class="ic-empty" style="display:none;">
+            No courts saved yet.
+            <button class="match-add-courts-btn" onclick="showPage('myCourts')" style="margin-left:8px;">Find Courts →</button>
           </div>
         </div>
 
@@ -2185,57 +2255,20 @@
         </div>
       </div>
 
-      <!-- STEP 3: WHERE -->
+      <!-- STEP 3: REVIEW + SEND -->
       <div class="match-card" id="matchStep3" style="display:none;">
-        <div class="match-q">Where do you want to play?</div>
-
-        <div class="match-options">
-          <div class="match-option on" id="matchLocMyCourts" onclick="selectMatchLocation('my_courts',this)">
-            <div class="match-option-icon">📍</div>
-            <div class="match-option-title">My Courts</div>
-            <div class="match-option-sub">Pick from your saved courts</div>
-          </div>
-          <div class="match-option" id="matchLocTbd" onclick="selectMatchLocation('tbd',this)">
-            <div class="match-option-icon">🤷</div>
-            <div class="match-option-title">TBD</div>
-            <div class="match-option-sub">Decide later with the group</div>
-          </div>
-        </div>
-
-        <!-- My Courts list -->
-        <div id="matchMyCourtsSection" style="margin-top:16px;">
-          <div class="match-section-label">Select a court</div>
-          <div id="matchCourtList" class="match-court-list"></div>
-          <div id="matchNoCourts" class="ic-empty" style="display:none;">
-            No courts saved yet.
-            <button class="match-add-courts-btn" onclick="showPage('myCourts')" style="margin-left:8px;">Find Courts →</button>
-          </div>
-        </div>
-
-        <div class="match-btn-row" style="margin-top:16px;">
-          <button class="match-back-btn" onclick="matchGoTo(2)">← Back</button>
-          <button class="match-next-btn" id="matchNext3" disabled onclick="matchGoTo(4)">Continue →</button>
-        </div>
-      </div>
-
-      <!-- STEP 4: REVIEW + SEND -->
-      <div class="match-card" id="matchStep4" style="display:none;">
         <div class="match-q">Review &amp; Send</div>
-        <div id="matchSummary" class="match-summary"></div>
-
-        <div class="field" style="margin-top:16px;">
+        <div id="matchSummary" class="match-summary" style="margin-bottom:16px;"></div>
+        <div class="field">
           <label>Add a note <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— optional</span></label>
           <textarea id="matchNote" placeholder="e.g. Bring water, dress warmly — it's outdoor!"
             style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);
                    background:rgba(255,255,255,0.07);color:#fff;font-size:13px;resize:vertical;
                    min-height:60px;box-sizing:border-box;font-family:'DM Sans',sans-serif;"></textarea>
         </div>
-
-        <!-- Who gets invited summary -->
         <div id="matchInviteePreview" style="margin-top:16px;"></div>
-
         <div class="match-btn-row" style="margin-top:20px;">
-          <button class="match-back-btn" onclick="matchGoTo(3)">← Back</button>
+          <button class="match-back-btn" onclick="matchGoTo(2)">← Back</button>
           <button class="match-next-btn" id="matchSendBtn"
             style="background:var(--green);color:var(--dark);font-weight:700;"
             onclick="submitMatch()">🎾 Send Match Invite</button>
@@ -2243,7 +2276,7 @@
         <div id="matchSendStatus" style="font-size:12px;color:var(--dim);margin-top:8px;text-align:center;"></div>
       </div>
 
-      <!-- Sent matches list -->
+      <!-- Sent matches -->
       <div id="matchSentSection" style="display:none;margin-top:24px;">
         <div class="ic-section-label">📅 Your Match Invites</div>
         <div id="matchSentList"></div>
@@ -7207,442 +7240,463 @@ document.addEventListener('DOMContentLoaded', checkInviteToken);
 // ══════════════════════════════════════════════════════
 
 const MS = {
-  format:       'doubles', // singles | doubles
-  group:        null,      // all | my_level | below | above | specific
+  format:          'doubles',
+  group:           null,
   specificPlayers: new Set(),
-  isFeeler:     false,
-  date:         null,
-  timeStart:    null,
-  timeEnd:      null,
-  location:     'my_courts',
-  courtId:      null,
-  courtName:    null,
-  courtAddress: null,
-  isPrivate:    false,
-  note:         '',
+  isFeeler:        false,
+  date:            null,
+  timeStart:       null,
+  timeEnd:         null,
+  duration:        2.0,   // hours, default 2
+  location:        'my_courts',
+  courtId:         null,
+  courtName:       null,
+  courtAddress:    null,
+  isPrivate:       false,
+  note:            '',
 };
 
+// ── Step navigation ────────────────────────────────────
 function matchGoTo(step){
-  [1,2,3,4].forEach(i=>{
+  const totalSteps = 3;
+  [1,2,3].forEach(i=>{
     const s   = document.getElementById('matchStep'+i);
     const dot = document.getElementById('msd'+i);
     const line= document.getElementById('msl'+i);
-    if(s) s.style.display = i===step ? 'block' : 'none';
+    if(s)    s.style.display = i===step ? 'block' : 'none';
     if(dot){
-      dot.className = 'match-step-dot' +
-        (i < step ? ' done' : i===step ? ' active' : '');
-      dot.textContent = i < step ? '✓' : i;
+      dot.className  = 'match-step-dot'+(i<step?' done':i===step?' active':'');
+      dot.textContent= i<step ? '✓' : i;
     }
-    if(line && i < 4){
-      if(line) line.classList.toggle('done', i < step);
-    }
+    if(line) line.classList.toggle('done', i<step);
   });
-  if(step===2) buildMatchCourtList();
-  if(step===3) loadMatchCourts();
-  if(step===4) buildMatchSummary();
-  window.scrollTo({top: document.getElementById('matchSteps')?.offsetTop - 60, behavior:'smooth'});
+  if(step===2) loadMatchCourts();
+  if(step===3) buildMatchSummary();
+  const stepsEl = document.getElementById('matchSteps');
+  if(stepsEl) window.scrollTo({top:stepsEl.offsetTop-70, behavior:'smooth'});
 }
 
-// ── Step 1: Format ────────────────────────────────────
+// ── Format selection ───────────────────────────────────
 function selectMatchFormat(fmt, el){
   MS.format = fmt;
-  document.querySelectorAll('#matchStep1 .match-option').forEach(o=>{
-    if(o.id === 'matchOptDoubles' || o.id === 'matchOptSingles') o.classList.remove('on');
-  });
+  document.querySelectorAll('#matchFormatOptions .match-option').forEach(o=>o.classList.remove('on'));
   el.classList.add('on');
+  // If specific players already selected, re-validate count
+  if(MS.group==='specific') buildSpecificPicker();
   checkMatchStep1();
 }
 
-function selectMatchGroup(group, el){
-  MS.group = group;
-  document.querySelectorAll('#matchGroupOptions .match-option').forEach(o=>o.classList.remove('on'));
-  el.classList.add('on');
-  // Show specific picker if needed
-  const picker = document.getElementById('matchSpecificPicker');
-  if(group === 'specific'){
-    picker.style.display = 'block';
-    buildSpecificPicker();
-  } else {
-    picker.style.display = 'none';
+// ── Duration +/- ───────────────────────────────────────
+function adjustDuration(delta){
+  MS.duration = Math.min(4, Math.max(1, MS.duration + delta));
+  const disp = document.getElementById('matchDurationDisplay');
+  if(disp){
+    const hrs  = MS.duration;
+    disp.textContent = hrs === Math.floor(hrs) ? hrs+' hrs' : hrs+' hrs';
   }
-  checkMatchStep1();
 }
 
-function buildSpecificPicker(){
-  const list = document.getElementById('matchSpecificList');
-  if(!list) return;
-  list.innerHTML = '';
-  if(!IC_MEMBERS.length){
-    list.innerHTML = '<div class="ic-empty">No Inner Circle members yet.</div>';
-    return;
-  }
-  IC_MEMBERS.forEach(({player})=>{
-    const name = ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim();
-    const row  = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;';
-    const checked = MS.specificPlayers.has(player.email);
-    row.innerHTML =
-      '<div style="width:20px;height:20px;border-radius:4px;border:2px solid var(--green);'+
-        'background:'+(checked?'var(--green)':'transparent')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+
-        (checked?'<span style="color:#fff;font-size:12px;">✓</span>':'')+
-      '</div>'+
-      '<span style="font-size:18px;">'+(player.avatar_emoji||'👤')+'</span>'+
-      '<div style="flex:1;">'+
-        '<div style="color:#fff;font-size:13px;font-weight:600;">'+name+'</div>'+
-        '<div style="color:var(--dim);font-size:11px;">⭐'+(player.skill_level||'?')+'</div>'+
-      '</div>';
-    row.onclick = ()=>{
-      if(MS.specificPlayers.has(player.email)) MS.specificPlayers.delete(player.email);
-      else MS.specificPlayers.add(player.email);
-      buildSpecificPicker();
+// ── Quick time chips ───────────────────────────────────
+function buildMatchTimeChips(){
+  const grid = document.getElementById('matchTimeGrid');
+  if(!grid) return;
+  const slots = ['7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM',
+                 '12:00 PM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM','6:00 PM'];
+  grid.innerHTML = '';
+  grid.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;';
+  slots.forEach(slot=>{
+    const btn = document.createElement('button');
+    btn.className = 'chip';
+    btn.textContent = slot;
+    btn.style.cssText = 'font-size:11px;padding:6px 10px;';
+    btn.onclick = ()=>{
+      grid.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+      btn.classList.add('on');
+      // Convert to 24h for input
+      const [time, ampm] = slot.split(' ');
+      let [h,m] = time.split(':').map(Number);
+      if(ampm==='PM' && h!==12) h+=12;
+      if(ampm==='AM' && h===12) h=0;
+      const val = String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+      document.getElementById('matchTimeStart').value = val;
+      MS.timeStart = val;
       checkMatchStep1();
     };
-    list.appendChild(row);
+    grid.appendChild(btn);
   });
 }
 
-function checkMatchStep1(){
-  const btn = document.getElementById('matchNext1');
-  if(!btn) return;
-  const ready = MS.group &&
-    (MS.group !== 'specific' || MS.specificPlayers.size > 0);
-  btn.disabled = !ready;
+function selectMatchTime(val){
+  MS.timeStart = val;
+  // Clear chip selection if manually typed
+  document.querySelectorAll('#matchTimeGrid .chip').forEach(c=>c.classList.remove('on'));
 }
 
-// Update group sub-labels with skill levels
-function updateMatchGroupLabels(){
-  const mySkill = S.skill || SESSION_PLAYER?.skill_level || '';
-  const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
-  if(skills){
-    const allSub = document.getElementById('matchAllSub');
-    const mySub  = document.getElementById('matchMyLevelSub');
-    const belSub = document.getElementById('matchBelowSub');
-    const abvSub = document.getElementById('matchAboveSub');
-    if(allSub) allSub.textContent = IC_MEMBERS.length + ' approved members';
-    if(mySub)  mySub.textContent  = 'Rating: ' + (skills.my||'—');
-    if(belSub) belSub.textContent  = 'Rating: ' + (skills.below||'—');
-    if(abvSub) abvSub.textContent  = 'Rating: ' + (skills.above||'—');
-  }
-}
-
-// ── Step 2: When ──────────────────────────────────────
 function toggleMatchFeeler(on){
   MS.isFeeler = on;
   document.getElementById('matchSpecificTime').style.display = on ? 'none' : 'block';
   document.getElementById('matchFeelerTime').style.display   = on ? 'block' : 'none';
-  // Toggle visual
   const slider = document.getElementById('matchFeelerSlider');
   const thumb  = document.getElementById('matchFeelerThumb');
   if(slider) slider.style.background = on ? 'var(--green)' : 'var(--border)';
-  if(thumb)  thumb.style.left        = on ? '23px' : '3px';
-  checkMatchStep2();
+  if(thumb)  thumb.style.left = on ? '23px' : '3px';
+  checkMatchStep1();
 }
 
-function checkMatchStep2(){
-  const btn  = document.getElementById('matchNext2');
+function checkMatchStep1(){
+  const btn  = document.getElementById('matchNext1');
+  if(!btn) return;
   const date = document.getElementById('matchDate')?.value;
   let timeOk = false;
   if(MS.isFeeler){
     timeOk = !!document.getElementById('matchTimeRangeStart')?.value &&
              !!document.getElementById('matchTimeRangeEnd')?.value;
   } else {
-    timeOk = !!document.getElementById('matchTimeStart')?.value;
+    timeOk = !!(MS.timeStart || document.getElementById('matchTimeStart')?.value);
   }
-  if(btn) btn.disabled = !(date && timeOk);
+  const groupOk = MS.group && (MS.group!=='specific' || MS.specificPlayers.size>0);
+  btn.disabled = !(date && timeOk && groupOk);
 }
 
-// ── Step 3: Where ─────────────────────────────────────
+// ── Group selection ────────────────────────────────────
+function selectMatchGroup(group, el){
+  MS.group = group;
+  document.querySelectorAll('#matchGroupOptions .match-option').forEach(o=>o.classList.remove('on'));
+  el.classList.add('on');
+  const picker = document.getElementById('matchSpecificPicker');
+  if(group==='specific'){
+    picker.style.display='block';
+    buildSpecificPicker();
+  } else {
+    picker.style.display='none';
+  }
+  checkMatchStep1();
+}
+
+function buildSpecificPicker(){
+  const list    = document.getElementById('matchSpecificList');
+  const countEl = document.getElementById('matchSpecificCount');
+  const warnEl  = document.getElementById('matchSpecificWarning');
+  if(!list) return;
+
+  const maxNeeded = MS.format==='doubles' ? 3 : 1;
+  const selected  = MS.specificPlayers.size;
+
+  // Update count
+  if(countEl) countEl.textContent = selected+' / '+maxNeeded+' selected';
+
+  // Warning if over limit
+  if(warnEl){
+    if(selected > maxNeeded){
+      warnEl.style.display='block';
+      warnEl.textContent = '⚠️ '+MS.format+' only needs '+maxNeeded+' other player'+(maxNeeded>1?'s':'')+'. Please deselect '+(selected-maxNeeded)+'.';
+    } else {
+      warnEl.style.display='none';
+    }
+  }
+
+  list.innerHTML='';
+  if(!IC_MEMBERS.length){
+    list.innerHTML='<div class="ic-empty">No Inner Circle members yet.</div>';
+    return;
+  }
+
+  IC_MEMBERS.forEach(({player})=>{
+    const name    = ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim();
+    const checked = MS.specificPlayers.has(player.email);
+    const atMax   = !checked && selected >= maxNeeded;
+
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 0;'+
+      'border-bottom:1px solid var(--border);cursor:'+(atMax?'not-allowed':'pointer')+';'+
+      'opacity:'+(atMax?'0.4':'1')+';';
+
+    row.innerHTML =
+      '<div style="width:22px;height:22px;border-radius:6px;border:2px solid '+(checked?'var(--green)':'var(--border)')+';'+
+        'background:'+(checked?'var(--green)':'transparent')+';display:flex;align-items:center;'+
+        'justify-content:center;flex-shrink:0;transition:all .15s;">'+
+        (checked?'<span style="color:#fff;font-size:13px;font-weight:700;">✓</span>':'')+
+      '</div>'+
+      '<span style="font-size:18px;flex-shrink:0;">'+(player.avatar_emoji||'👤')+'</span>'+
+      '<div style="flex:1;min-width:0;">'+
+        '<div style="color:#fff;font-size:13px;font-weight:600;">'+name+'</div>'+
+        '<div style="color:var(--dim);font-size:11px;">⭐'+(player.skill_level||'?')+
+          (player.nickname?' · "'+player.nickname+'"':'')+
+        '</div>'+
+      '</div>'+
+      (checked?'<span style="font-size:10px;color:var(--green);font-weight:700;">✅ Selected</span>':'');
+
+    if(!atMax || checked){
+      row.onclick = ()=>{
+        if(MS.specificPlayers.has(player.email)){
+          MS.specificPlayers.delete(player.email);
+        } else {
+          if(MS.specificPlayers.size >= maxNeeded){
+            showToast('⚠️ '+MS.format+' only needs '+maxNeeded+' other player'+(maxNeeded>1?'s':'')+'!','#f59e0b');
+            return;
+          }
+          MS.specificPlayers.add(player.email);
+        }
+        buildSpecificPicker();
+        checkMatchStep1();
+      };
+    }
+    list.appendChild(row);
+  });
+}
+
+function updateMatchGroupLabels(){
+  const mySkill = S.skill || SESSION_PLAYER?.skill_level || '';
+  const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
+  if(skills){
+    const el = (id,txt)=>{ const e=document.getElementById(id); if(e)e.textContent=txt; };
+    el('matchAllSub',    IC_MEMBERS.length+' approved members');
+    el('matchMyLevelSub','Rating: '+(skills.my||'—'));
+    el('matchBelowSub',  'Rating: '+(skills.below||'—'));
+    el('matchAboveSub',  'Rating: '+(skills.above||'—'));
+    el('matchSpecificSub','Select up to '+(MS.format==='doubles'?3:1)+' players');
+  }
+}
+
+// ── Step 2: Where ──────────────────────────────────────
 function selectMatchLocation(loc, el){
   MS.location = loc;
-  document.querySelectorAll('#matchStep3 .match-option').forEach(o=>o.classList.remove('on'));
+  document.querySelectorAll('#matchStep2 .match-option').forEach(o=>o.classList.remove('on'));
   el.classList.add('on');
   const sec = document.getElementById('matchMyCourtsSection');
-  if(sec) sec.style.display = loc === 'my_courts' ? 'block' : 'none';
-  if(loc === 'tbd'){
-    MS.courtId = null; MS.courtName = 'TBD'; MS.courtAddress = '';
-    document.getElementById('matchNext3').disabled = false;
+  if(sec) sec.style.display = loc==='my_courts' ? 'block' : 'none';
+  if(loc==='tbd'){
+    MS.courtId=null; MS.courtName='TBD'; MS.courtAddress='';
+    document.getElementById('matchNext2').disabled=false;
+  } else {
+    // Re-check court selection
+    document.getElementById('matchNext2').disabled = !MS.courtId;
   }
 }
 
 async function loadMatchCourts(){
   const myEmail = getMyEmail();
   if(!myEmail) return;
-  const list = document.getElementById('matchCourtList');
-  const empty= document.getElementById('matchNoCourts');
-  if(!list) return;
-  list.innerHTML = '<div class="ic-empty" style="color:var(--green);">Loading…</div>';
+  const pubEl  = document.getElementById('matchPublicCourts');
+  const privEl = document.getElementById('matchPrivateCourts');
+  const empty  = document.getElementById('matchNoCourts');
+  if(!pubEl||!privEl) return;
+  pubEl.innerHTML = privEl.innerHTML = '<div class="ic-empty" style="color:var(--green);font-size:11px;">Loading…</div>';
 
   try{
-    // Get player_courts for this user
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(myEmail)}&select=court_id,courts(id,name,address,city,state,is_private,is_indoor)`,
+      `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(myEmail)}&select=court_id,courts(id,name,address,city,state,is_private,is_indoor,num_courts)`,
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
     );
-    const rows = res.ok ? await res.json() : [];
+    const rows   = res.ok ? await res.json() : [];
     const courts = rows.map(r=>r.courts).filter(Boolean);
-    list.innerHTML = '';
 
-    if(!courts.length){
-      list.innerHTML = '';
-      if(empty) empty.style.display = 'block';
-      return;
-    }
-    if(empty) empty.style.display = 'none';
+    pubEl.innerHTML = privEl.innerHTML = '';
+    if(!courts.length){ if(empty) empty.style.display='block'; return; }
+    if(empty) empty.style.display='none';
 
-    courts.forEach(court=>{
+    const pub  = courts.filter(c=>!c.is_private);
+    const priv = courts.filter(c=>c.is_private);
+
+    const renderCourt = (court, container)=>{
       const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;';
-      const selected = MS.courtId === court.id;
-      const badge = court.is_private
-        ? '<span style="font-size:9px;background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);border-radius:4px;padding:2px 6px;font-weight:700;">PRIVATE</span>'
-        : '<span style="font-size:9px;background:rgba(76,175,125,0.1);color:var(--green);border:1px solid rgba(76,175,125,0.2);border-radius:4px;padding:2px 6px;font-weight:700;">FREE</span>';
+      const sel = MS.courtId===court.id;
+      row.style.cssText = 'padding:10px 12px;border-radius:10px;border:2px solid '+(sel?'var(--green)':'var(--border)')+
+        ';background:'+(sel?'rgba(76,175,125,0.08)':'rgba(255,255,255,0.02)')+
+        ';margin-bottom:8px;cursor:pointer;transition:all .15s;';
       row.innerHTML =
-        '<div style="width:20px;height:20px;border-radius:50%;border:2px solid var(--green);'+
-          'background:'+(selected?'var(--green)':'transparent')+';flex-shrink:0;display:flex;align-items:center;justify-content:center;">'+
-          (selected?'<span style="color:#fff;font-size:12px;">✓</span>':'')+
-        '</div>'+
-        '<div style="flex:1;min-width:0;">'+
-          '<div style="color:#fff;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+court.name+'</div>'+
-          '<div style="color:var(--dim);font-size:11px;">'+(court.city||'')+' · '+badge+'</div>'+
+        '<div style="display:flex;align-items:center;gap:8px;">'+
+          '<span style="font-size:16px;">'+(sel?'✅':'📍')+'</span>'+
+          '<div style="flex:1;min-width:0;">'+
+            '<div style="color:#fff;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+court.name+'</div>'+
+            '<div style="color:var(--dim);font-size:10px;">'+(court.city||'')+
+              (court.num_courts?' · '+court.num_courts+' courts':'')+
+            '</div>'+
+          '</div>'+
         '</div>';
       row.onclick = ()=>{
         MS.courtId      = court.id;
         MS.courtName    = court.name;
         MS.courtAddress = (court.address||'')+(court.city?', '+court.city:'');
-        MS.isPrivate    = court.is_private || false;
-        loadMatchCourts(); // re-render with selection
-        document.getElementById('matchNext3').disabled = false;
+        MS.isPrivate    = court.is_private||false;
+        loadMatchCourts();
+        document.getElementById('matchNext2').disabled=false;
       };
-      list.appendChild(row);
-    });
-  }catch(e){ list.innerHTML = '<div class="ic-empty">Error loading courts.</div>'; }
+      container.appendChild(row);
+    };
+
+    if(pub.length)  pub.forEach(c=>renderCourt(c, pubEl));
+    else pubEl.innerHTML  = '<div style="font-size:11px;color:var(--dim);">No free courts saved</div>';
+    if(priv.length) priv.forEach(c=>renderCourt(c, privEl));
+    else privEl.innerHTML = '<div style="font-size:11px;color:var(--dim);">No private courts saved</div>';
+
+  }catch(e){ pubEl.innerHTML='<div class="ic-empty">Error loading courts.</div>'; }
 }
 
-// ── Step 4: Summary + Submit ──────────────────────────
+// ── Step 3: Review ─────────────────────────────────────
 function buildMatchSummary(){
   const sum = document.getElementById('matchSummary');
   if(!sum) return;
-
-  const date      = document.getElementById('matchDate')?.value;
-  const dateStr   = date ? new Date(date+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}) : '—';
+  const date    = document.getElementById('matchDate')?.value;
+  const dateStr = date ? new Date(date+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}) : '—';
   let timeStr = '';
   if(MS.isFeeler){
-    const s = document.getElementById('matchTimeRangeStart')?.value;
-    const e = document.getElementById('matchTimeRangeEnd')?.value;
-    timeStr = s && e ? fmt12(s) + ' – ' + fmt12(e) + ' (feeler)' : '—';
+    const s=document.getElementById('matchTimeRangeStart')?.value;
+    const e=document.getElementById('matchTimeRangeEnd')?.value;
+    timeStr = s&&e ? fmt12(s)+' – '+fmt12(e)+' (feeler)' : '—';
   } else {
-    const t = document.getElementById('matchTimeStart')?.value;
+    const t = MS.timeStart||document.getElementById('matchTimeStart')?.value;
     timeStr = t ? fmt12(t) : '—';
   }
+  const durStr = MS.duration+(MS.duration===1?' hr':' hrs');
 
   // Build invitee list
-  let invitees = [];
-  if(MS.group === 'specific'){
-    invitees = IC_MEMBERS.filter(({player})=>MS.specificPlayers.has(player.email))
-      .map(({player})=>((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim());
+  const mySkill = S.skill||SESSION_PLAYER?.skill_level||'';
+  const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
+  let invitees  = [];
+  if(MS.group==='specific'){
+    invitees = IC_MEMBERS.filter(({player})=>MS.specificPlayers.has(player.email)).map(({player})=>player);
   } else {
-    const mySkill = S.skill || SESSION_PLAYER?.skill_level || '';
-    const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
     invitees = IC_MEMBERS.filter(({player})=>{
       if(MS.group==='all') return true;
-      const ps = parseFloat(player.skill_level||0);
-      if(MS.group==='my_level') return skills && Math.abs(ps-skills.my)<0.13;
-      if(MS.group==='below')    return skills && skills.below!==null && Math.abs(ps-skills.below)<0.13;
-      if(MS.group==='above')    return skills && skills.above!==null && Math.abs(ps-skills.above)<0.13;
+      const ps=parseFloat(player.skill_level||0);
+      if(MS.group==='my_level') return skills&&Math.abs(ps-skills.my)<0.13;
+      if(MS.group==='below')    return skills&&skills.below!==null&&Math.abs(ps-skills.below)<0.13;
+      if(MS.group==='above')    return skills&&skills.above!==null&&Math.abs(ps-skills.above)<0.13;
       return false;
-    }).map(({player})=>((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim());
+    }).map(({player})=>player);
   }
 
-  const maxNeeded = MS.format==='doubles' ? 3 : 1;
-  const groupLabels = {all:'Entire Inner Circle',my_level:'My Level',below:'Below My Level',above:'Above My Level',specific:'Specific Players'};
+  const maxNeeded = MS.format==='doubles'?3:1;
+  const groupLabels={all:'Entire Inner Circle',my_level:'My Level',below:'Below My Level',above:'Above My Level',specific:'Specific Players'};
 
   sum.innerHTML =
     '<div class="match-summary-row"><span>Format</span><span>'+(MS.format==='doubles'?'🏓🏓 Doubles':'🏓 Singles')+'</span></div>'+
-    '<div class="match-summary-row"><span>Invited</span><span>'+(groupLabels[MS.group]||'—')+' ('+invitees.length+' players)</span></div>'+
-    '<div class="match-summary-row"><span>Spots open</span><span>'+maxNeeded+' of '+invitees.length+' needed</span></div>'+
+    '<div class="match-summary-row"><span>Duration</span><span>'+durStr+'</span></div>'+
+    '<div class="match-summary-row"><span>Invited</span><span>'+(groupLabels[MS.group]||'—')+' ('+invitees.length+')</span></div>'+
+    '<div class="match-summary-row"><span>Spots open</span><span>'+maxNeeded+' needed · first to respond wins</span></div>'+
     '<div class="match-summary-row"><span>Date</span><span>'+dateStr+'</span></div>'+
     '<div class="match-summary-row"><span>Time</span><span>'+timeStr+'</span></div>'+
     '<div class="match-summary-row"><span>Court</span><span>'+(MS.courtName||'TBD')+'</span></div>';
 
-  // Show invitee preview
   const preview = document.getElementById('matchInviteePreview');
-  if(preview && invitees.length){
+  if(preview&&invitees.length){
     preview.innerHTML =
       '<div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">'+
-        'Inviting '+invitees.length+' player'+(invitees.length!==1?'s':'')+' — first '+maxNeeded+' to respond get'+(maxNeeded===1?'s':'')+' the spot'+
+        'Inviting '+invitees.length+' player'+(invitees.length!==1?'s':'')+' — first '+maxNeeded+' to accept get'+(maxNeeded===1?'s':'')+' the spot'+
       '</div>'+
       '<div style="color:var(--dim);font-size:12px;line-height:1.8;">'+
-        invitees.slice(0,8).join(' · ')+(invitees.length>8?' + '+(invitees.length-8)+' more':'')+'</div>';
+        invitees.slice(0,8).map(p=>((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim()).join(' · ')+
+        (invitees.length>8?' + '+(invitees.length-8)+' more':'')+
+      '</div>';
   }
-
-  document.getElementById('matchSendBtn').disabled = false;
 }
 
 function fmt12(t){
   if(!t) return '';
-  const [h,m] = t.split(':').map(Number);
-  const ampm = h >= 12 ? 'pm' : 'am';
-  return ((h%12)||12) + ':' + String(m).padStart(2,'0') + ampm;
+  const [h,m]=t.split(':').map(Number);
+  const ampm=h>=12?'pm':'am';
+  return ((h%12)||12)+':'+String(m).padStart(2,'0')+ampm;
 }
 
 async function submitMatch(){
   const myEmail = getMyEmail();
   if(!myEmail){ showToast('Please sign in first','#f59e0b'); return; }
-  const btn = document.getElementById('matchSendBtn');
-  const status = document.getElementById('matchSendStatus');
-  btn.disabled = true; btn.textContent = 'Sending…';
-  status.textContent = 'Saving match…';
-
-  const date      = document.getElementById('matchDate')?.value;
-  const timeStart = MS.isFeeler
-    ? document.getElementById('matchTimeRangeStart')?.value
-    : document.getElementById('matchTimeStart')?.value;
-  const timeEnd   = MS.isFeeler
-    ? document.getElementById('matchTimeRangeEnd')?.value : null;
-  const note      = document.getElementById('matchNote')?.value?.trim();
-  const myName    = ((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim();
-
+  const btn=document.getElementById('matchSendBtn');
+  const status=document.getElementById('matchSendStatus');
+  btn.disabled=true; btn.textContent='Sending…';
+  status.textContent='Saving match…';
+  const date=document.getElementById('matchDate')?.value;
+  const timeStart=MS.isFeeler?document.getElementById('matchTimeRangeStart')?.value:MS.timeStart||document.getElementById('matchTimeStart')?.value;
+  const timeEnd=MS.isFeeler?document.getElementById('matchTimeRangeEnd')?.value:null;
+  const note=document.getElementById('matchNote')?.value?.trim();
+  const myName=((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim();
   try{
-    // Save match to DB
-    const matchRes = await fetch(`${SUPABASE_URL}/rest/v1/matches`, {
-      method: 'POST',
-      headers:{
-        'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
-        'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=representation'
-      },
-      body: JSON.stringify({
-        organizer_email:  myEmail,
-        organizer_name:   myName,
-        match_type:       MS.format,
-        invite_group:     MS.group,
-        is_feeler:        MS.isFeeler,
-        match_date:       date,
-        time_start:       timeStart,
-        time_end:         timeEnd,
-        court_id:         MS.courtId || null,
-        court_name:       MS.courtName || 'TBD',
-        court_address:    MS.courtAddress || '',
-        is_private_court: MS.isPrivate,
-        max_players:      MS.format==='doubles' ? 4 : 2,
-        notes:            note || null,
-      })
+    const matchRes=await fetch(`${SUPABASE_URL}/rest/v1/matches`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=representation'},
+      body:JSON.stringify({organizer_email:myEmail,organizer_name:myName,match_type:MS.format,invite_group:MS.group,is_feeler:MS.isFeeler,match_date:date,time_start:timeStart,time_end:timeEnd,court_id:MS.courtId||null,court_name:MS.courtName||'TBD',court_address:MS.courtAddress||'',is_private_court:MS.isPrivate,max_players:MS.format==='doubles'?4:2,notes:note||null})
     });
-    const matchRows = matchRes.ok ? await matchRes.json() : [];
-    const matchId = matchRows[0]?.id;
-
-    // Build invitee list
-    const mySkill = S.skill || SESSION_PLAYER?.skill_level || '';
-    const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
-    let invitees = [];
-    if(MS.group === 'specific'){
-      invitees = IC_MEMBERS.filter(({player})=>MS.specificPlayers.has(player.email)).map(({player})=>player);
+    const matchRows=matchRes.ok?await matchRes.json():[];
+    const matchId=matchRows[0]?.id;
+    const mySkill=S.skill||SESSION_PLAYER?.skill_level||'';
+    const skills=mySkill?getAdjacentSkills(mySkill):null;
+    let invitees=[];
+    if(MS.group==='specific'){
+      invitees=IC_MEMBERS.filter(({player})=>MS.specificPlayers.has(player.email)).map(({player})=>player);
     } else {
-      invitees = IC_MEMBERS.filter(({player})=>{
+      invitees=IC_MEMBERS.filter(({player})=>{
         if(MS.group==='all') return true;
-        const ps = parseFloat(player.skill_level||0);
-        if(MS.group==='my_level') return skills && Math.abs(ps-skills.my)<0.13;
-        if(MS.group==='below')    return skills && skills.below!==null && Math.abs(ps-skills.below)<0.13;
-        if(MS.group==='above')    return skills && skills.above!==null && Math.abs(ps-skills.above)<0.13;
+        const ps=parseFloat(player.skill_level||0);
+        if(MS.group==='my_level') return skills&&Math.abs(ps-skills.my)<0.13;
+        if(MS.group==='below')    return skills&&skills.below!==null&&Math.abs(ps-skills.below)<0.13;
+        if(MS.group==='above')    return skills&&skills.above!==null&&Math.abs(ps-skills.above)<0.13;
         return false;
       }).map(({player})=>player);
     }
-
-    // Create response rows + send notifications
-    status.textContent = 'Sending invites to '+invitees.length+' players…';
-    const dateStr = date ? new Date(date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) : '';
-    const timeStr = timeStart ? fmt12(timeStart)+(timeEnd?' – '+fmt12(timeEnd):'') : '';
-    const matchFeelerTxt = MS.isFeeler ? ' (feeler — who\'s free?)' : '';
-
+    status.textContent='Sending to '+invitees.length+' players…';
+    const dateStr=date?new Date(date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}):'';
+    const timeStr=timeStart?fmt12(timeStart)+(timeEnd?' – '+fmt12(timeEnd):''):'';
     for(const player of invitees){
-      // Insert response row
-      if(matchId){
-        await fetch(`${SUPABASE_URL}/rest/v1/match_responses`,{
-          method:'POST',
-          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
-          body: JSON.stringify({match_id:matchId, player_email:player.email, player_name:((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim(), response:'pending'})
-        }).catch(()=>{});
-      }
-
-      // Send email via EmailJS if configured
-      const pubKey = window.EMAILJS_PUBLIC_KEY;
-      if(pubKey && pubKey !== 'YOUR_PUBLIC_KEY' && player.email){
-        const matchUrl = window.location.origin + window.location.pathname + '?match=' + matchId;
+      if(matchId) await fetch(`${SUPABASE_URL}/rest/v1/match_responses`,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},body:JSON.stringify({match_id:matchId,player_email:player.email,player_name:((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim(),response:'pending'})}).catch(()=>{});
+      const pubKey=window.EMAILJS_PUBLIC_KEY;
+      if(pubKey&&pubKey!=='YOUR_PUBLIC_KEY'&&player.email){
+        const matchUrl=window.location.origin+window.location.pathname+'?match='+matchId;
         emailjs.init(pubKey);
-        emailjs.send(window.EMAILJS_SERVICE_ID, window.EMAILJS_TEMPLATE_ID, {
-          to_email:      player.email,
-          from_name:     myName || 'A fellow player',
-          from_email:    myEmail,
-          invite_url:    matchUrl,
-          personal_note: (MS.format==='doubles'?'Doubles':'Singles')+' match · '+dateStr+' · '+timeStr+matchFeelerTxt+(MS.courtName?' @ '+MS.courtName:'')+(note?' · '+note:''),
-          site_url:      window.location.origin,
-        }).catch(()=>{});
+        emailjs.send(window.EMAILJS_SERVICE_ID,window.EMAILJS_TEMPLATE_ID,{to_email:player.email,from_name:myName||'A fellow player',from_email:myEmail,invite_url:matchUrl,personal_note:(MS.format==='doubles'?'Doubles':'Singles')+' · '+dateStr+' '+timeStr+(MS.courtName?' @ '+MS.courtName:'')+(note?' · '+note:''),site_url:window.location.origin}).catch(()=>{});
       }
     }
-
     showToast('🎾 Match invite sent to '+invitees.length+' players!','#4CAF7D');
-    status.textContent = '';
-    btn.textContent = '✅ Sent!';
-
-    // Show sent matches
-    document.getElementById('matchSentSection').style.display = 'block';
+    status.textContent='';
+    btn.textContent='✅ Sent!';
+    document.getElementById('matchSentSection').style.display='block';
     loadSentMatches();
-
-    // Reset after delay
-    setTimeout(()=>{
-      MS.format='doubles'; MS.group=null; MS.specificPlayers.clear();
-      MS.isFeeler=false; MS.date=null; MS.courtId=null; MS.courtName=null;
-      matchGoTo(1);
-      btn.textContent='🎾 Send Match Invite'; btn.disabled=false;
-    }, 3000);
-
-  }catch(e){
-    status.textContent = '⚠️ Error: '+e.message;
-    btn.disabled=false; btn.textContent='🎾 Send Match Invite';
-  }
+    setTimeout(()=>{ MS.format='doubles';MS.group=null;MS.specificPlayers.clear();MS.isFeeler=false;MS.date=null;MS.courtId=null;MS.courtName=null;MS.duration=2; matchGoTo(1); btn.textContent='🎾 Send Match Invite';btn.disabled=false; },3000);
+  }catch(e){ status.textContent='⚠️ Error: '+e.message; btn.disabled=false; btn.textContent='🎾 Send Match Invite'; }
 }
 
 async function loadSentMatches(){
-  const myEmail = getMyEmail();
-  const list = document.getElementById('matchSentList');
+  const myEmail=getMyEmail();
+  const list=document.getElementById('matchSentList');
   if(!list||!myEmail) return;
   try{
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&order=created_at.desc&limit=5`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
-    );
-    const matches = res.ok ? await res.json() : [];
-    list.innerHTML = '';
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&order=created_at.desc&limit=5`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const matches=res.ok?await res.json():[];
+    list.innerHTML='';
     matches.forEach(m=>{
-      const dateStr = m.match_date ? new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) : '—';
-      const timeStr = m.time_start ? fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):'') : '—';
-      const row = document.createElement('div');
-      row.style.cssText = 'padding:12px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;';
-      row.innerHTML =
-        '<span style="font-size:20px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span>'+
-        '<div style="flex:1;">'+
-          '<div style="color:#fff;font-size:13px;font-weight:600;">'+dateStr+' · '+timeStr+'</div>'+
-          '<div style="color:var(--dim);font-size:11px;">'+(m.court_name||'TBD')+(m.is_feeler?' · Feeler':'')+'</div>'+
-        '</div>'+
-        '<span style="font-size:11px;font-weight:700;color:var(--green);">'+m.status+'</span>';
+      const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}):'—';
+      const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):''):'—';
+      const row=document.createElement('div');
+      row.style.cssText='padding:12px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;';
+      row.innerHTML='<span style="font-size:20px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span><div style="flex:1;"><div style="color:#fff;font-size:13px;font-weight:600;">'+dateStr+' · '+timeStr+'</div><div style="color:var(--dim);font-size:11px;">'+(m.court_name||'TBD')+(m.is_feeler?' · Feeler':'')+'</div></div><span style="font-size:11px;font-weight:700;color:var(--green);">'+m.status+'</span>';
       list.appendChild(row);
     });
   }catch(e){}
 }
 
-// ── Init match page when opened ────────────────────────
+// ── Init match page ────────────────────────────────────
 function initSetupMatch(){
+  // Reset MS state
+  MS.format='doubles'; MS.group=null; MS.specificPlayers.clear();
+  MS.isFeeler=false; MS.duration=2; MS.courtId=null; MS.courtName=null;
   matchGoTo(1);
   updateMatchGroupLabels();
+  buildMatchTimeChips();
   loadSentMatches();
-  document.getElementById('matchSentSection').style.display = 'none';
-  // Pre-select doubles
-  MS.format = 'doubles';
+  document.getElementById('matchSentSection').style.display='none';
+  // Default doubles on
   document.getElementById('matchOptDoubles')?.classList.add('on');
   document.getElementById('matchOptSingles')?.classList.remove('on');
-  // Set min date to today
-  const today = new Date().toISOString().split('T')[0];
-  const dateEl = document.getElementById('matchDate');
-  if(dateEl) dateEl.min = today;
+  // Duration display
+  const dur=document.getElementById('matchDurationDisplay');
+  if(dur) dur.textContent='2 hrs';
+  // Min date = today
+  const today=new Date().toISOString().split('T')[0];
+  const dateEl=document.getElementById('matchDate');
+  if(dateEl) dateEl.min=today;
+  // Update step indicators to 3 steps
+  document.getElementById('msd4') && (document.getElementById('msd4').style.display='none');
+  document.getElementById('msl3') && (document.getElementById('msl3').style.display='none');
 }
 </script>
 </body>
