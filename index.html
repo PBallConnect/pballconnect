@@ -2791,10 +2791,6 @@ async function submitForm(){
     });
     console.log('✅ Registration saved');
     showToast('✅ Profile saved!', '#4CAF7D');
-    // Persist key values to localStorage as backup
-    localStorage.setItem('pb_nickname', _savedNickname);
-    localStorage.setItem('pb_emoji',    _savedEmoji);
-    localStorage.setItem('pb_skill',    _savedSkill);
     // Capture current values before any navigation
     const _savedNickname  = v('nickname') || S.nickname || '';
     const _savedEmoji     = document.getElementById('avatarEmoji')?.value || S.avatarEmoji || '🎾';
@@ -2804,6 +2800,11 @@ async function submitForm(){
     // Update S state immediately
     S.nickname    = _savedNickname;
     S.avatarEmoji = _savedEmoji;
+    S.skill       = _savedSkill || S.skill;
+    // Persist to localStorage so values survive page reloads/deploys
+    localStorage.setItem('pb_nickname', _savedNickname);
+    localStorage.setItem('pb_emoji',    _savedEmoji);
+    localStorage.setItem('pb_skill',    _savedSkill);
     // Update top bar immediately
     updateTopBar({ first_name: _savedFirstName, nickname: _savedNickname,
                    skill_level: _savedSkill, playing_since: _savedSince,
