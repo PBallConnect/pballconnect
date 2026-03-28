@@ -7546,7 +7546,7 @@ function updateMatchGroupLabels(){
 // ── Step 2: Where ──────────────────────────────────────
 function selectMatchLocation(loc, el){
   MS.location = loc;
-  document.querySelectorAll('#matchStep2 .match-option').forEach(o=>{
+  document.querySelectorAll('#matchStep3 .match-option').forEach(o=>{
     o.classList.remove('on','dim');
     o.classList.add('dim');
   });
@@ -7555,9 +7555,11 @@ function selectMatchLocation(loc, el){
   const sec = document.getElementById('matchMyCourtsSection');
   if(sec) sec.style.display = loc==='my_courts' ? 'block' : 'none';
   if(loc==='tbd'){
-    MS.courtId=null; MS.courtName='TBD'; MS.courtAddress='';
-    document.getElementById('matchNext2').disabled=false;
+    MS.courtName='TBD'; MS.courtAddress='';
+    const btn = document.getElementById('matchNext3');
+    if(btn) btn.disabled=false;
   } else {
+    loadMatchCourts();
     updateMatchCourtsNext();
   }
 }
@@ -7573,15 +7575,28 @@ async function loadMatchCourts(){
   pubEl.innerHTML = privEl.innerHTML = '<div style="font-size:11px;color:var(--green);">Loading…</div>';
 
   try{
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(myEmail)}&select=court_id,courts(id,name,address,city,state,is_private,is_indoor,num_courts)`,
+    // Step 1: get court IDs saved by this player
+    const pcRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(myEmail)}&select=court_id`,
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
     );
-    const rows   = res.ok ? await res.json() : [];
-    const courts = rows.map(r=>r.courts).filter(Boolean);
+    const pcRows = pcRes.ok ? await pcRes.json() : [];
+    const courtIds = pcRows.map(r=>r.court_id).filter(Boolean);
 
-    pubEl.innerHTML = privEl.innerHTML = '';
-    if(!courts.length){ if(empty) empty.style.display='block'; return; }
+    if(!courtIds.length){
+      pubEl.innerHTML = privEl.innerHTML = '';
+      if(empty) empty.style.display='block';
+      return;
+    }
+
+    // Step 2: fetch full court details for those IDs
+    const inFilter = courtIds.map(id=>`"${id}"`).join(',');
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/courts?id=in.(${courtIds.join(',')})&select=id,name,address,city,state,is_private,is_indoor,num_courts`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+    );
+    const courts = res.ok ? await res.json() : [];
+
     if(empty) empty.style.display='none';
 
     const renderCourt = (court, container)=>{
