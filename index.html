@@ -3942,7 +3942,7 @@ async function icRespond(connectionId, status, btn){
     });
     if(res.ok){
       showToast(status==='approved'?'✅ Added to Inner Circle!':'Request declined','#4CAF7D');
-      loadInnerCircle();
+      // Caller handles reload - don't double-call loadInnerCircle
     }
   }catch(e){ btn.disabled=false; }
 }
@@ -4210,7 +4210,7 @@ async function loadIcPending(){
     if(card) card.style.display='block';
     if(badge) badge.textContent = pending.length;
 
-    list.innerHTML='';
+    list.innerHTML=''; // clear before render
     for(const conn of pending){
       const pRes = await fetch(
         `${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(conn.requester_email)}&select=first_name,last_name,email,skill_level,gender,avatar_emoji,city,state,court_name,playing_since&limit=1`,
@@ -4256,8 +4256,7 @@ function buildPendingRequestRow(player, conn, myEmail){
   acceptBtn.onclick = async function(){
     acceptBtn.disabled = true; acceptBtn.textContent = 'Accepting…';
     await icRespond(conn.id, 'approved', acceptBtn);
-    showToast('✅ '+name+' added to your Inner Circle!', '#4CAF7D');
-    loadInnerCircle();
+    await loadInnerCircle();
   };
 
   // Decline button
@@ -4269,7 +4268,8 @@ function buildPendingRequestRow(player, conn, myEmail){
     declineBtn.disabled = true;
     await icRespond(conn.id, 'declined', declineBtn);
     showToast('Request declined', '#f59e0b');
-    loadIcPending();
+    await loadIcPending();
+    updateNavCircleBadges(IC_MEMBERS.length, IC_PENDING_PLAYERS?.length||0, IC_INCOMING_COUNT);
   };
 
   const metaParts = [skill, location, since].filter(Boolean).join(' · ');
@@ -6031,7 +6031,8 @@ async function loadIcInvites(){
         );
         showToast('Invite cancelled','#f59e0b');
         IC_PENDING_PLAYERS = IC_PENDING_PLAYERS.filter(p=>p.email!==conn.recipient_email);
-        loadIcInvites();
+        await loadIcInvites();
+        updateNavCircleBadges(IC_MEMBERS.length, IC_PENDING_PLAYERS?.length||0, IC_INCOMING_COUNT);
       };
 
       const skillTag = player.skill_level
