@@ -2721,6 +2721,10 @@ async function submitForm(){
     });
     console.log('✅ Registration saved');
     showToast('✅ Profile saved!', '#4CAF7D');
+    // Update top bar immediately from current form values
+    updateTopBar({ first_name: v('firstName'), nickname: v('nickname'),
+                   skill_level: S.skill, playing_since: S.playingSince,
+                   avatar_emoji: document.getElementById('avatarEmoji')?.value || S.avatarEmoji });
     // Re-fetch the saved record and restore to ensure top bar is accurate
     const savedEmail = v('email') || getMyEmail();
     if(savedEmail){
@@ -5504,6 +5508,9 @@ function restoreProfileForm(player){
   restoreChip('venuePrefChips',  player.play_venues);
   restoreChip('playStyleChips',  player.play_style);
   restoreChip('improveChips',    player.wants_to_improve);
+  restoreChip('lessonChips',     player.has_had_lesson);
+  S.hasHadLesson = player.has_had_lesson || '';
+  S.wantsLesson  = player.wants_lesson   || '';
 
   // Update S state from chips
   S.gender       = player.gender       || '';
@@ -5539,29 +5546,31 @@ function restoreProfileForm(player){
   // ── Schedule ──────────────────────────────────────────
   // ── Schedule ──────────────────────────────────────────
   S.schedule.clear();
-  // Clear all schedule cells (they use data-key)
-  document.querySelectorAll('[data-key]').forEach(b=>b.classList.remove('on'));
+  S.anytime = false;
+  // Clear all schedule buttons and cells
+  document.querySelectorAll('[data-key], .day-btn').forEach(b=>b.classList.remove('on'));
 
-  if(player.schedule && player.schedule !== 'Not specified'){
-    const schedStr = String(player.schedule);
-    if(schedStr === 'Anytime'){
-      S.anytime = true;
-    } else {
-      // Schedule saved as "Mon, Tue, Wed" — find all cells for those days
-      const days = schedStr.split(',').map(s=>s.trim());
-      days.forEach(day=>{
-        // Only restore day-level selections (data-key="Mon" etc)
-        // NOT time-slot cells (data-key="Mon|Morning") to avoid selecting everything
-        document.querySelectorAll('[data-key="'+day+'"]').forEach(btn=>{
-          btn.classList.add('on');
-          S.schedule.add(btn.dataset.key);
-        });
+  if(player.anytime || player.schedule==='Anytime'){
+    S.anytime = true;
+    const anyBtn=document.getElementById('anytimeBtn');
+    if(anyBtn) anyBtn.classList.add('on');
+  } else if(player.schedule && player.schedule !== 'Not specified'){
+    const days = String(player.schedule).split(',').map(s=>s.trim()).filter(Boolean);
+    days.forEach(day=>{
+      // Use toggleDay to properly select all cells for this day
+      // Highlight the day button
+      document.querySelectorAll('.day-btn').forEach(btn=>{
+        if(btn.textContent.trim()===day) btn.classList.add('on');
       });
-    }
+      // Select all time-slot cells for this day
+      document.querySelectorAll('.sched-cell').forEach(cell=>{
+        if(cell.dataset.key && cell.dataset.key.startsWith(day+'|')){
+          cell.classList.add('on');
+          S.schedule.add(cell.dataset.key);
+        }
+      });
+    });
   }
-  S.anytime = player.anytime || (player.schedule==='Anytime') || false;
-  const anyBtn=document.getElementById('anytimeBtn');
-  if(anyBtn) anyBtn.classList.toggle('on', S.anytime);
 
   // ── Drive distance ────────────────────────────────────
   if(player.drive_distance_miles){
@@ -5604,15 +5613,16 @@ function restoreProfileForm(player){
   verifyChip('improveChips',    player.wants_to_improve);
   const psEl = document.getElementById('playingSince');
   console.log('🔍 playingSince: value="'+(psEl?psEl.value:'NO ELEMENT')+'" expected="'+player.playing_since+'"');
-  // When editing, show all 3 steps at once so user can see everything
-  // instead of wizard flow
+  // When editing, show all 3 steps at once
   [1,2,3].forEach(i=>{
     const step = document.getElementById('step'+i);
     if(step) step.style.display='block';
   });
-  // Scroll to top of form
-  window.scrollTo({top:0, behavior:'smooth'});
 
+  // Populate summary with restored values
+  try{ populateSummary(); }catch(e){}
+
+  window.scrollTo({top:0, behavior:'smooth'});
   console.log('✅ Profile form restored');
 }
 
@@ -6041,19 +6051,38 @@ function updateTopBar(player){
   const navLabel = document.getElementById('navLoginLabel');
   const navEmoji = document.getElementById('navLoginEmoji');
   if(!navLabel) return;
-  // Use passed player data OR fall back to S state (after profile edit)
-  const emoji    = player.avatar_emoji  || S.avatarEmoji  || '👤';
-  const nickname = player.nickname      || S.nickname      || document.getElementById('nickname')?.value || '';
-  const skill    = player.skill_level   || S.skill         || '';
-  const since    = player.playing_since || S.playingSince  || document.getElementById('playingSince')?.value || '';
-  const fname    = player.first_name    || document.getElementById('firstName')?.value || 'Player';
-  const nick  = nickname ? ' "'+nickname+'"' : '';
-  const skillTxt = skill ? ' · ⭐'+skill : '';
-  const sinceTxt = since ? ' · Since '+since : '';
+
+  // Always prefer live form values (most current) over stored player data
+  const emoji    = document.getElementById('avatarEmoji')?.value
+                || S.avatarEmoji
+                || player.avatar_emoji
+                || '👤';
+  const nickname = document.getElementById('nickname')?.value?.trim()
+                || S.nickname
+                || player.nickname
+                || '';
+  const skill    = S.skill
+                || player.skill_level
+                || '';
+  const since    = document.getElementById('playingSince')?.value
+                || S.playingSince
+                || player.playing_since
+                || '';
+  const fname    = document.getElementById('firstName')?.value?.trim()
+                || player.first_name
+                || 'Player';
+
+  // Update S state to stay in sync
+  S.avatarEmoji = emoji;
+  S.nickname    = nickname;
+  if(skill) S.skill = skill;
+
+  const nick     = nickname ? ' "'+nickname+'"' : '';
+  const skillTxt = skill    ? ' · ⭐'+skill     : '';
+  const sinceTxt = since    ? ' · Since '+since : '';
+
   if(navEmoji) navEmoji.textContent = emoji;
   navLabel.textContent = fname+nick+skillTxt+sinceTxt+' ▾';
-  // Keep S state in sync
-  if(nickname) S.nickname = nickname;
 }
 
 // ── Update Inner Circle nav badges ────────────────────
