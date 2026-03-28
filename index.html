@@ -883,6 +883,13 @@
   .ic-filter-popup-title{font-size:12px;font-weight:700;color:var(--green);}
   .ic-filter-close{background:transparent;border:none;color:var(--dim);cursor:pointer;
     font-size:16px;padding:2px 6px;}
+  /* ── Find New Members button ──────────────────────── */
+  .ic-find-members-btn{padding:7px 14px;border-radius:8px;
+    border:1px solid rgba(76,175,125,0.5);background:rgba(76,175,125,0.1);
+    color:var(--green);font-size:11px;font-weight:700;cursor:pointer;
+    font-family:'DM Sans',sans-serif;transition:all .2s;white-space:nowrap;}
+  .ic-find-members-btn:hover{background:rgba(76,175,125,0.2);
+    border-color:var(--green);}
 </style>
 </head>
 <body>
@@ -940,8 +947,8 @@
       <div class="nav-item" onclick="showPage('innerCircle')" id="nav-innerCircle">
         <span class="nav-icon">👥</span>
         <span class="nav-label">Inner Circle</span>
-        <span id="icNavGreenBadge" class="nav-circle-badge nav-circle-green" style="display:none;cursor:pointer;" onclick="showIcView('members')"></span>
-        <span id="icNavYellowBadge" class="nav-circle-badge nav-circle-yellow" style="display:none;cursor:pointer;" onclick="showIcView('invited')"></span>
+        <span id="icNavGreenBadge" class="nav-circle-badge nav-circle-green placeholder" style="cursor:pointer;opacity:0.4;" onclick="showIcView('members')">0</span>
+        <span id="icNavYellowBadge" class="nav-circle-badge nav-circle-yellow placeholder" style="cursor:pointer;opacity:0.4;" onclick="showIcView('invited')">0</span>
         <span id="icNavPurpleBadge" class="nav-circle-badge nav-circle-purple placeholder" title="Inner Circle requests" style="cursor:pointer;" onclick="showIcView('incoming')">0</span>
       </div>
       <div class="nav-item" onclick="showPage('setupMatch')" id="nav-setupMatch">
@@ -1009,7 +1016,7 @@
         <div id="emojiPickerRow" style="display:none;flex-wrap:wrap;gap:6px;max-width:340px;">
           <div id="emojiPickerGrid" class="emoji-reg-grid"></div>
         </div>
-        <input type="hidden" id="avatarEmoji" value="🎾"/>
+        <input type="hidden" id="avatarEmoji" value=""/>
       </div>
     </div>
     <div class="field"><label>Email Address</label><input type="email" id="email" placeholder="jane@example.com" autocomplete="off" oninput="chk1()"/></div>
@@ -1723,7 +1730,7 @@
           <div class="ic-skill-grid-wrap">
             <!-- Column: One Below -->
             <div class="ic-skill-column">
-              <div class="ic-skill-col-head ic-col-below">
+              <div class="ic-skill-col-head ic-col-below" style="position:sticky;top:200px;z-index:8;">
                 <div class="ic-col-head-label">One below</div>
                 <div class="ic-col-head-rating" id="colBelowLabel">—</div>
               </div>
@@ -1731,7 +1738,7 @@
             </div>
             <!-- Column: My Level -->
             <div class="ic-skill-column">
-              <div class="ic-skill-col-head ic-col-my">
+              <div class="ic-skill-col-head ic-col-my" style="position:sticky;top:200px;z-index:8;">
                 <div class="ic-col-head-label">My level</div>
                 <div class="ic-col-head-rating" id="colMyLabel">—</div>
               </div>
@@ -1739,7 +1746,7 @@
             </div>
             <!-- Column: One Above -->
             <div class="ic-skill-column">
-              <div class="ic-skill-col-head ic-col-above">
+              <div class="ic-skill-col-head ic-col-above" style="position:sticky;top:200px;z-index:8;">
                 <div class="ic-col-head-label">One above</div>
                 <div class="ic-col-head-rating" id="colAboveLabel">—</div>
               </div>
@@ -1810,14 +1817,14 @@
               <div class="ic-skill-col" id="circleColBelow"></div>
             </div>
             <div class="ic-skill-column">
-              <div class="ic-skill-col-head ic-col-my">
+              <div class="ic-skill-col-head ic-col-my" style="position:sticky;top:200px;z-index:8;">
                 <div class="ic-col-head-label">My level</div>
                 <div class="ic-col-head-rating" id="circleColMyLabel">—</div>
               </div>
               <div class="ic-skill-col" id="circleColMy"></div>
             </div>
             <div class="ic-skill-column">
-              <div class="ic-skill-col-head ic-col-above">
+              <div class="ic-skill-col-head ic-col-above" style="position:sticky;top:200px;z-index:8;">
                 <div class="ic-col-head-label">One above</div>
                 <div class="ic-col-head-rating" id="circleColAboveLabel">—</div>
               </div>
@@ -5759,7 +5766,8 @@ async function restoreSession(email, playerData){
   S.driveDistance= player.drive_distance_miles
                    ? player.drive_distance_miles+' miles' : '25 miles';
   S.venuePref    = player.play_venues || '';
-  S.nickname     = player.nickname || '';
+  // Only restore nickname if S state doesn't have a more recent value
+  if(!S.nickname) S.nickname = player.nickname || '';
   S.playingSince = player.playing_since || '';
   S.addrLat      = player.lat         || null;
   S.addrLon      = player.lon         || null;
@@ -5792,9 +5800,26 @@ async function restoreSession(email, playerData){
       );
       if(r.ok){
         const reqs = await r.json();
+        IC_INCOMING_COUNT = reqs.length;
+        // Update purple nav badge
+        const pb = document.getElementById('icNavPurpleBadge');
+        if(pb){
+          pb.textContent = reqs.length;
+          pb.classList.toggle('placeholder', reqs.length===0);
+          pb.style.opacity = reqs.length > 0 ? '1' : '0.5';
+          pb.style.display = 'inline-flex';
+        }
+        // Update top purple button
+        const topBadge = document.getElementById('topRequestsBadge');
+        if(topBadge){
+          topBadge.textContent   = reqs.length;
+          topBadge.style.display = reqs.length > 0 ? 'inline-block' : 'none';
+        }
+        const topLabel = document.getElementById('topRequestsLabel');
+        if(topLabel) topLabel.textContent = reqs.length > 0
+          ? 'View Member Requests ('+reqs.length+')'
+          : 'View Member Requests';
         if(reqs.length > 0){
-          const pb = document.getElementById('icNavPurpleBadge');
-          if(pb){ pb.textContent=reqs.length; pb.style.display='inline-flex'; }
           setTimeout(()=>showToast('🟣 You have '+reqs.length+' Inner Circle request'+(reqs.length>1?'s':'')+'!','#7c3aed'), 1500);
         }
       }
@@ -5975,7 +6000,8 @@ function filterNearbyGrid(val){
 // ══════════════════════════════════════════════════════
 
 function updateIcStats(pendingMembers){
-  const mySkill = S.skill || '';
+  // Get skill from S state or SESSION_PLAYER
+  const mySkill = S.skill || SESSION_PLAYER?.skill_level || '';
   const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
   const set = (id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
 
@@ -6171,10 +6197,10 @@ function updateTopBar(player){
                 || player.first_name
                 || 'Player';
 
-  // Update S state to stay in sync
-  S.avatarEmoji = emoji;
-  S.nickname    = nickname;
-  if(skill) S.skill = skill;
+  // Update S state — only if values are non-empty
+  if(emoji)    S.avatarEmoji = emoji;
+  if(nickname) S.nickname    = nickname;
+  if(skill)    S.skill       = skill;
 
   const nick     = nickname ? ' "'+nickname+'"' : '';
   const skillTxt = skill    ? ' · ⭐'+skill     : '';
@@ -6740,6 +6766,17 @@ function showFilteredList(type, value, status){
 
   // Scroll to popup
   setTimeout(()=>popup.scrollIntoView({behavior:'smooth', block:'start'}), 100);
+}
+
+// ── Scroll to Find Players section with context headers ──────────────────
+function scrollToFindPlayers(){
+  const section = document.getElementById('icFindPlayersSection');
+  if(!section){ return; }
+  // Scroll so the Find Players section is visible below the sticky stats
+  const statsBar  = document.getElementById('icStatsDashboard');
+  const statsH    = statsBar ? statsBar.offsetHeight : 0;
+  const sectionTop = section.getBoundingClientRect().top + window.scrollY;
+  window.scrollTo({ top: sectionTop - statsH - 10, behavior:'smooth' });
 }
 </script>
 </body>
