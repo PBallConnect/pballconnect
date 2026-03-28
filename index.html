@@ -805,6 +805,8 @@
   .nav-circle-green{background:#22c55e;color:#fff;}
   .nav-circle-yellow{background:#f59e0b;color:#1a1200;border:1px solid #b45309;}
   .nav-circle-purple{background:#7c3aed;color:#fff;}
+  .nav-circle-green.placeholder{background:rgba(76,175,125,0.3);}
+  .nav-circle-yellow.placeholder{background:rgba(245,158,11,0.3);color:#000;}
   .nav-circle-purple.placeholder{background:rgba(124,58,237,0.25);color:rgba(255,255,255,0.5);}
 
   /* ── Profile quick menu ───────────────────────────── */
@@ -2721,10 +2723,27 @@ async function submitForm(){
     });
     console.log('✅ Registration saved');
     showToast('✅ Profile saved!', '#4CAF7D');
-    // Update top bar immediately from current form values
-    updateTopBar({ first_name: v('firstName'), nickname: v('nickname'),
-                   skill_level: S.skill, playing_since: S.playingSince,
-                   avatar_emoji: document.getElementById('avatarEmoji')?.value || S.avatarEmoji });
+    // Capture current values before any navigation
+    const _savedNickname  = v('nickname') || S.nickname || '';
+    const _savedEmoji     = document.getElementById('avatarEmoji')?.value || S.avatarEmoji || '🎾';
+    const _savedFirstName = v('firstName') || '';
+    const _savedSkill     = S.skill || '';
+    const _savedSince     = document.getElementById('playingSince')?.value || S.playingSince || '';
+    // Update S state immediately
+    S.nickname    = _savedNickname;
+    S.avatarEmoji = _savedEmoji;
+    // Update top bar immediately
+    updateTopBar({ first_name: _savedFirstName, nickname: _savedNickname,
+                   skill_level: _savedSkill, playing_since: _savedSince,
+                   avatar_emoji: _savedEmoji });
+    // Also update SESSION_PLAYER so next Edit Profile shows correct values
+    if(SESSION_PLAYER){
+      SESSION_PLAYER.nickname     = _savedNickname;
+      SESSION_PLAYER.avatar_emoji = _savedEmoji;
+      SESSION_PLAYER.first_name   = _savedFirstName;
+      SESSION_PLAYER.skill_level  = _savedSkill;
+      SESSION_PLAYER.playing_since = _savedSince;
+    }
     // Re-fetch the saved record and restore to ensure top bar is accurate
     const savedEmail = v('email') || getMyEmail();
     if(savedEmail){
@@ -3772,13 +3791,13 @@ async function loadInnerCircle(){
       '<div class="ic-empty">Complete your Player Profile first to use Inner Circle.</div>';
     return;
   }
-  // Load members first, then invites (so stats get both)
-  await loadIcApproved();
-  await loadIcInvites();
-  await loadIcPending();
-  // Final stats refresh with all data
+  // Sequential load - each awaited so data is ready for stats
+  await loadIcApproved();   // sets IC_MEMBERS
+  await loadIcInvites();    // sets IC_PENDING_PLAYERS
+  await loadIcPending();    // sets IC_INCOMING_COUNT
+  // Stats now have all data
   updateIcStats(IC_PENDING_PLAYERS);
-  updateNavCircleBadges(IC_MEMBERS.length, IC_PENDING_PLAYERS ? IC_PENDING_PLAYERS.length : 0, IC_INCOMING_COUNT);
+  updateNavCircleBadges(IC_MEMBERS.length, IC_PENDING_PLAYERS?.length||0, IC_INCOMING_COUNT);
 }
 
 // ── Search players ─────────────────────────────────────
@@ -4199,11 +4218,18 @@ async function loadIcPending(){
       }
       pb.style.display = 'inline-flex';
     }
-    // Update top bar requests button
+    // Update top bar purple requests button
     const topBadge = document.getElementById('topRequestsBadge');
     if(topBadge){
-      topBadge.textContent = pending.length;
+      topBadge.textContent   = pending.length;
       topBadge.style.display = pending.length > 0 ? 'inline-block' : 'none';
+    }
+    // Also update the button label with count
+    const topLabel = document.getElementById('topRequestsLabel');
+    if(topLabel){
+      topLabel.textContent = pending.length > 0
+        ? 'View Member Requests ('+pending.length+')'
+        : 'View Member Requests';
     }
 
     if(!pending.length){ if(card) card.style.display='none'; return; }
@@ -6005,7 +6031,7 @@ async function loadIcInvites(){
     }));
     IC_PENDING_PLAYERS = playerDetails;
     updateIcStats(playerDetails);
-    updateNavCircleBadges(IC_MEMBERS.length, playerDetails.length);
+    updateNavCircleBadges(IC_MEMBERS.length, playerDetails.length, IC_INCOMING_COUNT);
 
     pending.forEach((conn, idx)=>{
       const player  = playerDetails[idx] || {};
@@ -6103,12 +6129,22 @@ function updateNavCircleBadges(memberCount, pendingCount, incomingCount){
   const yb = document.getElementById('icNavYellowBadge');
   const pb = document.getElementById('icNavPurpleBadge');
   if(gb){
-    gb.textContent   = memberCount;
-    gb.style.display = memberCount  > 0 ? 'inline-flex' : 'none';
+    gb.textContent = memberCount;
+    if(memberCount > 0){
+      gb.classList.remove('placeholder'); gb.style.opacity='1';
+    } else {
+      gb.classList.add('placeholder'); gb.style.opacity='0.4';
+    }
+    gb.style.display = 'inline-flex';
   }
   if(yb){
-    yb.textContent   = pendingCount;
-    yb.style.display = pendingCount > 0 ? 'inline-flex' : 'none';
+    yb.textContent = pendingCount;
+    if(pendingCount > 0){
+      yb.classList.remove('placeholder'); yb.style.opacity='1';
+    } else {
+      yb.classList.add('placeholder'); yb.style.opacity='0.4';
+    }
+    yb.style.display = 'inline-flex';
   }
   if(pb){
     const incoming = incomingCount || 0;
