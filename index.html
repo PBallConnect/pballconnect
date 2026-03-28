@@ -288,8 +288,8 @@
   .nav-overlay.visible{display:block;}
 
   /* ── Main content ─────────────────────────────────── */
-  .right-column{margin-left:240px;display:flex;flex-direction:column;min-height:100vh;}
-  @media(max-width:768px){.right-column{margin-left:0;padding-top:52px;}}
+  .right-column{margin-left:240px;display:flex;flex-direction:column;min-height:100vh;position:relative;}
+  @media(max-width:768px){.right-column{margin-left:0;}}
   .main-content{flex:1;
     background-image:radial-gradient(ellipse at 15% 15%,rgba(76,175,125,0.08) 0%,transparent 55%),
       radial-gradient(ellipse at 85% 85%,rgba(76,175,125,0.05) 0%,transparent 50%);}
@@ -720,8 +720,8 @@
   /* ── Top Header Bar ───────────────────────────────── */
   .top-header{display:flex;align-items:center;justify-content:space-between;
     padding:0 20px;height:52px;background:#0a120b;
-    border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;
-    flex-shrink:0;width:100%;}
+    border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;
+    flex-shrink:0;width:100%;box-sizing:border-box;}
   .top-header-left{display:flex;align-items:center;gap:10px;}
   .top-logo-icon{font-size:22px;line-height:1;}
   .top-logo-text{font-family:'Playfair Display',serif;font-size:16px;
@@ -1582,7 +1582,7 @@
         <!-- Title + action bar -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
           <div>
-            <h1 style="font-size:20px;font-weight:800;margin:0 0 2px;">Inner <span style="color:var(--green);">Circle</span></h1>
+            <h1 style="font-size:20px;font-weight:800;margin:0 0 2px;color:#fff;">Inner <span style="color:var(--green);">Circle</span></h1>
             <div style="font-size:11px;color:var(--dim);">Overview</div>
           </div>
           <button class="ic-view-toggle-btn" id="icListToggleBtn" onclick="toggleIcListView()" title="Circle List Toggle — shows your members sorted by skill level in 3 columns">
@@ -1594,7 +1594,7 @@
         <div id="icInlineList" style="display:none;margin-bottom:12px;">
           <div class="ic-skill-grid-wrap" id="icInlineColumns">
             <div class="ic-skill-column">
-              <div class="ic-skill-col-head ic-col-below" style="position:sticky;top:52px;z-index:9;">
+              <div class="ic-skill-col-head ic-col-below" style="position:sticky;top:var(--col-sticky-top,280px);z-index:9;">
                 <div class="ic-col-head-label">One below</div>
                 <div class="ic-col-head-rating" id="inlineBelowLabel">—</div>
               </div>
@@ -1731,7 +1731,7 @@
           <div class="ic-skill-grid-wrap">
             <!-- Column: One Below -->
             <div class="ic-skill-column">
-              <div class="ic-skill-col-head ic-col-below" style="position:sticky;top:200px;z-index:8;">
+              <div class="ic-skill-col-head ic-col-below" style="position:sticky;top:var(--col-sticky-top,280px);z-index:8;">
                 <div class="ic-col-head-label">One below</div>
                 <div class="ic-col-head-rating" id="colBelowLabel">—</div>
               </div>
@@ -1739,7 +1739,7 @@
             </div>
             <!-- Column: My Level -->
             <div class="ic-skill-column">
-              <div class="ic-skill-col-head ic-col-my" style="position:sticky;top:200px;z-index:8;">
+              <div class="ic-skill-col-head ic-col-my" style="position:sticky;top:var(--col-sticky-top,280px);z-index:8;">
                 <div class="ic-col-head-label">My level</div>
                 <div class="ic-col-head-rating" id="colMyLabel">—</div>
               </div>
@@ -1747,7 +1747,7 @@
             </div>
             <!-- Column: One Above -->
             <div class="ic-skill-column">
-              <div class="ic-skill-col-head ic-col-above" style="position:sticky;top:200px;z-index:8;">
+              <div class="ic-skill-col-head ic-col-above" style="position:sticky;top:var(--col-sticky-top,280px);z-index:8;">
                 <div class="ic-col-head-label">One above</div>
                 <div class="ic-col-head-rating" id="colAboveLabel">—</div>
               </div>
@@ -1818,14 +1818,14 @@
               <div class="ic-skill-col" id="circleColBelow"></div>
             </div>
             <div class="ic-skill-column">
-              <div class="ic-skill-col-head ic-col-my" style="position:sticky;top:200px;z-index:8;">
+              <div class="ic-skill-col-head ic-col-my" style="position:sticky;top:var(--col-sticky-top,280px);z-index:8;">
                 <div class="ic-col-head-label">My level</div>
                 <div class="ic-col-head-rating" id="circleColMyLabel">—</div>
               </div>
               <div class="ic-skill-col" id="circleColMy"></div>
             </div>
             <div class="ic-skill-column">
-              <div class="ic-skill-col-head ic-col-above" style="position:sticky;top:200px;z-index:8;">
+              <div class="ic-skill-col-head ic-col-above" style="position:sticky;top:var(--col-sticky-top,280px);z-index:8;">
                 <div class="ic-col-head-label">One above</div>
                 <div class="ic-col-head-rating" id="circleColAboveLabel">—</div>
               </div>
@@ -2996,7 +2996,7 @@ function showPage(page){
   // Page-specific loaders
   if(page==='myCourts')    loadMyCourts();
   if(page==='lessons')     renderLessonsPage();
-  if(page==='innerCircle'){ loadInnerCircle(); loadNearbyPlayers(); }
+  if(page==='innerCircle'){ loadInnerCircle(); loadNearbyPlayers(); setTimeout(updateColStickyTop,300); }
   if(page==='playerProfile'){
     if(SESSION_PLAYER){
       setTimeout(()=>restoreProfileForm(SESSION_PLAYER), 200);
@@ -6833,6 +6833,16 @@ function scrollToFindPlayers(){
   const statsH    = statsBar ? statsBar.offsetHeight : 0;
   const sectionTop = section.getBoundingClientRect().top + window.scrollY;
   window.scrollTo({ top: sectionTop - statsH - 10, behavior:'smooth' });
+}
+
+// ── Set column header sticky position dynamically ────────────────────────
+function updateColStickyTop(){
+  const dash   = document.getElementById('icStatsDashboard');
+  const findHdr = document.querySelector('.ic-search-card > div[style*="sticky"]');
+  const dashH  = dash   ? dash.offsetHeight   : 0;
+  const findH  = findHdr? findHdr.offsetHeight : 0;
+  const total  = 52 + dashH + findH; // topbar + dashboard + find header
+  document.documentElement.style.setProperty('--col-sticky-top', total+'px');
 }
 </script>
 </body>
