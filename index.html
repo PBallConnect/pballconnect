@@ -2197,7 +2197,7 @@
 <script>
 
 const S={gender:'',skill:'',schedule:new Set(),anytime:false,partner:false,
-  waiver:false,photoSrc:null,state:'',stateFips:'',county:'',city:'',
+  waiver:false,photoSrc:null,state:'',stateFips:'',county:'',city:'',email:'',
   court:'',courtName:'',duprVal:null,venues:new Set(),driveDistance:'25 miles',
   playStyle:'',handedness:'',avatarEmoji:'🎾',venuePref:'',playingSince:'',nickname:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null};
 
@@ -2770,7 +2770,7 @@ async function submitForm(){
       zip_code:            v('addrZip'),
       county:              v('addrCounty')||S.county,
       court_name:          S.courtName || null,
-      skill_level:         S.skill,
+      skill_level:         S.skill || SESSION_PLAYER?.skill_level || null,
       dupr_rating:         S.duprVal || null,
       shirt_size:          v('shirtSize'),
       schedule:            schedStr,
@@ -2791,6 +2791,10 @@ async function submitForm(){
     });
     console.log('✅ Registration saved');
     showToast('✅ Profile saved!', '#4CAF7D');
+    // Persist key values to localStorage as backup
+    localStorage.setItem('pb_nickname', _savedNickname);
+    localStorage.setItem('pb_emoji',    _savedEmoji);
+    localStorage.setItem('pb_skill',    _savedSkill);
     // Capture current values before any navigation
     const _savedNickname  = v('nickname') || S.nickname || '';
     const _savedEmoji     = document.getElementById('avatarEmoji')?.value || S.avatarEmoji || '🎾';
@@ -3842,7 +3846,7 @@ function submitMatchRequest(){
 // ══════════════════════════════════════════════════════
 
 function getMyEmail(){
-  return (document.getElementById('email')?.value || S.email || '').trim().toLowerCase();
+  return (S.email || localStorage.getItem('pb_email') || document.getElementById('email')?.value || '').trim().toLowerCase();
 }
 
 function getMyName(){
@@ -5752,22 +5756,25 @@ async function restoreSession(email, playerData){
   if(!player) return;
 
   // Restore all S state from player record
+  S.email        = (player.email||'').toLowerCase();
   S.city         = player.city        || '';
   S.state        = (()=>{ 
     const st = player.state||'';
     const abbr = Object.entries(STATE_INFO).find(([k,v])=>v[1]&&v[1].toLowerCase()===st.toLowerCase());
     return abbr ? abbr[0] : st;
   })();
-  S.skill        = player.skill_level || '';
   S.duprVal      = player.dupr_rating || null;
-  S.avatarEmoji  = player.avatar_emoji|| '🎾';
+  // S.skill, S.nickname, S.avatarEmoji set above from localStorage
   S.handedness   = player.handedness  || '';
   S.gender       = player.gender      || '';
   S.driveDistance= player.drive_distance_miles
                    ? player.drive_distance_miles+' miles' : '25 miles';
   S.venuePref    = player.play_venues || '';
-  // Only restore nickname if S state doesn't have a more recent value
-  if(!S.nickname) S.nickname = player.nickname || '';
+  // Restore from localStorage first (most recent saved values)
+  // then fall back to DB, then empty
+  S.nickname    = localStorage.getItem('pb_nickname') || player.nickname || '';
+  S.avatarEmoji = localStorage.getItem('pb_emoji')    || player.avatar_emoji || '🎾';
+  S.skill       = localStorage.getItem('pb_skill')    || player.skill_level  || '';
   S.playingSince = player.playing_since || '';
   S.addrLat      = player.lat         || null;
   S.addrLon      = player.lon         || null;
