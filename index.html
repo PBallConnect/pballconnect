@@ -1577,16 +1577,14 @@
 
     <!-- INNER CIRCLE PAGE -->
     <div class="page-section" id="page-innerCircle">
-      <div class="page-header">
-        <h1>Inner <span>Circle</span></h1>
-        <p>Your approved pickleball players</p>
-      </div>
-
       <!-- Inner Circle Stats Dashboard -->
-      <div class="ic-stats-dashboard" id="icStatsDashboard" style="position:sticky;top:0;z-index:50;background:#0a120b;padding-bottom:8px;border-bottom:1px solid var(--border);">
-        <!-- Action bar above grids -->
+      <div class="ic-stats-dashboard" id="icStatsDashboard" style="position:sticky;top:52px;z-index:50;background:#0a120b;padding-bottom:8px;border-bottom:1px solid var(--border);">
+        <!-- Title + action bar -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
-          <div style="font-size:11px;color:var(--dim);">Inner Circle Overview</div>
+          <div>
+            <h1 style="font-size:20px;font-weight:800;margin:0 0 2px;">Inner <span style="color:var(--green);">Circle</span></h1>
+            <div style="font-size:11px;color:var(--dim);">Overview</div>
+          </div>
           <button class="ic-view-toggle-btn" id="icListToggleBtn" onclick="toggleIcListView()" title="Circle List Toggle — shows your members sorted by skill level in 3 columns">
             📋 See Current Inner Circle List
           </button>
@@ -5292,8 +5290,9 @@ async function loadNearbyPlayers(){
                 if(p.lat && p.lon){
                   return haversine(cityData.lat, cityData.lon, parseFloat(p.lat), parseFloat(p.lon)) <= radiusMi * 1.60934;
                 }
-                // Players without coordinates: include if same state (fallback)
-                return true;
+                // Players without coordinates: skip (can't determine distance)
+                // This ensures slider actually changes results
+                return false;
               })
             : all;
           console.log('After distance filter:', nearbyPlayers.length, 'within', radiusMi, 'miles');
@@ -5724,10 +5723,22 @@ function restoreProfileForm(player){
   if(player.wants_to_improve==='Yes'){
     toggleGoalRating('Yes');
     if(player.goal_rating){
-      S.goalRating=player.goal_rating;
-      // Show goal rating display
-      const grd=document.getElementById('goalRatingDisplay');
-      if(grd) grd.innerHTML=player.goal_rating+' <span>Goal Rating</span>';
+      S.goalRating = player.goal_rating;
+      // Now set the slider to the actual saved goal value (not personal level)
+      const goalIdx = DUPR_VALS.findIndex(v=>String(v)===String(player.goal_rating));
+      if(goalIdx >= 0){
+        const gsl = document.getElementById('goalRatingSlider');
+        if(gsl){
+          gsl.value = goalIdx;
+          const pct = (goalIdx/21*100).toFixed(1)+'%';
+          gsl.style.setProperty('--pct', pct);
+          // Also update the red bar
+          const personalIdx = DUPR_VALS.findIndex(v=>String(v)===String(player.skill_level));
+          updateGoalRedBar(personalIdx >= 0 ? personalIdx : 0, goalIdx);
+        }
+        const grd = document.getElementById('goalRatingDisplay');
+        if(grd) grd.innerHTML = player.goal_rating+' <span>Goal Rating</span>';
+      }
     }
   }
 
