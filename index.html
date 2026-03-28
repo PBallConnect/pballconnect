@@ -407,6 +407,9 @@
     position:relative;}
   .match-option:hover{border-color:rgba(76,175,125,0.4);background:rgba(76,175,125,0.06);}
   .match-option.selected{border-color:var(--green);background:rgba(76,175,125,0.12);}
+  .match-option.on{border-color:var(--green);background:rgba(76,175,125,0.14);}
+  .match-option.on .match-option-title{color:var(--green);}
+  .match-option.dim{opacity:0.35;pointer-events:auto;}
   .match-option-icon{font-size:28px;margin-bottom:8px;}
   .match-option-title{color:#fff;font-size:14px;font-weight:600;margin-bottom:4px;}
   .match-option-sub{color:var(--dim);font-size:11px;line-height:1.5;}
@@ -2079,23 +2082,7 @@
         <!-- When — right after format -->
         <div class="match-q" style="margin-top:20px;">When?</div>
 
-        <!-- Feeler toggle -->
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:12px 16px;
-             background:rgba(76,175,125,0.06);border:1px solid rgba(76,175,125,0.2);border-radius:12px;">
-          <div style="flex:1;">
-            <div style="font-size:13px;font-weight:700;color:#fff;">Send as a "feeler"?</div>
-            <div style="font-size:11px;color:var(--dim);margin-top:2px;">Ask who's free in a time window rather than a fixed time</div>
-          </div>
-          <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;flex-shrink:0;">
-            <input type="checkbox" id="matchFeelerToggle" onchange="toggleMatchFeeler(this.checked)"
-              style="opacity:0;width:0;height:0;">
-            <span style="position:absolute;top:0;left:0;right:0;bottom:0;background:var(--border);
-              border-radius:24px;transition:.3s;" id="matchFeelerSlider">
-              <span style="position:absolute;height:18px;width:18px;left:3px;bottom:3px;
-                background:#fff;border-radius:50%;transition:.3s;" id="matchFeelerThumb"></span>
-            </span>
-          </label>
-        </div>
+
 
         <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;margin-bottom:4px;">
           <div class="field" style="margin:0;">
@@ -2128,41 +2115,34 @@
         <div id="matchSpecificTime" style="margin-top:12px;">
           <div class="match-q" style="font-size:14px;margin-bottom:8px;">Start time</div>
           <div class="match-time-grid" id="matchTimeGrid"></div>
-          <div style="margin-top:8px;">
-            <label style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;
-                          letter-spacing:.1em;display:block;margin-bottom:6px;">Or enter a specific time</label>
-            <input type="time" id="matchTimeStart"
-              style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);
-                     background:rgba(255,255,255,0.07);color:#fff;font-size:13px;
-                     font-family:'DM Sans',sans-serif;outline:none;"
-              oninput="selectMatchTime(this.value);checkMatchStep1()"/>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;">
+            <div>
+              <label style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;
+                            letter-spacing:.1em;display:block;margin-bottom:6px;">Start time</label>
+              <select id="matchTimeStart" onchange="onMatchStartTimeChange(this.value);checkMatchStep1()"
+                style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);
+                       background:rgba(255,255,255,0.07);color:#fff;font-size:13px;
+                       font-family:'DM Sans',sans-serif;outline:none;appearance:none;">
+                <option value="">Select…</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;
+                            letter-spacing:.1em;display:block;margin-bottom:6px;">End time <span style="color:var(--dim);font-weight:400;">(auto)</span></label>
+              <select id="matchTimeEnd" onchange="checkMatchStep1()"
+                style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);
+                       background:rgba(255,255,255,0.07);color:#fff;font-size:13px;
+                       font-family:'DM Sans',sans-serif;outline:none;appearance:none;">
+                <option value="">Auto</option>
+              </select>
+            </div>
+          </div>
+          <div id="matchTimeWarning" style="display:none;margin-top:6px;font-size:11px;color:#f87171;">
+            ⚠️ End time cannot be before start time
           </div>
         </div>
 
-        <!-- Feeler time range -->
-        <div id="matchFeelerTime" style="display:none;margin-top:12px;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <div class="field">
-              <label>Earliest start</label>
-              <input type="time" id="matchTimeRangeStart"
-                style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);
-                       background:rgba(255,255,255,0.07);color:#fff;font-size:13px;
-                       box-sizing:border-box;font-family:'DM Sans',sans-serif;"
-                oninput="checkMatchStep1()"/>
-            </div>
-            <div class="field">
-              <label>Latest start</label>
-              <input type="time" id="matchTimeRangeEnd"
-                style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);
-                       background:rgba(255,255,255,0.07);color:#fff;font-size:13px;
-                       box-sizing:border-box;font-family:'DM Sans',sans-serif;"
-                oninput="checkMatchStep1()"/>
-            </div>
-          </div>
-          <div style="margin-top:6px;font-size:11px;color:#fbbf24;">
-            💡 Players respond: "I'm free anytime in this window"
-          </div>
-        </div>
+
 
         <div class="match-q" style="margin-top:20px;">Who to invite?</div>
         <div class="match-options" id="matchGroupOptions">
@@ -4432,13 +4412,15 @@ async function loadIcPending(){
   const badge   = document.getElementById('icPendingBadge');
   try{
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/connections?recipient_email=eq.${encodeURIComponent(myEmail)}&status=eq.pending&select=*&order=created_at.desc`,
+      `${SUPABASE_URL}/rest/v1/connections?recipient_email=eq.${encodeURIComponent(myEmail)}&status=eq.pending&select=*`,
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
     );
     if(!res.ok) return;
     const pending = await res.json();
 
     // Update purple nav badge and global count
+    // Sort alphabetically by requester name
+    pending.sort((a,b)=>(a.requester_name||'').localeCompare(b.requester_name||''));
     IC_INCOMING_COUNT = pending.length;
     const pb = document.getElementById('icNavPurpleBadge');
     if(pb){
@@ -6023,9 +6005,6 @@ async function restoreSession(email, playerData){
     }catch(e){}
   }, 500);
 
-  // Check incoming requests and set purple badge on login
-  loadIcPending();
-
   // Geocode city if no lat/lon stored
   if(!S.addrLat && player.city && player.state){
     geocodeCityForSession(player.city, player.state);
@@ -7279,9 +7258,12 @@ function matchGoTo(step){
 // ── Format selection ───────────────────────────────────
 function selectMatchFormat(fmt, el){
   MS.format = fmt;
-  document.querySelectorAll('#matchFormatOptions .match-option').forEach(o=>o.classList.remove('on'));
+  document.querySelectorAll('#matchFormatOptions .match-option').forEach(o=>{
+    o.classList.remove('on','dim');
+    o.classList.add('dim');
+  });
+  el.classList.remove('dim');
   el.classList.add('on');
-  // If specific players already selected, re-validate count
   if(MS.group==='specific') buildSpecificPicker();
   checkMatchStep1();
 }
@@ -7296,51 +7278,100 @@ function adjustDuration(delta){
   }
 }
 
-// ── Quick time chips ───────────────────────────────────
+// ── Time selects with 15-min increments ───────────────
 function buildMatchTimeChips(){
+  // Build quick-tap common time chips
   const grid = document.getElementById('matchTimeGrid');
   if(!grid) return;
-  const slots = ['7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM',
-                 '12:00 PM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM','6:00 PM'];
+  const quickTimes = ['7:00','8:00','9:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'];
   grid.innerHTML = '';
-  grid.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;';
-  slots.forEach(slot=>{
+  grid.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;';
+  quickTimes.forEach(t=>{
     const btn = document.createElement('button');
     btn.className = 'chip';
-    btn.textContent = slot;
-    btn.style.cssText = 'font-size:11px;padding:6px 10px;';
+    btn.style.cssText = 'font-size:11px;padding:5px 10px;';
+    btn.textContent = fmt12(t);
     btn.onclick = ()=>{
       grid.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
       btn.classList.add('on');
-      // Convert to 24h for input
-      const [time, ampm] = slot.split(' ');
-      let [h,m] = time.split(':').map(Number);
-      if(ampm==='PM' && h!==12) h+=12;
-      if(ampm==='AM' && h===12) h=0;
-      const val = String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
-      document.getElementById('matchTimeStart').value = val;
-      MS.timeStart = val;
+      const sel = document.getElementById('matchTimeStart');
+      if(sel) sel.value = t;
+      onMatchStartTimeChange(t);
       checkMatchStep1();
     };
     grid.appendChild(btn);
   });
+  // Build start time dropdown (all day in 15-min increments)
+  buildTimeSelect('matchTimeStart', '06:00', '22:00');
+  buildTimeSelect('matchTimeEnd',   '06:00', '23:00');
 }
 
-function selectMatchTime(val){
-  MS.timeStart = val;
-  // Clear chip selection if manually typed
-  document.querySelectorAll('#matchTimeGrid .chip').forEach(c=>c.classList.remove('on'));
+function buildTimeSelect(selectId, startHH, endHH){
+  const sel = document.getElementById(selectId);
+  if(!sel) return;
+  const current = sel.value;
+  // Keep first option
+  while(sel.options.length > 1) sel.remove(1);
+  const [sh,sm] = startHH.split(':').map(Number);
+  const [eh,em] = endHH.split(':').map(Number);
+  for(let h=sh; h<=eh; h++){
+    for(let m=0; m<60; m+=15){
+      if(h===eh && m>em) break;
+      const val = String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = fmt12(val);
+      sel.appendChild(opt);
+    }
+  }
+  if(current) sel.value = current;
 }
 
-function toggleMatchFeeler(on){
-  MS.isFeeler = on;
-  document.getElementById('matchSpecificTime').style.display = on ? 'none' : 'block';
-  document.getElementById('matchFeelerTime').style.display   = on ? 'block' : 'none';
-  const slider = document.getElementById('matchFeelerSlider');
-  const thumb  = document.getElementById('matchFeelerThumb');
-  if(slider) slider.style.background = on ? 'var(--green)' : 'var(--border)';
-  if(thumb)  thumb.style.left = on ? '23px' : '3px';
-  checkMatchStep1();
+function onMatchStartTimeChange(startVal){
+  MS.timeStart = startVal;
+  if(!startVal) return;
+  // Auto-set end time = start + duration
+  const [h,m] = startVal.split(':').map(Number);
+  const totalMins = h*60 + m + Math.round(MS.duration * 60);
+  const endH = Math.floor(totalMins/60) % 24;
+  const endM = totalMins % 60;
+  const endVal = String(endH).padStart(2,'0')+':'+String(endM).padStart(2,'0');
+  const endSel = document.getElementById('matchTimeEnd');
+  if(endSel) endSel.value = endVal;
+  MS.timeEnd = endVal;
+  validateMatchTimes();
+  // Sync chip selection
+  document.querySelectorAll('#matchTimeGrid .chip').forEach(btn=>{
+    const chipTime = btn.dataset?.time || '';
+    btn.classList.toggle('on', chipTime === startVal);
+  });
+}
+
+function validateMatchTimes(){
+  const startSel = document.getElementById('matchTimeStart');
+  const endSel   = document.getElementById('matchTimeEnd');
+  const warnEl   = document.getElementById('matchTimeWarning');
+  if(!startSel||!endSel) return true;
+  const s = startSel.value, e = endSel.value;
+  const invalid = s && e && e <= s;
+  if(warnEl) warnEl.style.display = invalid ? 'block' : 'none';
+  if(endSel) endSel.style.borderColor = invalid ? '#f87171' : '';
+  return !invalid;
+}
+
+// Override adjustDuration to also update end time
+const _origAdjustDuration = adjustDuration;
+function adjustDuration(delta){
+  MS.duration = Math.min(4, Math.max(1, parseFloat((MS.duration + delta).toFixed(1))));
+  const disp = document.getElementById('matchDurationDisplay');
+  if(disp){
+    const h = Math.floor(MS.duration);
+    const m = (MS.duration % 1) * 60;
+    disp.textContent = m > 0 ? h+'h '+m+'m' : h+' hr'+(h!==1?'s':'');
+  }
+  // Update end time based on new duration
+  const startVal = document.getElementById('matchTimeStart')?.value || MS.timeStart;
+  if(startVal) onMatchStartTimeChange(startVal);
 }
 
 function checkMatchStep1(){
@@ -7361,7 +7392,11 @@ function checkMatchStep1(){
 // ── Group selection ────────────────────────────────────
 function selectMatchGroup(group, el){
   MS.group = group;
-  document.querySelectorAll('#matchGroupOptions .match-option').forEach(o=>o.classList.remove('on'));
+  document.querySelectorAll('#matchGroupOptions .match-option').forEach(o=>{
+    o.classList.remove('on','dim');
+    o.classList.add('dim');
+  });
+  el.classList.remove('dim');
   el.classList.add('on');
   const picker = document.getElementById('matchSpecificPicker');
   if(group==='specific'){
@@ -7461,7 +7496,11 @@ function updateMatchGroupLabels(){
 // ── Step 2: Where ──────────────────────────────────────
 function selectMatchLocation(loc, el){
   MS.location = loc;
-  document.querySelectorAll('#matchStep2 .match-option').forEach(o=>o.classList.remove('on'));
+  document.querySelectorAll('#matchStep2 .match-option').forEach(o=>{
+    o.classList.remove('on','dim');
+    o.classList.add('dim');
+  });
+  el.classList.remove('dim');
   el.classList.add('on');
   const sec = document.getElementById('matchMyCourtsSection');
   if(sec) sec.style.display = loc==='my_courts' ? 'block' : 'none';
