@@ -893,6 +893,13 @@
   .ic-find-members-btn:hover{background:rgba(76,175,125,0.2);
     border-color:var(--green);}
 </style>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script>
+    // EmailJS config — fill these in after setting up at emailjs.com
+    window.EMAILJS_PUBLIC_KEY  = 'YOUR_PUBLIC_KEY';   // Account > API Keys
+    window.EMAILJS_SERVICE_ID  = 'YOUR_SERVICE_ID';   // Email Services tab
+    window.EMAILJS_TEMPLATE_ID = 'YOUR_TEMPLATE_ID';  // Email Templates tab
+  </script>
 </head>
 <body>
 
@@ -1683,6 +1690,67 @@
             </table>
           </div>
 
+        </div>
+      </div>
+
+      <!-- Invite a Friend -->
+      <div class="ic-card" id="icInviteCard" style="max-width:100%;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+          <div>
+            <div class="ic-section-label" style="margin-bottom:2px;">📨 Invite a Friend to Pickleball Registry</div>
+            <div style="font-size:11px;color:var(--dim);">Invite someone by email or text — they'll get a link to set up their profile</div>
+          </div>
+          <button class="ic-view-toggle-btn" onclick="toggleInviteForm()" id="inviteToggleBtn">
+            + Send an Invite
+          </button>
+        </div>
+
+        <!-- Invite form (hidden by default) -->
+        <div id="inviteForm" style="display:none;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div>
+              <label style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:6px;">Their Email</label>
+              <input type="email" id="inviteEmail" placeholder="friend@email.com"
+                style="width:100%;background:rgba(255,255,255,0.08);border:1px solid var(--border);
+                       border-radius:10px;padding:10px 14px;color:#fff;font-size:14px;
+                       font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box;"
+                oninput="validateInviteForm()"/>
+            </div>
+            <div>
+              <label style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:6px;">Their Phone <span style="color:var(--dim);font-weight:400;">(for SMS, optional)</span></label>
+              <input type="tel" id="invitePhone" placeholder="(603) 555-1234"
+                style="width:100%;background:rgba(255,255,255,0.08);border:1px solid var(--border);
+                       border-radius:10px;padding:10px 14px;color:#fff;font-size:14px;
+                       font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box;"
+                oninput="formatPhone(this)"/>
+            </div>
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <label style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:6px;">Personal Note <span style="color:var(--dim);font-weight:400;">(optional)</span></label>
+            <textarea id="inviteNote" placeholder="Hey! I'd love to play pickleball with you. Come join me on Pickleball Registry!"
+              style="width:100%;background:rgba(255,255,255,0.08);border:1px solid var(--border);
+                     border-radius:10px;padding:10px 14px;color:#fff;font-size:13px;
+                     font-family:'DM Sans',sans-serif;outline:none;resize:vertical;
+                     min-height:70px;box-sizing:border-box;" rows="2"></textarea>
+          </div>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <button id="inviteSendEmailBtn" class="ic-find-members-btn" 
+              style="opacity:0.4;pointer-events:none;"
+              onclick="sendInvite('email')">
+              ✉️ Send Email Invite
+            </button>
+            <button id="inviteSendSmsBtn" class="ic-find-members-btn"
+              style="background:rgba(59,130,246,0.1);border-color:rgba(59,130,246,0.4);color:#60a5fa;opacity:0.4;pointer-events:none;"
+              onclick="sendInvite('sms')">
+              💬 Send Text Message
+            </button>
+            <div id="inviteStatus" style="font-size:12px;color:var(--dim);"></div>
+          </div>
+
+          <!-- Sent invites list -->
+          <div id="inviteSentList" style="margin-top:16px;"></div>
         </div>
       </div>
 
@@ -6844,6 +6912,238 @@ function updateColStickyTop(){
   const total  = 52 + dashH + findH; // topbar + dashboard + find header
   document.documentElement.style.setProperty('--col-sticky-top', total+'px');
 }
+
+// ══════════════════════════════════════════════════════
+// INVITE A FRIEND
+// ══════════════════════════════════════════════════════
+
+function toggleInviteForm(){
+  const form = document.getElementById('inviteForm');
+  const btn  = document.getElementById('inviteToggleBtn');
+  const open = form.style.display === 'none';
+  form.style.display = open ? 'block' : 'none';
+  btn.textContent    = open ? '✕ Close' : '+ Send an Invite';
+  if(open) loadSentInvites();
+}
+
+function validateInviteForm(){
+  const email = document.getElementById('inviteEmail')?.value?.trim();
+  const phone = document.getElementById('invitePhone')?.value?.trim();
+  const emailBtn = document.getElementById('inviteSendEmailBtn');
+  const smsBtn   = document.getElementById('inviteSendSmsBtn');
+
+  const validEmail = email && email.includes('@') && email.includes('.');
+  const validPhone = phone && phone.replace(/\D/g,'').length === 10;
+
+  if(emailBtn){
+    emailBtn.style.opacity       = validEmail ? '1' : '0.4';
+    emailBtn.style.pointerEvents = validEmail ? 'auto' : 'none';
+  }
+  if(smsBtn){
+    smsBtn.style.opacity       = validPhone ? '1' : '0.4';
+    smsBtn.style.pointerEvents = validPhone ? 'auto' : 'none';
+  }
+}
+
+async function sendInvite(method){
+  const myEmail      = getMyEmail();
+  const myName       = ((SESSION_PLAYER?.first_name||'') + ' ' + (SESSION_PLAYER?.last_name||'')).trim() || 'A fellow player';
+  const inviteeEmail = document.getElementById('inviteEmail')?.value?.trim();
+  const inviteePhone = document.getElementById('invitePhone')?.value?.replace(/\D/g,'');
+  const note         = document.getElementById('inviteNote')?.value?.trim();
+  const statusEl     = document.getElementById('inviteStatus');
+
+  if(!myEmail){ showToast('Please sign in first','#f59e0b'); return; }
+
+  // ── Create invite record in DB first ─────────────────
+  statusEl.textContent = 'Saving…';
+  let token = '';
+  try{
+    const inviteRes = await fetch(`${SUPABASE_URL}/rest/v1/invites`, {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'apikey':        SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        'Prefer':        'return=representation',
+      },
+      body: JSON.stringify({
+        inviter_email: myEmail,
+        inviter_name:  myName,
+        invitee_email: inviteeEmail || null,
+        invitee_phone: inviteePhone || null,
+        invite_method: method,
+        personal_note: note || null,
+      })
+    });
+    const rows = inviteRes.ok ? await inviteRes.json() : [];
+    token = rows[0]?.invite_token || Math.random().toString(36).slice(2);
+  }catch(e){ token = Math.random().toString(36).slice(2); }
+
+  const inviteUrl = window.location.origin + window.location.pathname + '?invite=' + token;
+  const siteUrl   = 'https://pickleball-registry.pages.dev';
+
+  // ── Send email via EmailJS ────────────────────────────
+  if(method === 'email'){
+    const pubKey  = window.EMAILJS_PUBLIC_KEY;
+    const svcId   = window.EMAILJS_SERVICE_ID;
+    const tplId   = window.EMAILJS_TEMPLATE_ID;
+
+    // Check if EmailJS is configured
+    if(!pubKey || pubKey === 'YOUR_PUBLIC_KEY'){
+      // Fallback: open mailto
+      const subject = encodeURIComponent(myName + ' invited you to Pickleball Registry! 🎾');
+      const body    = encodeURIComponent(
+        'Hi!\n\n' + myName + ' personally invited you to join Pickleball Registry.\n\n' +
+        (note ? '"' + note + '"\n\n' : '') +
+        'Set up your player profile here:\n' + inviteUrl + '\n\n' +
+        'See you on the court! 🏓'
+      );
+      window.open('mailto:' + inviteeEmail + '?subject=' + subject + '&body=' + body);
+      statusEl.textContent = '';
+      showToast('📧 Email app opened!', '#4CAF7D');
+      loadSentInvites();
+      return;
+    }
+
+    statusEl.textContent = 'Sending email…';
+    try{
+      emailjs.init(pubKey);
+      await emailjs.send(svcId, tplId, {
+        to_email:      inviteeEmail,
+        from_name:     myName,
+        from_email:    myEmail,
+        invite_url:    inviteUrl,
+        personal_note: note || '',
+        site_url:      siteUrl,
+      });
+      statusEl.textContent = '';
+      showToast('✅ Email invite sent to ' + inviteeEmail, '#4CAF7D');
+      document.getElementById('inviteEmail').value = '';
+      document.getElementById('inviteNote').value  = '';
+      validateInviteForm();
+      loadSentInvites();
+    }catch(e){
+      console.error('EmailJS error:', e);
+      statusEl.textContent = '⚠️ Email error: ' + (e.text || e.message || 'Unknown error');
+    }
+  }
+
+  // ── Send SMS via native SMS app ───────────────────────
+  if(method === 'sms'){
+    const smsBody = encodeURIComponent(
+      myName + ' invited you to join Pickleball Registry! 🎾 ' +
+      (note ? '"' + note + '" ' : '') +
+      'Set up your profile: ' + inviteUrl
+    );
+    window.open('sms:' + (inviteePhone ? '+1'+inviteePhone : '') + '?body=' + smsBody);
+    statusEl.textContent = '';
+    showToast('✅ SMS app opened!', '#4CAF7D');
+    loadSentInvites();
+  }
+}
+
+// ── Load sent invites list ────────────────────────────
+async function loadSentInvites(){
+  const myEmail = getMyEmail();
+  const listEl  = document.getElementById('inviteSentList');
+  if(!listEl || !myEmail) return;
+
+  try{
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/invites?inviter_email=eq.${encodeURIComponent(myEmail)}&order=created_at.desc&limit=10`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+    );
+    if(!res.ok) return;
+    const invites = await res.json();
+    if(!invites.length){ listEl.innerHTML=''; return; }
+
+    listEl.innerHTML =
+      '<div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;' +
+      'letter-spacing:.08em;margin-bottom:8px;">Recent Invites Sent</div>';
+
+    invites.forEach(inv=>{
+      const sentAt = new Date(inv.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      const statusColor = inv.status==='registered'?'var(--green)':inv.status==='opened'?'#f59e0b':'var(--dim)';
+      const statusIcon  = inv.status==='registered'?'✅':inv.status==='opened'?'👀':'📨';
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);';
+      row.innerHTML =
+        '<span style="font-size:16px;">'+ (inv.invite_method==='sms'?'💬':'✉️') +'</span>'+
+        '<div style="flex:1;min-width:0;">'+
+          '<div style="font-size:13px;color:#fff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+
+            (inv.invitee_email||inv.invitee_phone||'Unknown')+'</div>'+
+          '<div style="font-size:10px;color:var(--dim);">Sent '+sentAt+'</div>'+
+        '</div>'+
+        '<span style="font-size:11px;font-weight:700;color:'+statusColor+';white-space:nowrap;">'+statusIcon+' '+inv.status+'</span>';
+      listEl.appendChild(row);
+    });
+  }catch(e){ console.warn('loadSentInvites error:', e); }
+}
+
+// ── Handle invite token on page load ─────────────────
+function checkInviteToken(){
+  const params = new URLSearchParams(window.location.search);
+  const token  = params.get('invite');
+  if(!token) return;
+
+  // Mark invite as opened
+  fetch(`${SUPABASE_URL}/rest/v1/invites?invite_token=eq.${token}`,{
+    method: 'PATCH',
+    headers:{
+      'Content-Type':'application/json',
+      'apikey':SUPABASE_ANON_KEY,
+      'Authorization':'Bearer '+SUPABASE_ANON_KEY,
+      'Prefer':'return=representation'
+    },
+    body: JSON.stringify({ status:'opened', opened_at: new Date().toISOString() })
+  }).then(r=>r.json()).then(rows=>{
+    if(rows.length){
+      const inv = rows[0];
+      // Pre-fill email and show welcome banner
+      const emailInput = document.getElementById('email');
+      if(emailInput && inv.invitee_email) emailInput.value = inv.invitee_email;
+      const loginEmailInput = document.getElementById('loginEmail');
+      if(loginEmailInput && inv.invitee_email) loginEmailInput.value = inv.invitee_email;
+
+      // Show welcome banner
+      showInviteBanner(inv);
+      // Navigate to profile setup
+      showPage('playerProfile');
+    }
+  }).catch(()=>{});
+}
+
+function showInviteBanner(invite){
+  const banner = document.createElement('div');
+  banner.style.cssText =
+    'position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:600;' +
+    'background:#0a120b;border:1px solid var(--green);border-radius:14px;' +
+    'padding:16px 24px;max-width:480px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.4);' +
+    'animation:slideIn .3s ease;';
+  const inviterName = invite.inviter_name || 'A fellow player';
+  banner.innerHTML =
+    '<div style="display:flex;align-items:flex-start;gap:12px;">'+
+      '<span style="font-size:24px;flex-shrink:0;">🎾</span>'+
+      '<div style="flex:1;">'+
+        '<div style="color:var(--green);font-weight:700;font-size:14px;margin-bottom:4px;">'+
+          'You were invited by '+inviterName+'!</div>'+
+        '<div style="color:rgba(255,255,255,0.7);font-size:12px;line-height:1.5;">'+
+          'Set up your player profile below to join their Inner Circle on Pickleball Registry.'+
+        '</div>'+
+        (invite.personal_note?
+          '<div style="margin-top:8px;font-size:12px;color:#fff;font-style:italic;">"'+invite.personal_note+'"</div>'
+          :'')+
+      '</div>'+
+      '<button onclick="this.parentElement.parentElement.remove()" '+
+        'style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:18px;flex-shrink:0;">✕</button>'+
+    '</div>';
+  document.body.appendChild(banner);
+  setTimeout(()=>{ if(banner.parentNode) banner.remove(); }, 12000);
+}
+
+// Check for invite token when page loads
+document.addEventListener('DOMContentLoaded', checkInviteToken);
 </script>
 </body>
 </html>
