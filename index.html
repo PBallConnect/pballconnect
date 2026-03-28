@@ -2900,7 +2900,7 @@ function showPage(page){
   if(page==='innerCircle'){ loadInnerCircle(); loadNearbyPlayers(); }
   if(page==='playerProfile'){
     if(SESSION_PLAYER){
-      setTimeout(()=>restoreProfileForm(SESSION_PLAYER), 50);
+      setTimeout(()=>restoreProfileForm(SESSION_PLAYER), 200);
     } else {
       // Try to load from localStorage email
       const em = localStorage.getItem('pb_email');
@@ -5456,6 +5456,9 @@ async function doLogin(){
 // ══════════════════════════════════════════════════════
 function restoreProfileForm(player){
   if(!player) return;
+  if(RESTORING_PROFILE) return; // prevent duplicate calls
+  RESTORING_PROFILE = true;
+  setTimeout(()=>{ RESTORING_PROFILE = false; }, 500); // reset after 500ms
 
   function restoreChip(groupId, value){
     if(!value) return;
@@ -5601,11 +5604,21 @@ function restoreProfileForm(player){
   verifyChip('improveChips',    player.wants_to_improve);
   const psEl = document.getElementById('playingSince');
   console.log('🔍 playingSince: value="'+(psEl?psEl.value:'NO ELEMENT')+'" expected="'+player.playing_since+'"');
-  console.log('✅ Profile form restored for', player.email);
+  // When editing, show all 3 steps at once so user can see everything
+  // instead of wizard flow
+  [1,2,3].forEach(i=>{
+    const step = document.getElementById('step'+i);
+    if(step) step.style.display='block';
+  });
+  // Scroll to top of form
+  window.scrollTo({top:0, behavior:'smooth'});
+
+  console.log('✅ Profile form restored');
 }
 
 // Store last loaded player for form restore
 let SESSION_PLAYER = null;
+let RESTORING_PROFILE = false; // prevent multiple simultaneous restores
 async function restoreSession(email, playerData){
   // Fetch player if not passed in
   let player = playerData;
@@ -6389,11 +6402,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
 // ══════════════════════════════════════════════════════
 async function openEditProfile(){
   const email = localStorage.getItem('pb_email') || getMyEmail();
-  if(!email){
-    showPage('playerProfile');
-    return;
-  }
-  showToast('Loading your profile…', '#4CAF7D');
+  if(!email){ showPage('playerProfile'); return; }
   await fetchAndRestoreProfile(email);
 }
 
@@ -6407,12 +6416,9 @@ async function fetchAndRestoreProfile(email){
       const rows = await res.json();
       if(rows.length){
         SESSION_PLAYER = rows[0];
+        updateTopBar(SESSION_PLAYER);
+        // Navigate to profile page - showPage hook will call restoreProfileForm
         showPage('playerProfile');
-        // Wait for page to be visible then restore
-        setTimeout(()=>{
-          restoreProfileForm(SESSION_PLAYER);
-          updateTopBar(SESSION_PLAYER);
-        }, 100);
         return;
       }
     }
