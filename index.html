@@ -859,6 +859,30 @@
     font-size:10px;
     color:#a78bfa;
   }
+  /* ── IC grid clickable cells ──────────────────────── */
+  .ic-clickable-cell{cursor:pointer;transition:opacity .15s;}
+  .ic-clickable-cell:hover{opacity:0.7;text-decoration:underline;}
+  /* ── IC list toggle button ────────────────────────── */
+  .ic-view-toggle-btn{padding:6px 14px;border-radius:8px;border:1px solid rgba(76,175,125,0.4);
+    background:rgba(76,175,125,0.08);color:var(--green);font-size:11px;font-weight:600;
+    cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;white-space:nowrap;}
+  .ic-view-toggle-btn:hover{background:rgba(76,175,125,0.18);}
+  .ic-view-toggle-btn.active{background:rgba(76,175,125,0.2);border-color:var(--green);}
+  /* ── IC inline name card ──────────────────────────── */
+  .ic-name-card{padding:8px 10px;background:rgba(255,255,255,0.03);
+    border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;
+    transition:border-color .15s;}
+  .ic-name-card:hover{border-color:rgba(76,175,125,0.4);}
+  .ic-name-card-name{color:#fff;font-size:12px;font-weight:600;}
+  .ic-name-card-nick{color:var(--green);font-size:10px;font-style:italic;margin-top:2px;}
+  /* ── Filtered list popup ──────────────────────────── */
+  .ic-filter-popup{background:rgba(255,255,255,0.03);border:1px solid rgba(76,175,125,0.3);
+    border-radius:14px;padding:14px;margin-bottom:12px;}
+  .ic-filter-popup-header{display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:12px;}
+  .ic-filter-popup-title{font-size:12px;font-weight:700;color:var(--green);}
+  .ic-filter-close{background:transparent;border:none;color:var(--dim);cursor:pointer;
+    font-size:16px;padding:2px 6px;}
 </style>
 </head>
 <body>
@@ -1549,7 +1573,42 @@
       </div>
 
       <!-- Inner Circle Stats Dashboard -->
-      <div class="ic-stats-dashboard" id="icStatsDashboard" style="position:sticky;top:0;z-index:50;background:#0a120b;padding-bottom:8px;">
+      <div class="ic-stats-dashboard" id="icStatsDashboard" style="position:sticky;top:0;z-index:50;background:#0a120b;padding-bottom:8px;border-bottom:1px solid var(--border);">
+        <!-- Action bar above grids -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+          <div style="font-size:11px;color:var(--dim);">Inner Circle Overview</div>
+          <button class="ic-view-toggle-btn" id="icListToggleBtn" onclick="toggleIcListView()">
+            📋 See Current Inner Circle List
+          </button>
+        </div>
+
+        <!-- Inline 3-column circle list (hidden by default) -->
+        <div id="icInlineList" style="display:none;margin-bottom:12px;">
+          <div class="ic-skill-grid-wrap" id="icInlineColumns">
+            <div class="ic-skill-column">
+              <div class="ic-skill-col-head ic-col-below" style="position:sticky;top:52px;z-index:9;">
+                <div class="ic-col-head-label">One below</div>
+                <div class="ic-col-head-rating" id="inlineBelowLabel">—</div>
+              </div>
+              <div id="inlineColBelow" class="ic-skill-col"></div>
+            </div>
+            <div class="ic-skill-column">
+              <div class="ic-skill-col-head ic-col-my" style="position:sticky;top:52px;z-index:9;">
+                <div class="ic-col-head-label">My level</div>
+                <div class="ic-col-head-rating" id="inlineColMyLabel">—</div>
+              </div>
+              <div id="inlineColMy" class="ic-skill-col"></div>
+            </div>
+            <div class="ic-skill-column">
+              <div class="ic-skill-col-head ic-col-above" style="position:sticky;top:52px;z-index:9;">
+                <div class="ic-col-head-label">One above</div>
+                <div class="ic-col-head-rating" id="inlineAboveLabel">—</div>
+              </div>
+              <div id="inlineColAbove" class="ic-skill-col"></div>
+            </div>
+          </div>
+        </div>
+
         <div class="ic-two-grids">
 
           <!-- Grid 1: Gender -->
@@ -1568,17 +1627,17 @@
               <tbody>
                 <tr>
                   <td class="ic-row-label">Members</td>
-                  <td class="ic-th-male" id="gMaleMember">0</td>
-                  <td class="ic-th-female" id="gFemaleMember">0</td>
-                  <td class="ic-th-other" id="gOtherMember">0</td>
-                  <td class="ic-th-total" id="gTotalMember">0</td>
+                  <td class="ic-th-male ic-clickable-cell" id="gMaleMember" onclick="showFilteredList('gender','Male','member')" title="Click to see players">0</td>
+                  <td class="ic-th-female ic-clickable-cell" id="gFemaleMember" onclick="showFilteredList('gender','Female','member')" title="Click to see players">0</td>
+                  <td class="ic-th-other ic-clickable-cell" id="gOtherMember" onclick="showFilteredList('gender','Other','member')" title="Click to see players">0</td>
+                  <td class="ic-th-total ic-clickable-cell" id="gTotalMember" onclick="showFilteredList('gender','All','member')" title="Click to see players">0</td>
                 </tr>
                 <tr>
                   <td class="ic-row-label">Invited</td>
-                  <td class="ic-th-male" id="gMaleInvited">0</td>
-                  <td class="ic-th-female" id="gFemaleInvited">0</td>
-                  <td class="ic-th-other" id="gOtherInvited">0</td>
-                  <td class="ic-th-total" id="gTotalInvited">0</td>
+                  <td class="ic-th-male ic-clickable-cell" id="gMaleInvited" onclick="showFilteredList('gender','Male','invited')" title="Click to see players">0</td>
+                  <td class="ic-th-female ic-clickable-cell" id="gFemaleInvited" onclick="showFilteredList('gender','Female','invited')" title="Click to see players">0</td>
+                  <td class="ic-th-other ic-clickable-cell" id="gOtherInvited" onclick="showFilteredList('gender','Other','invited')" title="Click to see players">0</td>
+                  <td class="ic-th-total ic-clickable-cell" id="gTotalInvited" onclick="showFilteredList('gender','All','invited')" title="Click to see players">0</td>
                 </tr>
               </tbody>
             </table>
@@ -1600,17 +1659,17 @@
               <tbody>
                 <tr>
                   <td class="ic-row-label">Members</td>
-                  <td class="ic-th-below" id="lBelowMember">0</td>
-                  <td class="ic-th-my" id="lMyMember">0</td>
-                  <td class="ic-th-above" id="lAboveMember">0</td>
-                  <td class="ic-th-total" id="lTotalMember">0</td>
+                  <td class="ic-th-below ic-clickable-cell" id="lBelowMember" onclick="showFilteredList('level','Below','member')" title="Click to see players">0</td>
+                  <td class="ic-th-my ic-clickable-cell" id="lMyMember" onclick="showFilteredList('level','My','member')" title="Click to see players">0</td>
+                  <td class="ic-th-above ic-clickable-cell" id="lAboveMember" onclick="showFilteredList('level','Above','member')" title="Click to see players">0</td>
+                  <td class="ic-th-total ic-clickable-cell" id="lTotalMember" onclick="showFilteredList('level','All','member')" title="Click to see players">0</td>
                 </tr>
                 <tr>
                   <td class="ic-row-label">Invited</td>
-                  <td class="ic-th-below" id="lBelowInvited">0</td>
-                  <td class="ic-th-my" id="lMyInvited">0</td>
-                  <td class="ic-th-above" id="lAboveInvited">0</td>
-                  <td class="ic-th-total" id="lTotalInvited">0</td>
+                  <td class="ic-th-below ic-clickable-cell" id="lBelowInvited" onclick="showFilteredList('level','Below','invited')" title="Click to see players">0</td>
+                  <td class="ic-th-my ic-clickable-cell" id="lMyInvited" onclick="showFilteredList('level','My','invited')" title="Click to see players">0</td>
+                  <td class="ic-th-above ic-clickable-cell" id="lAboveInvited" onclick="showFilteredList('level','Above','invited')" title="Click to see players">0</td>
+                  <td class="ic-th-total ic-clickable-cell" id="lTotalInvited" onclick="showFilteredList('level','All','invited')" title="Click to see players">0</td>
                 </tr>
               </tbody>
             </table>
@@ -1621,13 +1680,15 @@
 
       <!-- Find Players -->
       <div class="ic-search-card" style="max-width:100%;">
-        <div class="ic-section-label">Find players to add</div>
-
-        <!-- Tab switcher -->
-        <div class="ic-find-tabs">
+        <!-- Sticky header bar for Find Players -->
+        <div style="position:sticky;top:0;z-index:40;background:#0a120b;padding:10px 0 8px;margin-bottom:4px;border-bottom:1px solid var(--border);">
+          <div class="ic-section-label" style="margin-bottom:8px;">Find players to add</div>
+          <!-- Tab switcher -->
+          <div class="ic-find-tabs">
           <button class="ic-find-tab active" id="tabNearby" onclick="switchFindTab('nearby')">📍 Nearby by skill</button>
           <button class="ic-find-tab" id="tabSearch" onclick="switchFindTab('search')">🔍 Search by name</button>
-        </div>
+          </div><!-- end tabs -->
+        </div><!-- end sticky header -->
 
         <!-- TAB 1: Nearby by skill grid -->
         <div id="icNearbyPanel">
@@ -3798,6 +3859,8 @@ async function loadInnerCircle(){
   // Stats now have all data
   updateIcStats(IC_PENDING_PLAYERS);
   updateNavCircleBadges(IC_MEMBERS.length, IC_PENDING_PLAYERS?.length||0, IC_INCOMING_COUNT);
+  // Refresh inline list if visible
+  if(IC_LIST_VISIBLE) renderInlineCircleList();
 }
 
 // ── Search players ─────────────────────────────────────
@@ -6502,6 +6565,177 @@ async function fetchAndRestoreProfile(email){
   }catch(e){ console.warn('fetchAndRestoreProfile error:', e); }
   // Fallback — just show the page
   showPage('playerProfile');
+}
+
+// ══════════════════════════════════════════════════════
+// INNER CIRCLE — INLINE LIST + FILTERED GRID CLICK
+// ══════════════════════════════════════════════════════
+
+let IC_LIST_VISIBLE = false;
+
+function toggleIcListView(){
+  IC_LIST_VISIBLE = !IC_LIST_VISIBLE;
+  const panel  = document.getElementById('icInlineList');
+  const btn    = document.getElementById('icListToggleBtn');
+  if(IC_LIST_VISIBLE){
+    panel.style.display = 'block';
+    btn.textContent = '✕ Hide Circle List';
+    btn.classList.add('active');
+    renderInlineCircleList();
+  } else {
+    panel.style.display = 'none';
+    btn.textContent = '📋 See Current Inner Circle List';
+    btn.classList.remove('active');
+  }
+}
+
+function renderInlineCircleList(){
+  const mySkill = S.skill || '';
+  const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
+
+  // Update column headers
+  document.getElementById('inlineBelowLabel').textContent = skills?.below ?? '—';
+  document.getElementById('inlineColMyLabel').textContent = skills?.my    ?? '—';
+  document.getElementById('inlineAboveLabel').textContent = skills?.above ?? '—';
+
+  const cols = { below:[], my:[], above:[], other:[] };
+
+  IC_MEMBERS.forEach(({player})=>{
+    const pSkill = parseFloat(player.skill_level||0);
+    if(skills?.below!==null && Math.abs(pSkill-(skills?.below||0))<0.13)      cols.below.push(player);
+    else if(Math.abs(pSkill-(skills?.my||0))<0.13)                            cols.my.push(player);
+    else if(skills?.above!==null && Math.abs(pSkill-(skills?.above||0))<0.13) cols.above.push(player);
+    else cols.other.push(player);
+  });
+  // Put unmatched in my column
+  cols.my = cols.my.concat(cols.other);
+
+  ['below','my','above'].forEach(key=>{
+    const colEl = document.getElementById('inlineCol'+key.charAt(0).toUpperCase()+key.slice(1));
+    if(!colEl) return;
+    colEl.innerHTML = '';
+    if(!cols[key].length){
+      colEl.innerHTML = '<div class="ic-col-empty">None</div>';
+      return;
+    }
+    cols[key].forEach(player=>{
+      const card = document.createElement('div');
+      card.className = 'ic-name-card';
+      const name = ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim();
+      card.innerHTML =
+        '<div class="ic-name-card-name">'+(player.avatar_emoji||'👤')+' '+name+'</div>'+
+        (player.nickname?'<div class="ic-name-card-nick">"'+player.nickname+'"</div>':'');
+      card.onclick = ()=>openPlayerCard(player, null, getMyEmail());
+      colEl.appendChild(card);
+    });
+  });
+}
+
+// ── Filtered list when clicking a grid cell ────────────
+function showFilteredList(type, value, status){
+  // Remove any existing popup
+  const existing = document.getElementById('icFilterPopup');
+  if(existing) existing.remove();
+
+  const mySkill = S.skill || '';
+  const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
+  const myEmail = getMyEmail();
+
+  // Get the right source
+  const sourceMembers = status==='member' ? IC_MEMBERS.map(m=>m.player) : IC_PENDING_PLAYERS||[];
+
+  // Filter players
+  let filtered = [];
+  if(type==='gender'){
+    if(value==='All'){
+      filtered = sourceMembers;
+    } else {
+      filtered = sourceMembers.filter(p=>{
+        const g=(p.gender||'').toLowerCase();
+        if(value==='Male')   return g==='male';
+        if(value==='Female') return g==='female';
+        if(value==='Other')  return g!=='male'&&g!=='female';
+        return true;
+      });
+    }
+  } else if(type==='level'){
+    if(value==='All'){
+      filtered = sourceMembers;
+    } else {
+      filtered = sourceMembers.filter(p=>{
+        const pSkill=parseFloat(p.skill_level||0);
+        if(value==='Below') return skills?.below!==null && Math.abs(pSkill-(skills?.below||0))<0.13;
+        if(value==='My')    return Math.abs(pSkill-(skills?.my||0))<0.13;
+        if(value==='Above') return skills?.above!==null && Math.abs(pSkill-(skills?.above||0))<0.13;
+        return true;
+      });
+    }
+  }
+
+  if(!filtered.length){
+    showToast('No players in this group yet','#f59e0b');
+    return;
+  }
+
+  // Build label
+  const statusLabel = status==='member' ? '✅ Members' : '⏳ Invited';
+  const filterLabel = type==='gender'
+    ? (value==='Other'?'⚪ Private':value==='Male'?'♂ Male':'♀ Female')
+    : (value==='Below'?'🟡 One below my level':value==='My'?'🟢 My level':'🟣 One above my level');
+
+  // Build 3-column popup
+  const popup = document.createElement('div');
+  popup.id = 'icFilterPopup';
+  popup.className = 'ic-filter-popup';
+
+  popup.innerHTML =
+    '<div class="ic-filter-popup-header">'+
+      '<div class="ic-filter-popup-title">'+statusLabel+' · '+filterLabel+' ('+filtered.length+')</div>'+
+      '<button class="ic-filter-close" onclick="document.getElementById(&quot;icFilterPopup&quot;).remove()">✕</button>'+
+    '</div>'+
+    '<div class="ic-skill-grid-wrap" id="icPopupCols">'+
+      '<div class="ic-skill-column">'+
+        '<div class="ic-skill-col-head ic-col-below" style="padding:6px;"><div class="ic-col-head-label">One below</div><div class="ic-col-head-rating" style="font-size:14px;">'+(skills?.below??'—')+'</div></div>'+
+        '<div id="popupColBelow" class="ic-skill-col"></div>'+
+      '</div>'+
+      '<div class="ic-skill-column">'+
+        '<div class="ic-skill-col-head ic-col-my" style="padding:6px;"><div class="ic-col-head-label">My level</div><div class="ic-col-head-rating" style="font-size:14px;">'+(skills?.my??'—')+'</div></div>'+
+        '<div id="popupColMy" class="ic-skill-col"></div>'+
+      '</div>'+
+      '<div class="ic-skill-column">'+
+        '<div class="ic-skill-col-head ic-col-above" style="padding:6px;"><div class="ic-col-head-label">One above</div><div class="ic-col-head-rating" style="font-size:14px;">'+(skills?.above??'—')+'</div></div>'+
+        '<div id="popupColAbove" class="ic-skill-col"></div>'+
+      '</div>'+
+    '</div>';
+
+  // Insert popup right after the stats grids
+  const dashboard = document.getElementById('icStatsDashboard');
+  if(dashboard) dashboard.after(popup);
+
+  // Populate columns
+  filtered.forEach(player=>{
+    const pSkill = parseFloat(player.skill_level||0);
+    let colId = 'popupColMy'; // default
+    if(skills?.below!==null && Math.abs(pSkill-(skills?.below||0))<0.13) colId='popupColBelow';
+    else if(skills?.above!==null && Math.abs(pSkill-(skills?.above||0))<0.13) colId='popupColAbove';
+
+    const col = document.getElementById(colId);
+    if(!col) return;
+    const card = document.createElement('div');
+    card.className = 'ic-name-card';
+    const name = ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim();
+    card.innerHTML =
+      '<div class="ic-name-card-name">'+(player.avatar_emoji||'👤')+' '+name+'</div>'+
+      (player.nickname?'<div class="ic-name-card-nick">"'+player.nickname+'"</div>':'')+
+      '<div style="font-size:9px;color:var(--dim);margin-top:2px;">'+
+        [player.skill_level?'⭐'+player.skill_level:'', player.gender||''].filter(Boolean).join(' · ')+
+      '</div>';
+    card.onclick = ()=>openPlayerCard(player, null, myEmail);
+    col.appendChild(card);
+  });
+
+  // Scroll to popup
+  setTimeout(()=>popup.scrollIntoView({behavior:'smooth', block:'start'}), 100);
 }
 </script>
 </body>
