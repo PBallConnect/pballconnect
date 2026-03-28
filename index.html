@@ -903,6 +903,7 @@
   .match-summary-row span:last-child{color:#fff;font-weight:600;}
   /* ── Match time chips ─────────────────────────────── */
   .match-time-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+  .match-next-btn:disabled{opacity:0.35;cursor:not-allowed;}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <script>
@@ -2178,7 +2179,7 @@
         </div>
         <div class="match-btn-row" style="margin-top:20px;">
           <button class="match-back-btn" onclick="matchGoTo(1)">← Back</button>
-          <button class="match-next-btn" id="matchNext3" disabled onclick="matchGoTo(4)">Continue →</button>
+          <button class="match-next-btn" id="matchNext2" disabled onclick="matchGoTo(3)">Continue →</button>
         </div>
       </div>
 
@@ -7407,6 +7408,22 @@ function adjustDuration(delta){
   if(startVal) onMatchStartTimeChange(startVal);
 }
 
+
+// ── Step validation functions ──────────────────────────
+function checkMatchStep2(){
+  const btn    = document.getElementById('matchNext2');
+  if(!btn) return;
+  const date   = (document.getElementById('matchDate')?.value || '').trim();
+  const timeOk = !!(document.getElementById('matchTimeStart')?.value) && validateMatchTimes();
+  btn.disabled = !(date && timeOk);
+}
+
+function checkMatchStep4(){
+  const btn     = document.getElementById('matchNext4');
+  if(!btn) return;
+  const groupOk = MS.group && (MS.group !== 'specific' || MS.specificPlayers.size > 0);
+  btn.disabled  = !groupOk;
+}
 function checkMatchStep1(){
   const btn  = document.getElementById('matchNext1');
   if(!btn) return;
@@ -7657,7 +7674,11 @@ async function loadMatchCourts(){
 }
 
 function updateMatchCourtsNext(){
-  document.getElementById('matchNext3').disabled = MS.selectedCourts.size === 0 && MS.location !== 'tbd';
+  const btn = document.getElementById('matchNext3');
+  if(!btn) return;
+  const ok = MS.selectedCourts.size > 0 || MS.location === 'tbd';
+  btn.disabled = !ok;
+  btn.style.opacity = ok ? '1' : '';
 }
 
 function updateMatchCourtsSummary(){
@@ -7844,6 +7865,8 @@ function initSetupMatch(){
     dateEl.min   = now.toISOString().split('T')[0];
     dateEl.value = dateStr;
   }
+  // Date is pre-set — enable Step 2 Continue once a time is selected
+  // (time required so we don't enable yet)
   // All 5 steps visible
   // Step 1 Continue always enabled (Doubles pre-selected)
   const next1 = document.getElementById('matchNext1');
