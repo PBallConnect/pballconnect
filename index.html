@@ -5570,7 +5570,7 @@ function restoreProfileForm(player){
   const textFields = {
     firstName:     player.first_name,
     lastName:      player.last_name,
-    nickname:      player.nickname,
+    nickname:      S.nickname || player.nickname,  // prefer S state
     email:         player.email,
     phone:         player.phone ? formatPhoneDisplay(player.phone) : '',
     dob:           player.dob,
@@ -5678,17 +5678,15 @@ function restoreProfileForm(player){
     if(dd){ dd.value=parseInt(player.drive_distance_miles)||25; onDriveChange(parseInt(player.drive_distance_miles)||25); }
   }
 
-  // ── Avatar emoji ──────────────────────────────────────
-  if(player.avatar_emoji){
-    const preview=document.getElementById('emojiPreview');
-    if(preview) preview.textContent=player.avatar_emoji;
-    const input=document.getElementById('avatarEmoji');
-    if(input) input.value=player.avatar_emoji;
-    S.avatarEmoji=player.avatar_emoji;
-    document.querySelectorAll('.emoji-reg-opt').forEach(btn=>{
-      btn.classList.toggle('on', btn.textContent.trim()===player.avatar_emoji);
-    });
-  }
+  // ── Avatar emoji — prefer S state (most recent edit) ──
+  const emojiToShow = S.avatarEmoji || player.avatar_emoji || '🎾';
+  const preview=document.getElementById('emojiPreview');
+  if(preview) preview.textContent=emojiToShow;
+  const emojiInput=document.getElementById('avatarEmoji');
+  if(emojiInput) emojiInput.value=emojiToShow;
+  document.querySelectorAll('.emoji-reg-opt').forEach(btn=>{
+    btn.classList.toggle('on', btn.textContent.trim()===emojiToShow);
+  });
 
   // ── Improve / goal rating ─────────────────────────────
   if(player.wants_to_improve==='Yes'){
@@ -6555,7 +6553,13 @@ async function fetchAndRestoreProfile(email){
     if(res.ok){
       const rows = await res.json();
       if(rows.length){
+        // Merge DB data with current S state
+        // S state has the most recent edits (may be ahead of DB cache)
         SESSION_PLAYER = rows[0];
+        if(S.nickname)    SESSION_PLAYER.nickname     = S.nickname;
+        if(S.avatarEmoji) SESSION_PLAYER.avatar_emoji = S.avatarEmoji;
+        if(S.skill)       SESSION_PLAYER.skill_level  = S.skill;
+        if(S.playingSince)SESSION_PLAYER.playing_since= S.playingSince;
         updateTopBar(SESSION_PLAYER);
         // Navigate to profile page - showPage hook will call restoreProfileForm
         showPage('playerProfile');
