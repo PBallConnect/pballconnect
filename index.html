@@ -2261,6 +2261,22 @@
           </div>
         </div>
 
+        <!-- Group size warning + quick-add -->
+        <div id="matchGroupWarning" style="display:none;margin-top:14px;padding:14px 16px;
+          background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.3);
+          border-radius:12px;">
+          <div style="display:flex;align-items:flex-start;gap:10px;">
+            <span style="font-size:18px;flex-shrink:0;">⚠️</span>
+            <div style="flex:1;">
+              <div id="matchGroupWarningText" style="color:#fbbf24;font-size:13px;font-weight:600;margin-bottom:10px;"></div>
+              <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">
+                Expand your invite to include additional groups:
+              </div>
+              <div id="matchGroupQuickAdd" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+            </div>
+          </div>
+        </div>
+
         <!-- Specific player picker -->
         <div id="matchSpecificPicker" style="display:none;margin-top:16px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
@@ -3805,6 +3821,7 @@ const MS = {
   format:          'doubles',
   selectedCourts:  new Map(),
   group:           null,
+  extraGroups:     new Set(), // additional groups added via quick-add
   specificPlayers: new Set(),
   isFeeler:        false,
   date:            null,
@@ -4001,6 +4018,7 @@ function checkMatchStep1(){
 // ── Group selection ────────────────────────────────────
 function selectMatchGroup(group, el){
   MS.group = group;
+  MS.extraGroups.clear(); // reset extra groups when primary changes
   document.querySelectorAll('#matchGroupOptions .match-option').forEach(o=>{
     o.classList.remove('on','dim');
     o.classList.add('dim');
@@ -4014,13 +4032,97 @@ function selectMatchGroup(group, el){
   } else {
     picker.style.display='none';
   }
-  // Directly enable Continue button
-  const btn4 = document.getElementById('matchNext4');
-  if(btn4){
-    btn4.removeAttribute('disabled');
-    btn4.style.opacity = '1';
-    btn4.style.cursor  = 'pointer';
+  checkGroupSize();
+}
+
+function checkGroupSize(){
+  const warning   = document.getElementById('matchGroupWarning');
+  const warnText  = document.getElementById('matchGroupWarningText');
+  const quickAdd  = document.getElementById('matchGroupQuickAdd');
+  const btn4      = document.getElementById('matchNext4');
+  if(!warning||!warnText||!quickAdd) return;
+
+  const maxNeeded = MS.format==='doubles' ? 3 : 1;
+  const mySkill   = S.skill || SESSION_PLAYER?.skill_level || '';
+  const skills    = mySkill ? getAdjacentSkills(mySkill) : null;
+
+  // Count players in primary group + extra groups
+  const allGroupPlayers = getGroupPlayers(MS.group, skills);
+  MS.extraGroups.forEach(g=>{
+    const extra = getGroupPlayers(g, skills);
+    extra.forEach(p=>{ if(!allGroupPlayers.find(x=>x.email===p.email)) allGroupPlayers.push(p); });
+  });
+
+  const count = MS.group==='specific' ? MS.specificPlayers.size : allGroupPlayers.length;
+
+  if(MS.group && MS.group!=='specific' && count < maxNeeded){
+    // Show warning
+    warning.style.display='block';
+    const needed = maxNeeded - count;
+    warnText.textContent = 'Only '+count+' player'+(count!==1?'s':'')+' in this group — '+
+      MS.format+' needs at least '+maxNeeded+'. Add '+needed+' more player'+(needed!==1?'s':'')+'.';
+
+    // Build quick-add buttons for other groups
+    quickAdd.innerHTML='';
+    const otherGroups = [
+      {key:'all',      label:'👥 Entire Circle', sub: IC_MEMBERS.length+' players'},
+      {key:'my_level', label:'🟢 My Level',       sub: 'Rating: '+(skills?.my||'—')},
+      {key:'below',    label:'🟡 Below My Level', sub: 'Rating: '+(skills?.below||'—')},
+      {key:'above',    label:'🟣 Above My Level', sub: 'Rating: '+(skills?.above||'—')},
+      {key:'specific', label:'🎯 Pick Players',   sub: 'Choose individually'},
+    ];
+    otherGroups
+      .filter(g=>g.key!==MS.group) // exclude current group
+      .forEach(g=>{
+        const extraCount = g.key==='specific' ? 0 : getGroupPlayers(g.key, skills).length;
+        const isAdded    = MS.extraGroups.has(g.key);
+        const btn = document.createElement('button');
+        btn.style.cssText = 'padding:7px 12px;border-radius:8px;font-size:11px;font-weight:700;'+
+          'cursor:pointer;font-family:sans-serif;border:1px solid;transition:all .15s;'+
+          (isAdded
+            ? 'background:rgba(76,175,125,0.2);color:var(--green);border-color:var(--green);'
+            : 'background:rgba(255,255,255,0.06);color:var(--dim);border-color:var(--border);');
+        btn.textContent = (isAdded?'✓ ':'+ ') + g.label + (g.key!=='specific'&&extraCount?' ('+extraCount+')':'');
+        btn.onclick = ()=>{
+          if(g.key==='specific'){
+            // Show specific picker
+            MS.extraGroups.add('specific');
+            document.getElementById('matchSpecificPicker').style.display='block';
+            buildSpecificPicker();
+          } else if(isAdded){
+            MS.extraGroups.delete(g.key);
+          } else {
+            MS.extraGroups.add(g.key);
+          }
+          checkGroupSize();
+        };
+        quickAdd.appendChild(btn);
+      });
+
+    // Block Continue
+    if(btn4){ btn4.setAttribute('disabled',true); btn4.style.opacity='0.35'; btn4.style.cursor='not-allowed'; }
+
+  } else {
+    // Enough players — hide warning, enable Continue
+    warning.style.display='none';
+    if(MS.group==='specific'){
+      checkMatchStep4(); // uses its own logic for specific
+    } else if(MS.group){
+      if(btn4){ btn4.removeAttribute('disabled'); btn4.style.opacity='1'; btn4.style.cursor='pointer'; }
+    }
   }
+}
+
+function getGroupPlayers(group, skills){
+  if(!group||group==='specific') return [];
+  return IC_MEMBERS.filter(({player})=>{
+    if(group==='all') return true;
+    const ps=parseFloat(player.skill_level||0);
+    if(group==='my_level') return skills&&Math.abs(ps-skills.my)<0.13;
+    if(group==='below')    return skills&&skills.below!==null&&Math.abs(ps-skills.below)<0.13;
+    if(group==='above')    return skills&&skills.above!==null&&Math.abs(ps-skills.above)<0.13;
+    return false;
+  }).map(({player})=>player);
 }
 
 function buildSpecificPicker(){
@@ -4308,12 +4410,17 @@ function buildMatchSummary(){
   if(MS.group==='specific'){
     invitees = IC_MEMBERS.filter(({player})=>MS.specificPlayers.has(player.email)).map(({player})=>player);
   } else {
+    const allGroups = new Set([MS.group, ...MS.extraGroups]);
+    const seen = new Set();
     invitees = IC_MEMBERS.filter(({player})=>{
-      if(MS.group==='all') return true;
-      const ps=parseFloat(player.skill_level||0);
-      if(MS.group==='my_level') return skills&&Math.abs(ps-skills.my)<0.13;
-      if(MS.group==='below')    return skills&&skills.below!==null&&Math.abs(ps-skills.below)<0.13;
-      if(MS.group==='above')    return skills&&skills.above!==null&&Math.abs(ps-skills.above)<0.13;
+      if(seen.has(player.email)) return false;
+      const ps = parseFloat(player.skill_level||0);
+      for(const g of allGroups){
+        if(g==='all') { seen.add(player.email); return true; }
+        if(g==='my_level' && skills && Math.abs(ps-skills.my)<0.13)    { seen.add(player.email); return true; }
+        if(g==='below' && skills && skills.below!==null && Math.abs(ps-skills.below)<0.13) { seen.add(player.email); return true; }
+        if(g==='above' && skills && skills.above!==null && Math.abs(ps-skills.above)<0.13) { seen.add(player.email); return true; }
+      }
       return false;
     }).map(({player})=>player);
   }
@@ -4428,7 +4535,7 @@ async function loadSentMatches(){
 // ── Init match page ────────────────────────────────────
 function initSetupMatch(){
   // Reset MS state
-  MS.format='doubles'; MS.group=null; MS.specificPlayers.clear();
+  MS.format='doubles'; MS.group=null; MS.specificPlayers.clear(); MS.extraGroups=new Set();
   MS.isFeeler=false; MS.duration=2; MS.selectedCourts=new Map();
   matchGoTo(1);
   updateMatchGroupLabels();
