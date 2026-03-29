@@ -2232,8 +2232,20 @@
 
       <!-- STEP 4: WHO -->
       <div class="match-card" id="matchStep4" style="display:none;">
-        <div class="match-q">Who to invite?</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div class="match-q" style="margin:0;">Who to invite?</div>
+          <div id="matchInviteCounter" style="display:none;background:rgba(76,175,125,0.12);
+            border:1px solid rgba(76,175,125,0.3);border-radius:20px;padding:4px 14px;
+            font-size:12px;font-weight:700;color:var(--green);">
+            0 players
+          </div>
+        </div>
         <div class="match-options" id="matchGroupOptions">
+          <div class="match-option" onclick="selectMatchGroup('favorites',this)">
+            <div class="match-option-icon">⭐</div>
+            <div class="match-option-title">My Favorites</div>
+            <div class="match-option-sub" id="matchFavoritesSub">Your starred players</div>
+          </div>
           <div class="match-option" onclick="selectMatchGroup('all',this)">
             <div class="match-option-icon">👥</div>
             <div class="match-option-title">Entire Inner Circle</div>
@@ -2275,6 +2287,24 @@
               <div id="matchGroupQuickAdd" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
             </div>
           </div>
+        </div>
+
+        <!-- Expanded group player list (shown when tapping Show players ▾) -->
+        <div id="matchGroupExpandArea" style="display:none;margin-top:14px;
+          background:rgba(255,255,255,0.02);border:1px solid var(--border);
+          border-radius:12px;padding:14px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div id="matchExpandTitle" style="font-size:12px;font-weight:700;color:var(--green);"></div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button onclick="toggleSelectAll()" id="matchSelectAllBtn"
+                style="font-size:11px;color:var(--green);background:rgba(76,175,125,0.1);
+                border:1px solid rgba(76,175,125,0.3);border-radius:6px;padding:4px 10px;
+                cursor:pointer;font-family:sans-serif;">Select All</button>
+              <button onclick="document.getElementById('matchGroupExpandArea').style.display='none'"
+                style="font-size:11px;color:var(--dim);background:none;border:none;cursor:pointer;">✕ Close</button>
+            </div>
+          </div>
+          <div id="matchGroupExpandList" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;max-height:280px;overflow-y:auto;"></div>
         </div>
 
         <!-- Specific player picker -->
@@ -4040,13 +4070,42 @@ function selectMatchGroup(group, el){
   el.classList.remove('dim');
   el.classList.add('on');
   const picker = document.getElementById('matchSpecificPicker');
+  const expandArea = document.getElementById('matchGroupExpandArea');
   if(group==='specific'){
     picker.style.display='block';
+    if(expandArea) expandArea.style.display='none';
     buildSpecificPicker();
   } else {
     picker.style.display='none';
+    if(expandArea) expandArea.style.display='none';
+  }
+
+  // Add "Show players ▾" button to the selected option
+  document.querySelectorAll('#matchGroupOptions .match-option').forEach(o=>{
+    const existing = o.querySelector('.match-show-players-btn');
+    if(existing) existing.remove();
+  });
+  if(group!=='specific'){
+    const selectedEl = document.querySelector('#matchGroupOptions .match-option.on');
+    if(selectedEl){
+      const showBtn = document.createElement('button');
+      showBtn.className='match-show-players-btn';
+      showBtn.textContent='Show players ▾';
+      showBtn.style.cssText='margin-top:8px;font-size:10px;color:var(--green);background:rgba(76,175,125,0.1);'+
+        'border:1px solid rgba(76,175,125,0.3);border-radius:6px;padding:3px 10px;cursor:pointer;'+
+        'font-family:sans-serif;width:100%;';
+      showBtn.onclick=(e)=>{
+        e.stopPropagation();
+        buildGroupExpandList(group);
+        const area=document.getElementById('matchGroupExpandArea');
+        if(area) area.style.display=area.style.display==='none'?'block':'none';
+        showBtn.textContent=area.style.display==='block'?'Hide players ▴':'Show players ▾';
+      };
+      selectedEl.appendChild(showBtn);
+    }
   }
   checkGroupSize();
+  updateInviteCounter();
 }
 
 function checkGroupSize(){
@@ -4109,6 +4168,7 @@ function checkGroupSize(){
             MS.extraGroups.add(g.key);
           }
           checkGroupSize();
+          updateInviteCounter();
         };
         quickAdd.appendChild(btn);
       });
@@ -4130,6 +4190,8 @@ function checkGroupSize(){
 function getGroupPlayers(group, skills){
   if(!group||group==='specific') return [];
   return IC_MEMBERS.filter(({player})=>{
+    const pEmail=(player.email||'').toLowerCase();
+    if(group==='favorites') return IC_FAVORITES.has(pEmail);
     if(group==='all') return true;
     const ps=parseFloat(player.skill_level||0);
     if(group==='my_level') return skills&&Math.abs(ps-skills.my)<0.13;
@@ -4161,13 +4223,18 @@ function buildSpecificPicker(){
     }
   }
 
+  // Sort alphabetically
+  const sortedMembers = [...IC_MEMBERS].sort((a,b)=>
+    ((a.player.first_name||'')+(a.player.last_name||'')).localeCompare((b.player.first_name||'')+(b.player.last_name||''))
+  );
+  list.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;';
   list.innerHTML='';
   if(!IC_MEMBERS.length){
-    list.innerHTML='<div class="ic-empty">No Inner Circle members yet.</div>';
+    list.innerHTML='<div class="ic-empty" style="grid-column:1/-1;">No Inner Circle members yet.</div>';
     return;
   }
 
-  IC_MEMBERS.forEach(({player})=>{
+  sortedMembers.forEach(({player})=>{
     const name    = ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim();
     const checked = MS.specificPlayers.has(player.email);
     const atMax   = !checked && selected >= maxNeeded;
@@ -4449,6 +4516,8 @@ function buildMatchSummary(){
     invitees = IC_MEMBERS.filter(({player})=>{
       if(seen.has(player.email)) return false;
       const ps = parseFloat(player.skill_level||0);
+      const pEmailLC=(player.email||'').toLowerCase();
+      if(MS.deselectedPlayers?.has(pEmailLC)) return false;
       for(const g of allGroups){
         if(g==='all') { seen.add(player.email); return true; }
         if(g==='my_level' && skills && Math.abs(ps-skills.my)<0.13)    { seen.add(player.email); return true; }
@@ -4578,7 +4647,7 @@ async function loadSentMatches(){
 // ── Init match page ────────────────────────────────────
 function initSetupMatch(){
   // Reset MS state
-  MS.format='doubles'; MS.group=null; MS.specificPlayers.clear(); MS.extraGroups=new Set();
+  MS.format='doubles'; MS.group=null; MS.specificPlayers.clear(); MS.extraGroups=new Set(); MS.deselectedPlayers=new Set();
   MS.isFeeler=false; MS.duration=2; MS.selectedCourts=new Map();
   matchGoTo(1);
   updateMatchGroupLabels();
@@ -5226,6 +5295,7 @@ function formatPhoneDisplay(digits){
 // ══════════════════════════════════════════════════════
 
 let IC_MEMBERS = [];
+let IC_FAVORITES = new Set(); // emails of favorited members
 let IC_PENDING_PLAYERS = [];
 let IC_INCOMING_COUNT = 0;
 let icPendingConfirm = null;
@@ -5240,6 +5310,8 @@ async function loadInnerCircle(){
     );
     if(!res.ok) return;
     const conns = await res.json();
+    // Load favorites
+    IC_FAVORITES = new Set(conns.filter(c=>c.is_favorite).map(c=>c.requester_email===myEmail?c.recipient_email:c.requester_email));
     const otherEmails = conns.map(c=>c.requester_email===myEmail?c.recipient_email:c.requester_email);
     IC_MEMBERS = [];
     if(otherEmails.length){
@@ -5298,6 +5370,15 @@ function buildIcMemberCard(player, conn, myEmail, lastPlayed){
 
   const actEl = document.createElement('div');
   actEl.className = 'ic-member-actions';
+  // Favorite star button
+  const favBtn = document.createElement('button');
+  const pEmail = (player.email||'').toLowerCase();
+  const isFav  = IC_FAVORITES.has(pEmail);
+  favBtn.textContent = isFav ? '⭐' : '☆';
+  favBtn.title = isFav ? 'Remove from favorites' : 'Add to favorites';
+  favBtn.style.cssText = 'background:none;border:none;font-size:18px;cursor:pointer;padding:0 4px;color:'+(isFav?'#fbbf24':'var(--dim)')+';transition:all .15s;';
+  favBtn.onclick = (e)=>{ e.stopPropagation(); toggleFavorite(pEmail, favBtn); };
+
   const playBtn2 = document.createElement('button');
   playBtn2.className='ic-member-btn ic-mem-btn-play';
   playBtn2.textContent='🎾 Play';
@@ -5306,7 +5387,7 @@ function buildIcMemberCard(player, conn, myEmail, lastPlayed){
   remBtn.className='ic-member-btn ic-mem-btn-remove';
   remBtn.textContent='Remove';
   remBtn.onclick=()=>removeFromCircle(conn?.id||'',remBtn);
-  actEl.appendChild(playBtn2); actEl.appendChild(remBtn);
+  actEl.appendChild(favBtn); actEl.appendChild(playBtn2); actEl.appendChild(remBtn);
 
   card.appendChild(avatarEl); card.appendChild(mainEl); card.appendChild(actEl);
     return card;
@@ -5838,6 +5919,16 @@ function buildMiniPlayerCard(player,myConns,myEmail,colClass){
     addBtn.textContent='+ Add to Circle';
     addBtn.onclick=function(e){e.stopPropagation();openIcConfirmModal(player);};
   }
+  // Star button on mini card — only for existing IC members
+  if(conn && conn.status==='approved'){
+    const miniFav = document.createElement('button');
+    const pEmailFav = (player.email||'').toLowerCase();
+    const isF = IC_FAVORITES.has(pEmailFav);
+    miniFav.textContent = isF?'⭐':'☆';
+    miniFav.style.cssText='background:none;border:none;font-size:13px;cursor:pointer;padding:0;color:'+(isF?'#fbbf24':'var(--dim)')+';';
+    miniFav.onclick=function(e){e.stopPropagation();toggleFavorite(pEmailFav,miniFav);};
+    addWrap.appendChild(miniFav);
+  }
   addWrap.appendChild(addBtn);
   return div;
 }
@@ -6358,6 +6449,146 @@ function getWeatherDesc(code){
   if(code<=86)  return 'Snow Showers';
   if(code<=99)  return 'Thunderstorms';
   return 'Unknown';
+}
+
+// ══════════════════════════════════════════════════════
+// FAVORITES
+// ══════════════════════════════════════════════════════
+
+async function toggleFavorite(playerEmail, btn){
+  const myEmail = getMyEmail();
+  if(!myEmail) return;
+  const isFav = IC_FAVORITES.has(playerEmail);
+  const newVal = !isFav;
+
+  // Update UI immediately
+  if(newVal){ IC_FAVORITES.add(playerEmail); }
+  else { IC_FAVORITES.delete(playerEmail); }
+  if(btn){
+    btn.textContent = newVal ? '⭐' : '☆';
+    btn.title = newVal ? 'Remove from favorites' : 'Add to favorites';
+    btn.style.color = newVal ? '#fbbf24' : 'var(--dim)';
+  }
+
+  // Find the connection ID
+  try{
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/connections?or=(requester_email.eq.${encodeURIComponent(myEmail)},recipient_email.eq.${encodeURIComponent(myEmail)})&select=id,requester_email,recipient_email`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+    );
+    const conns = res.ok ? await res.json() : [];
+    const conn = conns.find(c=>c.requester_email===playerEmail||c.recipient_email===playerEmail);
+    if(!conn) return;
+    await fetch(`${SUPABASE_URL}/rest/v1/connections?id=eq.${conn.id}`,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+      body: JSON.stringify({is_favorite: newVal})
+    });
+    showToast(newVal ? '⭐ Added to favorites!' : 'Removed from favorites', newVal?'#fbbf24':'var(--dim)');
+    updateMatchGroupLabels(); // refresh counts
+  }catch(e){ console.warn('toggleFavorite error:',e); }
+}
+
+function buildGroupExpandList(group){
+  const listEl  = document.getElementById('matchGroupExpandList');
+  const titleEl = document.getElementById('matchExpandTitle');
+  if(!listEl) return;
+
+  const mySkill = S.skill || SESSION_PLAYER?.skill_level || '';
+  const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
+  const players = getGroupPlayers(group, skills);
+
+  const groupLabels = {
+    favorites:'⭐ My Favorites', all:'👥 Entire Inner Circle',
+    my_level:'🟢 My Level', below:'🟡 Below My Level', above:'🟣 Above My Level'
+  };
+  if(titleEl) titleEl.textContent = (groupLabels[group]||group)+' · '+players.length+' players';
+
+  // Sort alphabetically
+  players.sort((a,b)=>((a.first_name||'')+(a.last_name||'')).localeCompare((b.first_name||'')+(b.last_name||'')));
+
+  listEl.innerHTML='';
+  players.forEach(player=>{
+    const pEmail  = (player.email||'').toLowerCase();
+    const name    = ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim();
+    const checked = MS.deselectedPlayers?.has(pEmail)===false || !MS.deselectedPlayers?.has(pEmail);
+
+    const item = document.createElement('div');
+    item.style.cssText='display:flex;align-items:center;gap:6px;padding:7px 8px;'+
+      'border-radius:8px;border:1px solid var(--border);cursor:pointer;'+
+      'background:'+(checked?'rgba(76,175,125,0.06)':'rgba(255,255,255,0.02)')+';'+
+      'transition:all .15s;';
+
+    const cb = document.createElement('div');
+    cb.style.cssText='width:14px;height:14px;border-radius:3px;flex-shrink:0;border:2px solid '+
+      (checked?'var(--green)':'var(--border)')+';background:'+(checked?'var(--green)':'transparent')+
+      ';display:flex;align-items:center;justify-content:center;';
+    if(checked) cb.innerHTML='<span style="color:#fff;font-size:9px;font-weight:700;">✓</span>';
+
+    const lbl = document.createElement('div');
+    lbl.style.cssText='flex:1;min-width:0;';
+    lbl.innerHTML=
+      '<div style="color:#fff;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+
+        (player.avatar_emoji||'')+(player.avatar_emoji?' ':'')+name+'</div>'+
+      '<div style="color:var(--dim);font-size:9px;">⭐'+(player.skill_level||'?')+'</div>';
+
+    item.appendChild(cb); item.appendChild(lbl);
+    item.onclick=()=>{
+      if(!MS.deselectedPlayers) MS.deselectedPlayers = new Set();
+      if(MS.deselectedPlayers.has(pEmail)) MS.deselectedPlayers.delete(pEmail);
+      else MS.deselectedPlayers.add(pEmail);
+      buildGroupExpandList(group);
+      updateInviteCounter();
+    };
+    listEl.appendChild(item);
+  });
+}
+
+let _selectAllState = true;
+function toggleSelectAll(){
+  const group = MS.group;
+  if(!group||group==='specific') return;
+  const mySkill = S.skill || SESSION_PLAYER?.skill_level || '';
+  const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
+  const players = getGroupPlayers(group, skills);
+  if(!MS.deselectedPlayers) MS.deselectedPlayers = new Set();
+  _selectAllState = !_selectAllState;
+  if(_selectAllState){
+    MS.deselectedPlayers.clear(); // select all
+  } else {
+    players.forEach(p=>MS.deselectedPlayers.add((p.email||'').toLowerCase())); // deselect all
+  }
+  const btn=document.getElementById('matchSelectAllBtn');
+  if(btn) btn.textContent=_selectAllState?'Deselect All':'Select All';
+  buildGroupExpandList(group);
+  updateInviteCounter();
+}
+
+function updateInviteCounter(){
+  const counter = document.getElementById('matchInviteCounter');
+  if(!counter) return;
+  const mySkill = S.skill || SESSION_PLAYER?.skill_level || '';
+  const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
+
+  // Count all players from primary + extra groups minus deselected
+  const allGroups = new Set([MS.group, ...MS.extraGroups]);
+  const seen = new Set();
+  let total = 0;
+  allGroups.forEach(g=>{
+    if(!g||g==='specific') return;
+    getGroupPlayers(g, skills).forEach(p=>{
+      const e=(p.email||'').toLowerCase();
+      if(!seen.has(e) && !MS.deselectedPlayers?.has(e)){
+        seen.add(e); total++;
+      }
+    });
+  });
+  if(MS.group==='specific') total = MS.specificPlayers.size;
+
+  counter.style.display = MS.group ? 'block' : 'none';
+  counter.textContent   = total+' player'+(total!==1?'s':'')+' invited';
+  counter.style.background = total>0 ? 'rgba(76,175,125,0.12)' : 'rgba(255,255,255,0.06)';
+  counter.style.color       = total>0 ? 'var(--green)' : 'var(--dim)';
 }
 </script>
 </body>
