@@ -2240,33 +2240,34 @@
             0 players
           </div>
         </div>
+        <div style="font-size:11px;color:var(--dim);margin-bottom:8px;">Tap to select one or more groups — selections stack together.</div>
         <div class="match-options" id="matchGroupOptions">
-          <div class="match-option" onclick="selectMatchGroup('favorites',this)">
+          <div class="match-option" data-group="favorites" onclick="toggleMatchGroup('favorites',this)">
             <div class="match-option-icon">⭐</div>
             <div class="match-option-title">My Favorites</div>
             <div class="match-option-sub" id="matchFavoritesSub">Your starred players</div>
           </div>
-          <div class="match-option" onclick="selectMatchGroup('all',this)">
+          <div class="match-option" data-group="all" onclick="toggleMatchGroup('all',this)">
             <div class="match-option-icon">👥</div>
             <div class="match-option-title">Entire Inner Circle</div>
             <div class="match-option-sub" id="matchAllSub">All approved members</div>
           </div>
-          <div class="match-option" onclick="selectMatchGroup('my_level',this)">
+          <div class="match-option" data-group="my_level" onclick="toggleMatchGroup('my_level',this)">
             <div class="match-option-icon">🟢</div>
             <div class="match-option-title">My Level</div>
             <div class="match-option-sub" id="matchMyLevelSub">Players at my rating</div>
           </div>
-          <div class="match-option" onclick="selectMatchGroup('below',this)">
+          <div class="match-option" data-group="below" onclick="toggleMatchGroup('below',this)">
             <div class="match-option-icon">🟡</div>
             <div class="match-option-title">Below My Level</div>
             <div class="match-option-sub" id="matchBelowSub">One level below</div>
           </div>
-          <div class="match-option" onclick="selectMatchGroup('above',this)">
+          <div class="match-option" data-group="above" onclick="toggleMatchGroup('above',this)">
             <div class="match-option-icon">🟣</div>
             <div class="match-option-title">Above My Level</div>
             <div class="match-option-sub" id="matchAboveSub">One level above</div>
           </div>
-          <div class="match-option" onclick="selectMatchGroup('specific',this)">
+          <div class="match-option" data-group="specific" onclick="toggleMatchGroup('specific',this)">
             <div class="match-option-icon">🎯</div>
             <div class="match-option-title">Specific Players</div>
             <div class="match-option-sub" id="matchSpecificSub">Hand-pick from my circle</div>
@@ -2341,7 +2342,7 @@
           background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
             <span style="font-size:14px;">🌤</span>
-            <span style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;">Weather Forecast</span>
+            <span style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;">Weather Forecast at Game Time</span>
             <span id="matchWeatherDate" style="font-size:11px;color:var(--dim);margin-left:4px;"></span>
           </div>
           <div id="matchWeatherContent">
@@ -3866,6 +3867,7 @@ const MS = {
   selectedCourts:  new Map(),
   group:           null,
   extraGroups:     new Set(), // additional groups added via quick-add
+  selectedGroups:  new Set(), // all currently selected groups (multi-select)
   specificPlayers: new Set(),
   isFeeler:        false,
   date:            null,
@@ -3897,17 +3899,14 @@ function matchGoTo(step){
   if(step===4){
     updateMatchGroupLabels();
     // Reset group selection state visually
-    if(MS.group){
-      // Re-apply dim/on if group already selected
-      document.querySelectorAll('#matchGroupOptions .match-option').forEach(o=>{
-        o.classList.remove('on','dim');
-        o.classList.add('dim');
-      });
-      const selectedOption = [...document.querySelectorAll('#matchGroupOptions .match-option')]
-        .find(o => o.onclick?.toString().includes("'"+MS.group+"'") || 
-                   o.getAttribute('onclick')?.includes("'"+MS.group+"'"));
-      if(selectedOption){ selectedOption.classList.remove('dim'); selectedOption.classList.add('on'); }
-    }
+    // Re-apply 'on' state for all selected groups
+    document.querySelectorAll('#matchGroupOptions .match-option').forEach(o=>o.classList.remove('on'));
+    const activeGroups = (MS.selectedGroups&&MS.selectedGroups.size) ? MS.selectedGroups : new Set([MS.group,...MS.extraGroups].filter(Boolean));
+    activeGroups.forEach(g=>{
+      const optEl = document.querySelector('#matchGroupOptions .match-option[data-group="'+g+'"]');
+      if(optEl) optEl.classList.add('on');
+    });
+    if(activeGroups.has('specific')){ buildSpecificPicker(); document.getElementById('matchSpecificPicker').style.display='block'; }
     checkMatchStep4();
   }
   if(step===5){ buildMatchSummary(); setTimeout(loadMatchWeather, 300); }
@@ -3930,14 +3929,6 @@ function selectMatchFormat(fmt, el){
 }
 
 // ── Duration +/- ───────────────────────────────────────
-function adjustDuration(delta){
-  MS.duration = Math.min(4, Math.max(1, MS.duration + delta));
-  const disp = document.getElementById('matchDurationDisplay');
-  if(disp){
-    const hrs  = MS.duration;
-    disp.textContent = hrs === Math.floor(hrs) ? hrs+' hrs' : hrs+' hrs';
-  }
-}
 
 // ── Time selects with 15-min increments ───────────────
 function buildMatchTimeChips(){
@@ -4033,7 +4024,10 @@ function checkMatchStep2(){
 function checkMatchStep4(){
   const btn = document.getElementById('matchNext4');
   if(!btn) return;
-  const groupOk = MS.group && (MS.group !== 'specific' || MS.specificPlayers.size > 0);
+  const groups = MS.selectedGroups || new Set([MS.group].filter(Boolean));
+  const hasNonSpecific = [...groups].some(g=>g!=='specific');
+  const hasSpecific = groups.has('specific');
+  const groupOk = groups.size > 0 && (hasNonSpecific || (hasSpecific && MS.specificPlayers.size > 0));
   if(groupOk){
     btn.removeAttribute('disabled');
     btn.style.opacity = '1';
@@ -4055,58 +4049,50 @@ function checkMatchStep1(){
   } else {
     timeOk = !!(MS.timeStart || document.getElementById('matchTimeStart')?.value);
   }
-  const groupOk = MS.group && (MS.group!=='specific' || MS.specificPlayers.size>0);
+  const groupOk = (MS.selectedGroups&&MS.selectedGroups.size>0) || (MS.group && (MS.group!=='specific'||MS.specificPlayers.size>0));
   btn.disabled = !(date && timeOk && groupOk);
 }
 
-// ── Group selection ────────────────────────────────────
-function selectMatchGroup(group, el){
-  MS.group = group;
-  MS.extraGroups.clear(); // reset extra groups when primary changes
-  document.querySelectorAll('#matchGroupOptions .match-option').forEach(o=>{
-    o.classList.remove('on','dim');
-    o.classList.add('dim');
-  });
-  el.classList.remove('dim');
-  el.classList.add('on');
-  const picker = document.getElementById('matchSpecificPicker');
-  const expandArea = document.getElementById('matchGroupExpandArea');
-  if(group==='specific'){
-    picker.style.display='block';
-    if(expandArea) expandArea.style.display='none';
-    buildSpecificPicker();
-  } else {
-    picker.style.display='none';
-    if(expandArea) expandArea.style.display='none';
-  }
+// ── Group selection (multi-select) ─────────────────────
+function toggleMatchGroup(group, el){
+  // Initialize selectedGroups if needed
+  if(!MS.selectedGroups) MS.selectedGroups = new Set();
 
-  // Add "Show players ▾" button to the selected option
-  document.querySelectorAll('#matchGroupOptions .match-option').forEach(o=>{
-    const existing = o.querySelector('.match-show-players-btn');
-    if(existing) existing.remove();
-  });
-  if(group!=='specific'){
-    const selectedEl = document.querySelector('#matchGroupOptions .match-option.on');
-    if(selectedEl){
-      const showBtn = document.createElement('button');
-      showBtn.className='match-show-players-btn';
-      showBtn.textContent='Show players ▾';
-      showBtn.style.cssText='margin-top:8px;font-size:10px;color:var(--green);background:rgba(76,175,125,0.1);'+
-        'border:1px solid rgba(76,175,125,0.3);border-radius:6px;padding:3px 10px;cursor:pointer;'+
-        'font-family:sans-serif;width:100%;';
-      showBtn.onclick=(e)=>{
-        e.stopPropagation();
-        buildGroupExpandList(group);
-        const area=document.getElementById('matchGroupExpandArea');
-        if(area) area.style.display=area.style.display==='none'?'block':'none';
-        showBtn.textContent=area.style.display==='block'?'Hide players ▴':'Show players ▾';
-      };
-      selectedEl.appendChild(showBtn);
+  const isOn = el.classList.contains('on');
+  if(isOn){
+    // Deselect this group
+    MS.selectedGroups.delete(group);
+    el.classList.remove('on');
+    // If removing specific, hide picker
+    if(group==='specific'){
+      const picker = document.getElementById('matchSpecificPicker');
+      if(picker) picker.style.display='none';
+    }
+  } else {
+    // Select this group
+    MS.selectedGroups.add(group);
+    el.classList.add('on');
+    if(group==='specific'){
+      const picker = document.getElementById('matchSpecificPicker');
+      if(picker){ picker.style.display='block'; buildSpecificPicker(); }
     }
   }
+
+  // Sync MS.group = first selected (for DB/email compat), MS.extraGroups = rest
+  const allSelected = [...MS.selectedGroups];
+  MS.group = allSelected[0] || null;
+  MS.extraGroups = new Set(allSelected.slice(1));
+
+  // Hide expand area when toggling
+  const expandArea = document.getElementById('matchGroupExpandArea');
+  if(expandArea) expandArea.style.display='none';
+
   checkGroupSize();
   updateInviteCounter();
 }
+
+// Keep selectMatchGroup as alias for backward compat (format restore etc.)
+function selectMatchGroup(group, el){ toggleMatchGroup(group, el); }
 
 function checkGroupSize(){
   const warning   = document.getElementById('matchGroupWarning');
@@ -4118,72 +4104,64 @@ function checkGroupSize(){
   const maxNeeded = MS.format==='doubles' ? 3 : 1;
   const mySkill   = S.skill || SESSION_PLAYER?.skill_level || '';
   const skills    = mySkill ? getAdjacentSkills(mySkill) : null;
+  const allGroups = (MS.selectedGroups && MS.selectedGroups.size) ? MS.selectedGroups : new Set([MS.group, ...MS.extraGroups].filter(Boolean));
 
-  // Count players in primary group + extra groups
-  const allGroupPlayers = getGroupPlayers(MS.group, skills);
-  MS.extraGroups.forEach(g=>{
-    const extra = getGroupPlayers(g, skills);
-    extra.forEach(p=>{ if(!allGroupPlayers.find(x=>x.email===p.email)) allGroupPlayers.push(p); });
+  // Collect all players (deduped) from all selected groups
+  const seen = new Set();
+  const allPlayers = [];
+  allGroups.forEach(g=>{
+    if(!g||g==='specific') return;
+    getGroupPlayers(g, skills).forEach(p=>{
+      if(!seen.has(p.email)){ seen.add(p.email); allPlayers.push(p); }
+    });
   });
+  if(allGroups.has('specific')){
+    MS.specificPlayers.forEach(e=>{ if(!seen.has(e)){ seen.add(e); allPlayers.push({email:e}); } });
+  }
 
-  const count = MS.group==='specific' ? MS.specificPlayers.size : allGroupPlayers.length;
+  const count = allPlayers.length;
 
-  if(MS.group && MS.group!=='specific' && count < maxNeeded){
-    // Show warning
+  if(allGroups.size > 0 && count < maxNeeded){
     warning.style.display='block';
     const needed = maxNeeded - count;
-    warnText.textContent = 'Only '+count+' player'+(count!==1?'s':'')+' in this group — '+
+    warnText.textContent = 'Only '+count+' player'+(count!==1?'s':'')+' selected — '+
       MS.format+' needs at least '+maxNeeded+'. Add '+needed+' more player'+(needed!==1?'s':'')+'.';
 
-    // Build quick-add buttons for other groups
+    // Quick-add buttons for groups not yet selected
     quickAdd.innerHTML='';
     const otherGroups = [
-      {key:'all',      label:'👥 Entire Circle', sub: IC_MEMBERS.length+' players'},
-      {key:'my_level', label:'🟢 My Level',       sub: 'Rating: '+(skills?.my||'—')},
-      {key:'below',    label:'🟡 Below My Level', sub: 'Rating: '+(skills?.below||'—')},
-      {key:'above',    label:'🟣 Above My Level', sub: 'Rating: '+(skills?.above||'—')},
-      {key:'specific', label:'🎯 Pick Players',   sub: 'Choose individually'},
+      {key:'all',      label:'👥 Entire Circle'},
+      {key:'my_level', label:'🟢 My Level'},
+      {key:'below',    label:'🟡 Below My Level'},
+      {key:'above',    label:'🟣 Above My Level'},
+      {key:'specific', label:'🎯 Pick Players'},
     ];
-    otherGroups
-      .filter(g=>g.key!==MS.group) // exclude current group
-      .forEach(g=>{
-        const extraCount = g.key==='specific' ? 0 : getGroupPlayers(g.key, skills).length;
-        const isAdded    = MS.extraGroups.has(g.key);
-        const btn = document.createElement('button');
-        btn.style.cssText = 'padding:7px 12px;border-radius:8px;font-size:11px;font-weight:700;'+
-          'cursor:pointer;font-family:sans-serif;border:1px solid;transition:all .15s;'+
-          (isAdded
-            ? 'background:rgba(76,175,125,0.2);color:var(--green);border-color:var(--green);'
-            : 'background:rgba(255,255,255,0.06);color:var(--dim);border-color:var(--border);');
-        btn.textContent = (isAdded?'✓ ':'+ ') + g.label + (g.key!=='specific'&&extraCount?' ('+extraCount+')':'');
-        btn.onclick = ()=>{
-          if(g.key==='specific'){
-            // Show specific picker
-            MS.extraGroups.add('specific');
-            document.getElementById('matchSpecificPicker').style.display='block';
-            buildSpecificPicker();
-          } else if(isAdded){
-            MS.extraGroups.delete(g.key);
-          } else {
-            MS.extraGroups.add(g.key);
-          }
-          checkGroupSize();
-          updateInviteCounter();
-        };
-        quickAdd.appendChild(btn);
-      });
+    otherGroups.filter(g=>!allGroups.has(g.key)).forEach(g=>{
+      const extraCount = g.key==='specific' ? 0 : getGroupPlayers(g.key, skills).length;
+      const btn = document.createElement('button');
+      btn.style.cssText = 'padding:7px 12px;border-radius:8px;font-size:11px;font-weight:700;'+
+        'cursor:pointer;font-family:sans-serif;border:1px solid;transition:all .15s;'+
+        'background:rgba(255,255,255,0.06);color:var(--dim);border-color:var(--border);';
+      btn.textContent = '+ ' + g.label + (g.key!=='specific'&&extraCount?' ('+extraCount+')':'');
+      btn.onclick = ()=>{
+        if(!MS.selectedGroups) MS.selectedGroups = new Set();
+        MS.selectedGroups.add(g.key);
+        const all=[...MS.selectedGroups]; MS.group=all[0]||null; MS.extraGroups=new Set(all.slice(1));
+        const optEl=document.querySelector('#matchGroupOptions .match-option[data-group="'+g.key+'"]');
+        if(optEl) optEl.classList.add('on');
+        if(g.key==='specific'){
+          const picker=document.getElementById('matchSpecificPicker');
+          if(picker){ picker.style.display='block'; buildSpecificPicker(); }
+        }
+        checkGroupSize(); updateInviteCounter();
+      };
+      quickAdd.appendChild(btn);
+    });
 
-    // Block Continue
     if(btn4){ btn4.setAttribute('disabled',true); btn4.style.opacity='0.35'; btn4.style.cursor='not-allowed'; }
-
   } else {
-    // Enough players — hide warning, enable Continue
     warning.style.display='none';
-    if(MS.group==='specific'){
-      checkMatchStep4(); // uses its own logic for specific
-    } else if(MS.group){
-      if(btn4){ btn4.removeAttribute('disabled'); btn4.style.opacity='1'; btn4.style.cursor='pointer'; }
-    }
+    checkMatchStep4();
   }
 }
 
@@ -4210,71 +4188,105 @@ function buildSpecificPicker(){
   const maxNeeded = MS.format==='doubles' ? 3 : 1;
   const selected  = MS.specificPlayers.size;
 
-  // Update count
-  if(countEl) countEl.textContent = selected+' / '+maxNeeded+' selected';
+  if(countEl) countEl.textContent = selected+' selected';
 
-  // Warning if over limit
   if(warnEl){
     if(selected > maxNeeded){
       warnEl.style.display='block';
-      warnEl.textContent = '⚠️ '+MS.format+' only needs '+maxNeeded+' other player'+(maxNeeded>1?'s':'')+'. Please deselect '+(selected-maxNeeded)+'.';
+      warnEl.textContent = '\u26a0\ufe0f '+MS.format+' only needs '+maxNeeded+' other player'+(maxNeeded>1?'s':'')+'. Please deselect '+(selected-maxNeeded)+'.';
     } else {
       warnEl.style.display='none';
     }
   }
 
-  // Sort alphabetically
-  const sortedMembers = [...IC_MEMBERS].sort((a,b)=>
-    ((a.player.first_name||'')+(a.player.last_name||'')).localeCompare((b.player.first_name||'')+(b.player.last_name||''))
-  );
-  list.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;';
   list.innerHTML='';
   if(!IC_MEMBERS.length){
-    list.innerHTML='<div class="ic-empty" style="grid-column:1/-1;">No Inner Circle members yet.</div>';
+    list.innerHTML='<div class="ic-empty">No Inner Circle members yet.</div>';
     return;
   }
 
-  sortedMembers.forEach(({player})=>{
-    const name    = ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim();
-    const checked = MS.specificPlayers.has(player.email);
-    const atMax   = !checked && selected >= maxNeeded;
+  const mySkill = S.skill || SESSION_PLAYER?.skill_level || '';
+  const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
 
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 0;'+
-      'border-bottom:1px solid var(--border);cursor:'+(atMax?'not-allowed':'pointer')+';'+
-      'opacity:'+(atMax?'0.4':'1')+';';
+  // Bucket members by skill level
+  const buckets = {below:[], my:[], above:[], other:[]};
+  [...IC_MEMBERS].sort((a,b)=>
+    ((a.player.first_name||'')+(a.player.last_name||'')).localeCompare((b.player.first_name||'')+(b.player.last_name||''))
+  ).forEach(({player})=>{
+    const ps = parseFloat(player.skill_level||0);
+    if(skills && skills.below !== null && Math.abs(ps-skills.below)<0.13) buckets.below.push(player);
+    else if(skills && Math.abs(ps-skills.my)<0.13)                         buckets.my.push(player);
+    else if(skills && skills.above !== null && Math.abs(ps-skills.above)<0.13) buckets.above.push(player);
+    else buckets.other.push(player);
+  });
 
-    row.innerHTML =
-      '<div style="width:22px;height:22px;border-radius:6px;border:2px solid '+(checked?'var(--green)':'var(--border)')+';'+
-        'background:'+(checked?'var(--green)':'transparent')+';display:flex;align-items:center;'+
-        'justify-content:center;flex-shrink:0;transition:all .15s;">'+
-        (checked?'<span style="color:#fff;font-size:13px;font-weight:700;">✓</span>':'')+
-      '</div>'+
-      '<span style="font-size:18px;flex-shrink:0;">'+(player.avatar_emoji||'👤')+'</span>'+
-      '<div style="flex:1;min-width:0;">'+
-        '<div style="color:#fff;font-size:13px;font-weight:600;">'+name+'</div>'+
-        '<div style="color:var(--dim);font-size:11px;">⭐'+(player.skill_level||'?')+
-          (player.nickname?' · "'+player.nickname+'"':'')+
-        '</div>'+
-      '</div>'+
-      (checked?'<span style="font-size:10px;color:var(--green);font-weight:700;">✅ Selected</span>':'');
+  const colDefs = [
+    {key:'below', label:'\ud83d\udfe1 Below My Level', skill: skills?.below||''},
+    {key:'my',    label:'\ud83d\udfe2 My Level',       skill: skills?.my||''},
+    {key:'above', label:'\ud83d\udfe3 Above My Level', skill: skills?.above||''},
+  ];
 
-    if(!atMax || checked){
-      row.onclick = ()=>{
-        if(MS.specificPlayers.has(player.email)){
-          MS.specificPlayers.delete(player.email);
-        } else {
-          if(MS.specificPlayers.size >= maxNeeded){
-            showToast('⚠️ '+MS.format+' only needs '+maxNeeded+' other player'+(maxNeeded>1?'s':'')+'!','#f59e0b');
-            return;
-          }
-          MS.specificPlayers.add(player.email);
-        }
-        buildSpecificPicker();
-        checkMatchStep4();
-      };
+  list.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 12px;align-items:start;';
+
+  colDefs.forEach(col=>{
+    const players = buckets[col.key];
+    const colEl = document.createElement('div');
+
+    // Column header
+    const hdr = document.createElement('div');
+    hdr.style.cssText='text-align:center;padding:8px 4px 6px;margin-bottom:6px;'+
+      'border-radius:8px;font-size:11px;font-weight:700;'+
+      'background:rgba(255,255,255,0.05);border:1px solid var(--border);'+
+      'color:var(--dim);line-height:1.4;';
+    hdr.innerHTML = col.label+'<br><span style="font-size:10px;opacity:0.7;">'+
+      (col.skill?'Rating '+col.skill:'—')+' · '+players.length+' player'+(players.length!==1?'s':'')+'</span>';
+    colEl.appendChild(hdr);
+
+    if(!players.length){
+      const empty = document.createElement('div');
+      empty.style.cssText='text-align:center;color:var(--dim);font-size:11px;padding:12px 4px;';
+      empty.textContent='None in circle';
+      colEl.appendChild(empty);
     }
-    list.appendChild(row);
+
+    players.forEach(player=>{
+      const name    = ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim();
+      const checked = MS.specificPlayers.has(player.email);
+      const atMax   = !checked && selected >= maxNeeded;
+
+      const card = document.createElement('div');
+      card.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:3px;'+
+        'padding:8px 4px;border-radius:10px;margin-bottom:6px;text-align:center;cursor:'+(atMax?'not-allowed':'pointer')+';'+
+        'border:1.5px solid '+(checked?'var(--green)':'var(--border)')+';'+
+        'background:'+(checked?'rgba(76,175,125,0.12)':'rgba(255,255,255,0.03)')+';'+
+        'opacity:'+(atMax?'0.4':'1')+';transition:all .15s;';
+
+      card.innerHTML =
+        '<span style="font-size:22px;line-height:1;">'+(player.avatar_emoji||'\ud83e\uddd1')+'</span>'+
+        '<div style="color:#fff;font-size:11px;font-weight:600;line-height:1.3;word-break:break-word;">'+name+'</div>'+
+        '<div style="color:var(--dim);font-size:10px;">'+( player.skill_level||'?')+'</div>'+
+        (checked?'<div style="color:var(--green);font-size:10px;font-weight:700;">\u2713 Selected</div>':'');
+
+      if(!atMax || checked){
+        card.onclick = ()=>{
+          if(MS.specificPlayers.has(player.email)){
+            MS.specificPlayers.delete(player.email);
+          } else {
+            if(MS.specificPlayers.size >= maxNeeded){
+              showToast('\u26a0\ufe0f '+MS.format+' only needs '+maxNeeded+' other player'+(maxNeeded>1?'s':'')+'!','#f59e0b');
+              return;
+            }
+            MS.specificPlayers.add(player.email);
+          }
+          buildSpecificPicker();
+          checkMatchStep4();
+          updateInviteCounter();
+        };
+      }
+      colEl.appendChild(card);
+    });
+
+    list.appendChild(colEl);
   });
 }
 
@@ -4507,34 +4519,41 @@ function buildMatchSummary(){
   // Build invitee list
   const mySkill = S.skill||SESSION_PLAYER?.skill_level||'';
   const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
+  const allGroups = (MS.selectedGroups && MS.selectedGroups.size) ? MS.selectedGroups : new Set([MS.group, ...MS.extraGroups].filter(Boolean));
   let invitees  = [];
-  if(MS.group==='specific'){
-    invitees = IC_MEMBERS.filter(({player})=>MS.specificPlayers.has(player.email)).map(({player})=>player);
-  } else {
-    const allGroups = new Set([MS.group, ...MS.extraGroups]);
-    const seen = new Set();
-    invitees = IC_MEMBERS.filter(({player})=>{
-      if(seen.has(player.email)) return false;
-      const ps = parseFloat(player.skill_level||0);
-      const pEmailLC=(player.email||'').toLowerCase();
-      if(MS.deselectedPlayers?.has(pEmailLC)) return false;
-      for(const g of allGroups){
-        if(g==='all') { seen.add(player.email); return true; }
-        if(g==='my_level' && skills && Math.abs(ps-skills.my)<0.13)    { seen.add(player.email); return true; }
-        if(g==='below' && skills && skills.below!==null && Math.abs(ps-skills.below)<0.13) { seen.add(player.email); return true; }
-        if(g==='above' && skills && skills.above!==null && Math.abs(ps-skills.above)<0.13) { seen.add(player.email); return true; }
+  const seen = new Set();
+  // Non-specific groups
+  IC_MEMBERS.forEach(({player})=>{
+    if(seen.has(player.email)) return;
+    const ps = parseFloat(player.skill_level||0);
+    const pEmailLC=(player.email||'').toLowerCase();
+    if(MS.deselectedPlayers?.has(pEmailLC)) return;
+    for(const g of allGroups){
+      if(g==='specific'||!g) continue;
+      if(g==='favorites' && IC_FAVORITES.has(pEmailLC))  { seen.add(player.email); invitees.push(player); return; }
+      if(g==='all')                                        { seen.add(player.email); invitees.push(player); return; }
+      if(g==='my_level' && skills && Math.abs(ps-skills.my)<0.13) { seen.add(player.email); invitees.push(player); return; }
+      if(g==='below' && skills && skills.below!==null && Math.abs(ps-skills.below)<0.13) { seen.add(player.email); invitees.push(player); return; }
+      if(g==='above' && skills && skills.above!==null && Math.abs(ps-skills.above)<0.13) { seen.add(player.email); invitees.push(player); return; }
+    }
+  });
+  // Add specifically-picked players (deduped)
+  if(allGroups.has('specific')){
+    IC_MEMBERS.forEach(({player})=>{
+      if(!seen.has(player.email) && MS.specificPlayers.has(player.email)){
+        seen.add(player.email); invitees.push(player);
       }
-      return false;
-    }).map(({player})=>player);
+    });
   }
 
   const maxNeeded = MS.format==='doubles'?3:1;
-  const groupLabels={all:'Entire Inner Circle',my_level:'My Level',below:'Below My Level',above:'Above My Level',specific:'Specific Players'};
+  const groupLabels={all:'Entire Inner Circle',my_level:'My Level',below:'Below My Level',above:'Above My Level',specific:'Specific Players',favorites:'My Favorites'};
+  const invitedLabel = [...allGroups].map(g=>groupLabels[g]||g).join(' + ');
 
   sum.innerHTML =
     '<div class="match-summary-row"><span>Format</span><span>'+(MS.format==='doubles'?'🏓🏓 Doubles':'🏓 Singles')+'</span></div>'+
     '<div class="match-summary-row"><span>Duration</span><span>'+durStr+'</span></div>'+
-    '<div class="match-summary-row"><span>Invited</span><span>'+(groupLabels[MS.group]||'—')+' ('+invitees.length+')</span></div>'+
+    '<div class="match-summary-row"><span>Invited</span><span>'+invitedLabel+' ('+invitees.length+')</span></div>'+
     '<div class="match-summary-row"><span>Spots open</span><span>'+maxNeeded+' needed · first to respond wins</span></div>'+
     '<div class="match-summary-row"><span>Date</span><span>'+dateStr+'</span></div>'+
     '<div class="match-summary-row"><span>Time</span><span>'+timeStr+'</span></div>'+
@@ -4591,29 +4610,43 @@ async function submitMatch(){
     const matchId=matchRows[0]?.id;
     const mySkill=S.skill||SESSION_PLAYER?.skill_level||'';
     const skills=mySkill?getAdjacentSkills(mySkill):null;
+    const allGroups=(MS.selectedGroups&&MS.selectedGroups.size)?MS.selectedGroups:new Set([MS.group,...MS.extraGroups].filter(Boolean));
+    const seenEmails=new Set();
     let invitees=[];
-    if(MS.group==='specific'){
-      invitees=IC_MEMBERS.filter(({player})=>MS.specificPlayers.has(player.email)).map(({player})=>player);
-    } else {
-      invitees=IC_MEMBERS.filter(({player})=>{
-        if(MS.group==='all') return true;
-        const ps=parseFloat(player.skill_level||0);
-        if(MS.group==='my_level') return skills&&Math.abs(ps-skills.my)<0.13;
-        if(MS.group==='below')    return skills&&skills.below!==null&&Math.abs(ps-skills.below)<0.13;
-        if(MS.group==='above')    return skills&&skills.above!==null&&Math.abs(ps-skills.above)<0.13;
-        return false;
-      }).map(({player})=>player);
+    IC_MEMBERS.forEach(({player})=>{
+      if(seenEmails.has(player.email)) return;
+      const ps=parseFloat(player.skill_level||0);
+      const pLC=(player.email||'').toLowerCase();
+      for(const g of allGroups){
+        if(!g||g==='specific') continue;
+        if(g==='favorites'&&IC_FAVORITES.has(pLC)){ seenEmails.add(player.email); invitees.push(player); return; }
+        if(g==='all'){ seenEmails.add(player.email); invitees.push(player); return; }
+        if(g==='my_level'&&skills&&Math.abs(ps-skills.my)<0.13){ seenEmails.add(player.email); invitees.push(player); return; }
+        if(g==='below'&&skills&&skills.below!==null&&Math.abs(ps-skills.below)<0.13){ seenEmails.add(player.email); invitees.push(player); return; }
+        if(g==='above'&&skills&&skills.above!==null&&Math.abs(ps-skills.above)<0.13){ seenEmails.add(player.email); invitees.push(player); return; }
+      }
+    });
+    if(allGroups.has('specific')){
+      IC_MEMBERS.forEach(({player})=>{ if(!seenEmails.has(player.email)&&MS.specificPlayers.has(player.email)){ seenEmails.add(player.email); invitees.push(player); } });
     }
     status.textContent='Sending to '+invitees.length+' players…';
     const dateStr=date?new Date(date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}):'';
     const timeStr=timeStart?fmt12(timeStart)+(timeEnd?' – '+fmt12(timeEnd):''):'';
+    // Grab weather summary for email
+    let weatherNote='';
+    try{
+      const wContent=document.getElementById('matchWeatherContent');
+      if(wContent&&wContent.innerText&&!wContent.innerText.includes('Loading')&&!wContent.innerText.includes('unavailable')){
+        weatherNote=' | Weather at game time: '+wContent.innerText.replace(/\n/g,' ').replace(/\s+/g,' ').trim();
+      }
+    }catch(e){}
     for(const player of invitees){
       if(matchId) await fetch(`${SUPABASE_URL}/rest/v1/match_responses`,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},body:JSON.stringify({match_id:matchId,player_email:player.email,player_name:((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim(),response:'pending'})}).catch(()=>{});
       const pubKey=window.EMAILJS_PUBLIC_KEY;
       if(pubKey&&pubKey!=='YOUR_PUBLIC_KEY'&&player.email){
         const matchUrl=window.location.origin+window.location.pathname+'?match='+matchId;
         emailjs.init(pubKey);
-        emailjs.send(window.EMAILJS_SERVICE_ID,window.EMAILJS_TEMPLATE_ID,{to_email:player.email,from_name:myName||'A fellow player',from_email:myEmail,invite_url:matchUrl,personal_note:(MS.format==='doubles'?'Doubles':'Singles')+' · '+dateStr+' '+timeStr+(MS.courtName?' @ '+MS.courtName:'')+(note?' · '+note:''),site_url:window.location.origin}).catch(()=>{});
+        emailjs.send(window.EMAILJS_SERVICE_ID,window.EMAILJS_TEMPLATE_ID,{to_email:player.email,from_name:myName||'A fellow player',from_email:myEmail,invite_url:matchUrl,personal_note:(MS.format==='doubles'?'Doubles':'Singles')+' · '+dateStr+' '+timeStr+(MS.courtName?' @ '+MS.courtName:'')+(note?' · '+note:'')+weatherNote,site_url:window.location.origin}).catch(()=>{});
       }
     }
     showToast('🎾 Match invite sent to '+invitees.length+' players!','#4CAF7D');
@@ -4621,7 +4654,7 @@ async function submitMatch(){
     btn.textContent='✅ Sent!';
     document.getElementById('matchSentSection').style.display='block';
     loadSentMatches();
-    setTimeout(()=>{ MS.format='doubles';MS.group=null;MS.specificPlayers.clear();MS.isFeeler=false;MS.date=null;MS.courtId=null;MS.courtName=null;MS.duration=2; matchGoTo(1); btn.textContent='🎾 Send Match Invite';btn.disabled=false; },3000);
+    setTimeout(()=>{ MS.format='doubles';MS.group=null;MS.specificPlayers.clear();MS.selectedGroups=new Set();MS.extraGroups=new Set();MS.isFeeler=false;MS.date=null;MS.courtId=null;MS.courtName=null;MS.duration=2; matchGoTo(1); btn.textContent='🎾 Send Match Invite';btn.disabled=false; },3000);
   }catch(e){ status.textContent='⚠️ Error: '+e.message; btn.disabled=false; btn.textContent='🎾 Send Match Invite'; }
 }
 
@@ -4647,7 +4680,7 @@ async function loadSentMatches(){
 // ── Init match page ────────────────────────────────────
 function initSetupMatch(){
   // Reset MS state
-  MS.format='doubles'; MS.group=null; MS.specificPlayers.clear(); MS.extraGroups=new Set(); MS.deselectedPlayers=new Set();
+  MS.format='doubles'; MS.group=null; MS.specificPlayers.clear(); MS.extraGroups=new Set(); MS.selectedGroups=new Set(); MS.deselectedPlayers=new Set();
   MS.isFeeler=false; MS.duration=2; MS.selectedCourts=new Map();
   matchGoTo(1);
   updateMatchGroupLabels();
@@ -6546,8 +6579,9 @@ function buildGroupExpandList(group){
 
 let _selectAllState = true;
 function toggleSelectAll(){
-  const group = MS.group;
-  if(!group||group==='specific') return;
+  const allGroups = (MS.selectedGroups&&MS.selectedGroups.size) ? MS.selectedGroups : new Set([MS.group].filter(Boolean));
+  const group = [...allGroups].find(g=>g&&g!=='specific') || null;
+  if(!group) return;
   const mySkill = S.skill || SESSION_PLAYER?.skill_level || '';
   const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
   const players = getGroupPlayers(group, skills);
@@ -6569,9 +6603,7 @@ function updateInviteCounter(){
   if(!counter) return;
   const mySkill = S.skill || SESSION_PLAYER?.skill_level || '';
   const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
-
-  // Count all players from primary + extra groups minus deselected
-  const allGroups = new Set([MS.group, ...MS.extraGroups]);
+  const allGroups = MS.selectedGroups && MS.selectedGroups.size ? MS.selectedGroups : new Set([MS.group, ...MS.extraGroups]);
   const seen = new Set();
   let total = 0;
   allGroups.forEach(g=>{
@@ -6583,9 +6615,12 @@ function updateInviteCounter(){
       }
     });
   });
-  if(MS.group==='specific') total = MS.specificPlayers.size;
+  // Add specific picks (deduplicated)
+  if(allGroups.has('specific')){
+    MS.specificPlayers.forEach(e=>{ if(!seen.has(e)){ seen.add(e); total++; } });
+  }
 
-  counter.style.display = MS.group ? 'block' : 'none';
+  counter.style.display = allGroups.size > 0 ? 'block' : 'none';
   counter.textContent   = total+' player'+(total!==1?'s':'')+' invited';
   counter.style.background = total>0 ? 'rgba(76,175,125,0.12)' : 'rgba(255,255,255,0.06)';
   counter.style.color       = total>0 ? 'var(--green)' : 'var(--dim)';
