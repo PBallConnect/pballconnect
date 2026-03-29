@@ -977,6 +977,16 @@
         <span class="nav-icon">🎯</span>
         <span class="nav-label">Set Up A Match</span>
       </div>
+      <div class="nav-item" onclick="showPage('myInvites')" id="nav-myInvites" title="My Invites — matches you've organized">
+        <span class="nav-icon">📤</span>
+        <span class="nav-label">My Invites</span>
+        <span id="myInvitesBadge" style="display:none;background:rgba(239,68,68,0.85);color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;"></span>
+      </div>
+      <div class="nav-item" onclick="showPage('invitedByOthers')" id="nav-invitedByOthers" title="Invited by Others — matches you've been invited to">
+        <span class="nav-icon">📥</span>
+        <span class="nav-label">Invited by Others</span>
+        <span id="invitedByOthersBadge" style="display:none;background:rgba(59,130,246,0.85);color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;"></span>
+      </div>
       <div class="nav-item nav-lessons-dim" onclick="showPage('lessons')" id="nav-lessons" title="Get Lessons — find instructors near you">
         <span class="nav-icon">🎓</span>
         <span class="nav-label">Get Lessons</span>
@@ -2052,6 +2062,28 @@
         <p id="matchPageSub">Let's find you a game</p>
       </div>
 
+      <!-- Match status squares -->
+      <div style="display:flex;gap:12px;margin-bottom:20px;max-width:400px;">
+        <div id="matchSquareMyInvites" onclick="showPage('myInvites')"
+          style="flex:1;padding:14px 12px;border-radius:14px;border:1.5px solid rgba(239,68,68,0.4);
+            background:rgba(239,68,68,0.08);cursor:pointer;text-align:center;transition:all .15s;"
+          onmouseover="this.style.background='rgba(239,68,68,0.15)'"
+          onmouseout="this.style.background='rgba(239,68,68,0.08)'">
+          <div id="matchSquareMyCount" style="font-size:32px;font-weight:800;color:#f87171;line-height:1;">0</div>
+          <div style="font-size:11px;color:var(--dim);margin-top:4px;font-weight:600;">My Invites</div>
+          <div style="font-size:10px;color:rgba(248,113,113,0.7);margin-top:2px;">tap to view →</div>
+        </div>
+        <div id="matchSquareInvitedTo" onclick="showPage('invitedByOthers')"
+          style="flex:1;padding:14px 12px;border-radius:14px;border:1.5px solid rgba(59,130,246,0.4);
+            background:rgba(59,130,246,0.08);cursor:pointer;text-align:center;transition:all .15s;"
+          onmouseover="this.style.background='rgba(59,130,246,0.15)'"
+          onmouseout="this.style.background='rgba(59,130,246,0.08)'">
+          <div id="matchSquareInvitedCount" style="font-size:32px;font-weight:800;color:#60a5fa;line-height:1;">0</div>
+          <div style="font-size:11px;color:var(--dim);margin-top:4px;font-weight:600;">Invited to</div>
+          <div style="font-size:10px;color:rgba(96,165,250,0.7);margin-top:2px;">tap to view →</div>
+        </div>
+      </div>
+
       <!-- STEP INDICATOR -->
       <div class="match-steps" id="matchSteps" style="margin-bottom:20px;">
         <div style="text-align:center;">
@@ -2350,6 +2382,14 @@
           </div>
         </div>
 
+        <!-- Overlap warning -->
+        <div id="matchOverlapWarning" style="display:none;margin-top:14px;padding:12px 16px;
+          background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.35);
+          border-radius:12px;font-size:12px;color:#fbbf24;">
+          <div style="font-weight:700;margin-bottom:4px;">⚠️ Scheduling Conflict</div>
+          <div id="matchOverlapText"></div>
+        </div>
+
         <div class="match-btn-row" style="margin-top:20px;">
           <button class="match-back-btn" onclick="matchGoTo(4)">← Back</button>
           <button class="match-next-btn" id="matchSendBtn"
@@ -2365,6 +2405,24 @@
         <div id="matchSentList"></div>
       </div>
     </div>
+    <!-- MY INVITES PAGE -->
+    <div class="page-section" id="page-myInvites">
+      <div class="page-header">
+        <h1>My <span>Invites</span></h1>
+        <p>Matches you've organized and their response status</p>
+      </div>
+      <div id="myInvitesList" style="max-width:700px;"></div>
+    </div>
+
+    <!-- INVITED BY OTHERS PAGE -->
+    <div class="page-section" id="page-invitedByOthers">
+      <div class="page-header">
+        <h1>Invited <span>by Others</span></h1>
+        <p>Match invites you've received</p>
+      </div>
+      <div id="invitedByOthersList" style="max-width:700px;"></div>
+    </div>
+
     <!-- LESSONS PAGE -->
     <div class="page-section" id="page-lessons">
       <div class="page-header">
@@ -2415,6 +2473,29 @@
 <!-- Confirmation -->
 
 <!-- Confirmation -->
+<!-- Profile Changes Diff Modal -->
+<div id="profileDiffOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);
+  display:none;align-items:center;justify-content:center;padding:16px;z-index:500;">
+  <div style="background:#0f1f12;border:1px solid var(--border);border-radius:20px;
+    padding:24px;max-width:480px;width:100%;max-height:85vh;overflow-y:auto;">
+    <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:4px;">Review Your Changes</div>
+    <div style="font-size:12px;color:var(--dim);margin-bottom:16px;">Confirm these updates before saving</div>
+    <div id="profileDiffList" style="margin-bottom:20px;"></div>
+    <div style="display:flex;gap:10px;">
+      <button id="profileDiffConfirm"
+        style="flex:1;padding:12px;border-radius:10px;border:none;background:var(--green);
+          color:var(--dark);font-weight:700;font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+        ✅ Looks Correct — Save
+      </button>
+      <button onclick="document.getElementById('profileDiffOverlay').style.display='none'"
+        style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--border);
+          background:transparent;color:var(--dim);font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+        ✏️ Keep Editing
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="confirm-overlay" id="confirmOverlay" style="display:none">
   <div class="confirm-card">
     <div class="confirm-icon">🏓</div>
@@ -2980,6 +3061,76 @@ function showToast(msg, color='#ef4444'){
 }
 
 async function submitForm(){
+  // If editing existing profile, show diff overlay first
+  if(SESSION_PLAYER){
+    showProfileDiff();
+    return;
+  }
+  await doSaveProfile();
+}
+
+function showProfileDiff(){
+  const player = SESSION_PLAYER;
+  const diffList = document.getElementById('profileDiffList');
+  if(!diffList) return;
+
+  // Field labels and current vs new values
+  const stateAbbr=(st)=>{
+    if(!st) return '';
+    const abbr=Object.entries(STATE_INFO).find(([k,v])=>v[1]&&v[1].toLowerCase()===st.toLowerCase());
+    return abbr?abbr[0]:(st.length===2?st.toUpperCase():st);
+  };
+  const fields=[
+    {label:'First Name',   old:player.first_name||'', nw:v('firstName')},
+    {label:'Last Name',    old:player.last_name||'',  nw:v('lastName')},
+    {label:'Nickname',     old:player.nickname||'',   nw:v('nickname')},
+    {label:'Address',      old:player.address||'',    nw:v('addressSearch')},
+    {label:'City',         old:player.city||'',       nw:v('addrCity')},
+    {label:'State',        old:player.state||'',      nw:stateAbbr(v('addrState'))},
+    {label:'Zip',          old:player.zip_code||'',   nw:v('addrZip')},
+    {label:'Skill Level',  old:String(player.skill_level||''), nw:String(S.skill||player.skill_level||'')},
+    {label:'Gender',       old:player.gender||'',     nw:S.gender||player.gender||''},
+    {label:'Handedness',   old:player.handedness||'', nw:S.handedness||player.handedness||''},
+    {label:'Phone',        old:player.phone||'',      nw:(v('phone')||'').replace(/\D/g,'')},
+  ];
+
+  const changed = fields.filter(f=>String(f.old).trim()!==String(f.nw).trim());
+
+  diffList.innerHTML='';
+  if(!changed.length){
+    diffList.innerHTML='<div style="color:var(--dim);font-size:13px;text-align:center;padding:16px;">No changes detected.</div>';
+  } else {
+    changed.forEach(f=>{
+      const row=document.createElement('div');
+      row.style.cssText='padding:10px 0;border-bottom:1px solid var(--border);display:grid;grid-template-columns:100px 1fr 1fr;gap:8px;align-items:center;';
+      row.innerHTML=
+        '<div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;">'+f.label+'</div>'+
+        '<div style="font-size:12px;color:#f87171;text-decoration:line-through;word-break:break-word;">'+(f.old||'—')+'</div>'+
+        '<div style="font-size:12px;color:var(--green);font-weight:600;word-break:break-word;">'+(f.nw||'—')+'</div>';
+      diffList.appendChild(row);
+    });
+    // Header row
+    const hdr=document.createElement('div');
+    hdr.style.cssText='padding:4px 0 8px;display:grid;grid-template-columns:100px 1fr 1fr;gap:8px;';
+    hdr.innerHTML=
+      '<div></div>'+
+      '<div style="font-size:10px;font-weight:700;color:#f87171;text-transform:uppercase;">Before</div>'+
+      '<div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;">After</div>';
+    diffList.insertBefore(hdr, diffList.firstChild);
+  }
+
+  const overlay=document.getElementById('profileDiffOverlay');
+  overlay.style.display='flex';
+
+  // Wire confirm button
+  const confirmBtn=document.getElementById('profileDiffConfirm');
+  confirmBtn.onclick=async()=>{
+    overlay.style.display='none';
+    await doSaveProfile();
+  };
+}
+
+async function doSaveProfile(){
   // Disable button and show saving state
   const btn = document.getElementById('btnSubmit');
   btn.disabled = true;
@@ -2991,6 +3142,24 @@ async function submitForm(){
   else if(S.schedule.size > 0){
     // Save full keys (Mon|Morning, Mon|Afternoon etc) to preserve time detail
     schedStr = [...S.schedule].join(', ');
+  }
+
+  // If no lat/lon from autocomplete, try to geocode city+state before saving
+  if(!S.addrLat || !S.addrLon){
+    const city = document.getElementById('addrCity')?.value?.trim();
+    const state = document.getElementById('addrState')?.value?.trim();
+    if(city && state){
+      try{
+        const gRes = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city+', '+state+', USA')}&format=json&limit=1`,
+          {headers:{'Accept-Language':'en','User-Agent':'PickleballRegistry/1.0'}}
+        );
+        if(gRes.ok){
+          const gData = await gRes.json();
+          if(gData.length){ S.addrLat=parseFloat(gData[0].lat); S.addrLon=parseFloat(gData[0].lon); }
+        }
+      }catch(e){ console.warn('Geocode on save failed:',e); }
+    }
   }
 
   // Save to Supabase via direct REST call
@@ -3032,7 +3201,9 @@ async function submitForm(){
       wants_to_improve:    S.wantsToImprove || null,
       goal_rating:         S.goalRating || null,
       has_had_lesson:      S.hasHadLesson || null,
-      wants_lesson:        S.wantsLesson || null
+      wants_lesson:        S.wantsLesson || null,
+      lat:                 S.addrLat || SESSION_PLAYER?.lat || null,
+      lon:                 S.addrLon || SESSION_PLAYER?.lon || null,
     });
     console.log('✅ Registration saved');
     showToast('✅ Profile saved!', '#4CAF7D');
@@ -3085,7 +3256,7 @@ async function submitForm(){
     showToast('⚠️ Could not save: ' + err.message);
   }
 
-  btn.textContent = '🎉 Complete Registration';
+  btn.textContent = SESSION_PLAYER ? '✏️ Update Profile' : '🎉 Complete Registration';
   btn.disabled = false;
 
   // Show confirmation screen
@@ -3251,7 +3422,9 @@ function showPage(page){
   }
   if(page==='findPlayers')  initFindPlayers();
   if(page==='playerStats')   { loadCommunitySnapshot(); }
-  if(page==='setupMatch')     { initSetupMatch(); }
+  if(page==='setupMatch')     { initSetupMatch(); loadMatchSquareCounts(); }
+  if(page==='myInvites')      { loadMyInvitesPage(); }
+  if(page==='invitedByOthers'){ loadInvitedByOthersPage(); }
 }
 
 function unlockLessonsNav(){
@@ -4500,7 +4673,53 @@ function updateMatchCourtsSummary(){
 }
 
 // ── Step 3: Review ─────────────────────────────────────
+// ── Match overlap / conflict detection ─────────────────
+async function checkMatchOverlap(){
+  const warnBox  = document.getElementById('matchOverlapWarning');
+  const warnText = document.getElementById('matchOverlapText');
+  if(!warnBox||!warnText) return;
+  warnBox.style.display='none';
+
+  const myEmail = getMyEmail();
+  if(!myEmail) return;
+
+  const date      = document.getElementById('matchDate')?.value;
+  const timeStart = MS.timeStart || document.getElementById('matchTimeStart')?.value;
+  if(!date||!timeStart) return;
+
+  // Convert "HH:MM" to minutes since midnight
+  const toMins = t=>{ if(!t) return 0; const [h,m]=t.split(':').map(Number); return h*60+m; };
+  const newStart = toMins(timeStart);
+  const newEnd   = newStart + Math.round(MS.duration * 60);
+
+  try{
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&match_date=eq.${date}&status=neq.cancelled&select=time_start,time_end,court_name,match_type`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+    );
+    const existing = res.ok ? await res.json() : [];
+    const conflicts = existing.filter(m=>{
+      const s = toMins(m.time_start);
+      const e = m.time_end ? toMins(m.time_end) : s + 120;
+      // True overlap: new start < existing end AND new end > existing start
+      return newStart < e && newEnd > s;
+    });
+
+    if(conflicts.length){
+      warnBox.style.display='block';
+      const list = conflicts.map(m=>{
+        const s=fmt12(m.time_start);
+        const e=m.time_end?fmt12(m.time_end):'';
+        return (m.match_type==='doubles'?'🏓🏓 Doubles':'🏓 Singles')+' at '+s+(e?' – '+e:'')+(m.court_name?' @ '+m.court_name:'');
+      }).join('<br>');
+      warnText.innerHTML='You already have a match at this time:<br><span style="color:#fff;font-weight:600;">'+list+'</span><br><span style="color:var(--dim);">Back-to-back is fine — only true overlaps are flagged.</span>';
+    }
+  }catch(e){ console.warn('Overlap check error:',e); }
+}
+
 function buildMatchSummary(){
+  // Check for scheduling conflicts with existing matches
+  checkMatchOverlap();
   const sum = document.getElementById('matchSummary');
   if(!sum) return;
   const date    = document.getElementById('matchDate')?.value;
@@ -4663,18 +4882,245 @@ async function loadSentMatches(){
   const list=document.getElementById('matchSentList');
   if(!list||!myEmail) return;
   try{
-    const res=await fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&order=created_at.desc&limit=5`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    // Fetch recent matches
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&order=created_at.desc&limit=10`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     const matches=res.ok?await res.json():[];
+
+    // Fetch all responses for these matches
+    const matchIds=matches.map(m=>m.id);
+    let allResponses=[];
+    if(matchIds.length){
+      const rRes=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${matchIds.join(',')})&select=match_id,player_name,player_email,response`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      allResponses=rRes.ok?await rRes.json():[];
+    }
+
     list.innerHTML='';
+    if(!matches.length){
+      list.innerHTML='<div style="color:var(--dim);font-size:13px;padding:12px 0;">No match invites sent yet.</div>';
+      return;
+    }
+
     matches.forEach(m=>{
       const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}):'—';
       const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):''):'—';
-      const row=document.createElement('div');
-      row.style.cssText='padding:12px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;';
-      row.innerHTML='<span style="font-size:20px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span><div style="flex:1;"><div style="color:#fff;font-size:13px;font-weight:600;">'+dateStr+' · '+timeStr+'</div><div style="color:var(--dim);font-size:11px;">'+(m.court_name||'TBD')+(m.is_feeler?' · Feeler':'')+'</div></div><span style="font-size:11px;font-weight:700;color:var(--green);">'+m.status+'</span>';
-      list.appendChild(row);
+      const responses=allResponses.filter(r=>r.match_id===m.id);
+      const inPlayers   =responses.filter(r=>r.response==='in');
+      const outPlayers  =responses.filter(r=>r.response==='out');
+      const waitlist    =responses.filter(r=>r.response==='waitlist');
+      const pending     =responses.filter(r=>r.response==='pending');
+      const maxNeeded   =m.match_type==='doubles'?3:1;
+
+      const card=document.createElement('div');
+      card.style.cssText='padding:14px 0;border-bottom:1px solid var(--border);';
+
+      // Header row
+      const hdr=document.createElement('div');
+      hdr.style.cssText='display:flex;align-items:center;gap:12px;margin-bottom:8px;cursor:pointer;';
+      hdr.innerHTML=
+        '<span style="font-size:20px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span>'+
+        '<div style="flex:1;">'+
+          '<div style="color:#fff;font-size:13px;font-weight:600;">'+dateStr+' · '+timeStr+'</div>'+
+          '<div style="color:var(--dim);font-size:11px;">'+(m.court_name||'TBD')+(m.is_feeler?' · Feeler':'')+'</div>'+
+        '</div>'+
+        '<div style="text-align:right;">'+
+          '<div style="font-size:11px;font-weight:700;color:'+(m.status==='open'?'var(--green)':m.status==='full'?'#fbbf24':'var(--dim)')+';">'+m.status.toUpperCase()+'</div>'+
+          '<div style="font-size:10px;color:var(--dim);">'+inPlayers.length+'/'+maxNeeded+' confirmed</div>'+
+        '</div>';
+
+      // Response breakdown
+      const detail=document.createElement('div');
+      detail.style.cssText='display:none;margin-top:8px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid var(--border);';
+
+      const makeGroup=(emoji, label, color, players)=>{
+        if(!players.length) return '';
+        return '<div style="margin-bottom:6px;">'+
+          '<div style="font-size:10px;font-weight:700;color:'+color+';text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">'+emoji+' '+label+' ('+players.length+')</div>'+
+          '<div style="font-size:12px;color:#fff;line-height:1.8;">'+players.map(p=>p.player_name||p.player_email).join(' · ')+'</div>'+
+        '</div>';
+      };
+
+      detail.innerHTML=
+        makeGroup('✅','In',  'var(--green)', inPlayers)+
+        makeGroup('⏳','Pending','#94a3b8', pending)+
+        makeGroup('⌛','Waitlist','#f59e0b', waitlist)+
+        makeGroup('❌','Out', '#f87171',    outPlayers)||
+        '<div style="color:var(--dim);font-size:12px;">No responses yet.</div>';
+
+      // Toggle detail on click
+      let open=false;
+      hdr.onclick=()=>{
+        open=!open;
+        detail.style.display=open?'block':'none';
+      };
+
+      card.appendChild(hdr);
+      card.appendChild(detail);
+      list.appendChild(card);
     });
-  }catch(e){}
+  }catch(e){ console.warn('loadSentMatches error:',e); }
+}
+
+// ── Match squares counter ───────────────────────────────
+async function loadMatchSquareCounts(){
+  const myEmail=getMyEmail();
+  if(!myEmail) return;
+  try{
+    // My invites (matches I organized)
+    const myRes=await fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=neq.cancelled&select=id`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const myMatches=myRes.ok?await myRes.json():[];
+    const myCount=myMatches.length;
+    const myEl=document.getElementById('matchSquareMyCount');
+    if(myEl) myEl.textContent=myCount;
+    const myBadge=document.getElementById('myInvitesBadge');
+    if(myBadge){ myBadge.textContent=myCount; myBadge.style.display=myCount>0?'inline-flex':'none'; }
+
+    // Invited to (match_responses where I'm a recipient, not organizer)
+    const invRes=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&select=match_id`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const invRows=invRes.ok?await invRes.json():[];
+    const invCount=invRows.length;
+    const invEl=document.getElementById('matchSquareInvitedCount');
+    if(invEl) invEl.textContent=invCount;
+    const invBadge=document.getElementById('invitedByOthersBadge');
+    if(invBadge){ invBadge.textContent=invCount; invBadge.style.display=invCount>0?'inline-flex':'none'; }
+  }catch(e){ console.warn('loadMatchSquareCounts error:',e); }
+}
+
+// ── My Invites page ─────────────────────────────────────
+async function loadMyInvitesPage(){
+  const myEmail=getMyEmail();
+  const container=document.getElementById('myInvitesList');
+  if(!container) return;
+  if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in to view your invites.</div>'; return; }
+  container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:12px 0;">Loading…</div>';
+  try{
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&order=match_date.desc,time_start.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const matches=res.ok?await res.json():[];
+
+    // Fetch responses for all matches
+    const ids=matches.map(m=>m.id);
+    let responses=[];
+    if(ids.length){
+      const rr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${ids.join(',')})&select=match_id,player_name,player_email,response`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      responses=rr.ok?await rr.json():[];
+    }
+
+    container.innerHTML='';
+    if(!matches.length){
+      container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">You haven\'t set up any matches yet.<br><br><button onclick="showPage(\'setupMatch\')" style="padding:10px 20px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;cursor:pointer;font-family:\'DM Sans\',sans-serif;">+ Set Up A Match</button></div>';
+      return;
+    }
+
+    matches.forEach(m=>{
+      const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}):'—';
+      const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):''):'—';
+      const mRes=responses.filter(r=>r.match_id===m.id);
+      const inPlayers=mRes.filter(r=>r.response==='in');
+      const pending=mRes.filter(r=>r.response==='pending');
+      const waitlist=mRes.filter(r=>r.response==='waitlist');
+      const out=mRes.filter(r=>r.response==='out');
+      const maxNeeded=m.match_type==='doubles'?3:1;
+      const spotsLeft=Math.max(0,maxNeeded-inPlayers.length);
+
+      const card=document.createElement('div');
+      card.style.cssText='background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px;';
+
+      const statusColor=m.status==='open'?'var(--green)':m.status==='full'?'#fbbf24':'var(--dim)';
+
+      card.innerHTML=
+        '<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">'+
+          '<span style="font-size:24px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span>'+
+          '<div style="flex:1;">'+
+            '<div style="color:#fff;font-size:14px;font-weight:700;">'+dateStr+' · '+timeStr+'</div>'+
+            '<div style="color:var(--dim);font-size:12px;margin-top:2px;">'+(m.court_name||'TBD')+(m.notes?' · <em>'+m.notes+'</em>':'')+'</div>'+
+          '</div>'+
+          '<div style="text-align:right;">'+
+            '<div style="font-size:11px;font-weight:800;color:'+statusColor+';text-transform:uppercase;">'+m.status+'</div>'+
+            '<div style="font-size:10px;color:var(--dim);">'+inPlayers.length+'/'+maxNeeded+' confirmed</div>'+
+            (spotsLeft>0?'<div style="font-size:10px;color:#fbbf24;">'+spotsLeft+' spot'+(spotsLeft>1?'s':'')+' open</div>':'')+
+          '</div>'+
+        '</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:10px;">'+
+          makeResponsePill('✅ In',inPlayers,'var(--green)')+
+          makeResponsePill('⏳ Pending',pending,'#94a3b8')+
+          makeResponsePill('⌛ Waitlist',waitlist,'#f59e0b')+
+          makeResponsePill('❌ Out',out,'#f87171')+
+        '</div>'+
+        (inPlayers.length?'<div style="font-size:11px;color:var(--green);margin-top:4px;">✅ '+inPlayers.map(p=>p.player_name||p.player_email).join(' · ')+'</div>':'')+
+        (pending.length?'<div style="font-size:11px;color:#94a3b8;margin-top:2px;">⏳ Awaiting: '+pending.map(p=>p.player_name||p.player_email).join(' · ')+'</div>':'');
+
+      container.appendChild(card);
+    });
+  }catch(e){ container.innerHTML='<div style="color:#f87171;font-size:13px;">Error loading invites.</div>'; console.warn(e); }
+}
+
+function makeResponsePill(label, players, color){
+  return '<div style="text-align:center;padding:8px 4px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);">'+
+    '<div style="font-size:16px;font-weight:800;color:'+color+';">'+players.length+'</div>'+
+    '<div style="font-size:9px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">'+label+'</div>'+
+  '</div>';
+}
+
+// ── Invited by Others page ──────────────────────────────
+async function loadInvitedByOthersPage(){
+  const myEmail=getMyEmail();
+  const container=document.getElementById('invitedByOthersList');
+  if(!container) return;
+  if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in to view your invites.</div>'; return; }
+  container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:12px 0;">Loading…</div>';
+  try{
+    // Get my match_responses
+    const rr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&select=match_id,response,responded_at&order=responded_at.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const myResponses=rr.ok?await rr.json():[];
+
+    if(!myResponses.length){
+      container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">You haven\'t been invited to any matches yet.</div>';
+      return;
+    }
+
+    // Fetch match details
+    const matchIds=myResponses.map(r=>r.match_id);
+    const mr=await fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${matchIds.join(',')})&select=*&order=match_date.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const matches=mr.ok?await mr.json():[];
+
+    container.innerHTML='';
+    if(!matches.length){ container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;">No matches found.</div>'; return; }
+
+    matches.forEach(m=>{
+      const myResp=myResponses.find(r=>r.match_id===m.id);
+      const response=myResp?.response||'pending';
+      const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}):'—';
+      const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):''):'—';
+
+      const respColor=response==='in'?'var(--green)':response==='out'?'#f87171':response==='waitlist'?'#f59e0b':'#94a3b8';
+      const respLabel=response==='in'?'✅ You\'re In':response==='out'?'❌ Declined':response==='waitlist'?'⌛ Waitlist':'⏳ Pending';
+      const matchStatusColor=m.status==='open'?'var(--green)':m.status==='full'?'#fbbf24':'var(--dim)';
+
+      const card=document.createElement('div');
+      card.style.cssText='background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px;';
+      card.innerHTML=
+        '<div style="display:flex;align-items:flex-start;gap:12px;">'+
+          '<span style="font-size:24px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span>'+
+          '<div style="flex:1;">'+
+            '<div style="color:#fff;font-size:14px;font-weight:700;">'+dateStr+' · '+timeStr+'</div>'+
+            '<div style="color:var(--dim);font-size:12px;margin-top:2px;">Organized by <strong style="color:#fff;">'+m.organizer_name+'</strong></div>'+
+            '<div style="color:var(--dim);font-size:12px;">'+(m.court_name||'TBD')+'</div>'+
+            (m.notes?'<div style="color:var(--dim);font-size:11px;font-style:italic;margin-top:2px;">'+m.notes+'</div>':'')+
+          '</div>'+
+          '<div style="text-align:right;">'+
+            '<div style="font-size:11px;font-weight:800;color:'+matchStatusColor+';text-transform:uppercase;margin-bottom:4px;">'+m.status+'</div>'+
+            '<div style="font-size:12px;font-weight:700;color:'+respColor+';">'+respLabel+'</div>'+
+          '</div>'+
+        '</div>'+
+        // If still pending and match is open, show respond buttons
+        (response==='pending'&&m.status==='open'?
+          '<div style="display:flex;gap:8px;margin-top:12px;">'+
+            '<button onclick="respondToMatch(\''+m.id+'\',\'in\')" style="flex:1;padding:9px;border-radius:8px;border:none;background:var(--green);color:#fff;font-weight:700;font-size:12px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">✅ I\'m In!</button>'+
+            '<button onclick="respondToMatch(\''+m.id+'\',\'out\')" style="flex:1;padding:9px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:12px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">❌ Can\'t Make It</button>'+
+          '</div>':'');
+
+      container.appendChild(card);
+    });
+  }catch(e){ container.innerHTML='<div style="color:#f87171;font-size:13px;">Error loading invites.</div>'; console.warn(e); }
 }
 
 // ── Init match page ────────────────────────────────────
@@ -4686,7 +5132,7 @@ function initSetupMatch(){
   updateMatchGroupLabels();
   buildMatchTimeChips();
   loadSentMatches();
-  document.getElementById('matchSentSection').style.display='none';
+  document.getElementById('matchSentSection').style.display= getMyEmail() ? 'block' : 'none';
   // Default doubles on
   document.getElementById('matchOptDoubles')?.classList.add('on');
   document.getElementById('matchOptSingles')?.classList.remove('on');
@@ -5103,6 +5549,7 @@ async function restoreSession(email, playerData){
   }, 500);
 
   loadIcPending();
+  setTimeout(loadMatchSquareCounts, 800);
 
   if(!S.addrLat && player.city && player.state) geocodeCityForSession(player.city, player.state);
   showPage('innerCircle');
@@ -5213,6 +5660,10 @@ function restoreProfileForm(player){
   if(!player||RESTORING_PROFILE) return;
   RESTORING_PROFILE=true;
   setTimeout(()=>{RESTORING_PROFILE=false;},500);
+
+  // Switch button to edit mode
+  const btn = document.getElementById('btnSubmit');
+  if(btn){ btn.textContent='✏️ Update Profile'; btn.disabled=false; }
 
   function restoreChip(groupId,value){
     if(!value) return;
@@ -5330,6 +5781,7 @@ function formatPhoneDisplay(digits){
 let IC_MEMBERS = [];
 let IC_FAVORITES = new Set(); // emails of favorited members
 let IC_PENDING_PLAYERS = [];
+let IC_INVITED_PLAYERS = []; // players you've invited who haven't accepted yet
 let IC_INCOMING_COUNT = 0;
 let icPendingConfirm = null;
 
@@ -5361,6 +5813,7 @@ async function loadInnerCircle(){
     updateIcStats([]);
     updateNavCircleBadges(IC_MEMBERS.length, IC_PENDING_PLAYERS?.length||0, IC_INCOMING_COUNT);
     loadIcInvites();
+    loadIcPending();
   }catch(e){ console.warn('loadInnerCircle error:',e); }
 }
 
@@ -5452,8 +5905,17 @@ async function loadIcPending(){
     let pending = await res.json();
     pending.sort((a,b)=>(a.requester_name||'').localeCompare(b.requester_name||''));
     IC_INCOMING_COUNT = pending.length;
+
+    // Update left nav purple badge
     const pb = document.getElementById('icNavPurpleBadge');
     if(pb){ pb.textContent=pending.length; pb.classList.toggle('placeholder',pending.length===0); pb.style.opacity=pending.length>0?'1':'0.5'; pb.style.display='inline-flex'; }
+
+    // Update top purple button (stays in sync with nav badge)
+    const topBadge = document.getElementById('topRequestsBadge');
+    if(topBadge){ topBadge.textContent=pending.length; topBadge.style.display=pending.length>0?'inline-block':'none'; }
+    const topLabel = document.getElementById('topRequestsLabel');
+    if(topLabel) topLabel.textContent = pending.length>0 ? 'View Member Requests ('+pending.length+')' : 'View Member Requests';
+
     if(!pending.length){ if(card) card.style.display='none'; return; }
     if(card) card.style.display='block';
     if(badge) badge.textContent=pending.length;
@@ -5536,7 +5998,7 @@ function updateIcStats(pendingMembers){
       else mMy++;
     }
   });
-  const pending=pendingMembers||IC_PENDING_PLAYERS||[];
+  const pending=pendingMembers||IC_INVITED_PLAYERS||[];
   let pMale=0,pFemale=0,pOther=0,pBelow=0,pMy=0,pAbove=0;
   pending.forEach(player=>{
     const g=(player.gender||'').toLowerCase();
@@ -6003,37 +6465,88 @@ async function loadIcInvites(){
   const list=document.getElementById('icInvitesList');
   if(!card||!list) return;
   try{
-    const res=await fetch(`${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(myEmail)}&status=eq.pending&select=*&order=created_at.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    // Fetch ALL sent invites (pending + approved + declined) for history
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(myEmail)}&select=*&order=created_at.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     if(!res.ok) return;
-    const pending=await res.json();
+    const allSent=await res.json();
+    const pending=allSent.filter(c=>c.status==='pending');
+    const accepted=allSent.filter(c=>c.status==='approved');
+    const declined=allSent.filter(c=>c.status==='declined');
+
+    // Populate IC_INVITED_PLAYERS with profile data for pending invites (for IC stats)
+    IC_INVITED_PLAYERS = [];
+    if(pending.length){
+      const emails=pending.map(c=>c.recipient_email).filter(Boolean);
+      if(emails.length){
+        try{
+          const pr=await fetch(`${SUPABASE_URL}/rest/v1/registrations?email=in.(${emails.map(e=>encodeURIComponent(e)).join(',')})&select=email,gender,skill_level`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+          if(pr.ok) IC_INVITED_PLAYERS = await pr.json();
+        }catch(e){}
+      }
+    }
+    // Refresh IC stats with updated invited data
+    updateIcStats([]);
+
+    // Update yellow badge with pending count
     const navPendBadge=document.getElementById('icNavYellowBadge');
-    if(navPendBadge){navPendBadge.textContent=pending.length;navPendBadge.classList.toggle('placeholder',pending.length===0);navPendBadge.style.opacity=pending.length>0?'1':'0.4';navPendBadge.style.display='inline-flex';}
-    if(!pending.length){card.style.display='none';return;}
+    if(navPendBadge){
+      navPendBadge.textContent=pending.length;
+      navPendBadge.classList.toggle('placeholder',pending.length===0);
+      navPendBadge.style.opacity=pending.length>0?'1':'0.4';
+      navPendBadge.style.display='inline-flex';
+    }
+
+    if(!allSent.length){card.style.display='none';return;}
     card.style.display='block';
     const badge=document.getElementById('icInvitesBadge');
-    if(badge) badge.textContent=pending.length;
+    if(badge) badge.textContent=pending.length||'';
+
     list.innerHTML='';
-    pending.forEach(conn=>{
-      const name=conn.recipient_name||conn.recipient_email;
-      const initials=name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
-      const sentAt=conn.created_at?new Date(conn.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
-      const row=document.createElement('div');
-      row.className='ic-invite-row';
-      const cancelBtn=document.createElement('button');
-      cancelBtn.className='ic-member-btn ic-mem-btn-remove';
-      cancelBtn.style.marginLeft='auto';
-      cancelBtn.textContent='Cancel';
-      cancelBtn.onclick=async function(){
-        cancelBtn.disabled=true;cancelBtn.textContent='Cancelling…';
-        await fetch(`${SUPABASE_URL}/rest/v1/connections?id=eq.${conn.id}`,{method:'DELETE',headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
-        showToast('Invite cancelled','#f59e0b');
-        loadIcInvites();
-      };
-      row.innerHTML='<div class="ic-invite-avatar">'+initials+'</div><div style="flex:1;"><div class="ic-invite-name">'+name+'</div><div class="ic-invite-meta">'+(sentAt?'Sent '+sentAt:'Pending')+'</div></div><span class="ic-invite-status">Awaiting</span>';
-      row.appendChild(cancelBtn);
-      list.appendChild(row);
-    });
-  }catch(e){}
+
+    const renderGroup=(items, statusLabel, statusColor, showCancel)=>{
+      if(!items.length) return;
+      const hdr=document.createElement('div');
+      hdr.style.cssText='font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;'+
+        'letter-spacing:.06em;padding:8px 0 4px;border-top:1px solid var(--border);margin-top:4px;';
+      hdr.textContent=statusLabel+' ('+items.length+')';
+      list.appendChild(hdr);
+      items.forEach(conn=>{
+        const name=conn.recipient_name||conn.recipient_email;
+        const initials=name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
+        const sentAt=conn.created_at?new Date(conn.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
+        const updatedAt=conn.status!=='pending'&&(conn.updated_at||conn.created_at)
+          ?new Date(conn.updated_at||conn.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
+          :'';
+        const row=document.createElement('div');
+        row.className='ic-invite-row';
+        const meta=sentAt?'Sent '+sentAt+(updatedAt?' · '+statusLabel+' '+updatedAt:''):'';
+        row.innerHTML=
+          '<div class="ic-invite-avatar" style="background:'+(conn.status==='approved'?'rgba(76,175,125,0.2)':conn.status==='declined'?'rgba(239,68,68,0.15)':'rgba(255,255,255,0.08)')+';color:'+(conn.status==='approved'?'var(--green)':conn.status==='declined'?'#f87171':'#fff')+';">'+initials+'</div>'+
+          '<div style="flex:1;"><div class="ic-invite-name">'+name+'</div>'+
+          '<div class="ic-invite-meta">'+meta+'</div></div>'+
+          '<span class="ic-invite-status" style="color:'+statusColor+';">'+statusLabel+'</span>';
+        if(showCancel){
+          const cancelBtn=document.createElement('button');
+          cancelBtn.className='ic-member-btn ic-mem-btn-remove';
+          cancelBtn.style.cssText='margin-left:8px;padding:4px 10px;font-size:11px;';
+          cancelBtn.textContent='Cancel';
+          cancelBtn.onclick=async function(){
+            cancelBtn.disabled=true;cancelBtn.textContent='Cancelling…';
+            await fetch(`${SUPABASE_URL}/rest/v1/connections?id=eq.${conn.id}`,{method:'DELETE',headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+            showToast('Invite cancelled','#f59e0b');
+            loadIcInvites();
+          };
+          row.appendChild(cancelBtn);
+        }
+        list.appendChild(row);
+      });
+    };
+
+    renderGroup(pending,  '⏳ Awaiting', '#fbbf24', true);
+    renderGroup(accepted, '✅ Accepted', 'var(--green)', false);
+    renderGroup(declined, '❌ Declined', '#f87171', false);
+
+  }catch(e){ console.warn('loadIcInvites error:',e); }
 }
 
 // ── IC View modes ─────────────────────────────────────
