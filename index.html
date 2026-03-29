@@ -3040,7 +3040,9 @@ async function submitForm(){
       wants_to_improve:    S.wantsToImprove || null,
       goal_rating:         S.goalRating || null,
       has_had_lesson:      S.hasHadLesson || null,
-      wants_lesson:        S.wantsLesson || null
+      wants_lesson:        S.wantsLesson || null,
+      lat:                 S.addrLat || SESSION_PLAYER?.lat || null,
+      lon:                 S.addrLon || SESSION_PLAYER?.lon || null,
     });
     console.log('✅ Registration saved');
     showToast('✅ Profile saved!', '#4CAF7D');
@@ -4804,7 +4806,7 @@ function initSetupMatch(){
   updateMatchGroupLabels();
   buildMatchTimeChips();
   loadSentMatches();
-  document.getElementById('matchSentSection').style.display='none';
+  document.getElementById('matchSentSection').style.display= getMyEmail() ? 'block' : 'none';
   // Default doubles on
   document.getElementById('matchOptDoubles')?.classList.add('on');
   document.getElementById('matchOptSingles')?.classList.remove('on');
@@ -5479,6 +5481,7 @@ async function loadInnerCircle(){
     updateIcStats([]);
     updateNavCircleBadges(IC_MEMBERS.length, IC_PENDING_PLAYERS?.length||0, IC_INCOMING_COUNT);
     loadIcInvites();
+    loadIcPending();
   }catch(e){ console.warn('loadInnerCircle error:',e); }
 }
 
@@ -6121,37 +6124,74 @@ async function loadIcInvites(){
   const list=document.getElementById('icInvitesList');
   if(!card||!list) return;
   try{
-    const res=await fetch(`${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(myEmail)}&status=eq.pending&select=*&order=created_at.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    // Fetch ALL sent invites (pending + approved + declined) for history
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(myEmail)}&select=*&order=created_at.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     if(!res.ok) return;
-    const pending=await res.json();
+    const allSent=await res.json();
+    const pending=allSent.filter(c=>c.status==='pending');
+    const accepted=allSent.filter(c=>c.status==='approved');
+    const declined=allSent.filter(c=>c.status==='declined');
+
+    // Update yellow badge with pending count
     const navPendBadge=document.getElementById('icNavYellowBadge');
-    if(navPendBadge){navPendBadge.textContent=pending.length;navPendBadge.classList.toggle('placeholder',pending.length===0);navPendBadge.style.opacity=pending.length>0?'1':'0.4';navPendBadge.style.display='inline-flex';}
-    if(!pending.length){card.style.display='none';return;}
+    if(navPendBadge){
+      navPendBadge.textContent=pending.length;
+      navPendBadge.classList.toggle('placeholder',pending.length===0);
+      navPendBadge.style.opacity=pending.length>0?'1':'0.4';
+      navPendBadge.style.display='inline-flex';
+    }
+
+    if(!allSent.length){card.style.display='none';return;}
     card.style.display='block';
     const badge=document.getElementById('icInvitesBadge');
-    if(badge) badge.textContent=pending.length;
+    if(badge) badge.textContent=pending.length||'';
+
     list.innerHTML='';
-    pending.forEach(conn=>{
-      const name=conn.recipient_name||conn.recipient_email;
-      const initials=name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
-      const sentAt=conn.created_at?new Date(conn.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
-      const row=document.createElement('div');
-      row.className='ic-invite-row';
-      const cancelBtn=document.createElement('button');
-      cancelBtn.className='ic-member-btn ic-mem-btn-remove';
-      cancelBtn.style.marginLeft='auto';
-      cancelBtn.textContent='Cancel';
-      cancelBtn.onclick=async function(){
-        cancelBtn.disabled=true;cancelBtn.textContent='Cancelling…';
-        await fetch(`${SUPABASE_URL}/rest/v1/connections?id=eq.${conn.id}`,{method:'DELETE',headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
-        showToast('Invite cancelled','#f59e0b');
-        loadIcInvites();
-      };
-      row.innerHTML='<div class="ic-invite-avatar">'+initials+'</div><div style="flex:1;"><div class="ic-invite-name">'+name+'</div><div class="ic-invite-meta">'+(sentAt?'Sent '+sentAt:'Pending')+'</div></div><span class="ic-invite-status">Awaiting</span>';
-      row.appendChild(cancelBtn);
-      list.appendChild(row);
-    });
-  }catch(e){}
+
+    const renderGroup=(items, statusLabel, statusColor, showCancel)=>{
+      if(!items.length) return;
+      const hdr=document.createElement('div');
+      hdr.style.cssText='font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;'+
+        'letter-spacing:.06em;padding:8px 0 4px;border-top:1px solid var(--border);margin-top:4px;';
+      hdr.textContent=statusLabel+' ('+items.length+')';
+      list.appendChild(hdr);
+      items.forEach(conn=>{
+        const name=conn.recipient_name||conn.recipient_email;
+        const initials=name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
+        const sentAt=conn.created_at?new Date(conn.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
+        const updatedAt=conn.status!=='pending'&&(conn.updated_at||conn.created_at)
+          ?new Date(conn.updated_at||conn.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
+          :'';
+        const row=document.createElement('div');
+        row.className='ic-invite-row';
+        const meta=sentAt?'Sent '+sentAt+(updatedAt?' · '+statusLabel+' '+updatedAt:''):'';
+        row.innerHTML=
+          '<div class="ic-invite-avatar" style="background:'+(conn.status==='approved'?'rgba(76,175,125,0.2)':conn.status==='declined'?'rgba(239,68,68,0.15)':'rgba(255,255,255,0.08)')+';color:'+(conn.status==='approved'?'var(--green)':conn.status==='declined'?'#f87171':'#fff')+';">'+initials+'</div>'+
+          '<div style="flex:1;"><div class="ic-invite-name">'+name+'</div>'+
+          '<div class="ic-invite-meta">'+meta+'</div></div>'+
+          '<span class="ic-invite-status" style="color:'+statusColor+';">'+statusLabel+'</span>';
+        if(showCancel){
+          const cancelBtn=document.createElement('button');
+          cancelBtn.className='ic-member-btn ic-mem-btn-remove';
+          cancelBtn.style.cssText='margin-left:8px;padding:4px 10px;font-size:11px;';
+          cancelBtn.textContent='Cancel';
+          cancelBtn.onclick=async function(){
+            cancelBtn.disabled=true;cancelBtn.textContent='Cancelling…';
+            await fetch(`${SUPABASE_URL}/rest/v1/connections?id=eq.${conn.id}`,{method:'DELETE',headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+            showToast('Invite cancelled','#f59e0b');
+            loadIcInvites();
+          };
+          row.appendChild(cancelBtn);
+        }
+        list.appendChild(row);
+      });
+    };
+
+    renderGroup(pending,  '⏳ Awaiting', '#fbbf24', true);
+    renderGroup(accepted, '✅ Accepted', 'var(--green)', false);
+    renderGroup(declined, '❌ Declined', '#f87171', false);
+
+  }catch(e){ console.warn('loadIcInvites error:',e); }
 }
 
 // ── IC View modes ─────────────────────────────────────
