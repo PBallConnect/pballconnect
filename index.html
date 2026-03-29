@@ -3077,8 +3077,9 @@ function showProfileDiff(){
   // Field labels and current vs new values
   const stateAbbr=(st)=>{
     if(!st) return '';
-    const abbr=Object.entries(STATE_INFO).find(([k,v])=>v[1]&&v[1].toLowerCase()===st.toLowerCase());
-    return abbr?abbr[0]:(st.length===2?st.toUpperCase():st);
+    if(st.length===2) return st.toUpperCase(); // already an abbreviation
+    const found=Object.values(STATE_INFO).find(v=>v[1]&&v[1].toLowerCase()===st.toLowerCase());
+    return found?found[0]:st;
   };
   const fields=[
     {label:'First Name',   old:player.first_name||'', nw:v('firstName')},
@@ -3176,9 +3177,11 @@ async function doSaveProfile(){
       city:                v('addrCity')||S.city,
       state:               (()=>{ 
         const st = v('addrState')||S.state||'';
+        if(!st) return '';
+        if(st.length===2) return st.toUpperCase();
         // Convert full state name to abbreviation
-        const abbr = Object.entries(STATE_INFO).find(([k,v])=>v[1]&&v[1].toLowerCase()===st.toLowerCase());
-        return abbr ? abbr[0] : (st.length===2 ? st.toUpperCase() : st);
+        const found = Object.values(STATE_INFO).find(([abbr,name])=>name&&name.toLowerCase()===st.toLowerCase());
+        return found ? found[0] : st;
       })(),
       zip_code:            v('addrZip'),
       county:              v('addrCounty')||S.county,
@@ -3276,6 +3279,10 @@ async function doSaveProfile(){
     showToast('✅ Profile updated!', '#4CAF7D');
   } else {
     document.getElementById('confirmOverlay').style.display='flex';
+    // If arrived via invite link, show IC join prompt after a short delay
+    const newEmail = v('email') || getMyEmail();
+    const newName  = (v('firstName')+' '+v('lastName')).trim();
+    setTimeout(()=>handlePostRegistrationInvite(newEmail, newName), 1500);
   }
 }
 
@@ -4873,6 +4880,7 @@ async function submitMatch(){
     btn.textContent='✅ Sent!';
     document.getElementById('matchSentSection').style.display='block';
     loadSentMatches();
+    loadMatchSquareCounts();
     setTimeout(()=>{ MS.format='doubles';MS.group=null;MS.specificPlayers.clear();MS.selectedGroups=new Set();MS.extraGroups=new Set();MS.isFeeler=false;MS.date=null;MS.courtId=null;MS.courtName=null;MS.duration=2; matchGoTo(1); btn.textContent='🎾 Send Match Invite';btn.disabled=false; },3000);
   }catch(e){ status.textContent='⚠️ Error: '+e.message; btn.disabled=false; btn.textContent='🎾 Send Match Invite'; }
 }
@@ -6864,6 +6872,8 @@ async function loadSentInvites(){
   }catch(e){}
 }
 
+let PENDING_INVITE = null;
+
 function checkInviteToken(){
   const params=new URLSearchParams(window.location.search);
   const token=params.get('invite');
@@ -6872,6 +6882,7 @@ function checkInviteToken(){
   .then(r=>r.json()).then(rows=>{
     if(rows.length){
       const inv=rows[0];
+      PENDING_INVITE=inv;
       const emailInput=document.getElementById('email');
       if(emailInput&&inv.invitee_email) emailInput.value=inv.invitee_email;
       showInviteBanner(inv);
@@ -6884,9 +6895,48 @@ function showInviteBanner(invite){
   const banner=document.createElement('div');
   banner.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:600;background:#0a120b;border:1px solid var(--green);border-radius:14px;padding:16px 24px;max-width:480px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.4);';
   const inviterName=invite.inviter_name||'A fellow player';
-  banner.innerHTML='<div style="display:flex;align-items:flex-start;gap:12px;"><span style="font-size:24px;flex-shrink:0;">🎾</span><div style="flex:1;"><div style="color:var(--green);font-weight:700;font-size:14px;margin-bottom:4px;">You were invited by '+inviterName+'!</div><div style="color:rgba(255,255,255,0.7);font-size:12px;">Set up your player profile below.</div>'+(invite.personal_note?'<div style="margin-top:8px;font-size:12px;color:#fff;font-style:italic;">"'+invite.personal_note+'"</div>':'')+'</div><button onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:18px;">✕</button></div>';
+  banner.innerHTML='<div style="display:flex;align-items:flex-start;gap:12px;"><span style="font-size:24px;flex-shrink:0;">&#127934;</span><div style="flex:1;"><div style="color:var(--green);font-weight:700;font-size:14px;margin-bottom:4px;">You were invited by '+inviterName+'!</div><div style="color:rgba(255,255,255,0.7);font-size:12px;">Set up your player profile below to join.</div>'+(invite.personal_note?'<div style="margin-top:8px;font-size:12px;color:#fff;font-style:italic;">"'+invite.personal_note+'"</div>':'')+'</div><button onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:18px;">&times;</button></div>';
   document.body.appendChild(banner);
   setTimeout(()=>{if(banner.parentNode)banner.remove();},12000);
+}
+
+async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
+  if(!PENDING_INVITE) return;
+  const inv=PENDING_INVITE;
+  PENDING_INVITE=null;
+  fetch(`${SUPABASE_URL}/rest/v1/invites?invite_token=eq.${inv.invite_token}`,{
+    method:'PATCH',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+    body:JSON.stringify({status:'registered'})
+  }).catch(()=>{});
+  const inviterName=inv.inviter_name||'your inviter';
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.88);display:flex;align-items:center;justify-content:center;padding:16px;z-index:700;';
+  overlay.innerHTML=
+    '<div style="background:#0f1f12;border:1px solid var(--green);border-radius:20px;padding:28px 24px;max-width:420px;width:100%;text-align:center;">'+
+      '<div style="font-size:40px;margin-bottom:12px;">&#129309;</div>'+
+      '<div style="font-size:18px;font-weight:800;color:#fff;margin-bottom:8px;">Join '+inviterName+'\'s Inner Circle?</div>'+
+      '<div style="font-size:13px;color:var(--dim);margin-bottom:20px;line-height:1.6;">'+
+        inviterName+' personally invited you. Add them to your Inner Circle so you can set up matches together!'+
+      '</div>'+
+      '<div style="display:flex;gap:10px;">'+
+        '<button id="icJoinYes" style="flex:1;padding:12px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:14px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">&#10003; Yes, Connect!</button>'+
+        '<button id="icJoinNo" style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Maybe Later</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(overlay);
+  document.getElementById('icJoinYes').onclick=async()=>{
+    overlay.remove();
+    try{
+      await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+        body:JSON.stringify({requester_email:newPlayerEmail,requester_name:newPlayerName,recipient_email:inv.inviter_email,recipient_name:inv.inviter_name||'',status:'pending'})
+      });
+      showToast('Inner Circle request sent to '+inviterName+'!','#4CAF7D');
+    }catch(e){ showToast('Could not send connection request','#f59e0b'); }
+  };
+  document.getElementById('icJoinNo').onclick=()=>overlay.remove();
 }
 
 document.addEventListener('DOMContentLoaded',checkInviteToken);
