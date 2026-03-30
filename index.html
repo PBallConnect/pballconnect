@@ -6168,31 +6168,33 @@ async function icSendRequest(recipientEmail, recipientName, btn){
 
 function updateIcStats(pendingMembers){
   const mySkill=S.skill||SESSION_PLAYER?.skill_level||'';
-  const skills=mySkill?getAdjacentSkills(mySkill):null;
+  const myVal=parseFloat(mySkill||0);
   const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
   let mMale=0,mFemale=0,mOther=0,mBelow=0,mMy=0,mAbove=0;
   IC_MEMBERS.forEach(({player})=>{
     const g=(player.gender||'').toLowerCase();
     if(g==='male') mMale++; else if(g==='female') mFemale++; else mOther++;
-    if(skills){
+    if(myVal>0){
       const ps=parseFloat(player.skill_level||0);
-      if(skills.below!==null&&Math.abs(ps-skills.below)<0.13) mBelow++;
-      else if(Math.abs(ps-skills.my)<0.13) mMy++;
-      else if(skills.above!==null&&Math.abs(ps-skills.above)<0.13) mAbove++;
-      else mMy++;
+      const diff=parseFloat((ps-myVal).toFixed(4));
+      if(diff<0) mBelow++;
+      else if(diff===0) mMy++;
+      else mAbove++;
     }
   });
-  const pending=pendingMembers||IC_INVITED_PLAYERS||[];
+  const pending = (pendingMembers && pendingMembers.length > 0) ? pendingMembers : IC_INVITED_PLAYERS;
   let pMale=0,pFemale=0,pOther=0,pBelow=0,pMy=0,pAbove=0;
   pending.forEach(player=>{
     const g=(player.gender||'').toLowerCase();
     if(g==='male') pMale++; else if(g==='female') pFemale++; else pOther++;
-    if(skills&&player.skill_level){
+    if(myVal>0&&player.skill_level){
       const ps=parseFloat(player.skill_level||0);
-      if(skills.below!==null&&Math.abs(ps-skills.below)<0.13) pBelow++;
-      else if(Math.abs(ps-skills.my)<0.13) pMy++;
-      else if(skills.above!==null&&Math.abs(ps-skills.above)<0.13) pAbove++;
-      else pMy++;
+      const diff=parseFloat((ps-myVal).toFixed(4));
+      if(diff<0) pBelow++;
+      else if(diff===0) pMy++;
+      else pAbove++;
+    } else if(player.skill_level===''||!player.skill_level){
+      // unregistered invitee — count in total but not level buckets
     }
   });
   set('gMaleMember',mMale); set('gFemaleMember',mFemale); set('gOtherMember',mOther); set('gTotalMember',IC_MEMBERS.length);
@@ -6882,8 +6884,9 @@ function switchCircleView(view){
 }
 
 function renderCircleSkillColumns(){
-  const mySkill=S.skill||'';
+  const mySkill=S.skill||SESSION_PLAYER?.skill_level||'';
   if(!mySkill) return;
+  const myVal=parseFloat(mySkill);
   const skills=getAdjacentSkills(mySkill);
   const lb=document.getElementById('circleColBelowLabel');
   const lm=document.getElementById('circleColMyLabel');
@@ -6891,20 +6894,28 @@ function renderCircleSkillColumns(){
   if(lb) lb.textContent=skills.below!==null?skills.below:'—';
   if(lm) lm.textContent=skills.my!==null?skills.my:'—';
   if(la) la.textContent=skills.above!==null?skills.above:'—';
-  const buckets={below:[],my:[],above:[],other:[]};
+
+  const buckets={below:[],my:[],above:[]};
   IC_MEMBERS.forEach(({player,conn})=>{
     const ps=parseFloat(player.skill_level||0);
-    if(skills.below!==null&&Math.abs(ps-skills.below)<0.13) buckets.below.push({player,conn});
-    else if(Math.abs(ps-skills.my)<0.13) buckets.my.push({player,conn});
-    else if(skills.above!==null&&Math.abs(ps-skills.above)<0.13) buckets.above.push({player,conn});
-    else buckets.other.push({player,conn});
+    const diff=parseFloat((ps-myVal).toFixed(4));
+    if(diff<0) buckets.below.push({player,conn});        // anyone below my level
+    else if(diff===0) buckets.my.push({player,conn});    // exactly my level
+    else buckets.above.push({player,conn});              // anyone above my level
   });
+
   ['below','my','above'].forEach(key=>{
     const colId='circleCol'+key.charAt(0).toUpperCase()+key.slice(1);
     const col=document.getElementById(colId);
     if(!col) return;
     col.innerHTML='';
     if(!buckets[key].length){col.innerHTML='<div class="ic-col-empty">No members at this level</div>';return;}
+    // Sort by skill level descending (closest to my level first)
+    buckets[key].sort((a,b)=>{
+      const da=Math.abs(parseFloat(a.player.skill_level||0)-myVal);
+      const db=Math.abs(parseFloat(b.player.skill_level||0)-myVal);
+      return da-db;
+    });
     buckets[key].forEach(({player,conn})=>{
       const card=buildIcMemberCard(player,conn,getMyEmail(),null);
       col.appendChild(card);
