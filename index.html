@@ -929,6 +929,15 @@
     <div id="editProfileBtn" style="display:none;">
       <div class="top-edit-btn" onclick="openEditProfile()" title="Edit Profile Button — update your info, nickname, emoji and schedule">✏️ Edit Profile</div>
     </div>
+    <div id="viewMatchInvitesBtn" style="display:none;">
+      <div onclick="showPage('invitedByOthers')" title="Match invites you've received"
+        style="display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;
+          background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.3);cursor:pointer;">
+        <span>📥</span>
+        <span id="topMatchInvitesLabel" style="color:#60a5fa;font-size:12px;font-weight:700;">Invited to Play</span>
+        <span id="topMatchInvitesBadge" style="display:none;background:#3b82f6;color:#fff;font-size:9px;font-weight:800;padding:1px 6px;border-radius:999px;margin-left:2px;"></span>
+      </div>
+    </div>
     <div id="viewRequestsBtn" style="display:none;">
       <div class="top-requests-btn" id="topRequestsBtn" onclick="showIcView('incoming')" title="Member Requests Button — players who want you to join their Inner Circle">
         <span>🟣</span>
@@ -977,9 +986,9 @@
         <span class="nav-icon">🎯</span>
         <span class="nav-label">Set Up A Match</span>
       </div>
-      <div class="nav-item" onclick="showPage('myInvites')" id="nav-myInvites" title="My Invites — matches you've organized">
+      <div class="nav-item" onclick="showPage('myInvites')" id="nav-myInvites" title="My Match Invites — matches you've organized">
         <span class="nav-icon">📤</span>
-        <span class="nav-label">My Invites</span>
+        <span class="nav-label">My Match Invites</span>
         <span id="myInvitesBadge" style="display:none;background:rgba(239,68,68,0.85);color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;"></span>
       </div>
       <div class="nav-item" onclick="showPage('invitedByOthers')" id="nav-invitedByOthers" title="Invited by Others — matches you've been invited to">
@@ -2070,7 +2079,7 @@
           onmouseover="this.style.background='rgba(239,68,68,0.15)'"
           onmouseout="this.style.background='rgba(239,68,68,0.08)'">
           <div id="matchSquareMyCount" style="font-size:32px;font-weight:800;color:#f87171;line-height:1;">0</div>
-          <div style="font-size:11px;color:var(--dim);margin-top:4px;font-weight:600;">My Invites</div>
+          <div style="font-size:11px;color:var(--dim);margin-top:4px;font-weight:600;">My Match Invites</div>
           <div style="font-size:10px;color:rgba(248,113,113,0.7);margin-top:2px;">tap to view →</div>
         </div>
         <div id="matchSquareInvitedTo" onclick="showPage('invitedByOthers')"
@@ -2408,7 +2417,7 @@
     <!-- MY INVITES PAGE -->
     <div class="page-section" id="page-myInvites">
       <div class="page-header">
-        <h1>My <span>Invites</span></h1>
+        <h1>My Match <span>Invites</span></h1>
         <p>Matches you've organized and their response status</p>
       </div>
       <div id="myInvitesList" style="max-width:700px;"></div>
@@ -3236,6 +3245,19 @@ async function doSaveProfile(){
       SESSION_PLAYER.first_name   = _savedFirstName;
       SESSION_PLAYER.skill_level  = _savedSkill;
       SESSION_PLAYER.playing_since = _savedSince;
+      // Explicitly update address fields so Edit Profile shows new values
+      SESSION_PLAYER.address  = v('addressSearch') || SESSION_PLAYER.address;
+      SESSION_PLAYER.city     = v('addrCity')       || SESSION_PLAYER.city;
+      SESSION_PLAYER.zip_code = v('addrZip')        || SESSION_PLAYER.zip_code;
+      SESSION_PLAYER.county   = v('addrCounty')     || SESSION_PLAYER.county;
+      const rawState = v('addrState') || SESSION_PLAYER.state || '';
+      if(rawState.length===2) SESSION_PLAYER.state = rawState.toUpperCase();
+      else {
+        const found = Object.values(STATE_INFO).find(([a,n])=>n&&n.toLowerCase()===rawState.toLowerCase());
+        SESSION_PLAYER.state = found ? found[0] : rawState;
+      }
+      if(S.addrLat) SESSION_PLAYER.lat = S.addrLat;
+      if(S.addrLon) SESSION_PLAYER.lon = S.addrLon;
     }
     // Re-fetch the saved record and restore to ensure top bar is accurate
     const savedEmail = v('email') || getMyEmail();
@@ -4993,7 +5015,7 @@ async function loadMatchSquareCounts(){
   }catch(e){ console.warn('loadMatchSquareCounts error:',e); }
 }
 
-// ── My Invites page ─────────────────────────────────────
+// ── My Match Invites page ────────────────────────────────
 async function loadMyInvitesPage(){
   const myEmail=getMyEmail();
   const container=document.getElementById('myInvitesList');
@@ -5395,6 +5417,15 @@ function openLoginModal(){
   const modal = document.getElementById('loginModal');
   if(modal){
     modal.style.display='flex';
+    // If the user arrived via invite, show sign-up messaging
+    if(PENDING_INVITE){
+      const titleEl = modal.querySelector('[style*="Welcome back"]');
+      const subEl   = modal.querySelector('[style*="Sign in to access"]');
+      const btnEl   = document.getElementById('loginSubmitBtn');
+      if(titleEl) titleEl.textContent = 'Welcome! 🎾';
+      if(subEl)   subEl.textContent   = 'Enter your email to get started';
+      if(btnEl)   btnEl.textContent   = 'Sign Up / Sign In →';
+    }
     setTimeout(()=>document.getElementById('loginEmail')?.focus(), 100);
   }
 }
@@ -5527,8 +5558,26 @@ async function restoreSession(email, playerData){
   if(editBtn) editBtn.style.display='block';
   const reqBtn = document.getElementById('viewRequestsBtn');
   if(reqBtn) reqBtn.style.display='block';
+  const matchInvBtn = document.getElementById('viewMatchInvitesBtn');
+  if(matchInvBtn) matchInvBtn.style.display='block';
   updateTopBar(player);
   showToast('Welcome back, '+(player.first_name||'Player')+'! 🎾','#4CAF7D');
+
+  // Load blue match invites badge count
+  setTimeout(async()=>{
+    try{
+      const myEm=(player.email||'').toLowerCase();
+      const mir=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEm)}&response=eq.pending&select=match_id`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      const mRows=mir.ok?await mir.json():[];
+      const mCount=mRows.length;
+      const topBadge=document.getElementById('topMatchInvitesBadge');
+      if(topBadge){topBadge.textContent=mCount;topBadge.style.display=mCount>0?'inline-block':'none';}
+      const topLabel=document.getElementById('topMatchInvitesLabel');
+      if(topLabel) topLabel.textContent=mCount>0?'Invited to Play ('+mCount+')':'Invited to Play';
+      const navBadge=document.getElementById('invitedByOthersBadge');
+      if(navBadge){navBadge.textContent=mCount;navBadge.style.display=mCount>0?'inline-flex':'none';}
+    }catch(e){}
+  }, 600);
 
   setTimeout(async()=>{
     const myEmail = (player.email||'').toLowerCase();
@@ -6488,8 +6537,16 @@ async function loadIcInvites(){
       if(emails.length){
         try{
           const pr=await fetch(`${SUPABASE_URL}/rest/v1/registrations?email=in.(${emails.map(e=>encodeURIComponent(e)).join(',')})&select=email,gender,skill_level`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
-          if(pr.ok) IC_INVITED_PLAYERS = await pr.json();
-        }catch(e){}
+          const registered = pr.ok ? await pr.json() : [];
+          // For invitees not yet registered, create placeholder entries so count is correct
+          const regEmails = new Set(registered.map(r=>r.email.toLowerCase()));
+          IC_INVITED_PLAYERS = [...registered];
+          emails.forEach(e=>{
+            if(!regEmails.has(e.toLowerCase())){
+              IC_INVITED_PLAYERS.push({email:e, gender:'', skill_level:''}); // unregistered placeholder
+            }
+          });
+        }catch(e){ IC_INVITED_PLAYERS = pending.map(c=>({email:c.recipient_email,gender:'',skill_level:''})); }
       }
     }
     // Refresh IC stats with updated invited data
@@ -6838,6 +6895,15 @@ async function sendInvite(method){
       showToast('✅ Email invite sent to '+inviteeEmail,'#4CAF7D');
       const emailEl=document.getElementById('inviteEmail');if(emailEl)emailEl.value='';
       const noteEl=document.getElementById('inviteNote');if(noteEl)noteEl.value='';
+      // Also create a pending IC connection so it appears in yellow badge + invites section
+      if(inviteeEmail){
+        const inviteeName = inviteeEmail.split('@')[0]; // best guess at name until they register
+        fetch(`${SUPABASE_URL}/rest/v1/connections`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+          body:JSON.stringify({requester_email:myEmail,requester_name:myName,recipient_email:inviteeEmail,recipient_name:inviteeName,status:'pending'})
+        }).then(()=>{ loadIcInvites(); }).catch(()=>{});
+      }
       validateInviteForm(); loadSentInvites();
     }catch(e){if(statusEl) statusEl.textContent='⚠️ Email error: '+(e.text||e.message||'Unknown error');}
   }
@@ -6893,13 +6959,29 @@ function checkInviteToken(){
 
 function showInviteBanner(invite){
   const banner=document.createElement('div');
-  banner.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:600;background:#0a120b;border:1px solid var(--green);border-radius:14px;padding:16px 24px;max-width:480px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.4);';
+  banner.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:600;'+
+    'background:#0a120b;border:1px solid var(--green);border-radius:16px;padding:20px 24px;'+
+    'max-width:500px;width:92%;box-shadow:0 8px 32px rgba(0,0,0,0.5);';
   const inviterName=invite.inviter_name||'A fellow player';
-  banner.innerHTML='<div style="display:flex;align-items:flex-start;gap:12px;"><span style="font-size:24px;flex-shrink:0;">&#127934;</span><div style="flex:1;"><div style="color:var(--green);font-weight:700;font-size:14px;margin-bottom:4px;">You were invited by '+inviterName+'!</div><div style="color:rgba(255,255,255,0.7);font-size:12px;">Set up your player profile below to join.</div>'+(invite.personal_note?'<div style="margin-top:8px;font-size:12px;color:#fff;font-style:italic;">"'+invite.personal_note+'"</div>':'')+'</div><button onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:18px;">&times;</button></div>';
+  const note=invite.personal_note?'<div style="margin-top:6px;font-size:12px;color:#fff;font-style:italic;padding:8px 10px;background:rgba(255,255,255,0.05);border-radius:8px;">"'+invite.personal_note+'"</div>':'';
+  banner.innerHTML=
+    '<div style="display:flex;align-items:flex-start;gap:12px;">'+
+      '<span style="font-size:28px;flex-shrink:0;">&#127934;</span>'+
+      '<div style="flex:1;">'+
+        '<div style="color:var(--green);font-weight:800;font-size:15px;margin-bottom:4px;">'+inviterName+' invited you to Pickleball Registry!</div>'+
+        note+
+        '<div style="color:rgba(255,255,255,0.75);font-size:12px;margin-top:8px;line-height:1.5;">Fill out your profile below to join and connect with '+inviterName+'.</div>'+
+        '<button onclick="window.scrollTo({top:0,behavior:\'smooth\'});this.closest(\'div\').closest(\'div\').remove();" '+
+          'style="margin-top:10px;padding:8px 16px;border-radius:8px;border:none;background:var(--green);'+
+          'color:var(--dark);font-weight:700;font-size:12px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+
+          '&#8595; Start My Profile'+
+        '</button>'+
+      '</div>'+
+      '<button onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:18px;flex-shrink:0;">&times;</button>'+
+    '</div>';
   document.body.appendChild(banner);
-  setTimeout(()=>{if(banner.parentNode)banner.remove();},12000);
+  setTimeout(()=>{ window.scrollTo({top:0,behavior:'smooth'}); },300);
 }
-
 async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
   if(!PENDING_INVITE) return;
   const inv=PENDING_INVITE;
