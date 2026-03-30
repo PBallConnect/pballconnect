@@ -3124,17 +3124,18 @@ function showProfileDiff(){
     return found?found[0]:st;
   };
   const fields=[
-    {label:'First Name',   old:player.first_name||'', nw:v('firstName')},
-    {label:'Last Name',    old:player.last_name||'',  nw:v('lastName')},
-    {label:'Nickname',     old:player.nickname||'',   nw:v('nickname')},
-    {label:'Address',      old:player.address||'',    nw:v('addressSearch')},
-    {label:'City',         old:player.city||'',       nw:v('addrCity')},
-    {label:'State',        old:player.state||'',      nw:stateAbbr(v('addrState'))},
-    {label:'Zip',          old:player.zip_code||'',   nw:v('addrZip')},
+    {label:'First Name',   old:player.first_name||'',    nw:v('firstName')},
+    {label:'Last Name',    old:player.last_name||'',     nw:v('lastName')},
+    {label:'Nickname',     old:player.nickname||'',      nw:v('nickname')},
+    {label:'Address',      old:player.address||'',       nw:v('addressSearch')},
+    {label:'City',         old:player.city||'',          nw:v('addrCity')},
+    {label:'State',        old:player.state||'',         nw:stateAbbr(v('addrState'))},
+    {label:'Zip',          old:player.zip_code||'',      nw:v('addrZip')},
     {label:'Skill Level',  old:String(player.skill_level||''), nw:String(S.skill||player.skill_level||'')},
-    {label:'Gender',       old:player.gender||'',     nw:S.gender||player.gender||''},
-    {label:'Handedness',   old:player.handedness||'', nw:S.handedness||player.handedness||''},
-    {label:'Phone',        old:player.phone||'',      nw:(v('phone')||'').replace(/\D/g,'')},
+    {label:'Gender',       old:player.gender||'',        nw:S.gender||''},
+    {label:'Handedness',   old:player.handedness||'',    nw:S.handedness||''},
+    {label:'Play Style',   old:player.play_style||'',    nw:S.playStyle||''},
+    {label:'Phone',        old:(player.phone||'').replace(/\D/g,''), nw:(v('phone')||'').replace(/\D/g,'')},
   ];
 
   const changed = fields.filter(f=>String(f.old).trim()!==String(f.nw).trim());
@@ -3233,20 +3234,19 @@ async function doSaveProfile(){
       shirt_size:          v('shirtSize'),
       schedule:            schedStr,
       anytime:             S.anytime,
-      photo_url:           null,
-      waiver_agreed:       S.waiver,
-      play_venues:         S.venuePref || (S.venues&&S.venues.size>0 ? [...S.venues].join(', ') : null),
-      drive_distance_miles: S.driveDistance || null,
-      play_style:          S.playStyle || null,
-      play_format:         S.playFormat || 'Both',
-      handedness:          S.handedness || null,
+      photo_url:           S.photoSrc || SESSION_PLAYER?.photo_url || null,
+      waiver_agreed:       S.waiver || SESSION_PLAYER?.waiver_agreed || false,
+      play_venues:         S.venuePref || SESSION_PLAYER?.play_venues || null,
+      drive_distance_miles: S.driveDistance || SESSION_PLAYER?.drive_distance_miles || null,
+      play_style:          S.playStyle || SESSION_PLAYER?.play_style || null,
+      play_format:         S.playFormat || SESSION_PLAYER?.play_format || 'Both',
+      handedness:          S.handedness || SESSION_PLAYER?.handedness || null,
       avatar_emoji:        S.avatarEmoji || '🎾',
-      play_venues:         S.venuePref   || null,
-      playing_since:       S.playingSince || null,
-      wants_to_improve:    S.wantsToImprove || null,
-      goal_rating:         S.goalRating || null,
-      has_had_lesson:      S.hasHadLesson || null,
-      wants_lesson:        S.wantsLesson || null,
+      playing_since:       S.playingSince || SESSION_PLAYER?.playing_since || null,
+      wants_to_improve:    S.wantsToImprove || SESSION_PLAYER?.wants_to_improve || null,
+      goal_rating:         S.goalRating || SESSION_PLAYER?.goal_rating || null,
+      has_had_lesson:      S.hasHadLesson || SESSION_PLAYER?.has_had_lesson || null,
+      wants_lesson:        S.wantsLesson || SESSION_PLAYER?.wants_lesson || null,
       lat:                 S.addrLat || SESSION_PLAYER?.lat || null,
       lon:                 S.addrLon || SESSION_PLAYER?.lon || null,
     });
@@ -3273,12 +3273,22 @@ async function doSaveProfile(){
                    avatar_emoji: _savedEmoji });
     // Also update SESSION_PLAYER so next Edit Profile shows correct values
     if(SESSION_PLAYER){
-      SESSION_PLAYER.nickname     = _savedNickname;
-      SESSION_PLAYER.avatar_emoji = _savedEmoji;
-      SESSION_PLAYER.first_name   = _savedFirstName;
-      SESSION_PLAYER.skill_level  = _savedSkill;
+      SESSION_PLAYER.nickname      = _savedNickname;
+      SESSION_PLAYER.avatar_emoji  = _savedEmoji;
+      SESSION_PLAYER.first_name    = _savedFirstName;
+      SESSION_PLAYER.skill_level   = _savedSkill;
       SESSION_PLAYER.playing_since = _savedSince;
-      // Explicitly update address fields so Edit Profile shows new values
+      SESSION_PLAYER.gender        = S.gender        || SESSION_PLAYER.gender;
+      SESSION_PLAYER.handedness    = S.handedness    || SESSION_PLAYER.handedness;
+      SESSION_PLAYER.play_style    = S.playStyle     || SESSION_PLAYER.play_style;
+      SESSION_PLAYER.play_format   = S.playFormat    || SESSION_PLAYER.play_format;
+      SESSION_PLAYER.play_venues   = S.venuePref     || SESSION_PLAYER.play_venues;
+      SESSION_PLAYER.wants_to_improve = S.wantsToImprove || SESSION_PLAYER.wants_to_improve;
+      SESSION_PLAYER.has_had_lesson= S.hasHadLesson  || SESSION_PLAYER.has_had_lesson;
+      SESSION_PLAYER.wants_lesson  = S.wantsLesson   || SESSION_PLAYER.wants_lesson;
+      SESSION_PLAYER.schedule      = schedStr;
+      SESSION_PLAYER.anytime       = S.anytime;
+      // Address fields
       SESSION_PLAYER.address  = v('addressSearch') || SESSION_PLAYER.address;
       SESSION_PLAYER.city     = v('addrCity')       || SESSION_PLAYER.city;
       SESSION_PLAYER.zip_code = v('addrZip')        || SESSION_PLAYER.zip_code;
@@ -5859,7 +5869,7 @@ function restoreProfileForm(player){
 
   const textFields={
     firstName:player.first_name,lastName:player.last_name,
-    nickname:S.nickname||player.nickname,email:player.email,
+    nickname:player.nickname||'',email:player.email,
     phone:player.phone?formatPhoneDisplay(player.phone):'',
     dob:player.dob,addressSearch:player.address,
     addrCity:player.city,
