@@ -4974,7 +4974,9 @@ async function loadSentMatches(){
       const maxNeeded   =m.match_type==='doubles'?3:1;
 
       const card=document.createElement('div');
-      card.style.cssText='padding:14px 0;border-bottom:1px solid var(--border);';
+      card.style.cssText='padding:14px 0;border-bottom:1px solid var(--border);'+(isMatchPast(m)?'opacity:0.75;':'');
+
+      const sd=getMatchStatusDisplay(m);
 
       // Header row
       const hdr=document.createElement('div');
@@ -4982,11 +4984,11 @@ async function loadSentMatches(){
       hdr.innerHTML=
         '<span style="font-size:20px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span>'+
         '<div style="flex:1;">'+
-          '<div style="color:#fff;font-size:13px;font-weight:600;">'+dateStr+' · '+timeStr+'</div>'+
+          '<div style="color:'+(isMatchPast(m)?'#94a3b8':'#fff')+';font-size:13px;font-weight:600;">'+dateStr+' · '+timeStr+'</div>'+
           '<div style="color:var(--dim);font-size:11px;">'+(m.court_name||'TBD')+(m.is_feeler?' · Feeler':'')+'</div>'+
         '</div>'+
         '<div style="text-align:right;">'+
-          '<div style="font-size:11px;font-weight:700;color:'+(m.status==='open'?'var(--green)':m.status==='full'?'#fbbf24':'var(--dim)')+';">'+m.status.toUpperCase()+'</div>'+
+          '<div style="font-size:11px;font-weight:700;color:'+sd.color+';">'+sd.label+'</div>'+
           '<div style="font-size:10px;color:var(--dim);">'+inPlayers.length+'/'+maxNeeded+' confirmed</div>'+
         '</div>';
 
@@ -5073,67 +5075,111 @@ async function loadMyInvitesPage(){
   const myEmail=getMyEmail();
   const container=document.getElementById('myInvitesList');
   if(!container) return;
-  if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in to view your invites.</div>'; return; }
-  container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:12px 0;">Loading…</div>';
+  if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in.</div>'; return; }
+  container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:12px 0;">Loading...</div>';
   try{
     const res=await fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&order=match_date.desc,time_start.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     const matches=res.ok?await res.json():[];
-
-    // Fetch responses for all matches
     const ids=matches.map(m=>m.id);
     let responses=[];
     if(ids.length){
       const rr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${ids.join(',')})&select=match_id,player_name,player_email,response`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
       responses=rr.ok?await rr.json():[];
     }
-
     container.innerHTML='';
     if(!matches.length){
-      container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">You haven\'t set up any matches yet.<br><br><button onclick="showPage(\'setupMatch\')" style="padding:10px 20px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;cursor:pointer;font-family:\'DM Sans\',sans-serif;">+ Set Up A Match</button></div>';
+      container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">No matches yet.<br><br>'+
+        '<button onclick="showPage(\'setupMatch\')" style="padding:10px 20px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;cursor:pointer;">+ Set Up A Match</button></div>';
       return;
     }
+    const upcoming=matches.filter(m=>!isMatchPast(m));
+    const past    =matches.filter(m=> isMatchPast(m));
 
-    matches.forEach(m=>{
-      const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}):'—';
-      const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):''):'—';
+    const renderMatchCard=(m,isPast)=>{
+      const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}):'--';
+      const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' - '+fmt12(m.time_end):''):'--';
       const mRes=responses.filter(r=>r.match_id===m.id);
-      const inPlayers=mRes.filter(r=>r.response==='in');
-      const pending=mRes.filter(r=>r.response==='pending');
-      const waitlist=mRes.filter(r=>r.response==='waitlist');
-      const out=mRes.filter(r=>r.response==='out');
+      const inP =mRes.filter(r=>r.response==='in');
+      const pend=mRes.filter(r=>r.response==='pending');
+      const wait=mRes.filter(r=>r.response==='waitlist');
+      const out =mRes.filter(r=>r.response==='out');
       const maxNeeded=m.match_type==='doubles'?3:1;
-      const spotsLeft=Math.max(0,maxNeeded-inPlayers.length);
-
+      const spotsLeft=Math.max(0,maxNeeded-inP.length);
+      const sd=getMatchStatusDisplay(m);
       const card=document.createElement('div');
-      card.style.cssText='background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px;';
-
-      const statusColor=m.status==='open'?'var(--green)':m.status==='full'?'#fbbf24':'var(--dim)';
-
+      card.style.cssText='border:1px solid '+sd.border+';border-radius:16px;padding:16px;margin-bottom:14px;background:'+sd.bg+';'+(isPast?'opacity:0.85;':'');
+      let bottom='';
+      if(isPast&&m.status==='full'){
+        bottom='<div style="margin-top:12px;padding:10px 12px;background:rgba(76,175,125,0.08);border:1px solid rgba(76,175,125,0.25);border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;">'+
+          '<span style="font-size:12px;color:var(--green);font-weight:600;">How did it go? Record the results!</span>'+
+          '<button onclick="openRecordResults(\''+m.id+'\',\''+m.match_type+'\')" style="padding:7px 14px;border-radius:8px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">Record Results</button>'+
+          '</div>';
+      } else if(isPast){
+        bottom='<div style="margin-top:10px;font-size:11px;color:#94a3b8;font-style:italic;">This match has passed. '+spotsLeft+' spot'+(spotsLeft!==1?'s':'')+' went unfilled.</div>';
+      } else {
+        bottom=
+          '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:10px;">'+
+          makeResponsePill('In',inP,'var(--green)')+makeResponsePill('Pending',pend,'#94a3b8')+
+          makeResponsePill('Waitlist',wait,'#f59e0b')+makeResponsePill('Out',out,'#f87171')+
+          '</div>'+
+          (inP.length?'<div style="font-size:11px;color:var(--green);">In: '+inP.map(p=>p.player_name||p.player_email).join(' | ')+'</div>':'')+
+          (pend.length?'<div style="font-size:11px;color:#94a3b8;margin-top:2px;">Awaiting: '+pend.map(p=>p.player_name||p.player_email).join(' | ')+'</div>':'')+
+          (spotsLeft>0?'<div style="font-size:10px;color:#fbbf24;margin-top:4px;">'+spotsLeft+' spot'+(spotsLeft>1?'s':'')+' still open</div>':'');
+      }
       card.innerHTML=
-        '<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">'+
-          '<span style="font-size:24px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span>'+
-          '<div style="flex:1;">'+
-            '<div style="color:#fff;font-size:14px;font-weight:700;">'+dateStr+' · '+timeStr+'</div>'+
-            '<div style="color:var(--dim);font-size:12px;margin-top:2px;">'+(m.court_name||'TBD')+(m.notes?' · <em>'+m.notes+'</em>':'')+'</div>'+
-          '</div>'+
-          '<div style="text-align:right;">'+
-            '<div style="font-size:11px;font-weight:800;color:'+statusColor+';text-transform:uppercase;">'+m.status+'</div>'+
-            '<div style="font-size:10px;color:var(--dim);">'+inPlayers.length+'/'+maxNeeded+' confirmed</div>'+
-            (spotsLeft>0?'<div style="font-size:10px;color:#fbbf24;">'+spotsLeft+' spot'+(spotsLeft>1?'s':'')+' open</div>':'')+
-          '</div>'+
+        '<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;">'+
+        '<span style="font-size:22px;">'+(m.match_type==='doubles'?'&#127955;&#127955;':'&#127955;')+'</span>'+
+        '<div style="flex:1;">'+
+        '<div style="color:'+(isPast?'#94a3b8':'#fff')+';font-size:14px;font-weight:700;'+(isPast?'text-decoration:line-through;':'')+'">'+(isPast?'<s>':'')+dateStr+' | '+timeStr+(isPast?'</s>':'')+'</div>'+
+        '<div style="color:var(--dim);font-size:12px;margin-top:2px;">'+(m.court_name||'TBD')+(m.notes?' | '+m.notes:'')+'</div>'+
         '</div>'+
-        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:10px;">'+
-          makeResponsePill('✅ In',inPlayers,'var(--green)')+
-          makeResponsePill('⏳ Pending',pending,'#94a3b8')+
-          makeResponsePill('⌛ Waitlist',waitlist,'#f59e0b')+
-          makeResponsePill('❌ Out',out,'#f87171')+
-        '</div>'+
-        (inPlayers.length?'<div style="font-size:11px;color:var(--green);margin-top:4px;">✅ '+inPlayers.map(p=>p.player_name||p.player_email).join(' · ')+'</div>':'')+
-        (pending.length?'<div style="font-size:11px;color:#94a3b8;margin-top:2px;">⏳ Awaiting: '+pending.map(p=>p.player_name||p.player_email).join(' · ')+'</div>':'');
+        '<div style="text-align:right;flex-shrink:0;">'+
+        '<div style="font-size:12px;font-weight:800;color:'+sd.color+';">'+sd.label+'</div>'+
+        (!isPast?'<div style="font-size:10px;color:var(--dim);">'+inP.length+'/'+maxNeeded+' confirmed</div>':'')+
+        '</div></div>'+bottom;
+      return card;
+    };
 
-      container.appendChild(card);
-    });
+    if(upcoming.length){
+      const hdr=document.createElement('div');
+      hdr.style.cssText='font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;padding:4px 0 10px;';
+      hdr.textContent='Upcoming ('+upcoming.length+')';
+      container.appendChild(hdr);
+      upcoming.forEach(m=>container.appendChild(renderMatchCard(m,false)));
+    }
+    if(past.length){
+      const hdr=document.createElement('div');
+      hdr.style.cssText='font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;padding:16px 0 10px;border-top:1px solid var(--border);margin-top:8px;';
+      hdr.textContent='Past Matches ('+past.length+')';
+      container.appendChild(hdr);
+      past.forEach(m=>container.appendChild(renderMatchCard(m,true)));
+    }
   }catch(e){ container.innerHTML='<div style="color:#f87171;font-size:13px;">Error loading invites.</div>'; console.warn(e); }
+}
+
+// ── Past-match helpers ──────────────────────────────────
+function isMatchPast(match){
+  if(!match.match_date) return false;
+  const timeStr = match.time_end || match.time_start || '23:59';
+  const matchEnd = new Date(match.match_date + 'T' + timeStr);
+  return matchEnd < new Date();
+}
+
+function getMatchStatusDisplay(match){
+  const past = isMatchPast(match);
+  if(past){
+    if(match.status==='full') return {label:'✅ Played',    color:'var(--green)', bg:'rgba(76,175,125,0.08)',  border:'rgba(76,175,125,0.3)'};
+    return                           {label:'⏰ Expired',   color:'#94a3b8',       bg:'rgba(255,255,255,0.02)', border:'rgba(255,255,255,0.08)'};
+  }
+  if(match.status==='full')      return {label:'🟢 Confirmed', color:'var(--green)', bg:'rgba(76,175,125,0.08)',  border:'rgba(76,175,125,0.3)'};
+  if(match.status==='open')      return {label:'🔴 Open',      color:'#f87171',       bg:'rgba(239,68,68,0.06)',   border:'rgba(239,68,68,0.2)'};
+  if(match.status==='cancelled') return {label:'❌ Cancelled', color:'#f87171',       bg:'rgba(239,68,68,0.06)',   border:'rgba(239,68,68,0.2)'};
+  return                                {label:match.status,   color:'var(--dim)',     bg:'rgba(255,255,255,0.03)', border:'var(--border)'};
+}
+
+// Stub — will be expanded when score recorder is built
+function openRecordResults(matchId, matchType){
+  showToast('📋 Score recorder coming soon! Match ID: '+matchId, '#4CAF7D');
 }
 
 function makeResponsePill(label, players, color){
@@ -5148,61 +5194,81 @@ async function loadInvitedByOthersPage(){
   const myEmail=getMyEmail();
   const container=document.getElementById('invitedByOthersList');
   if(!container) return;
-  if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in to view your invites.</div>'; return; }
-  container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:12px 0;">Loading…</div>';
+  if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in.</div>'; return; }
+  container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:12px 0;">Loading...</div>';
   try{
-    // Get my match_responses
     const rr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&select=match_id,response,responded_at&order=responded_at.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     const myResponses=rr.ok?await rr.json():[];
-
     if(!myResponses.length){
       container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">You haven\'t been invited to any matches yet.</div>';
       return;
     }
-
-    // Fetch match details
     const matchIds=myResponses.map(r=>r.match_id);
     const mr=await fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${matchIds.join(',')})&select=*&order=match_date.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     const matches=mr.ok?await mr.json():[];
-
     container.innerHTML='';
     if(!matches.length){ container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;">No matches found.</div>'; return; }
 
-    matches.forEach(m=>{
+    const upcoming=matches.filter(m=>!isMatchPast(m));
+    const past    =matches.filter(m=> isMatchPast(m));
+
+    const renderInviteCard=(m)=>{
+      const isPast=isMatchPast(m);
       const myResp=myResponses.find(r=>r.match_id===m.id);
       const response=myResp?.response||'pending';
-      const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}):'—';
-      const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):''):'—';
-
+      const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}):'--';
+      const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' - '+fmt12(m.time_end):''):'--';
+      const sd=getMatchStatusDisplay(m);
       const respColor=response==='in'?'var(--green)':response==='out'?'#f87171':response==='waitlist'?'#f59e0b':'#94a3b8';
       const respLabel=response==='in'?'✅ You\'re In':response==='out'?'❌ Declined':response==='waitlist'?'⌛ Waitlist':'⏳ Pending';
-      const matchStatusColor=m.status==='open'?'var(--green)':m.status==='full'?'#fbbf24':'var(--dim)';
 
       const card=document.createElement('div');
-      card.style.cssText='background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px;';
+      card.style.cssText='border:1px solid '+sd.border+';border-radius:16px;padding:16px;margin-bottom:14px;background:'+sd.bg+';'+(isPast?'opacity:0.85;':'');
       card.innerHTML=
         '<div style="display:flex;align-items:flex-start;gap:12px;">'+
-          '<span style="font-size:24px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span>'+
-          '<div style="flex:1;">'+
-            '<div style="color:#fff;font-size:14px;font-weight:700;">'+dateStr+' · '+timeStr+'</div>'+
-            '<div style="color:var(--dim);font-size:12px;margin-top:2px;">Organized by <strong style="color:#fff;">'+m.organizer_name+'</strong></div>'+
-            '<div style="color:var(--dim);font-size:12px;">'+(m.court_name||'TBD')+'</div>'+
-            (m.notes?'<div style="color:var(--dim);font-size:11px;font-style:italic;margin-top:2px;">'+m.notes+'</div>':'')+
-          '</div>'+
-          '<div style="text-align:right;">'+
-            '<div style="font-size:11px;font-weight:800;color:'+matchStatusColor+';text-transform:uppercase;margin-bottom:4px;">'+m.status+'</div>'+
-            '<div style="font-size:12px;font-weight:700;color:'+respColor+';">'+respLabel+'</div>'+
-          '</div>'+
+        '<span style="font-size:22px;">'+(m.match_type==='doubles'?'&#127955;&#127955;':'&#127955;')+'</span>'+
+        '<div style="flex:1;">'+
+        '<div style="color:'+(isPast?'#94a3b8':'#fff')+';font-size:14px;font-weight:700;">'+(isPast?'<s>':'')+dateStr+' | '+timeStr+(isPast?'</s>':'')+'</div>'+
+        '<div style="color:var(--dim);font-size:12px;margin-top:2px;">Organized by <strong style="color:'+(isPast?'#94a3b8':'#fff')+';">'+m.organizer_name+'</strong></div>'+
+        '<div style="color:var(--dim);font-size:12px;">'+(m.court_name||'TBD')+'</div>'+
+        (m.notes?'<div style="color:var(--dim);font-size:11px;font-style:italic;margin-top:2px;">'+m.notes+'</div>':'')+
         '</div>'+
-        // If still pending and match is open, show respond buttons
-        (response==='pending'&&m.status==='open'?
+        '<div style="text-align:right;flex-shrink:0;">'+
+        '<div style="font-size:12px;font-weight:800;color:'+sd.color+';">'+sd.label+'</div>'+
+        '<div style="font-size:12px;font-weight:700;color:'+respColor+';margin-top:4px;">'+respLabel+'</div>'+
+        '</div></div>'+
+        // Respond buttons — only if pending, open, and not past
+        (!isPast&&response==='pending'&&m.status==='open'?
           '<div style="display:flex;gap:8px;margin-top:12px;">'+
-            '<button onclick="respondToMatch(\''+m.id+'\',\'in\')" style="flex:1;padding:9px;border-radius:8px;border:none;background:var(--green);color:#fff;font-weight:700;font-size:12px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">✅ I\'m In!</button>'+
-            '<button onclick="respondToMatch(\''+m.id+'\',\'out\')" style="flex:1;padding:9px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:12px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">❌ Can\'t Make It</button>'+
-          '</div>':'');
+          '<button onclick="respondToMatch(\''+m.id+'\',\'in\')" style="flex:1;padding:9px;border-radius:8px;border:none;background:var(--green);color:#fff;font-weight:700;font-size:12px;cursor:pointer;">&#10003; I\'m In!</button>'+
+          '<button onclick="respondToMatch(\''+m.id+'\',\'out\')" style="flex:1;padding:9px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:12px;cursor:pointer;">&#10007; Can\'t Make It</button>'+
+          '</div>':'')+
+        // Past + played + you were in — prompt for results
+        (isPast&&m.status==='full'&&response==='in'?
+          '<div style="margin-top:10px;padding:8px 12px;background:rgba(76,175,125,0.08);border:1px solid rgba(76,175,125,0.2);border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;">'+
+          '<span style="font-size:11px;color:var(--green);font-weight:600;">How did it go?</span>'+
+          '<button onclick="openRecordResults(\''+m.id+'\',\''+m.match_type+'\')" style="padding:5px 12px;border-radius:6px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:11px;cursor:pointer;">Record Results</button>'+
+          '</div>':'')+
+        // Past + didn't happen (open/expired)
+        (isPast&&m.status!=='full'?
+          '<div style="margin-top:8px;font-size:11px;color:#94a3b8;font-style:italic;">This match didn\'t get enough players.</div>':'');
+      return card;
+    };
 
-      container.appendChild(card);
-    });
+    if(upcoming.length){
+      const hdr=document.createElement('div');
+      hdr.style.cssText='font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;padding:4px 0 10px;';
+      hdr.textContent='Upcoming ('+upcoming.length+')';
+      container.appendChild(hdr);
+      upcoming.forEach(m=>container.appendChild(renderInviteCard(m)));
+    }
+    if(past.length){
+      const hdr=document.createElement('div');
+      hdr.style.cssText='font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;padding:16px 0 10px;border-top:1px solid var(--border);margin-top:8px;';
+      hdr.textContent='Past ('+past.length+')';
+      container.appendChild(hdr);
+      past.forEach(m=>container.appendChild(renderInviteCard(m)));
+    }
   }catch(e){ container.innerHTML='<div style="color:#f87171;font-size:13px;">Error loading invites.</div>'; console.warn(e); }
 }
 
@@ -5281,11 +5347,12 @@ function showMatchResponseBanner(match, myEmail){
     ? new Date(match.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})
     : '—';
   const timeStr = match.time_start ? fmt12(match.time_start) : '—';
-  const durHrs  = 2; // default — could store in match
+  const durHrs  = 2;
   const endTime = match.time_start ? fmt12(addHours(match.time_start, durHrs)) : '';
 
   const isFull  = match.status === 'full';
   const isOpen  = match.status === 'open';
+  const isPast  = isMatchPast(match);
 
   const banner = document.createElement('div');
   banner.id = 'matchResponseBanner';
@@ -5307,11 +5374,17 @@ function showMatchResponseBanner(match, myEmail){
           '<span style="color:var(--dim);">Court</span><span style="color:#fff;font-weight:600;">'+(match.court_name||'TBD')+'</span>'+
           (match.notes?'<span style="color:var(--dim);">Note</span><span style="color:#fff;font-style:italic;">'+match.notes+'</span>':'')+
         '</div>'+
-        (isFull
-          ? '<div style="color:#fbbf24;font-size:12px;font-weight:600;margin-bottom:10px;">⚠️ This match is full — join the waitlist?</div>'
-          : '<div style="color:var(--green);font-size:12px;margin-bottom:10px;">✅ Spots available — are you in?</div>')+
+        (isPast
+          ? '<div style="color:#94a3b8;font-size:12px;font-weight:600;margin-bottom:10px;">⏰ This match has already taken place.</div>'
+          : isFull
+            ? '<div style="color:#fbbf24;font-size:12px;font-weight:600;margin-bottom:10px;">⚠️ This match is full — join the waitlist?</div>'
+            : '<div style="color:var(--green);font-size:12px;margin-bottom:10px;">✅ Spots available — are you in?</div>')+
         '<div style="display:flex;gap:8px;flex-wrap:wrap;">'+
-          (isOpen
+          (isPast
+            ? `<button onclick="document.getElementById('matchResponseBanner').remove()"
+                style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+                Close</button>`
+            : isOpen
             ? `<button onclick="respondToMatch('${match.id}','in')"
                 style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--green);color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">
                 ✅ I'm In!</button>
