@@ -248,7 +248,8 @@
 
 
   /* ── Layout ───────────────────────────────────────── */
-  body{padding:0!important;display:block!important;}
+  html{height:100%;scroll-behavior:smooth;}
+  body{padding:0!important;display:block!important;overflow-y:auto!important;height:auto!important;}
   .app-shell{display:flex;min-height:100vh;}
 
   /* ── Left Nav ─────────────────────────────────────── */
@@ -1347,19 +1348,9 @@
   <!-- STEP 3 -->
   <div class="card" id="step3" style="display:none">
     <h2>Waiver &amp; Agreement</h2>
-    <div class="waiver-box">
-      <div class="w-head">
-        <span style="font-size:24px">⚠️</span>
-        <div>
-          <div class="w-title">Liability Waiver Required</div>
-          <div class="w-sub">Participation in pickleball activities involves physical risk. Please review and agree to our waiver before registering.</div>
-        </div>
-      </div>
-      <div class="waiver-link" onclick="document.getElementById('waiverModal').style.display='flex'">📄 Read Full Waiver →</div>
-    </div>
     <div class="check-row" onclick="toggleWaiver()" style="margin-bottom:20px">
       <div class="check-box" id="checkBox"></div>
-      <div class="check-text">I have read and agree to the liability waiver. I understand the risks associated with playing pickleball and participate voluntarily.</div>
+      <div class="check-text">I understand the risks associated with playing pickleball and participate voluntarily.</div>
     </div>
     <div class="summary-box">
       <div class="s-title">Registration Summary</div>
@@ -1637,29 +1628,48 @@
           </button>
         </div>
 
-        <!-- Inline 3-column circle list (hidden by default) -->
+        <!-- Inline 5-column circle list (hidden by default) -->
         <div id="icInlineList" style="display:none;margin-bottom:12px;">
-          <div class="ic-skill-grid-wrap" id="icInlineColumns">
+          <div class="ic-skill-grid-wrap" id="icInlineColumns" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr;">
+            <div class="ic-skill-column">
+              <div class="ic-skill-col-head" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:10px;padding:10px 6px;text-align:center;position:sticky;top:var(--col-sticky-top,280px);z-index:9;">
+                <div class="ic-col-head-label" style="color:#f87171;font-size:11px;font-weight:700;">.5+ Below</div>
+                <div class="ic-col-head-rating" id="inlineFarBelowLabel" style="color:#f87171;font-size:10px;">—</div>
+                <div id="inlineFarBelowCount" style="color:#f87171;font-size:11px;font-weight:800;">0</div>
+              </div>
+              <div id="inlineColFarBelow" class="ic-skill-col"></div>
+            </div>
             <div class="ic-skill-column">
               <div class="ic-skill-col-head ic-col-below" style="position:sticky;top:var(--col-sticky-top,280px);z-index:9;">
-                <div class="ic-col-head-label">One below</div>
+                <div class="ic-col-head-label">.25 Below</div>
                 <div class="ic-col-head-rating" id="inlineBelowLabel">—</div>
+                <div id="inlineBelowCount" style="color:#fbbf24;font-size:11px;font-weight:800;">0</div>
               </div>
               <div id="inlineColBelow" class="ic-skill-col"></div>
             </div>
             <div class="ic-skill-column">
               <div class="ic-skill-col-head ic-col-my" style="position:sticky;top:52px;z-index:9;">
-                <div class="ic-col-head-label">My level</div>
+                <div class="ic-col-head-label">My Level</div>
                 <div class="ic-col-head-rating" id="inlineColMyLabel">—</div>
+                <div id="inlineMyCount" style="color:var(--green);font-size:11px;font-weight:800;">0</div>
               </div>
               <div id="inlineColMy" class="ic-skill-col"></div>
             </div>
             <div class="ic-skill-column">
               <div class="ic-skill-col-head ic-col-above" style="position:sticky;top:52px;z-index:9;">
-                <div class="ic-col-head-label">One above</div>
+                <div class="ic-col-head-label">.25 Above</div>
                 <div class="ic-col-head-rating" id="inlineAboveLabel">—</div>
+                <div id="inlineAboveCount" style="color:#a78bfa;font-size:11px;font-weight:800;">0</div>
               </div>
               <div id="inlineColAbove" class="ic-skill-col"></div>
+            </div>
+            <div class="ic-skill-column">
+              <div class="ic-skill-col-head" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.25);border-radius:10px;padding:10px 6px;text-align:center;position:sticky;top:52px;z-index:9;">
+                <div class="ic-col-head-label" style="color:#818cf8;font-size:11px;font-weight:700;">.5+ Above</div>
+                <div class="ic-col-head-rating" id="inlineFarAboveLabel" style="color:#818cf8;font-size:10px;">—</div>
+                <div id="inlineFarAboveCount" style="color:#818cf8;font-size:11px;font-weight:800;">0</div>
+              </div>
+              <div id="inlineColFarAbove" class="ic-skill-col"></div>
             </div>
           </div>
         </div>
@@ -2072,24 +2082,46 @@
       </div>
 
       <!-- Match status squares -->
-      <div style="display:flex;gap:12px;margin-bottom:20px;max-width:400px;">
-        <div id="matchSquareMyInvites" onclick="showPage('myInvites')"
-          style="flex:1;padding:14px 12px;border-radius:14px;border:1.5px solid rgba(239,68,68,0.4);
+      <div style="display:flex;gap:12px;margin-bottom:20px;max-width:500px;flex-wrap:wrap;">
+        <!-- Green square: fully confirmed matches -->
+        <div onclick="showPage('myInvites')"
+          style="flex:1;min-width:100px;padding:14px 12px;border-radius:14px;border:2px solid rgba(76,175,125,0.5);
+            background:rgba(76,175,125,0.1);cursor:pointer;text-align:center;transition:all .15s;"
+          onmouseover="this.style.background='rgba(76,175,125,0.18)'"
+          onmouseout="this.style.background='rgba(76,175,125,0.1)'">
+          <div id="matchSquareMyConfirmed" style="font-size:32px;font-weight:800;color:var(--green);line-height:1;">0</div>
+          <div style="font-size:11px;color:var(--dim);margin-top:4px;font-weight:600;">✅ Confirmed</div>
+          <div style="font-size:10px;color:rgba(76,175,125,0.7);margin-top:2px;">all slots filled</div>
+        </div>
+        <!-- Red circle: pending matches (not yet full) -->
+        <div onclick="showPage('myInvites')"
+          style="flex:1;min-width:100px;padding:14px 12px;border-radius:999px;border:2px solid rgba(239,68,68,0.4);
             background:rgba(239,68,68,0.08);cursor:pointer;text-align:center;transition:all .15s;"
           onmouseover="this.style.background='rgba(239,68,68,0.15)'"
           onmouseout="this.style.background='rgba(239,68,68,0.08)'">
           <div id="matchSquareMyCount" style="font-size:32px;font-weight:800;color:#f87171;line-height:1;">0</div>
-          <div style="font-size:11px;color:var(--dim);margin-top:4px;font-weight:600;">My Match Invites</div>
-          <div style="font-size:10px;color:rgba(248,113,113,0.7);margin-top:2px;">tap to view →</div>
+          <div style="font-size:11px;color:var(--dim);margin-top:4px;font-weight:600;">🔴 Pending</div>
+          <div style="font-size:10px;color:rgba(248,113,113,0.7);margin-top:2px;">slots not yet full</div>
         </div>
-        <div id="matchSquareInvitedTo" onclick="showPage('invitedByOthers')"
-          style="flex:1;padding:14px 12px;border-radius:14px;border:1.5px solid rgba(59,130,246,0.4);
+        <!-- Blue circle: invited to (pending, not full) -->
+        <div onclick="showPage('invitedByOthers')"
+          style="flex:1;min-width:100px;padding:14px 12px;border-radius:999px;border:2px solid rgba(59,130,246,0.4);
             background:rgba(59,130,246,0.08);cursor:pointer;text-align:center;transition:all .15s;"
           onmouseover="this.style.background='rgba(59,130,246,0.15)'"
           onmouseout="this.style.background='rgba(59,130,246,0.08)'">
           <div id="matchSquareInvitedCount" style="font-size:32px;font-weight:800;color:#60a5fa;line-height:1;">0</div>
-          <div style="font-size:11px;color:var(--dim);margin-top:4px;font-weight:600;">Invited to</div>
-          <div style="font-size:10px;color:rgba(96,165,250,0.7);margin-top:2px;">tap to view →</div>
+          <div style="font-size:11px;color:var(--dim);margin-top:4px;font-weight:600;">🔵 Invited (open)</div>
+          <div style="font-size:10px;color:rgba(96,165,250,0.7);margin-top:2px;">not yet full</div>
+        </div>
+        <!-- Green square: invited, confirmed (all full) -->
+        <div onclick="showPage('invitedByOthers')"
+          style="flex:1;min-width:100px;padding:14px 12px;border-radius:14px;border:2px solid rgba(76,175,125,0.5);
+            background:rgba(76,175,125,0.1);cursor:pointer;text-align:center;transition:all .15s;"
+          onmouseover="this.style.background='rgba(76,175,125,0.18)'"
+          onmouseout="this.style.background='rgba(76,175,125,0.1)'">
+          <div id="matchSquareInvitedConfirmed" style="font-size:32px;font-weight:800;color:var(--green);line-height:1;">0</div>
+          <div style="font-size:11px;color:var(--dim);margin-top:4px;font-weight:600;">✅ You're In</div>
+          <div style="font-size:10px;color:rgba(76,175,125,0.7);margin-top:2px;">full &amp; confirmed</div>
         </div>
       </div>
 
@@ -4995,23 +5027,43 @@ async function loadMatchSquareCounts(){
   const myEmail=getMyEmail();
   if(!myEmail) return;
   try{
-    // My invites (matches I organized)
-    const myRes=await fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=neq.cancelled&select=id`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    // My matches — split confirmed (full) vs pending (open)
+    const myRes=await fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=neq.cancelled&select=id,status,max_players`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     const myMatches=myRes.ok?await myRes.json():[];
-    const myCount=myMatches.length;
-    const myEl=document.getElementById('matchSquareMyCount');
-    if(myEl) myEl.textContent=myCount;
-    const myBadge=document.getElementById('myInvitesBadge');
-    if(myBadge){ myBadge.textContent=myCount; myBadge.style.display=myCount>0?'inline-flex':'none'; }
+    const myConfirmed=myMatches.filter(m=>m.status==='full').length;
+    const myPending  =myMatches.filter(m=>m.status==='open').length;
+    const setEl=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+    setEl('matchSquareMyConfirmed', myConfirmed);
+    setEl('matchSquareMyCount',     myPending);
 
-    // Invited to (match_responses where I'm a recipient, not organizer)
-    const invRes=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&select=match_id`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    // Nav badge — total my matches
+    const myTotal=myMatches.length;
+    const myBadge=document.getElementById('myInvitesBadge');
+    if(myBadge){myBadge.textContent=myTotal;myBadge.style.display=myTotal>0?'inline-flex':'none';}
+
+    // Invited to — fetch my responses and join with match status
+    const invRes=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&select=match_id,response`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     const invRows=invRes.ok?await invRes.json():[];
-    const invCount=invRows.length;
-    const invEl=document.getElementById('matchSquareInvitedCount');
-    if(invEl) invEl.textContent=invCount;
+    const invMatchIds=invRows.map(r=>r.match_id);
+    let invConfirmed=0, invOpen=0;
+    if(invMatchIds.length){
+      const mRes=await fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${invMatchIds.join(',')})&select=id,status`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      const invMatches=mRes.ok?await mRes.json():[];
+      invConfirmed=invMatches.filter(m=>m.status==='full').length;
+      invOpen     =invMatches.filter(m=>m.status==='open').length;
+    }
+    setEl('matchSquareInvitedCount',     invOpen);
+    setEl('matchSquareInvitedConfirmed', invConfirmed);
+
+    // Nav badge
     const invBadge=document.getElementById('invitedByOthersBadge');
-    if(invBadge){ invBadge.textContent=invCount; invBadge.style.display=invCount>0?'inline-flex':'none'; }
+    if(invBadge){const t=invMatchIds.length;invBadge.textContent=t;invBadge.style.display=t>0?'inline-flex':'none';}
+    // Top blue badge — show pending (open) invites
+    const topBadge=document.getElementById('topMatchInvitesBadge');
+    if(topBadge){topBadge.textContent=invOpen;topBadge.style.display=invOpen>0?'inline-block':'none';}
+    const topLabel=document.getElementById('topMatchInvitesLabel');
+    if(topLabel) topLabel.textContent=invOpen>0?'Invited to Play ('+invOpen+')':'Invited to Play';
+
   }catch(e){ console.warn('loadMatchSquareCounts error:',e); }
 }
 
@@ -5737,7 +5789,7 @@ function restoreProfileForm(player){
     phone:player.phone?formatPhoneDisplay(player.phone):'',
     dob:player.dob,addressSearch:player.address,
     addrCity:player.city,
-    addrState:(()=>{const st=player.state||'';const abbr=Object.entries(STATE_INFO).find(([k,v])=>v[1]&&v[1].toLowerCase()===st.toLowerCase());return abbr?abbr[0]:st;})(),
+    addrState:(()=>{const st=player.state||'';if(st.length===2)return st.toUpperCase();const found=Object.values(STATE_INFO).find(([a,n])=>n&&n.toLowerCase()===st.toLowerCase());return found?found[0]:st;})(),
     addrZip:player.zip_code,addrCounty:player.county,
   };
   Object.entries(textFields).forEach(([id,val])=>{
@@ -5782,13 +5834,14 @@ function restoreProfileForm(player){
   }
 
   S.schedule.clear(); S.anytime=false;
-  document.querySelectorAll('[data-key],.day-btn').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.sched-cell').forEach(c=>{c.classList.remove('on');c.style.opacity='';c.style.cursor='';});
   if(player.anytime||player.schedule==='Anytime'){
     S.anytime=true; const ab=document.getElementById('anytimeBtn'); if(ab) ab.classList.add('on');
   } else if(player.schedule&&player.schedule!=='Not specified'){
     const parts=String(player.schedule).split(',').map(s=>s.trim()).filter(Boolean);
     parts.forEach(key=>{
-      const cell=document.querySelector('[data-key="'+key+'"]');
+      // Try exact data-key match first (Mon|Morning format)
+      let cell=document.querySelector('[data-key="'+key+'"]');
       if(cell){cell.classList.add('on');S.schedule.add(key);}
     });
   }
@@ -6684,39 +6737,61 @@ function toggleIcListView(){
 }
 
 function renderInlineCircleList(){
-  const mySkill=S.skill||'';
+  const mySkill=S.skill||SESSION_PLAYER?.skill_level||'';
   const skills=mySkill?getAdjacentSkills(mySkill):null;
-  const lb=document.getElementById('inlineBelowLabel');
-  const lm=document.getElementById('inlineColMyLabel');
-  const la=document.getElementById('inlineAboveLabel');
-  if(lb) lb.textContent=skills?.below??'—';
-  if(lm) lm.textContent=skills?.my??'—';
-  if(la) la.textContent=skills?.above??'—';
-  const cols={below:[],my:[],above:[],other:[]};
+  const myVal=parseFloat(mySkill||0);
+
+  const setEl=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  setEl('inlineFarBelowLabel', myVal>0?('≤'+(myVal-0.5).toFixed(2)):'--');
+  setEl('inlineBelowLabel',    skills?.below??'--');
+  setEl('inlineColMyLabel',    skills?.my??'--');
+  setEl('inlineAboveLabel',    skills?.above??'--');
+  setEl('inlineFarAboveLabel', myVal>0?('≥'+(myVal+0.5).toFixed(2)):'--');
+
+  const cols={farBelow:[],below:[],my:[],above:[],farAbove:[]};
   IC_MEMBERS.forEach(({player})=>{
     const ps=parseFloat(player.skill_level||0);
-    if(skills?.below!==null&&Math.abs(ps-(skills?.below||0))<0.13) cols.below.push(player);
-    else if(Math.abs(ps-(skills?.my||0))<0.13) cols.my.push(player);
-    else if(skills?.above!==null&&Math.abs(ps-(skills?.above||0))<0.13) cols.above.push(player);
-    else cols.other.push(player);
+    const diff=parseFloat((ps-myVal).toFixed(4));
+    if(diff<=-0.5)              cols.farBelow.push(player);
+    else if(Math.abs(diff+0.25)<0.01) cols.below.push(player);
+    else if(Math.abs(diff)<0.01)      cols.my.push(player);
+    else if(Math.abs(diff-0.25)<0.01) cols.above.push(player);
+    else if(diff>=0.5)                cols.farAbove.push(player);
+    else                              cols.my.push(player);
   });
-  cols.my=cols.my.concat(cols.other);
-  ['below','my','above'].forEach(key=>{
-    const colEl=document.getElementById('inlineCol'+key.charAt(0).toUpperCase()+key.slice(1));
+
+  setEl('inlineFarBelowCount', cols.farBelow.length||'0');
+  setEl('inlineBelowCount',    cols.below.length||'0');
+  setEl('inlineMyCount',       cols.my.length||'0');
+  setEl('inlineAboveCount',    cols.above.length||'0');
+  setEl('inlineFarAboveCount', cols.farAbove.length||'0');
+
+  const colMap=[
+    {key:'farBelow',elId:'inlineColFarBelow'},
+    {key:'below',   elId:'inlineColBelow'},
+    {key:'my',      elId:'inlineColMy'},
+    {key:'above',   elId:'inlineColAbove'},
+    {key:'farAbove',elId:'inlineColFarAbove'},
+  ];
+  colMap.forEach(({key,elId})=>{
+    const colEl=document.getElementById(elId);
     if(!colEl) return;
     colEl.innerHTML='';
     if(!cols[key].length){colEl.innerHTML='<div class="ic-col-empty">None</div>';return;}
+    cols[key].sort((a,b)=>((a.first_name||'')+(a.last_name||'')).localeCompare((b.first_name||'')+(b.last_name||'')));
     cols[key].forEach(player=>{
       const card=document.createElement('div');
       card.className='ic-name-card';
       const name=((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim();
-      card.innerHTML='<div class="ic-name-card-name">'+(player.avatar_emoji||'👤')+' '+name+'</div>'+(player.nickname?'<div class="ic-name-card-nick">"'+player.nickname+'"</div>':'');
+      card.innerHTML=
+        '<div class="ic-name-card-name">'+(player.avatar_emoji||'\uD83D\uDC64')+' '+name+'</div>'+
+        (player.nickname?'<div class="ic-name-card-nick">"'+player.nickname+'"</div>':'')+
+        '<div style="font-size:10px;color:var(--dim);">'+(player.skill_level||'?')+'</div>';
       card.onclick=()=>openPlayerCard(player,null,getMyEmail());
       colEl.appendChild(card);
     });
   });
 }
-
 function switchCircleView(view){
   const lv=document.getElementById('icCircleListView');
   const cv=document.getElementById('icCircleColumnsView');
