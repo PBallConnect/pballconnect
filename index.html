@@ -618,7 +618,7 @@
     background:transparent;color:var(--dim);font-size:13px;cursor:pointer;
     font-family:'DM Sans',sans-serif;}
   /* Emoji picker in registration */
-  .emoji-reg-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:6px 0;max-width:220px;}
+  .emoji-reg-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;padding:6px 0;max-width:320px;}
   .emoji-reg-opt{width:38px;height:38px;border-radius:8px;border:1px solid var(--border);
     background:rgba(255,255,255,0.04);cursor:pointer;display:flex;align-items:center;
     justify-content:center;font-size:20px;transition:all .15s;}
@@ -1000,6 +1000,10 @@
         <span class="nav-label">Get Lessons</span>
         <span class="nav-lessons-badge" id="lessonsNavBadge" style="display:none;">New</span>
       </div>
+      <div class="nav-item" onclick="showPage('privacy')" id="nav-privacy" title="Privacy Policy">
+        <span class="nav-icon">🔒</span>
+        <span class="nav-label">Privacy Policy</span>
+      </div>
     </div>
     <div class="nav-footer">
       <div class="nav-footer-text">Pickleball Registry v1.0<br>Powered by Supabase</div>
@@ -1052,7 +1056,10 @@
 
     <div class="grid2">
       <div class="field"><label>First Name</label><input type="text" id="firstName" placeholder="Jane" autocomplete="off" oninput="chk1()"/></div>
-      <div class="field"><label>Last Name</label><input type="text" id="lastName" placeholder="Smith" autocomplete="off" oninput="chk1()"/></div>
+      <div class="field">
+        <label>Last Name <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— optional · only initial stored</span></label>
+        <input type="text" id="lastName" placeholder="S." autocomplete="off"/>
+      </div>
     </div>
     <div class="field">
       <label>Pickleball Nickname <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— optional</span></label>
@@ -1070,8 +1077,37 @@
     </div>
     <div class="field"><label>Email Address</label><input type="email" id="email" placeholder="jane@example.com" autocomplete="off" oninput="chk1()"/></div>
     <div class="grid2">
-      <div class="field"><label>Phone Number</label><input type="tel" id="phone" placeholder="(555) 000-0000" autocomplete="off" oninput="formatPhone(this);chk1()" maxlength="14"/></div>
-      <div class="field"><label>Date of Birth</label><input type="date" id="dob" oninput="chk1()" onchange="chk1()"/></div>
+      <div class="field">
+        <label>Phone Number <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— optional</span></label>
+        <input type="tel" id="phone" placeholder="(555) 000-0000" autocomplete="off" oninput="formatPhone(this)" maxlength="14"/>
+      </div>
+      <div class="field">
+        <label>Age as of Jan 1 this year</label>
+        <select id="playerAge" oninput="chk1()" onchange="chk1()" style="width:100%;padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:#fff;font-size:14px;font-family:'DM Sans',sans-serif;">
+          <option value="">Select age…</option>
+          <option value="Under 18">Under 18</option>
+          <option value="18">18</option>
+          <option value="19">19</option>
+          <option value="20">20</option>
+          <option value="21">21</option>
+          <option value="22">22</option>
+          <option value="23">23</option>
+          <option value="24">24</option>
+          <option value="25">25</option>
+          <option value="26-30">26–30</option>
+          <option value="31-35">31–35</option>
+          <option value="36-40">36–40</option>
+          <option value="41-45">41–45</option>
+          <option value="46-50">46–50</option>
+          <option value="51-55">51–55</option>
+          <option value="56-60">56–60</option>
+          <option value="61-65">61–65</option>
+          <option value="66-70">66–70</option>
+          <option value="71-75">71–75</option>
+          <option value="76-80">76–80</option>
+          <option value="81+">81+</option>
+        </select>
+      </div>
     </div>
 
     <div class="field">
@@ -1093,20 +1129,24 @@
 
     <div class="divider"></div>
 
-    <!-- ADDRESS AUTOCOMPLETE -->
+    <!-- LOCATION — city/state/zip only -->
     <div class="field">
-      <label>Home Address</label>
-      <input type="text" id="addressSearch" placeholder="Start typing your address…" autocomplete="off" oninput="onAddressInput(this.value)" autocomplete="off"/>
-      <div id="addressSuggestions" class="address-suggestions"></div>
+      <label>Location</label>
+      <div style="font-size:11px;color:var(--dim);margin-bottom:10px;line-height:1.5;">
+        🔒 We use your city and zip to find nearby players and courts. We never store your street address.
+      </div>
     </div>
     <div class="grid2">
-      <div class="field"><label>City</label><input type="text" id="addrCity" oninput="onManualAddress()" placeholder="City" autocomplete="off"/></div>
-      <div class="field"><label>State</label><input type="text" id="addrState" oninput="onManualAddress()" placeholder="State" autocomplete="off"/></div>
+      <div class="field"><label>City</label><input type="text" id="addrCity" oninput="onManualAddress();chk1()" placeholder="City" autocomplete="off"/></div>
+      <div class="field"><label>State</label><input type="text" id="addrState" oninput="onManualAddress();chk1()" placeholder="NH" autocomplete="off"/></div>
     </div>
-    <div class="grid2">
-      <div class="field"><label>Zip Code</label><input type="text" id="addrZip" oninput="onManualAddress()" placeholder="Zip" autocomplete="off"/></div>
-      <div class="field"><label>County</label><input type="text" id="addrCounty" oninput="onManualAddress()" placeholder="County" autocomplete="off"/></div>
+    <div class="field" style="max-width:160px;">
+      <label>Zip Code</label>
+      <input type="text" id="addrZip" oninput="onManualAddress();chk1()" placeholder="03842" autocomplete="off" maxlength="10"/>
     </div>
+    <!-- Hidden compatibility fields -->
+    <input type="hidden" id="addressSearch" value=""/>
+    <input type="hidden" id="addrCounty" value=""/>
 
     <div class="divider"></div>
 
@@ -1355,8 +1395,17 @@
   <!-- STEP 3 -->
   <div class="card" id="step3" style="display:none">
     <h2>Waiver &amp; Agreement</h2>
-    <div class="check-row" onclick="toggleWaiver()" style="margin-bottom:20px">
-      <div class="check-box" id="checkBox"></div>
+    <!-- CONSENT CHECKBOXES -->
+    <div class="check-row" onclick="toggleConsent('privacy')" style="margin-bottom:14px;">
+      <div class="check-box" id="checkBoxPrivacy"></div>
+      <div class="check-text">
+        I have read and agree to the
+        <span onclick="event.stopPropagation();showPage('privacy')" style="color:var(--green);cursor:pointer;font-weight:600;">Privacy Policy</span>.
+        I understand that Pickleball Registry collects only the minimum data needed to connect players, never sells my information, and I can request deletion of my data at any time.
+      </div>
+    </div>
+    <div class="check-row" onclick="toggleConsent('risk')" style="margin-bottom:20px;">
+      <div class="check-box" id="checkBoxRisk"></div>
       <div class="check-text">I understand the risks associated with playing pickleball and participate voluntarily.</div>
     </div>
     <div class="summary-box">
@@ -1365,7 +1414,7 @@
       <div class="summary-row"><span>Nickname</span><span id="sumNickname">—</span></div>
       <div class="summary-row"><span>Email</span><span id="sumEmail">—</span></div>
       <div class="summary-row"><span>Phone</span><span id="sumPhone">—</span></div>
-      <div class="summary-row"><span>Date of Birth</span><span id="sumDob">—</span></div>
+      <div class="summary-row"><span>Age Range</span><span id="sumDob">—</span></div>
       <div class="summary-row"><span>Gender</span><span id="sumGender">—</span></div>
       <div class="summary-row"><span>State</span><span id="sumState">—</span></div>
       <div class="summary-row"><span>County</span><span id="sumCounty">—</span></div>
@@ -2484,6 +2533,68 @@
       <div id="invitedByOthersList" style="max-width:700px;"></div>
     </div>
 
+    <!-- PRIVACY POLICY PAGE -->
+    <div class="page-section" id="page-privacy">
+      <div class="page-header">
+        <h1>Privacy <span>Policy</span></h1>
+        <p>Last updated: March 2026</p>
+      </div>
+      <div style="max-width:680px;line-height:1.8;color:rgba(255,255,255,0.8);font-size:14px;">
+
+        <div style="background:rgba(76,175,125,0.08);border:1px solid rgba(76,175,125,0.25);border-radius:14px;padding:20px;margin-bottom:24px;">
+          <div style="font-size:18px;font-weight:800;color:var(--green);margin-bottom:8px;">Our Commitment to You</div>
+          <div>Pickleball Registry was built by pickleball players, for pickleball players. We collect only what we need to connect you with others who want to play. We will never sell your data, never use it for advertising, and you can delete your account at any time.</div>
+        </div>
+
+        <div style="font-size:16px;font-weight:700;color:#fff;margin:20px 0 8px;">What We Collect</div>
+        <div style="color:var(--dim);font-size:13px;margin-bottom:16px;">And why we need it:</div>
+        <div style="display:grid;gap:10px;margin-bottom:24px;">
+          ${[
+            ['First Name + Nickname', 'So other players can identify you in the app'],
+            ['Last Name initial (optional)', 'For your player card display only'],
+            ['Email address', 'Required to sign in and receive match invites'],
+            ['Phone number (optional)', 'For future match notifications and score recording'],
+            ['Age range (e.g. 41–45)', 'For community statistics — no exact birthdate stored'],
+            ['City, State, Zip', 'To find nearby players and courts — no street address stored'],
+            ['Skill level & play preferences', 'To match you with compatible players'],
+            ['Play schedule', 'So others know when you like to play'],
+          ].map(([field, reason])=>`
+            <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid var(--border);">
+              <div style="color:#fff;font-weight:600;font-size:13px;">${field}</div>
+              <div style="color:var(--dim);font-size:13px;">${reason}</div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div style="font-size:16px;font-weight:700;color:#fff;margin:20px 0 10px;">What We Never Collect</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;">
+          ${['Street address','Full date of birth','Financial information','Social Security number','Facial images or biometrics','Health records'].map(item=>`
+            <span style="padding:6px 12px;border-radius:999px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#f87171;font-size:12px;font-weight:600;">✕ ${item}</span>
+          `).join('')}
+        </div>
+
+        <div style="font-size:16px;font-weight:700;color:#fff;margin:20px 0 10px;">How We Protect Your Data</div>
+        <div style="margin-bottom:24px;">
+          Your data is stored on Supabase, which is SOC 2 Type 2 certified and built on AWS infrastructure with encryption at rest and in transit. Phone numbers are encoded before storage. We use row-level security to restrict database access. We never share your data with third parties except as required to operate the app (e.g. sending emails via EmailJS).
+        </div>
+
+        <div style="font-size:16px;font-weight:700;color:#fff;margin:20px 0 10px;">Your Rights</div>
+        <div style="margin-bottom:24px;">
+          You can request deletion of your account and all associated data at any time by emailing <span style="color:var(--green);">dippa777@gmail.com</span>. We will process deletion requests within 30 days.
+        </div>
+
+        <div style="font-size:16px;font-weight:700;color:#fff;margin:20px 0 10px;">Contact</div>
+        <div style="margin-bottom:32px;">
+          Questions about this policy? Email us at <span style="color:var(--green);">dippa777@gmail.com</span>. We're real people — you'll get a real response.
+        </div>
+
+        <div style="text-align:center;padding:20px;border-top:1px solid var(--border);color:var(--dim);font-size:12px;">
+          Pickleball Registry · Built with ❤️ for the pickleball community<br>
+          A portion of future proceeds supports <strong style="color:var(--green);">A Tiny Ripple of Hope</strong>
+        </div>
+      </div>
+    </div>
+
     <!-- LESSONS PAGE -->
     <div class="page-section" id="page-lessons">
       <div class="page-header">
@@ -2585,7 +2696,7 @@
 const S={gender:'',skill:'',schedule:new Set(),anytime:false,partner:false,
   waiver:false,photoSrc:null,state:'',stateFips:'',county:'',city:'',email:'',
   court:'',courtName:'',duprVal:null,venues:new Set(),driveDistance:'25 miles',
-  playStyle:'',playFormat:'Both',handedness:'',avatarEmoji:'🎾',venuePref:'',playingSince:'',nickname:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null};
+  playStyle:'',playFormat:'Both',handedness:'',avatarEmoji:'🎾',venuePref:'',playingSince:'',nickname:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null,_privacyConsent:false,_riskConsent:false};
 
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const TIMES=['Early AM','Morning','Afternoon','Evening'];
@@ -3013,10 +3124,31 @@ function toggleAnytime(){
   chk2();
 }
 function togglePartner(){S.partner=!S.partner;const pt=document.getElementById('partnerTrack');if(pt)pt.classList.toggle('on',S.partner);}
-function toggleWaiver(){S.waiver=!S.waiver;document.getElementById('checkBox').classList.toggle('on',S.waiver);document.getElementById('btnSubmit').disabled=!S.waiver;}
+function toggleConsent(type){
+  if(type==='privacy'){
+    S._privacyConsent = !S._privacyConsent;
+    document.getElementById('checkBoxPrivacy')?.classList.toggle('on', S._privacyConsent);
+  } else {
+    S._riskConsent = !S._riskConsent;
+    document.getElementById('checkBoxRisk')?.classList.toggle('on', S._riskConsent);
+  }
+  // Enable submit only when both are checked
+  const btn = document.getElementById('btnSubmit');
+  if(btn) btn.disabled = !(S._privacyConsent && S._riskConsent);
+  chk1();
+}
+// Keep toggleWaiver as alias so any old references don't break
+function toggleWaiver(){ toggleConsent('risk'); }
 
 function v(id){return document.getElementById(id).value.trim();}
-function chk1(){document.getElementById('next1').disabled=!(v('firstName')&&v('lastName')&&v('email')&&v('phone')&&v('dob')&&S.gender&&v('addrCity')&&v('addrState')&&v('addrZip'));}
+function chk1(){
+  const btn = document.getElementById('next1');
+  if(!btn) return;
+  const ok = v('firstName') && v('email') && v('addrCity') && v('addrState') && v('addrZip') && S.gender
+    && document.getElementById('playerAge')?.value
+    && S._privacyConsent && S._riskConsent;
+  btn.disabled = !ok;
+}
 function chk2(){document.getElementById('next2').disabled=!(v('shirtSize')&&v('playingSince')&&(S.anytime||S.schedule.size>0));}
 
 function goTo(n){
@@ -3040,8 +3172,8 @@ function populateSummary(){
   set('sumName',    (v('firstName')+' '+v('lastName')).trim());
   set('sumNickname', v('nickname') || '—');
   set('sumEmail',   v('email'));
-  set('sumPhone',   v('phone') || '—');
-  set('sumDob',     v('dob') || '—');
+  set('sumPhone',   v('phone') ? (v('phone')||'—') : '—');
+  set('sumDob',     document.getElementById('playerAge')?.value || '—');
   set('sumGender',  S.gender || '—');
 
   // Location
@@ -3201,6 +3333,23 @@ const VALID_CONN_STATUS = ['pending','approved','declined'];
 const MAX_TEXT_LEN      = 500;
 const MAX_NOTE_LEN      = 1000;
 const MAX_NAME_LEN      = 80;
+
+// ── Phone encoding (Base64 obfuscation) ───────────────
+function encodePhone(phone){
+  if(!phone) return null;
+  const digits = String(phone).replace(/\D/g,'');
+  if(!digits) return null;
+  try{ return btoa(digits); }catch(e){ return digits; }
+}
+function decodePhone(encoded){
+  if(!encoded) return '';
+  try{ return atob(encoded); }catch(e){ return encoded; }
+}
+function formatPhoneForDisplay(encoded){
+  const digits = decodePhone(encoded);
+  if(digits.length===10) return '('+digits.substring(0,3)+') '+digits.substring(3,6)+'-'+digits.substring(6);
+  return digits;
+}
 
 function sanitizeStr(val, maxLen=MAX_TEXT_LEN){
   if(val===null||val===undefined) return null;
@@ -3407,9 +3556,9 @@ function showProfileDiff(){
   };
   const fields=[
     {label:'First Name',   old:player.first_name||'',    nw:v('firstName')},
-    {label:'Last Name',    old:player.last_name||'',     nw:v('lastName')},
+    {label:'Last Name',    old:player.last_name||'',     nw:v('lastName')?v('lastName').trim().charAt(0).toUpperCase()+'.':''},
     {label:'Nickname',     old:player.nickname||'',      nw:v('nickname')},
-    {label:'Address',      old:player.address||'',       nw:v('addressSearch')},
+    {label:'Age Range',    old:player.dob||'',           nw:document.getElementById('playerAge')?.value||''},
     {label:'City',         old:player.city||'',          nw:v('addrCity')},
     {label:'State',        old:player.state||'',         nw:stateAbbr(v('addrState'))},
     {label:'Zip',          old:player.zip_code||'',      nw:v('addrZip')},
@@ -3419,7 +3568,7 @@ function showProfileDiff(){
     {label:'Play Format',  old:player.play_format||'Both', nw:S.playFormat||'Both'},
     {label:'Play Style',   old:player.play_style||'',    nw:S.playStyle||''},
     {label:'Venues',       old:player.play_venues||'',   nw:S.venuePref||''},
-    {label:'Phone',        old:(player.phone||'').replace(/\D/g,''), nw:(v('phone')||'').replace(/\D/g,'')},
+    {label:'Phone',        old:decodePhone(player.phone||''), nw:(v('phone')||'').replace(/\D/g,'')},
   ];
 
   const changed = fields.filter(f=>String(f.old).trim()!==String(f.nw).trim());
@@ -3494,24 +3643,23 @@ async function doSaveProfile(){
   try{
     await saveRegistration({
       first_name:          v('firstName'),
-      last_name:           v('lastName'),
+      last_name:           v('lastName') ? v('lastName').trim().charAt(0).toUpperCase()+'.' : null,
       nickname:            v('nickname')||null,
       email:               v('email'),
-      phone:               (v('phone')||'').replace(/\D/g,''),
-      dob:                 v('dob'),
+      phone:               encodePhone(v('phone')),
+      dob:                 document.getElementById('playerAge')?.value || SESSION_PLAYER?.dob || null,
       gender:              S.gender,
-      address:             v('addressSearch'),
+      address:             null,
       city:                v('addrCity')||S.city,
       state:               (()=>{ 
         const st = v('addrState')||S.state||'';
         if(!st) return '';
         if(st.length===2) return st.toUpperCase();
-        // Convert full state name to abbreviation
         const found = Object.values(STATE_INFO).find(([abbr,name])=>name&&name.toLowerCase()===st.toLowerCase());
         return found ? found[0] : st;
       })(),
       zip_code:            v('addrZip'),
-      county:              v('addrCounty')||S.county,
+      county:              null,
       court_name:          S.courtName || null,
       skill_level:         S.skill || SESSION_PLAYER?.skill_level || null,
       dupr_rating:         S.duprVal || null,
@@ -3519,7 +3667,7 @@ async function doSaveProfile(){
       schedule:            schedStr,
       anytime:             S.anytime,
       photo_url:           S.photoSrc || SESSION_PLAYER?.photo_url || null,
-      waiver_agreed:       S.waiver || SESSION_PLAYER?.waiver_agreed || false,
+      waiver_agreed:       (S._privacyConsent && S._riskConsent) || SESSION_PLAYER?.waiver_agreed || false,
       play_venues:         S.venuePref || SESSION_PLAYER?.play_venues || null,
       drive_distance_miles: S.driveDistance || SESSION_PLAYER?.drive_distance_miles || null,
       play_style:          S.playStyle || SESSION_PLAYER?.play_style || null,
@@ -3781,6 +3929,7 @@ function showPage(page){
   if(page==='setupMatch')     { initSetupMatch(); loadMatchSquareCounts(); }
   if(page==='myInvites')      { loadMyInvitesPage(); }
   if(page==='invitedByOthers'){ loadInvitedByOthersPage(); }
+  if(page==='privacy')        { /* static page, no loader needed */ }
 }
 
 function unlockLessonsNav(){
@@ -6173,11 +6322,11 @@ function restoreProfileForm(player){
   const textFields={
     firstName:player.first_name,lastName:player.last_name,
     nickname:player.nickname||'',email:player.email,
-    phone:player.phone?formatPhoneDisplay(player.phone):'',
-    dob:player.dob,addressSearch:player.address,
+    phone:player.phone ? formatPhoneForDisplay(player.phone) : '',
+    dob:'', addressSearch:'',
     addrCity:player.city,
     addrState:(()=>{const st=player.state||'';if(st.length===2)return st.toUpperCase();const found=Object.values(STATE_INFO).find(([a,n])=>n&&n.toLowerCase()===st.toLowerCase());return found?found[0]:st;})(),
-    addrZip:player.zip_code,addrCounty:player.county,
+    addrZip:player.zip_code,addrCounty:''
   };
   Object.entries(textFields).forEach(([id,val])=>{
     const el=document.getElementById(id); if(el&&val) el.value=val;
@@ -6185,6 +6334,22 @@ function restoreProfileForm(player){
 
   if(player.playing_since){const el=document.getElementById('playingSince');if(el)el.value=player.playing_since;}
   if(player.shirt_size){const el=document.getElementById('shirtSize');if(el)el.value=player.shirt_size;}
+
+  // Restore age dropdown (stored in dob field as age range string)
+  if(player.dob){
+    const ageEl=document.getElementById('playerAge');
+    if(ageEl) ageEl.value=player.dob; // we now store age range in dob field
+  }
+
+  // Restore consent state for existing players who already agreed
+  if(player.waiver_agreed){
+    S._privacyConsent=true; S._riskConsent=true;
+    document.getElementById('checkBoxPrivacy')?.classList.add('on');
+    document.getElementById('checkBoxRisk')?.classList.add('on');
+    // Enable submit button for existing players
+    const btn=document.getElementById('btnSubmit');
+    if(btn){ btn.disabled=false; btn.textContent='✏️ Update Profile'; }
+  }
 
   document.querySelectorAll('.chip,.chip-rect').forEach(c=>c.classList.remove('on'));
   restoreChip('genderChips',player.gender);
@@ -6715,7 +6880,22 @@ document.addEventListener('click',function(e){
   if(modal&&e.target===modal) closeIcModal();
 });
 
-const AVATAR_EMOJIS=['🎾','🏓','🏆','⚡','🔥','💪','🦅','🐉','🌟','👑','🎯','🤾','🏃','🦁','🐯','🦊','🧠','💥','🌊','🎪','🦋','🎸','🍕','🌈','🤙'];
+const AVATAR_EMOJIS=[
+  // Sports & Activity
+  '🎾','🏓','🏆','🥇','🎯','⚡','🔥','💪','🏃','🤾','🦾','🏋️','🤸','🧘','🚀',
+  // Animals
+  '🦅','🐉','🦁','🐯','🦊','🐺','🦋','🦅','🦆','🐬','🦈','🐸','🦎','🦏','🐘',
+  '🦒','🦓','🦀','🦞','🦁','🐻','🐼','🐨','🦘','🦙',
+  // Nature & Elements
+  '🌊','🌪️','⭐','🌟','💫','☀️','🌙','🌈','❄️','🍀',
+  // Food & Fun
+  '🍕','🌮','🍦','🎸','🎺','🎻','🎹','🎲','🎮','🃏',
+  // Personality & Vibe
+  '👑','🧠','💥','💎','🎪','🤙','✌️','🤘','🫶','💪',
+  '😎','🤩','😤','🥶','🤯','🧨','🎭','🎨','🪄','🔮',
+  // Pickleball specific
+  '🏅','🥊','🎽','👟','🧢','🎒','🌺','🌸','🏔️','🌄',
+];
 
 document.addEventListener('DOMContentLoaded',()=>{
   const grid=document.getElementById('emojiPickerGrid');
