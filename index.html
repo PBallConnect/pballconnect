@@ -3134,7 +3134,9 @@ function showProfileDiff(){
     {label:'Skill Level',  old:String(player.skill_level||''), nw:String(S.skill||player.skill_level||'')},
     {label:'Gender',       old:player.gender||'',        nw:S.gender||''},
     {label:'Handedness',   old:player.handedness||'',    nw:S.handedness||''},
+    {label:'Play Format',  old:player.play_format||'Both', nw:S.playFormat||'Both'},
     {label:'Play Style',   old:player.play_style||'',    nw:S.playStyle||''},
+    {label:'Venues',       old:player.play_venues||'',   nw:S.venuePref||''},
     {label:'Phone',        old:(player.phone||'').replace(/\D/g,''), nw:(v('phone')||'').replace(/\D/g,'')},
   ];
 
@@ -5893,6 +5895,7 @@ function restoreProfileForm(player){
   restoreChip('lessonChips',player.has_had_lesson);
   S.gender=player.gender||''; S.handedness=player.handedness||'';
   S.venuePref=player.play_venues||''; S.playStyle=player.play_style||'';
+  S.playFormat=player.play_format||'Both';
   S.wantsToImprove=player.wants_to_improve||'';
   S.hasHadLesson=player.has_had_lesson||''; S.wantsLesson=player.wants_lesson||'';
 
