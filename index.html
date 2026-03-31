@@ -2580,12 +2580,12 @@
 
         <div style="font-size:16px;font-weight:700;color:#fff;margin:20px 0 10px;">Your Rights</div>
         <div style="margin-bottom:24px;">
-          You can request deletion of your account and all associated data at any time by emailing <span style="color:var(--green);">dippa777@gmail.com</span>. We will process deletion requests within 30 days.
+          You can request deletion of your account and all associated data at any time by emailing <span style="color:var(--green);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f3979a838392c4c4c4b3949e929a9fdd909c9e">[email&#160;protected]</a></span>. We will process deletion requests within 30 days.
         </div>
 
         <div style="font-size:16px;font-weight:700;color:#fff;margin:20px 0 10px;">Contact</div>
         <div style="margin-bottom:32px;">
-          Questions about this policy? Email us at <span style="color:var(--green);">dippa777@gmail.com</span>. We're real people — you'll get a real response.
+          Questions about this policy? Email us at <span style="color:var(--green);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="9df9f4ededfcaaaaaaddfaf0fcf4f1b3fef2f0">[email&#160;protected]</a></span>. We're real people — you'll get a real response.
         </div>
 
         <div style="text-align:center;padding:20px;border-top:1px solid var(--border);color:var(--dim);font-size:12px;">
@@ -2692,6 +2692,7 @@
 
 
 <script>
+
 
 const S={gender:'',skill:'',schedule:new Set(),anytime:false,partner:false,
   waiver:false,photoSrc:null,state:'',stateFips:'',county:'',city:'',email:'',
@@ -3132,13 +3133,35 @@ function toggleConsent(type){
     S._riskConsent = !S._riskConsent;
     document.getElementById('checkBoxRisk')?.classList.toggle('on', S._riskConsent);
   }
-  // Enable submit only when both are checked
   const btn = document.getElementById('btnSubmit');
   if(btn) btn.disabled = !(S._privacyConsent && S._riskConsent);
   chk1();
 }
-// Keep toggleWaiver as alias so any old references don't break
 function toggleWaiver(){ toggleConsent('risk'); }
+
+// ── Phone encoding (Base64 obfuscation) ───────────────
+function encodePhone(phone){
+  if(!phone) return null;
+  const digits = String(phone).replace(/\D/g,'');
+  if(!digits) return null;
+  try{ return btoa(digits); }catch(e){ return digits; }
+}
+function decodePhone(encoded){
+  if(!encoded) return '';
+  if(/^\d+$/.test(encoded)) return encoded; // already plain digits (legacy)
+  try{
+    const decoded = atob(encoded);
+    if(/^\d+$/.test(decoded)) return decoded;
+    return encoded;
+  }catch(e){ return encoded; }
+}
+function formatPhoneForDisplay(encoded){
+  if(!encoded) return '';
+  const digits = decodePhone(encoded).replace(/\D/g,'');
+  if(digits.length===10) return '('+digits.substring(0,3)+') '+digits.substring(3,6)+'-'+digits.substring(6);
+  if(digits.length===11&&digits[0]==='1') return '('+digits.substring(1,4)+') '+digits.substring(4,7)+'-'+digits.substring(7);
+  return digits;
+}
 
 function v(id){return document.getElementById(id).value.trim();}
 function chk1(){
@@ -3165,74 +3188,24 @@ function goTo(n){
 }
 
 function populateSummary(){
-  const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val||'—';};
-  const show=(id,val)=>{const el=document.getElementById(id);if(el)el.style.display=val?'flex':'none';};
-
-  // Personal Info
-  set('sumName',    (v('firstName')+' '+v('lastName')).trim());
-  set('sumNickname', v('nickname') || '—');
-  set('sumEmail',   v('email'));
-  set('sumPhone',   v('phone') ? (v('phone')||'—') : '—');
-  set('sumDob',     document.getElementById('playerAge')?.value || '—');
-  set('sumGender',  S.gender || '—');
-
-  // Location
-  set('sumState',   document.getElementById('addrState')?.value || S.state || '—');
-  set('sumCounty',  document.getElementById('addrCounty')?.value || S.county || '—');
-  set('sumCity',    document.getElementById('addrCity')?.value || S.city || '—');
-
-  // Courts / venues
-  if(S.courtName){
-    document.getElementById('sumCourtRow').style.display='flex';
-    set('sumCourt', S.courtName);
-  } else if(S.venuePref || S.driveDistance){
-    document.getElementById('sumCourtRow').style.display='flex';
-    set('sumCourt', (S.venuePref||'') + (S.driveDistance?' · up to '+S.driveDistance+' mi':''));
-  } else {
-    document.getElementById('sumCourtRow').style.display='none';
-  }
-
-  // Player profile
-  set('sumHandedness', S.handedness || '—');
-  set('sumSkill',      S.skill || '—');
-  set('sumSince',      v('playingSince') || S.playingSince || '—');
-  set('sumShirt',      v('shirtSize') || '—');
-  set('sumFormat',     S.playFormat || '—');
-  set('sumStyle',      S.playStyle || '—');
-  set('sumVenuePref',  S.venuePref || '—');
-  set('sumDrive',      S.driveDistance ? 'Up to '+S.driveDistance+' miles' : '—');
-  set('sumImprove',    S.wantsToImprove || '—');
-  set('sumLesson',     S.hasHadLesson || '—');
-  set('sumWantsLesson',S.wantsLesson || '—');
-
-  // Optional ratings
-  if(S.duprVal){
-    document.getElementById('sumDuprRow').style.display='flex';
-    set('sumDupr', S.duprVal);
-  } else {
-    document.getElementById('sumDuprRow').style.display='none';
-  }
-  if(S.goalRating){
-    document.getElementById('sumGoalRow').style.display='flex';
-    set('sumGoal', S.goalRating);
-  } else {
-    document.getElementById('sumGoalRow').style.display='none';
-  }
-
-  // Schedule
+  document.getElementById('sumName').textContent=v('firstName')+' '+v('lastName');
+  document.getElementById('sumEmail').textContent=v('email');
+  const sumCityVal=document.getElementById('addrCity')?.value||S.city;
+  const sumStateVal=document.getElementById('addrState')?.value||S.state;
+  document.getElementById('sumState').textContent=sumStateVal||'—';
+  document.getElementById('sumCounty').textContent=(document.getElementById('addrCounty')?.value||S.county)||'—';
+  document.getElementById('sumCity').textContent=sumCityVal||'—';
+  if(S.venues.size>0){document.getElementById('sumCourtRow').style.display='flex';document.getElementById('sumCourt').textContent=[...S.venues].join(', ')+(S.driveDistance?' · '+S.driveDistance+' mi radius':'');}
+  else if(S.driveDistance){document.getElementById('sumCourtRow').style.display='flex';document.getElementById('sumCourt').textContent='Drive up to '+S.driveDistance+' miles';}
+  document.getElementById('sumSkill').textContent=S.skill||'—';
+  if(S.handedness) document.getElementById('sumHandedness').textContent=S.handedness;
+  document.getElementById('sumShirt').textContent=v('shirtSize')||'—';
+  if(S.courtName){document.getElementById('sumCourtRow').style.display='flex';document.getElementById('sumCourt').textContent=S.courtName;}
+  if(S.duprVal){document.getElementById('sumDuprRow').style.display='flex';document.getElementById('sumDupr').textContent=S.duprVal;}
   let sched='—';
-  if(S.anytime) sched='Anytime — I\'m flexible!';
-  else if(S.schedule.size>0){
-    // Group by day for readable display
-    const byDay={};
-    [...S.schedule].forEach(key=>{
-      const [day,time]=key.split('|');
-      if(!byDay[day]) byDay[day]=[];
-      byDay[day].push(time);
-    });
-    sched=Object.entries(byDay).map(([d,times])=>d+': '+times.join(', ')).join(' · ');
-  }
-  set('sumSched', sched);
+  if(S.anytime) sched='Anytime';
+  else if(S.schedule.size>0){const days=[...new Set([...S.schedule].map(k=>k.split('|')[0]))];sched=days.join(', ');}
+  document.getElementById('sumSched').textContent=sched;
 }
 
 
@@ -3242,25 +3215,10 @@ function populateSummary(){
 const SUPABASE_URL = 'https://dltiirdjfbjtydazrmvr.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsdGlpcmRqZmJqdHlkYXpybXZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MDQxNzgsImV4cCI6MjA4OTA4MDE3OH0.oBDtS3RZlGxMkqon-r1wdfYR6jPTSPGWIa8cZh7fLWA';
 
-let _lastSaveTime = 0;
 async function saveRegistration(payload){
-  // Rate limit: prevent saving more than once every 3 seconds
-  const now = Date.now();
-  if(now - _lastSaveTime < 3000){
-    throw new Error('Please wait a moment before saving again');
-  }
-  _lastSaveTime = now;
-
-  // Validate before touching Supabase
-  const errors = validateProfile(payload);
-  if(errors.length){
-    showValidationErrors(errors);
-    throw new Error(errors[0]);
-  }
-  // Sanitize all string fields
-  payload = sanitizePayload(payload);
-
   const url = `${SUPABASE_URL}/rest/v1/registrations`;
+  console.log('🔵 Attempting Supabase save to:', url);
+  console.log('🔵 Payload:', JSON.stringify(payload).substring(0,200));
   
   try{
     // Check if player already exists — use PATCH if so, POST if new
@@ -3318,221 +3276,6 @@ function showToast(msg, color='#ef4444'){
   setTimeout(()=>t.remove(), 6000);
 }
 
-// ══════════════════════════════════════════════════════
-// VALIDATION LAYER
-// Lightweight schema validation before any Supabase write
-// ══════════════════════════════════════════════════════
-
-const VALID_GENDERS     = ['male','female','prefer not to say',''];
-const VALID_HANDEDNESS  = ['right-handed','left-handed','ambidextrous',''];
-const VALID_FORMATS     = ['singles','doubles','both',''];
-const VALID_STYLES      = ['just for fun','competitively','both',''];
-const VALID_VENUES      = ['indoors','outdoors','both',''];
-const VALID_RESPONSES   = ['in','out','waitlist','pending'];
-const VALID_CONN_STATUS = ['pending','approved','declined'];
-const MAX_TEXT_LEN      = 500;
-const MAX_NOTE_LEN      = 1000;
-const MAX_NAME_LEN      = 80;
-
-// ── Phone encoding (Base64 obfuscation) ───────────────
-function encodePhone(phone){
-  if(!phone) return null;
-  const digits = String(phone).replace(/\D/g,'');
-  if(!digits) return null;
-  try{ return btoa(digits); }catch(e){ return digits; }
-}
-function decodePhone(encoded){
-  if(!encoded) return '';
-  try{ return atob(encoded); }catch(e){ return encoded; }
-}
-function formatPhoneForDisplay(encoded){
-  const digits = decodePhone(encoded);
-  if(digits.length===10) return '('+digits.substring(0,3)+') '+digits.substring(3,6)+'-'+digits.substring(6);
-  return digits;
-}
-
-function sanitizeStr(val, maxLen=MAX_TEXT_LEN){
-  if(val===null||val===undefined) return null;
-  // Strip HTML tags and trim
-  return String(val).replace(/<[^>]*>/g,'').trim().substring(0, maxLen) || null;
-}
-
-function isValidEmail(email){
-  if(!email) return false;
-  const re = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-  return re.test(String(email).toLowerCase().trim());
-}
-
-function isValidPhone(phone){
-  if(!phone) return true; // optional
-  const digits = String(phone).replace(/\D/g,'');
-  return digits.length === 10 || digits.length === 11;
-}
-
-function isValidDupr(val){
-  if(!val) return true; // optional
-  return DUPR_VALS.includes(String(val));
-}
-
-function isValidDate(dateStr){
-  if(!dateStr) return true; // optional
-  const d = new Date(dateStr);
-  return !isNaN(d.getTime());
-}
-
-function isInList(val, list){
-  if(!val) return true; // optional
-  return list.includes(String(val).toLowerCase().trim());
-}
-
-// ── Profile / Registration validator ──────────────────
-function validateProfile(payload){
-  const errors = [];
-
-  // Required fields
-  if(!payload.first_name?.trim())
-    errors.push('First name is required');
-  else if(payload.first_name.trim().length > MAX_NAME_LEN)
-    errors.push('First name is too long (max 80 characters)');
-
-  if(!payload.last_name?.trim())
-    errors.push('Last name is required');
-  else if(payload.last_name.trim().length > MAX_NAME_LEN)
-    errors.push('Last name is too long (max 80 characters)');
-
-  if(!isValidEmail(payload.email))
-    errors.push('A valid email address is required');
-
-  // Optional but validated if present
-  if(payload.phone){
-    const digits = String(payload.phone).replace(/\D/g,'');
-    if(digits.length !== 10 && digits.length !== 11)
-      errors.push('Phone number must be 10 digits');
-  }
-
-  if(payload.dob && !isValidDate(payload.dob))
-    errors.push('Date of birth is not a valid date');
-
-  if(payload.skill_level && !isValidDupr(payload.skill_level))
-    errors.push('Skill level is not a recognized DUPR value');
-
-  if(payload.dupr_rating && !isValidDupr(payload.dupr_rating))
-    errors.push('DUPR rating is not a recognized value');
-
-  if(payload.gender && !isInList(payload.gender, VALID_GENDERS))
-    errors.push('Gender value is not recognized');
-
-  if(payload.handedness && !isInList(payload.handedness, VALID_HANDEDNESS))
-    errors.push('Handedness value is not recognized');
-
-  if(payload.play_format && !isInList(payload.play_format, VALID_FORMATS))
-    errors.push('Play format value is not recognized');
-
-  if(payload.play_style && !isInList(payload.play_style, VALID_STYLES))
-    errors.push('Play style value is not recognized');
-
-  if(payload.play_venues && !isInList(payload.play_venues, VALID_VENUES))
-    errors.push('Play venues value is not recognized');
-
-  if(payload.nickname && payload.nickname.length > MAX_NAME_LEN)
-    errors.push('Nickname is too long (max 80 characters)');
-
-  if(payload.zip_code && !/^\d{5}(-\d{4})?$/.test(payload.zip_code))
-    errors.push('Zip code must be 5 digits (or 5+4 format)');
-
-  if(payload.avatar_emoji && payload.avatar_emoji.length > 10)
-    errors.push('Avatar emoji is invalid');
-
-  return errors;
-}
-
-// ── Match validator ────────────────────────────────────
-function validateMatch(payload){
-  const errors = [];
-
-  if(!isValidEmail(payload.organizer_email))
-    errors.push('Organizer email is invalid');
-
-  if(!payload.match_date || !isValidDate(payload.match_date))
-    errors.push('Match date is required and must be valid');
-
-  // Match date must not be in the past
-  const matchDate = new Date(payload.match_date + 'T00:00:00');
-  const today = new Date(); today.setHours(0,0,0,0);
-  if(matchDate < today)
-    errors.push('Match date cannot be in the past');
-
-  if(!payload.match_type || !['singles','doubles'].includes(payload.match_type))
-    errors.push('Match type must be singles or doubles');
-
-  if(!payload.time_start)
-    errors.push('Match start time is required');
-
-  if(payload.notes && payload.notes.length > MAX_NOTE_LEN)
-    errors.push('Match notes are too long (max 1000 characters)');
-
-  if(payload.max_players && (payload.max_players < 2 || payload.max_players > 8))
-    errors.push('Max players must be between 2 and 8');
-
-  return errors;
-}
-
-// ── Connection validator ───────────────────────────────
-function validateConnection(payload){
-  const errors = [];
-
-  if(!isValidEmail(payload.requester_email))
-    errors.push('Requester email is invalid');
-
-  if(!isValidEmail(payload.recipient_email))
-    errors.push('Recipient email is invalid');
-
-  if(payload.requester_email?.toLowerCase() === payload.recipient_email?.toLowerCase())
-    errors.push('You cannot send an Inner Circle invite to yourself');
-
-  if(payload.status && !VALID_CONN_STATUS.includes(payload.status))
-    errors.push('Connection status is invalid');
-
-  return errors;
-}
-
-// ── Match response validator ───────────────────────────
-function validateMatchResponse(payload){
-  const errors = [];
-
-  if(!payload.match_id)
-    errors.push('Match ID is required');
-
-  if(!isValidEmail(payload.player_email))
-    errors.push('Player email is invalid');
-
-  if(!VALID_RESPONSES.includes(payload.response))
-    errors.push('Response must be: in, out, waitlist, or pending');
-
-  return errors;
-}
-
-// ── Sanitize a full payload object ────────────────────
-function sanitizePayload(payload){
-  const clean = {};
-  Object.entries(payload).forEach(([k,v])=>{
-    if(v === null || v === undefined){ clean[k] = v; return; }
-    if(typeof v === 'string') clean[k] = sanitizeStr(v, MAX_TEXT_LEN);
-    else clean[k] = v;
-  });
-  return clean;
-}
-
-// ── Show validation errors to user ────────────────────
-function showValidationErrors(errors){
-  if(!errors.length) return;
-  // Show first error as toast, log the rest
-  showToast('⚠️ ' + errors[0], '#f59e0b');
-  if(errors.length > 1){
-    console.warn('Validation errors:', errors);
-  }
-}
-
 async function submitForm(){
   // If editing existing profile, show diff overlay first
   if(SESSION_PLAYER){
@@ -3555,19 +3298,19 @@ function showProfileDiff(){
     return found?found[0]:st;
   };
   const fields=[
-    {label:'First Name',   old:player.first_name||'',    nw:v('firstName')},
-    {label:'Last Name',    old:player.last_name||'',     nw:v('lastName')?v('lastName').trim().charAt(0).toUpperCase()+'.':''},
-    {label:'Nickname',     old:player.nickname||'',      nw:v('nickname')},
-    {label:'Age Range',    old:player.dob||'',           nw:document.getElementById('playerAge')?.value||''},
-    {label:'City',         old:player.city||'',          nw:v('addrCity')},
-    {label:'State',        old:player.state||'',         nw:stateAbbr(v('addrState'))},
-    {label:'Zip',          old:player.zip_code||'',      nw:v('addrZip')},
+    {label:'First Name',   old:player.first_name||'',      nw:v('firstName')},
+    {label:'Last Name',    old:player.last_name||'',       nw:v('lastName')?v('lastName').trim().charAt(0).toUpperCase()+'.':''},
+    {label:'Nickname',     old:player.nickname||'',        nw:v('nickname')},
+    {label:'Age Range',    old:player.dob||'',             nw:document.getElementById('playerAge')?.value||''},
+    {label:'City',         old:player.city||'',            nw:v('addrCity')},
+    {label:'State',        old:player.state||'',           nw:stateAbbr(v('addrState'))},
+    {label:'Zip',          old:player.zip_code||'',        nw:v('addrZip')},
     {label:'Skill Level',  old:String(player.skill_level||''), nw:String(S.skill||player.skill_level||'')},
-    {label:'Gender',       old:player.gender||'',        nw:S.gender||''},
-    {label:'Handedness',   old:player.handedness||'',    nw:S.handedness||''},
+    {label:'Gender',       old:player.gender||'',          nw:S.gender||''},
+    {label:'Handedness',   old:player.handedness||'',      nw:S.handedness||''},
     {label:'Play Format',  old:player.play_format||'Both', nw:S.playFormat||'Both'},
-    {label:'Play Style',   old:player.play_style||'',    nw:S.playStyle||''},
-    {label:'Venues',       old:player.play_venues||'',   nw:S.venuePref||''},
+    {label:'Play Style',   old:player.play_style||'',      nw:S.playStyle||''},
+    {label:'Venues',       old:player.play_venues||'',     nw:S.venuePref||''},
     {label:'Phone',        old:decodePhone(player.phone||''), nw:(v('phone')||'').replace(/\D/g,'')},
   ];
 
@@ -3621,6 +3364,14 @@ async function doSaveProfile(){
     schedStr = [...S.schedule].join(', ');
   }
 
+  // Validate raw phone before encoding (if provided)
+  const rawPhone = (document.getElementById('phone')?.value||'').replace(/\D/g,'');
+  if(rawPhone && rawPhone.length !== 10 && rawPhone.length !== 11){
+    showToast('⚠️ Phone number must be 10 digits','#f59e0b');
+    btn.disabled=false; btn.textContent = SESSION_PLAYER ? '✏️ Update Profile' : '🎉 Complete Registration';
+    return;
+  }
+
   // If no lat/lon from autocomplete, try to geocode city+state before saving
   if(!S.addrLat || !S.addrLon){
     const city = document.getElementById('addrCity')?.value?.trim();
@@ -3643,10 +3394,10 @@ async function doSaveProfile(){
   try{
     await saveRegistration({
       first_name:          v('firstName'),
-      last_name:           v('lastName') ? v('lastName').trim().charAt(0).toUpperCase()+'.' : null,
+      last_name:           v('lastName') ? v('lastName').trim().charAt(0).toUpperCase()+'.' : (SESSION_PLAYER?.last_name||null),
       nickname:            v('nickname')||null,
       email:               v('email'),
-      phone:               encodePhone(v('phone')),
+      phone:               encodePhone(v('phone')) || SESSION_PLAYER?.phone || null,
       dob:                 document.getElementById('playerAge')?.value || SESSION_PLAYER?.dob || null,
       gender:              S.gender,
       address:             null,
@@ -3712,19 +3463,18 @@ async function doSaveProfile(){
       SESSION_PLAYER.playing_since = _savedSince;
       SESSION_PLAYER.gender        = S.gender        || SESSION_PLAYER.gender;
       SESSION_PLAYER.handedness    = S.handedness    || SESSION_PLAYER.handedness;
-      SESSION_PLAYER.play_style    = S.playStyle     || SESSION_PLAYER.play_style;
       SESSION_PLAYER.play_format   = S.playFormat    || SESSION_PLAYER.play_format;
+      SESSION_PLAYER.play_style    = S.playStyle     || SESSION_PLAYER.play_style;
       SESSION_PLAYER.play_venues   = S.venuePref     || SESSION_PLAYER.play_venues;
       SESSION_PLAYER.wants_to_improve = S.wantsToImprove || SESSION_PLAYER.wants_to_improve;
       SESSION_PLAYER.has_had_lesson= S.hasHadLesson  || SESSION_PLAYER.has_had_lesson;
       SESSION_PLAYER.wants_lesson  = S.wantsLesson   || SESSION_PLAYER.wants_lesson;
-      SESSION_PLAYER.schedule      = schedStr;
-      SESSION_PLAYER.anytime       = S.anytime;
-      // Address fields
-      SESSION_PLAYER.address  = v('addressSearch') || SESSION_PLAYER.address;
-      SESSION_PLAYER.city     = v('addrCity')       || SESSION_PLAYER.city;
-      SESSION_PLAYER.zip_code = v('addrZip')        || SESSION_PLAYER.zip_code;
-      SESSION_PLAYER.county   = v('addrCounty')     || SESSION_PLAYER.county;
+      SESSION_PLAYER.dob           = document.getElementById('playerAge')?.value || SESSION_PLAYER.dob;
+      SESSION_PLAYER.phone         = encodePhone(v('phone')) || SESSION_PLAYER.phone;
+      SESSION_PLAYER.address       = null;
+      SESSION_PLAYER.county        = null;
+      SESSION_PLAYER.city          = v('addrCity')   || SESSION_PLAYER.city;
+      SESSION_PLAYER.zip_code      = v('addrZip')    || SESSION_PLAYER.zip_code;
       const rawState = v('addrState') || SESSION_PLAYER.state || '';
       if(rawState.length===2) SESSION_PLAYER.state = rawState.toUpperCase();
       else {
@@ -3929,7 +3679,6 @@ function showPage(page){
   if(page==='setupMatch')     { initSetupMatch(); loadMatchSquareCounts(); }
   if(page==='myInvites')      { loadMyInvitesPage(); }
   if(page==='invitedByOthers'){ loadInvitedByOthersPage(); }
-  if(page==='privacy')        { /* static page, no loader needed */ }
 }
 
 function unlockLessonsNav(){
@@ -5317,33 +5066,18 @@ async function submitMatch(){
   if(!myEmail){ showToast('Please sign in first','#f59e0b'); return; }
   const btn=document.getElementById('matchSendBtn');
   const status=document.getElementById('matchSendStatus');
+  btn.disabled=true; btn.textContent='Sending…';
+  status.textContent='Saving match…';
   const date=document.getElementById('matchDate')?.value;
   const timeStart=MS.isFeeler?document.getElementById('matchTimeRangeStart')?.value:MS.timeStart||document.getElementById('matchTimeStart')?.value;
   const timeEnd=MS.isFeeler?document.getElementById('matchTimeRangeEnd')?.value:null;
   const note=document.getElementById('matchNote')?.value?.trim();
   const myName=((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim();
-
-  // Validate before saving
-  const matchErrors = validateMatch({
-    organizer_email: myEmail,
-    match_date: date,
-    match_type: MS.format,
-    time_start: timeStart,
-    notes: note,
-    max_players: MS.format==='doubles'?4:2
-  });
-  if(matchErrors.length){
-    showValidationErrors(matchErrors);
-    return;
-  }
-
-  btn.disabled=true; btn.textContent='Sending…';
-  status.textContent='Saving match…';
   try{
     const matchRes=await fetch(`${SUPABASE_URL}/rest/v1/matches`,{
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=representation'},
-      body:JSON.stringify(sanitizePayload({organizer_email:myEmail,organizer_name:myName,match_type:MS.format,invite_group:MS.group,is_feeler:MS.isFeeler,match_date:date,time_start:timeStart,time_end:timeEnd,court_id:MS.courtId||null,court_name:MS.courtName||'TBD',court_address:MS.courtAddress||'',is_private_court:MS.isPrivate,max_players:MS.format==='doubles'?4:2,notes:note||null}))
+      body:JSON.stringify({organizer_email:myEmail,organizer_name:myName,match_type:MS.format,invite_group:MS.group,is_feeler:MS.isFeeler,match_date:date,time_start:timeStart,time_end:timeEnd,court_id:MS.courtId||null,court_name:MS.courtName||'TBD',court_address:MS.courtAddress||'',is_private_court:MS.isPrivate,max_players:MS.format==='doubles'?4:2,notes:note||null})
     });
     const matchRows=matchRes.ok?await matchRes.json():[];
     const matchId=matchRows[0]?.id;
@@ -5432,9 +5166,7 @@ async function loadSentMatches(){
       const maxNeeded   =m.match_type==='doubles'?3:1;
 
       const card=document.createElement('div');
-      card.style.cssText='padding:14px 0;border-bottom:1px solid var(--border);'+(isMatchPast(m)?'opacity:0.75;':'');
-
-      const sd=getMatchStatusDisplay(m);
+      card.style.cssText='padding:14px 0;border-bottom:1px solid var(--border);';
 
       // Header row
       const hdr=document.createElement('div');
@@ -5442,11 +5174,11 @@ async function loadSentMatches(){
       hdr.innerHTML=
         '<span style="font-size:20px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span>'+
         '<div style="flex:1;">'+
-          '<div style="color:'+(isMatchPast(m)?'#94a3b8':'#fff')+';font-size:13px;font-weight:600;">'+dateStr+' · '+timeStr+'</div>'+
+          '<div style="color:#fff;font-size:13px;font-weight:600;">'+dateStr+' · '+timeStr+'</div>'+
           '<div style="color:var(--dim);font-size:11px;">'+(m.court_name||'TBD')+(m.is_feeler?' · Feeler':'')+'</div>'+
         '</div>'+
         '<div style="text-align:right;">'+
-          '<div style="font-size:11px;font-weight:700;color:'+sd.color+';">'+sd.label+'</div>'+
+          '<div style="font-size:11px;font-weight:700;color:'+(m.status==='open'?'var(--green)':m.status==='full'?'#fbbf24':'var(--dim)')+';">'+m.status.toUpperCase()+'</div>'+
           '<div style="font-size:10px;color:var(--dim);">'+inPlayers.length+'/'+maxNeeded+' confirmed</div>'+
         '</div>';
 
@@ -5533,111 +5265,67 @@ async function loadMyInvitesPage(){
   const myEmail=getMyEmail();
   const container=document.getElementById('myInvitesList');
   if(!container) return;
-  if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in.</div>'; return; }
-  container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:12px 0;">Loading...</div>';
+  if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in to view your invites.</div>'; return; }
+  container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:12px 0;">Loading…</div>';
   try{
     const res=await fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&order=match_date.desc,time_start.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     const matches=res.ok?await res.json():[];
+
+    // Fetch responses for all matches
     const ids=matches.map(m=>m.id);
     let responses=[];
     if(ids.length){
       const rr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${ids.join(',')})&select=match_id,player_name,player_email,response`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
       responses=rr.ok?await rr.json():[];
     }
+
     container.innerHTML='';
     if(!matches.length){
-      container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">No matches yet.<br><br>'+
-        '<button onclick="showPage(\'setupMatch\')" style="padding:10px 20px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;cursor:pointer;">+ Set Up A Match</button></div>';
+      container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">You haven\'t set up any matches yet.<br><br><button onclick="showPage(\'setupMatch\')" style="padding:10px 20px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;cursor:pointer;font-family:\'DM Sans\',sans-serif;">+ Set Up A Match</button></div>';
       return;
     }
-    const upcoming=matches.filter(m=>!isMatchPast(m));
-    const past    =matches.filter(m=> isMatchPast(m));
 
-    const renderMatchCard=(m,isPast)=>{
-      const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}):'--';
-      const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' - '+fmt12(m.time_end):''):'--';
+    matches.forEach(m=>{
+      const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}):'—';
+      const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):''):'—';
       const mRes=responses.filter(r=>r.match_id===m.id);
-      const inP =mRes.filter(r=>r.response==='in');
-      const pend=mRes.filter(r=>r.response==='pending');
-      const wait=mRes.filter(r=>r.response==='waitlist');
-      const out =mRes.filter(r=>r.response==='out');
+      const inPlayers=mRes.filter(r=>r.response==='in');
+      const pending=mRes.filter(r=>r.response==='pending');
+      const waitlist=mRes.filter(r=>r.response==='waitlist');
+      const out=mRes.filter(r=>r.response==='out');
       const maxNeeded=m.match_type==='doubles'?3:1;
-      const spotsLeft=Math.max(0,maxNeeded-inP.length);
-      const sd=getMatchStatusDisplay(m);
+      const spotsLeft=Math.max(0,maxNeeded-inPlayers.length);
+
       const card=document.createElement('div');
-      card.style.cssText='border:1px solid '+sd.border+';border-radius:16px;padding:16px;margin-bottom:14px;background:'+sd.bg+';'+(isPast?'opacity:0.85;':'');
-      let bottom='';
-      if(isPast&&m.status==='full'){
-        bottom='<div style="margin-top:12px;padding:10px 12px;background:rgba(76,175,125,0.08);border:1px solid rgba(76,175,125,0.25);border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;">'+
-          '<span style="font-size:12px;color:var(--green);font-weight:600;">How did it go? Record the results!</span>'+
-          '<button onclick="openRecordResults(\''+m.id+'\',\''+m.match_type+'\')" style="padding:7px 14px;border-radius:8px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">Record Results</button>'+
-          '</div>';
-      } else if(isPast){
-        bottom='<div style="margin-top:10px;font-size:11px;color:#94a3b8;font-style:italic;">This match has passed. '+spotsLeft+' spot'+(spotsLeft!==1?'s':'')+' went unfilled.</div>';
-      } else {
-        bottom=
-          '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:10px;">'+
-          makeResponsePill('In',inP,'var(--green)')+makeResponsePill('Pending',pend,'#94a3b8')+
-          makeResponsePill('Waitlist',wait,'#f59e0b')+makeResponsePill('Out',out,'#f87171')+
-          '</div>'+
-          (inP.length?'<div style="font-size:11px;color:var(--green);">In: '+inP.map(p=>p.player_name||p.player_email).join(' | ')+'</div>':'')+
-          (pend.length?'<div style="font-size:11px;color:#94a3b8;margin-top:2px;">Awaiting: '+pend.map(p=>p.player_name||p.player_email).join(' | ')+'</div>':'')+
-          (spotsLeft>0?'<div style="font-size:10px;color:#fbbf24;margin-top:4px;">'+spotsLeft+' spot'+(spotsLeft>1?'s':'')+' still open</div>':'');
-      }
+      card.style.cssText='background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px;';
+
+      const statusColor=m.status==='open'?'var(--green)':m.status==='full'?'#fbbf24':'var(--dim)';
+
       card.innerHTML=
-        '<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;">'+
-        '<span style="font-size:22px;">'+(m.match_type==='doubles'?'&#127955;&#127955;':'&#127955;')+'</span>'+
-        '<div style="flex:1;">'+
-        '<div style="color:'+(isPast?'#94a3b8':'#fff')+';font-size:14px;font-weight:700;'+(isPast?'text-decoration:line-through;':'')+'">'+(isPast?'<s>':'')+dateStr+' | '+timeStr+(isPast?'</s>':'')+'</div>'+
-        '<div style="color:var(--dim);font-size:12px;margin-top:2px;">'+(m.court_name||'TBD')+(m.notes?' | '+m.notes:'')+'</div>'+
+        '<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">'+
+          '<span style="font-size:24px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span>'+
+          '<div style="flex:1;">'+
+            '<div style="color:#fff;font-size:14px;font-weight:700;">'+dateStr+' · '+timeStr+'</div>'+
+            '<div style="color:var(--dim);font-size:12px;margin-top:2px;">'+(m.court_name||'TBD')+(m.notes?' · <em>'+m.notes+'</em>':'')+'</div>'+
+          '</div>'+
+          '<div style="text-align:right;">'+
+            '<div style="font-size:11px;font-weight:800;color:'+statusColor+';text-transform:uppercase;">'+m.status+'</div>'+
+            '<div style="font-size:10px;color:var(--dim);">'+inPlayers.length+'/'+maxNeeded+' confirmed</div>'+
+            (spotsLeft>0?'<div style="font-size:10px;color:#fbbf24;">'+spotsLeft+' spot'+(spotsLeft>1?'s':'')+' open</div>':'')+
+          '</div>'+
         '</div>'+
-        '<div style="text-align:right;flex-shrink:0;">'+
-        '<div style="font-size:12px;font-weight:800;color:'+sd.color+';">'+sd.label+'</div>'+
-        (!isPast?'<div style="font-size:10px;color:var(--dim);">'+inP.length+'/'+maxNeeded+' confirmed</div>':'')+
-        '</div></div>'+bottom;
-      return card;
-    };
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:10px;">'+
+          makeResponsePill('✅ In',inPlayers,'var(--green)')+
+          makeResponsePill('⏳ Pending',pending,'#94a3b8')+
+          makeResponsePill('⌛ Waitlist',waitlist,'#f59e0b')+
+          makeResponsePill('❌ Out',out,'#f87171')+
+        '</div>'+
+        (inPlayers.length?'<div style="font-size:11px;color:var(--green);margin-top:4px;">✅ '+inPlayers.map(p=>p.player_name||p.player_email).join(' · ')+'</div>':'')+
+        (pending.length?'<div style="font-size:11px;color:#94a3b8;margin-top:2px;">⏳ Awaiting: '+pending.map(p=>p.player_name||p.player_email).join(' · ')+'</div>':'');
 
-    if(upcoming.length){
-      const hdr=document.createElement('div');
-      hdr.style.cssText='font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;padding:4px 0 10px;';
-      hdr.textContent='Upcoming ('+upcoming.length+')';
-      container.appendChild(hdr);
-      upcoming.forEach(m=>container.appendChild(renderMatchCard(m,false)));
-    }
-    if(past.length){
-      const hdr=document.createElement('div');
-      hdr.style.cssText='font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;padding:16px 0 10px;border-top:1px solid var(--border);margin-top:8px;';
-      hdr.textContent='Past Matches ('+past.length+')';
-      container.appendChild(hdr);
-      past.forEach(m=>container.appendChild(renderMatchCard(m,true)));
-    }
+      container.appendChild(card);
+    });
   }catch(e){ container.innerHTML='<div style="color:#f87171;font-size:13px;">Error loading invites.</div>'; console.warn(e); }
-}
-
-// ── Past-match helpers ──────────────────────────────────
-function isMatchPast(match){
-  if(!match.match_date) return false;
-  const timeStr = match.time_end || match.time_start || '23:59';
-  const matchEnd = new Date(match.match_date + 'T' + timeStr);
-  return matchEnd < new Date();
-}
-
-function getMatchStatusDisplay(match){
-  const past = isMatchPast(match);
-  if(past){
-    if(match.status==='full') return {label:'✅ Played',    color:'var(--green)', bg:'rgba(76,175,125,0.08)',  border:'rgba(76,175,125,0.3)'};
-    return                           {label:'⏰ Expired',   color:'#94a3b8',       bg:'rgba(255,255,255,0.02)', border:'rgba(255,255,255,0.08)'};
-  }
-  if(match.status==='full')      return {label:'🟢 Confirmed', color:'var(--green)', bg:'rgba(76,175,125,0.08)',  border:'rgba(76,175,125,0.3)'};
-  if(match.status==='open')      return {label:'🔴 Open',      color:'#f87171',       bg:'rgba(239,68,68,0.06)',   border:'rgba(239,68,68,0.2)'};
-  if(match.status==='cancelled') return {label:'❌ Cancelled', color:'#f87171',       bg:'rgba(239,68,68,0.06)',   border:'rgba(239,68,68,0.2)'};
-  return                                {label:match.status,   color:'var(--dim)',     bg:'rgba(255,255,255,0.03)', border:'var(--border)'};
-}
-
-// Stub — will be expanded when score recorder is built
-function openRecordResults(matchId, matchType){
-  showToast('📋 Score recorder coming soon! Match ID: '+matchId, '#4CAF7D');
 }
 
 function makeResponsePill(label, players, color){
@@ -5652,81 +5340,61 @@ async function loadInvitedByOthersPage(){
   const myEmail=getMyEmail();
   const container=document.getElementById('invitedByOthersList');
   if(!container) return;
-  if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in.</div>'; return; }
-  container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:12px 0;">Loading...</div>';
+  if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in to view your invites.</div>'; return; }
+  container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:12px 0;">Loading…</div>';
   try{
+    // Get my match_responses
     const rr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&select=match_id,response,responded_at&order=responded_at.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     const myResponses=rr.ok?await rr.json():[];
+
     if(!myResponses.length){
       container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">You haven\'t been invited to any matches yet.</div>';
       return;
     }
+
+    // Fetch match details
     const matchIds=myResponses.map(r=>r.match_id);
     const mr=await fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${matchIds.join(',')})&select=*&order=match_date.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     const matches=mr.ok?await mr.json():[];
+
     container.innerHTML='';
     if(!matches.length){ container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;">No matches found.</div>'; return; }
 
-    const upcoming=matches.filter(m=>!isMatchPast(m));
-    const past    =matches.filter(m=> isMatchPast(m));
-
-    const renderInviteCard=(m)=>{
-      const isPast=isMatchPast(m);
+    matches.forEach(m=>{
       const myResp=myResponses.find(r=>r.match_id===m.id);
       const response=myResp?.response||'pending';
-      const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}):'--';
-      const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' - '+fmt12(m.time_end):''):'--';
-      const sd=getMatchStatusDisplay(m);
+      const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}):'—';
+      const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):''):'—';
+
       const respColor=response==='in'?'var(--green)':response==='out'?'#f87171':response==='waitlist'?'#f59e0b':'#94a3b8';
       const respLabel=response==='in'?'✅ You\'re In':response==='out'?'❌ Declined':response==='waitlist'?'⌛ Waitlist':'⏳ Pending';
+      const matchStatusColor=m.status==='open'?'var(--green)':m.status==='full'?'#fbbf24':'var(--dim)';
 
       const card=document.createElement('div');
-      card.style.cssText='border:1px solid '+sd.border+';border-radius:16px;padding:16px;margin-bottom:14px;background:'+sd.bg+';'+(isPast?'opacity:0.85;':'');
+      card.style.cssText='background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px;';
       card.innerHTML=
         '<div style="display:flex;align-items:flex-start;gap:12px;">'+
-        '<span style="font-size:22px;">'+(m.match_type==='doubles'?'&#127955;&#127955;':'&#127955;')+'</span>'+
-        '<div style="flex:1;">'+
-        '<div style="color:'+(isPast?'#94a3b8':'#fff')+';font-size:14px;font-weight:700;">'+(isPast?'<s>':'')+dateStr+' | '+timeStr+(isPast?'</s>':'')+'</div>'+
-        '<div style="color:var(--dim);font-size:12px;margin-top:2px;">Organized by <strong style="color:'+(isPast?'#94a3b8':'#fff')+';">'+m.organizer_name+'</strong></div>'+
-        '<div style="color:var(--dim);font-size:12px;">'+(m.court_name||'TBD')+'</div>'+
-        (m.notes?'<div style="color:var(--dim);font-size:11px;font-style:italic;margin-top:2px;">'+m.notes+'</div>':'')+
+          '<span style="font-size:24px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span>'+
+          '<div style="flex:1;">'+
+            '<div style="color:#fff;font-size:14px;font-weight:700;">'+dateStr+' · '+timeStr+'</div>'+
+            '<div style="color:var(--dim);font-size:12px;margin-top:2px;">Organized by <strong style="color:#fff;">'+m.organizer_name+'</strong></div>'+
+            '<div style="color:var(--dim);font-size:12px;">'+(m.court_name||'TBD')+'</div>'+
+            (m.notes?'<div style="color:var(--dim);font-size:11px;font-style:italic;margin-top:2px;">'+m.notes+'</div>':'')+
+          '</div>'+
+          '<div style="text-align:right;">'+
+            '<div style="font-size:11px;font-weight:800;color:'+matchStatusColor+';text-transform:uppercase;margin-bottom:4px;">'+m.status+'</div>'+
+            '<div style="font-size:12px;font-weight:700;color:'+respColor+';">'+respLabel+'</div>'+
+          '</div>'+
         '</div>'+
-        '<div style="text-align:right;flex-shrink:0;">'+
-        '<div style="font-size:12px;font-weight:800;color:'+sd.color+';">'+sd.label+'</div>'+
-        '<div style="font-size:12px;font-weight:700;color:'+respColor+';margin-top:4px;">'+respLabel+'</div>'+
-        '</div></div>'+
-        // Respond buttons — only if pending, open, and not past
-        (!isPast&&response==='pending'&&m.status==='open'?
+        // If still pending and match is open, show respond buttons
+        (response==='pending'&&m.status==='open'?
           '<div style="display:flex;gap:8px;margin-top:12px;">'+
-          '<button onclick="respondToMatch(\''+m.id+'\',\'in\')" style="flex:1;padding:9px;border-radius:8px;border:none;background:var(--green);color:#fff;font-weight:700;font-size:12px;cursor:pointer;">&#10003; I\'m In!</button>'+
-          '<button onclick="respondToMatch(\''+m.id+'\',\'out\')" style="flex:1;padding:9px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:12px;cursor:pointer;">&#10007; Can\'t Make It</button>'+
-          '</div>':'')+
-        // Past + played + you were in — prompt for results
-        (isPast&&m.status==='full'&&response==='in'?
-          '<div style="margin-top:10px;padding:8px 12px;background:rgba(76,175,125,0.08);border:1px solid rgba(76,175,125,0.2);border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;">'+
-          '<span style="font-size:11px;color:var(--green);font-weight:600;">How did it go?</span>'+
-          '<button onclick="openRecordResults(\''+m.id+'\',\''+m.match_type+'\')" style="padding:5px 12px;border-radius:6px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:11px;cursor:pointer;">Record Results</button>'+
-          '</div>':'')+
-        // Past + didn't happen (open/expired)
-        (isPast&&m.status!=='full'?
-          '<div style="margin-top:8px;font-size:11px;color:#94a3b8;font-style:italic;">This match didn\'t get enough players.</div>':'');
-      return card;
-    };
+            '<button onclick="respondToMatch(\''+m.id+'\',\'in\')" style="flex:1;padding:9px;border-radius:8px;border:none;background:var(--green);color:#fff;font-weight:700;font-size:12px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">✅ I\'m In!</button>'+
+            '<button onclick="respondToMatch(\''+m.id+'\',\'out\')" style="flex:1;padding:9px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:12px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">❌ Can\'t Make It</button>'+
+          '</div>':'');
 
-    if(upcoming.length){
-      const hdr=document.createElement('div');
-      hdr.style.cssText='font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;padding:4px 0 10px;';
-      hdr.textContent='Upcoming ('+upcoming.length+')';
-      container.appendChild(hdr);
-      upcoming.forEach(m=>container.appendChild(renderInviteCard(m)));
-    }
-    if(past.length){
-      const hdr=document.createElement('div');
-      hdr.style.cssText='font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;padding:16px 0 10px;border-top:1px solid var(--border);margin-top:8px;';
-      hdr.textContent='Past ('+past.length+')';
-      container.appendChild(hdr);
-      past.forEach(m=>container.appendChild(renderInviteCard(m)));
-    }
+      container.appendChild(card);
+    });
   }catch(e){ container.innerHTML='<div style="color:#f87171;font-size:13px;">Error loading invites.</div>'; console.warn(e); }
 }
 
@@ -5805,12 +5473,11 @@ function showMatchResponseBanner(match, myEmail){
     ? new Date(match.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})
     : '—';
   const timeStr = match.time_start ? fmt12(match.time_start) : '—';
-  const durHrs  = 2;
+  const durHrs  = 2; // default — could store in match
   const endTime = match.time_start ? fmt12(addHours(match.time_start, durHrs)) : '';
 
   const isFull  = match.status === 'full';
   const isOpen  = match.status === 'open';
-  const isPast  = isMatchPast(match);
 
   const banner = document.createElement('div');
   banner.id = 'matchResponseBanner';
@@ -5832,17 +5499,11 @@ function showMatchResponseBanner(match, myEmail){
           '<span style="color:var(--dim);">Court</span><span style="color:#fff;font-weight:600;">'+(match.court_name||'TBD')+'</span>'+
           (match.notes?'<span style="color:var(--dim);">Note</span><span style="color:#fff;font-style:italic;">'+match.notes+'</span>':'')+
         '</div>'+
-        (isPast
-          ? '<div style="color:#94a3b8;font-size:12px;font-weight:600;margin-bottom:10px;">⏰ This match has already taken place.</div>'
-          : isFull
-            ? '<div style="color:#fbbf24;font-size:12px;font-weight:600;margin-bottom:10px;">⚠️ This match is full — join the waitlist?</div>'
-            : '<div style="color:var(--green);font-size:12px;margin-bottom:10px;">✅ Spots available — are you in?</div>')+
+        (isFull
+          ? '<div style="color:#fbbf24;font-size:12px;font-weight:600;margin-bottom:10px;">⚠️ This match is full — join the waitlist?</div>'
+          : '<div style="color:var(--green);font-size:12px;margin-bottom:10px;">✅ Spots available — are you in?</div>')+
         '<div style="display:flex;gap:8px;flex-wrap:wrap;">'+
-          (isPast
-            ? `<button onclick="document.getElementById('matchResponseBanner').remove()"
-                style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">
-                Close</button>`
-            : isOpen
+          (isOpen
             ? `<button onclick="respondToMatch('${match.id}','in')"
                 style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--green);color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">
                 ✅ I'm In!</button>
@@ -5885,10 +5546,6 @@ async function respondToMatch(matchId, response){
     openLoginModal();
     return;
   }
-
-  // Validate
-  const respErrors = validateMatchResponse({match_id:matchId, player_email:myEmail, response});
-  if(respErrors.length){ showValidationErrors(respErrors); return; }
 
   const btn = event?.target;
   if(btn){ btn.disabled=true; btn.textContent='Saving…'; }
@@ -6050,7 +5707,7 @@ async function doLogin(){
   const successMsg = document.getElementById('loginSuccessMsg');
 
   const email = (emailInput?.value||'').trim().toLowerCase();
-  if(!isValidEmail(email)){
+  if(!email || !email.includes('@')){
     if(errorEl){ errorEl.textContent='Please enter a valid email address.'; errorEl.style.display='block'; }
     return;
   }
@@ -6142,7 +5799,7 @@ async function restoreSession(email, playerData){
 
   const navBtn = document.getElementById('navLoginBtn');
   if(navBtn) navBtn.classList.add('signed-in');
-  const editBtn = document.getElementById('editProfileBtnInPage');
+  const editBtn = document.getElementById('editProfileBtn');
   if(editBtn) editBtn.style.display='block';
   const reqBtn = document.getElementById('viewRequestsBtn');
   if(reqBtn) reqBtn.style.display='block';
@@ -6321,7 +5978,7 @@ function restoreProfileForm(player){
 
   const textFields={
     firstName:player.first_name,lastName:player.last_name,
-    nickname:player.nickname||'',email:player.email,
+    nickname:S.nickname||player.nickname,email:player.email,
     phone:player.phone ? formatPhoneForDisplay(player.phone) : '',
     dob:'', addressSearch:'',
     addrCity:player.city,
@@ -6338,15 +5995,17 @@ function restoreProfileForm(player){
   // Restore age dropdown (stored in dob field as age range string)
   if(player.dob){
     const ageEl=document.getElementById('playerAge');
-    if(ageEl) ageEl.value=player.dob; // we now store age range in dob field
+    if(ageEl) ageEl.value=player.dob;
   }
 
-  // Restore consent state for existing players who already agreed
+  // Restore playFormat to S state (was missing before)
+  S.playFormat=player.play_format||'Both';
+
+  // Restore consent — existing players already agreed
   if(player.waiver_agreed){
     S._privacyConsent=true; S._riskConsent=true;
     document.getElementById('checkBoxPrivacy')?.classList.add('on');
     document.getElementById('checkBoxRisk')?.classList.add('on');
-    // Enable submit button for existing players
     const btn=document.getElementById('btnSubmit');
     if(btn){ btn.disabled=false; btn.textContent='✏️ Update Profile'; }
   }
@@ -6361,7 +6020,6 @@ function restoreProfileForm(player){
   restoreChip('lessonChips',player.has_had_lesson);
   S.gender=player.gender||''; S.handedness=player.handedness||'';
   S.venuePref=player.play_venues||''; S.playStyle=player.play_style||'';
-  S.playFormat=player.play_format||'Both';
   S.wantsToImprove=player.wants_to_improve||'';
   S.hasHadLesson=player.has_had_lesson||''; S.wantsLesson=player.wants_lesson||'';
 
@@ -6629,21 +6287,12 @@ async function icRespond(connId, status, btn){
 async function icSendRequest(recipientEmail, recipientName, btn){
   const myEmail=getMyEmail();
   if(!myEmail){ showToast('Please sign in first','#f59e0b'); return; }
-
-  // Validate connection
-  const connErrors = validateConnection({
-    requester_email: myEmail,
-    recipient_email: recipientEmail,
-    status: 'pending'
-  });
-  if(connErrors.length){ showValidationErrors(connErrors); return; }
-
   if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
   try{
     await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
-      body:JSON.stringify(sanitizePayload({requester_email:myEmail,requester_name:getMyName(),recipient_email:recipientEmail,recipient_name:recipientName,status:'pending'}))
+      body:JSON.stringify({requester_email:myEmail,requester_name:getMyName(),recipient_email:recipientEmail,recipient_name:recipientName,status:'pending'})
     });
     showToast('✅ Inner Circle invite sent to '+recipientName,'#4CAF7D');
     loadInnerCircle();
@@ -6656,33 +6305,31 @@ async function icSendRequest(recipientEmail, recipientName, btn){
 
 function updateIcStats(pendingMembers){
   const mySkill=S.skill||SESSION_PLAYER?.skill_level||'';
-  const myVal=parseFloat(mySkill||0);
+  const skills=mySkill?getAdjacentSkills(mySkill):null;
   const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
   let mMale=0,mFemale=0,mOther=0,mBelow=0,mMy=0,mAbove=0;
   IC_MEMBERS.forEach(({player})=>{
     const g=(player.gender||'').toLowerCase();
     if(g==='male') mMale++; else if(g==='female') mFemale++; else mOther++;
-    if(myVal>0){
+    if(skills){
       const ps=parseFloat(player.skill_level||0);
-      const diff=parseFloat((ps-myVal).toFixed(4));
-      if(diff<0) mBelow++;
-      else if(diff===0) mMy++;
-      else mAbove++;
+      if(skills.below!==null&&Math.abs(ps-skills.below)<0.13) mBelow++;
+      else if(Math.abs(ps-skills.my)<0.13) mMy++;
+      else if(skills.above!==null&&Math.abs(ps-skills.above)<0.13) mAbove++;
+      else mMy++;
     }
   });
-  const pending = (pendingMembers && pendingMembers.length > 0) ? pendingMembers : IC_INVITED_PLAYERS;
+  const pending=pendingMembers||IC_INVITED_PLAYERS||[];
   let pMale=0,pFemale=0,pOther=0,pBelow=0,pMy=0,pAbove=0;
   pending.forEach(player=>{
     const g=(player.gender||'').toLowerCase();
     if(g==='male') pMale++; else if(g==='female') pFemale++; else pOther++;
-    if(myVal>0&&player.skill_level){
+    if(skills&&player.skill_level){
       const ps=parseFloat(player.skill_level||0);
-      const diff=parseFloat((ps-myVal).toFixed(4));
-      if(diff<0) pBelow++;
-      else if(diff===0) pMy++;
-      else pAbove++;
-    } else if(player.skill_level===''||!player.skill_level){
-      // unregistered invitee — count in total but not level buckets
+      if(skills.below!==null&&Math.abs(ps-skills.below)<0.13) pBelow++;
+      else if(Math.abs(ps-skills.my)<0.13) pMy++;
+      else if(skills.above!==null&&Math.abs(ps-skills.above)<0.13) pAbove++;
+      else pMy++;
     }
   });
   set('gMaleMember',mMale); set('gFemaleMember',mFemale); set('gOtherMember',mOther); set('gTotalMember',IC_MEMBERS.length);
@@ -6881,20 +6528,13 @@ document.addEventListener('click',function(e){
 });
 
 const AVATAR_EMOJIS=[
-  // Sports & Activity
   '🎾','🏓','🏆','🥇','🎯','⚡','🔥','💪','🏃','🤾','🦾','🏋️','🤸','🧘','🚀',
-  // Animals
-  '🦅','🐉','🦁','🐯','🦊','🐺','🦋','🦅','🦆','🐬','🦈','🐸','🦎','🦏','🐘',
-  '🦒','🦓','🦀','🦞','🦁','🐻','🐼','🐨','🦘','🦙',
-  // Nature & Elements
+  '🦅','🐉','🦁','🐯','🦊','🐺','🦋','🐬','🦈','🐸','🦎','🐻','🐼','🐨','🦘',
   '🌊','🌪️','⭐','🌟','💫','☀️','🌙','🌈','❄️','🍀',
-  // Food & Fun
-  '🍕','🌮','🍦','🎸','🎺','🎻','🎹','🎲','🎮','🃏',
-  // Personality & Vibe
-  '👑','🧠','💥','💎','🎪','🤙','✌️','🤘','🫶','💪',
-  '😎','🤩','😤','🥶','🤯','🧨','🎭','🎨','🪄','🔮',
-  // Pickleball specific
-  '🏅','🥊','🎽','👟','🧢','🎒','🌺','🌸','🏔️','🌄',
+  '🍕','🌮','🍦','🎸','🎺','🎲','🎮','🃏','🎪','🎨',
+  '👑','🧠','💥','💎','🤙','✌️','🤘','🫶','😎','🤩',
+  '😤','🥶','🤯','🧨','🎭','🪄','🔮','🏅','🥊','🎽',
+  '👟','🧢','🎒','🌺','🌸','🏔️','🌄','🦒','🦓','🦀',
 ];
 
 document.addEventListener('DOMContentLoaded',()=>{
@@ -7387,9 +7027,8 @@ function switchCircleView(view){
 }
 
 function renderCircleSkillColumns(){
-  const mySkill=S.skill||SESSION_PLAYER?.skill_level||'';
+  const mySkill=S.skill||'';
   if(!mySkill) return;
-  const myVal=parseFloat(mySkill);
   const skills=getAdjacentSkills(mySkill);
   const lb=document.getElementById('circleColBelowLabel');
   const lm=document.getElementById('circleColMyLabel');
@@ -7397,28 +7036,20 @@ function renderCircleSkillColumns(){
   if(lb) lb.textContent=skills.below!==null?skills.below:'—';
   if(lm) lm.textContent=skills.my!==null?skills.my:'—';
   if(la) la.textContent=skills.above!==null?skills.above:'—';
-
-  const buckets={below:[],my:[],above:[]};
+  const buckets={below:[],my:[],above:[],other:[]};
   IC_MEMBERS.forEach(({player,conn})=>{
     const ps=parseFloat(player.skill_level||0);
-    const diff=parseFloat((ps-myVal).toFixed(4));
-    if(diff<0) buckets.below.push({player,conn});        // anyone below my level
-    else if(diff===0) buckets.my.push({player,conn});    // exactly my level
-    else buckets.above.push({player,conn});              // anyone above my level
+    if(skills.below!==null&&Math.abs(ps-skills.below)<0.13) buckets.below.push({player,conn});
+    else if(Math.abs(ps-skills.my)<0.13) buckets.my.push({player,conn});
+    else if(skills.above!==null&&Math.abs(ps-skills.above)<0.13) buckets.above.push({player,conn});
+    else buckets.other.push({player,conn});
   });
-
   ['below','my','above'].forEach(key=>{
     const colId='circleCol'+key.charAt(0).toUpperCase()+key.slice(1);
     const col=document.getElementById(colId);
     if(!col) return;
     col.innerHTML='';
     if(!buckets[key].length){col.innerHTML='<div class="ic-col-empty">No members at this level</div>';return;}
-    // Sort by skill level descending (closest to my level first)
-    buckets[key].sort((a,b)=>{
-      const da=Math.abs(parseFloat(a.player.skill_level||0)-myVal);
-      const db=Math.abs(parseFloat(b.player.skill_level||0)-myVal);
-      return da-db;
-    });
     buckets[key].forEach(({player,conn})=>{
       const card=buildIcMemberCard(player,conn,getMyEmail(),null);
       col.appendChild(card);
@@ -7532,25 +7163,10 @@ async function sendInvite(method){
   const note=document.getElementById('inviteNote')?.value?.trim();
   const statusEl=document.getElementById('inviteStatus');
   if(!myEmail){showToast('Please sign in first','#f59e0b');return;}
-
-  // Validate
-  if(method==='email' && !isValidEmail(inviteeEmail)){
-    showToast('⚠️ Please enter a valid email address to invite','#f59e0b'); return;
-  }
-  if(method==='sms' && (!inviteePhone || inviteePhone.length < 10)){
-    showToast('⚠️ Please enter a valid 10-digit phone number','#f59e0b'); return;
-  }
-  if(inviteeEmail && inviteeEmail.toLowerCase()===myEmail.toLowerCase()){
-    showToast('⚠️ You cannot invite yourself','#f59e0b'); return;
-  }
-  if(note && note.length > MAX_NOTE_LEN){
-    showToast('⚠️ Personal note is too long (max 1000 characters)','#f59e0b'); return;
-  }
-  const cleanNote = sanitizeStr(note, MAX_NOTE_LEN);
   if(statusEl) statusEl.textContent='Saving…';
   let token='';
   try{
-    const inviteRes=await fetch(`${SUPABASE_URL}/rest/v1/invites`,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=representation'},body:JSON.stringify(sanitizePayload({inviter_email:myEmail,inviter_name:myName,invitee_email:inviteeEmail||null,invitee_phone:inviteePhone||null,invite_method:method,personal_note:cleanNote||null}))});
+    const inviteRes=await fetch(`${SUPABASE_URL}/rest/v1/invites`,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=representation'},body:JSON.stringify({inviter_email:myEmail,inviter_name:myName,invitee_email:inviteeEmail||null,invitee_phone:inviteePhone||null,invite_method:method,personal_note:note||null})});
     const rows=inviteRes.ok?await inviteRes.json():[];
     token=rows[0]?.invite_token||Math.random().toString(36).slice(2);
   }catch(e){token=Math.random().toString(36).slice(2);}
@@ -7687,18 +7303,11 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
   document.body.appendChild(overlay);
   document.getElementById('icJoinYes').onclick=async()=>{
     overlay.remove();
-    // Validate before writing connection
-    const connErrors = validateConnection({
-      requester_email: newPlayerEmail,
-      recipient_email: inv.inviter_email,
-      status: 'pending'
-    });
-    if(connErrors.length){ showValidationErrors(connErrors); return; }
     try{
       await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
         method:'POST',
         headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
-        body:JSON.stringify(sanitizePayload({requester_email:newPlayerEmail,requester_name:newPlayerName,recipient_email:inv.inviter_email,recipient_name:inv.inviter_name||'',status:'pending'}))
+        body:JSON.stringify({requester_email:newPlayerEmail,requester_name:newPlayerName,recipient_email:inv.inviter_email,recipient_name:inv.inviter_name||'',status:'pending'})
       });
       showToast('Inner Circle request sent to '+inviterName+'!','#4CAF7D');
     }catch(e){ showToast('Could not send connection request','#f59e0b'); }
@@ -7955,6 +7564,7 @@ function updateInviteCounter(){
   counter.style.background = total>0 ? 'rgba(76,175,125,0.12)' : 'rgba(255,255,255,0.06)';
   counter.style.color       = total>0 ? 'var(--green)' : 'var(--dim)';
 }
+
 </script>
 </body>
 </html>
