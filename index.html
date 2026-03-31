@@ -928,9 +928,6 @@
     <div class="top-logo-text">Pickleball <span>Registry</span></div>
   </div>
   <div class="top-header-right">
-    <div id="editProfileBtn" style="display:none;">
-      <div class="top-edit-btn" onclick="openEditProfile()" title="Edit Profile Button — update your info, nickname, emoji and schedule">✏️ Edit Profile</div>
-    </div>
     <div id="viewMatchInvitesBtn" style="display:none;">
       <div onclick="showPage('invitedByOthers')" title="Match invites you've received"
         style="display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;
@@ -1016,8 +1013,17 @@
     <div class="page-section active" id="page-playerProfile">
       <div class="reg-wrapper">
 
-
-        <!-- Registration steps -->
+        <!-- Edit Profile button — shown when signed in -->
+        <div id="editProfileBtnInPage" style="display:none;text-align:right;margin-bottom:12px;">
+          <button onclick="openEditProfile()"
+            style="padding:8px 18px;border-radius:20px;border:1px solid var(--border);
+              background:rgba(76,175,125,0.1);color:var(--green);font-size:13px;font-weight:600;
+              cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;"
+            onmouseover="this.style.borderColor='var(--green)'"
+            onmouseout="this.style.borderColor='var(--border)'">
+            ✏️ Edit Profile
+          </button>
+        </div>
         <div class="steps">
           <div class="step-item"><div class="step-dot active" id="dot1">1</div><span class="step-label active" id="lbl1">Personal Info</span></div>
           <div class="step-line" id="line1"></div>
@@ -1356,7 +1362,11 @@
     <div class="summary-box">
       <div class="s-title">Registration Summary</div>
       <div class="summary-row"><span>Name</span><span id="sumName">—</span></div>
+      <div class="summary-row"><span>Nickname</span><span id="sumNickname">—</span></div>
       <div class="summary-row"><span>Email</span><span id="sumEmail">—</span></div>
+      <div class="summary-row"><span>Phone</span><span id="sumPhone">—</span></div>
+      <div class="summary-row"><span>Date of Birth</span><span id="sumDob">—</span></div>
+      <div class="summary-row"><span>Gender</span><span id="sumGender">—</span></div>
       <div class="summary-row"><span>State</span><span id="sumState">—</span></div>
       <div class="summary-row"><span>County</span><span id="sumCounty">—</span></div>
       <div class="summary-row"><span>City / Town</span><span id="sumCity">—</span></div>
@@ -1364,7 +1374,16 @@
       <div class="summary-row"><span>Playing Hand</span><span id="sumHandedness">—</span></div>
       <div class="summary-row"><span>Skill Level</span><span id="sumSkill">—</span></div>
       <div class="summary-row" id="sumDuprRow" style="display:none"><span>DUPR Rating</span><span id="sumDupr">—</span></div>
-      <div class="summary-row"><span>T-Shirt</span><span id="sumShirt">—</span></div>
+      <div class="summary-row" id="sumGoalRow" style="display:none"><span>Goal Rating</span><span id="sumGoal">—</span></div>
+      <div class="summary-row"><span>Playing Since</span><span id="sumSince">—</span></div>
+      <div class="summary-row"><span>T-Shirt Size</span><span id="sumShirt">—</span></div>
+      <div class="summary-row"><span>Play Format</span><span id="sumFormat">—</span></div>
+      <div class="summary-row"><span>Play Style</span><span id="sumStyle">—</span></div>
+      <div class="summary-row"><span>Venue Preference</span><span id="sumVenuePref">—</span></div>
+      <div class="summary-row"><span>Drive Distance</span><span id="sumDrive">—</span></div>
+      <div class="summary-row"><span>Wants to Improve</span><span id="sumImprove">—</span></div>
+      <div class="summary-row"><span>Had a Lesson</span><span id="sumLesson">—</span></div>
+      <div class="summary-row"><span>Wants a Lesson</span><span id="sumWantsLesson">—</span></div>
       <div class="summary-row"><span>Play Schedule</span><span id="sumSched">—</span></div>
     </div>
     <div class="btn-row">
@@ -3014,24 +3033,74 @@ function goTo(n){
 }
 
 function populateSummary(){
-  document.getElementById('sumName').textContent=v('firstName')+' '+v('lastName');
-  document.getElementById('sumEmail').textContent=v('email');
-  const sumCityVal=document.getElementById('addrCity')?.value||S.city;
-  const sumStateVal=document.getElementById('addrState')?.value||S.state;
-  document.getElementById('sumState').textContent=sumStateVal||'—';
-  document.getElementById('sumCounty').textContent=(document.getElementById('addrCounty')?.value||S.county)||'—';
-  document.getElementById('sumCity').textContent=sumCityVal||'—';
-  if(S.venues.size>0){document.getElementById('sumCourtRow').style.display='flex';document.getElementById('sumCourt').textContent=[...S.venues].join(', ')+(S.driveDistance?' · '+S.driveDistance+' mi radius':'');}
-  else if(S.driveDistance){document.getElementById('sumCourtRow').style.display='flex';document.getElementById('sumCourt').textContent='Drive up to '+S.driveDistance+' miles';}
-  document.getElementById('sumSkill').textContent=S.skill||'—';
-  if(S.handedness) document.getElementById('sumHandedness').textContent=S.handedness;
-  document.getElementById('sumShirt').textContent=v('shirtSize')||'—';
-  if(S.courtName){document.getElementById('sumCourtRow').style.display='flex';document.getElementById('sumCourt').textContent=S.courtName;}
-  if(S.duprVal){document.getElementById('sumDuprRow').style.display='flex';document.getElementById('sumDupr').textContent=S.duprVal;}
+  const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val||'—';};
+  const show=(id,val)=>{const el=document.getElementById(id);if(el)el.style.display=val?'flex':'none';};
+
+  // Personal Info
+  set('sumName',    (v('firstName')+' '+v('lastName')).trim());
+  set('sumNickname', v('nickname') || '—');
+  set('sumEmail',   v('email'));
+  set('sumPhone',   v('phone') || '—');
+  set('sumDob',     v('dob') || '—');
+  set('sumGender',  S.gender || '—');
+
+  // Location
+  set('sumState',   document.getElementById('addrState')?.value || S.state || '—');
+  set('sumCounty',  document.getElementById('addrCounty')?.value || S.county || '—');
+  set('sumCity',    document.getElementById('addrCity')?.value || S.city || '—');
+
+  // Courts / venues
+  if(S.courtName){
+    document.getElementById('sumCourtRow').style.display='flex';
+    set('sumCourt', S.courtName);
+  } else if(S.venuePref || S.driveDistance){
+    document.getElementById('sumCourtRow').style.display='flex';
+    set('sumCourt', (S.venuePref||'') + (S.driveDistance?' · up to '+S.driveDistance+' mi':''));
+  } else {
+    document.getElementById('sumCourtRow').style.display='none';
+  }
+
+  // Player profile
+  set('sumHandedness', S.handedness || '—');
+  set('sumSkill',      S.skill || '—');
+  set('sumSince',      v('playingSince') || S.playingSince || '—');
+  set('sumShirt',      v('shirtSize') || '—');
+  set('sumFormat',     S.playFormat || '—');
+  set('sumStyle',      S.playStyle || '—');
+  set('sumVenuePref',  S.venuePref || '—');
+  set('sumDrive',      S.driveDistance ? 'Up to '+S.driveDistance+' miles' : '—');
+  set('sumImprove',    S.wantsToImprove || '—');
+  set('sumLesson',     S.hasHadLesson || '—');
+  set('sumWantsLesson',S.wantsLesson || '—');
+
+  // Optional ratings
+  if(S.duprVal){
+    document.getElementById('sumDuprRow').style.display='flex';
+    set('sumDupr', S.duprVal);
+  } else {
+    document.getElementById('sumDuprRow').style.display='none';
+  }
+  if(S.goalRating){
+    document.getElementById('sumGoalRow').style.display='flex';
+    set('sumGoal', S.goalRating);
+  } else {
+    document.getElementById('sumGoalRow').style.display='none';
+  }
+
+  // Schedule
   let sched='—';
-  if(S.anytime) sched='Anytime';
-  else if(S.schedule.size>0){const days=[...new Set([...S.schedule].map(k=>k.split('|')[0]))];sched=days.join(', ');}
-  document.getElementById('sumSched').textContent=sched;
+  if(S.anytime) sched='Anytime — I\'m flexible!';
+  else if(S.schedule.size>0){
+    // Group by day for readable display
+    const byDay={};
+    [...S.schedule].forEach(key=>{
+      const [day,time]=key.split('|');
+      if(!byDay[day]) byDay[day]=[];
+      byDay[day].push(time);
+    });
+    sched=Object.entries(byDay).map(([d,times])=>d+': '+times.join(', ')).join(' · ');
+  }
+  set('sumSched', sched);
 }
 
 
@@ -5924,7 +5993,7 @@ async function restoreSession(email, playerData){
 
   const navBtn = document.getElementById('navLoginBtn');
   if(navBtn) navBtn.classList.add('signed-in');
-  const editBtn = document.getElementById('editProfileBtn');
+  const editBtn = document.getElementById('editProfileBtnInPage');
   if(editBtn) editBtn.style.display='block';
   const reqBtn = document.getElementById('viewRequestsBtn');
   if(reqBtn) reqBtn.style.display='block';
