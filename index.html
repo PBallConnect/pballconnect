@@ -3041,10 +3041,25 @@ function populateSummary(){
 const SUPABASE_URL = 'https://dltiirdjfbjtydazrmvr.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsdGlpcmRqZmJqdHlkYXpybXZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MDQxNzgsImV4cCI6MjA4OTA4MDE3OH0.oBDtS3RZlGxMkqon-r1wdfYR6jPTSPGWIa8cZh7fLWA';
 
+let _lastSaveTime = 0;
 async function saveRegistration(payload){
+  // Rate limit: prevent saving more than once every 3 seconds
+  const now = Date.now();
+  if(now - _lastSaveTime < 3000){
+    throw new Error('Please wait a moment before saving again');
+  }
+  _lastSaveTime = now;
+
+  // Validate before touching Supabase
+  const errors = validateProfile(payload);
+  if(errors.length){
+    showValidationErrors(errors);
+    throw new Error(errors[0]);
+  }
+  // Sanitize all string fields
+  payload = sanitizePayload(payload);
+
   const url = `${SUPABASE_URL}/rest/v1/registrations`;
-  console.log('🔵 Attempting Supabase save to:', url);
-  console.log('🔵 Payload:', JSON.stringify(payload).substring(0,200));
   
   try{
     // Check if player already exists — use PATCH if so, POST if new
@@ -3100,6 +3115,204 @@ function showToast(msg, color='#ef4444'){
   t.textContent = msg;
   document.body.appendChild(t);
   setTimeout(()=>t.remove(), 6000);
+}
+
+// ══════════════════════════════════════════════════════
+// VALIDATION LAYER
+// Lightweight schema validation before any Supabase write
+// ══════════════════════════════════════════════════════
+
+const VALID_GENDERS     = ['male','female','prefer not to say',''];
+const VALID_HANDEDNESS  = ['right-handed','left-handed','ambidextrous',''];
+const VALID_FORMATS     = ['singles','doubles','both',''];
+const VALID_STYLES      = ['just for fun','competitively','both',''];
+const VALID_VENUES      = ['indoors','outdoors','both',''];
+const VALID_RESPONSES   = ['in','out','waitlist','pending'];
+const VALID_CONN_STATUS = ['pending','approved','declined'];
+const MAX_TEXT_LEN      = 500;
+const MAX_NOTE_LEN      = 1000;
+const MAX_NAME_LEN      = 80;
+
+function sanitizeStr(val, maxLen=MAX_TEXT_LEN){
+  if(val===null||val===undefined) return null;
+  // Strip HTML tags and trim
+  return String(val).replace(/<[^>]*>/g,'').trim().substring(0, maxLen) || null;
+}
+
+function isValidEmail(email){
+  if(!email) return false;
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  return re.test(String(email).toLowerCase().trim());
+}
+
+function isValidPhone(phone){
+  if(!phone) return true; // optional
+  const digits = String(phone).replace(/\D/g,'');
+  return digits.length === 10 || digits.length === 11;
+}
+
+function isValidDupr(val){
+  if(!val) return true; // optional
+  return DUPR_VALS.includes(String(val));
+}
+
+function isValidDate(dateStr){
+  if(!dateStr) return true; // optional
+  const d = new Date(dateStr);
+  return !isNaN(d.getTime());
+}
+
+function isInList(val, list){
+  if(!val) return true; // optional
+  return list.includes(String(val).toLowerCase().trim());
+}
+
+// ── Profile / Registration validator ──────────────────
+function validateProfile(payload){
+  const errors = [];
+
+  // Required fields
+  if(!payload.first_name?.trim())
+    errors.push('First name is required');
+  else if(payload.first_name.trim().length > MAX_NAME_LEN)
+    errors.push('First name is too long (max 80 characters)');
+
+  if(!payload.last_name?.trim())
+    errors.push('Last name is required');
+  else if(payload.last_name.trim().length > MAX_NAME_LEN)
+    errors.push('Last name is too long (max 80 characters)');
+
+  if(!isValidEmail(payload.email))
+    errors.push('A valid email address is required');
+
+  // Optional but validated if present
+  if(payload.phone){
+    const digits = String(payload.phone).replace(/\D/g,'');
+    if(digits.length !== 10 && digits.length !== 11)
+      errors.push('Phone number must be 10 digits');
+  }
+
+  if(payload.dob && !isValidDate(payload.dob))
+    errors.push('Date of birth is not a valid date');
+
+  if(payload.skill_level && !isValidDupr(payload.skill_level))
+    errors.push('Skill level is not a recognized DUPR value');
+
+  if(payload.dupr_rating && !isValidDupr(payload.dupr_rating))
+    errors.push('DUPR rating is not a recognized value');
+
+  if(payload.gender && !isInList(payload.gender, VALID_GENDERS))
+    errors.push('Gender value is not recognized');
+
+  if(payload.handedness && !isInList(payload.handedness, VALID_HANDEDNESS))
+    errors.push('Handedness value is not recognized');
+
+  if(payload.play_format && !isInList(payload.play_format, VALID_FORMATS))
+    errors.push('Play format value is not recognized');
+
+  if(payload.play_style && !isInList(payload.play_style, VALID_STYLES))
+    errors.push('Play style value is not recognized');
+
+  if(payload.play_venues && !isInList(payload.play_venues, VALID_VENUES))
+    errors.push('Play venues value is not recognized');
+
+  if(payload.nickname && payload.nickname.length > MAX_NAME_LEN)
+    errors.push('Nickname is too long (max 80 characters)');
+
+  if(payload.zip_code && !/^\d{5}(-\d{4})?$/.test(payload.zip_code))
+    errors.push('Zip code must be 5 digits (or 5+4 format)');
+
+  if(payload.avatar_emoji && payload.avatar_emoji.length > 10)
+    errors.push('Avatar emoji is invalid');
+
+  return errors;
+}
+
+// ── Match validator ────────────────────────────────────
+function validateMatch(payload){
+  const errors = [];
+
+  if(!isValidEmail(payload.organizer_email))
+    errors.push('Organizer email is invalid');
+
+  if(!payload.match_date || !isValidDate(payload.match_date))
+    errors.push('Match date is required and must be valid');
+
+  // Match date must not be in the past
+  const matchDate = new Date(payload.match_date + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  if(matchDate < today)
+    errors.push('Match date cannot be in the past');
+
+  if(!payload.match_type || !['singles','doubles'].includes(payload.match_type))
+    errors.push('Match type must be singles or doubles');
+
+  if(!payload.time_start)
+    errors.push('Match start time is required');
+
+  if(payload.notes && payload.notes.length > MAX_NOTE_LEN)
+    errors.push('Match notes are too long (max 1000 characters)');
+
+  if(payload.max_players && (payload.max_players < 2 || payload.max_players > 8))
+    errors.push('Max players must be between 2 and 8');
+
+  return errors;
+}
+
+// ── Connection validator ───────────────────────────────
+function validateConnection(payload){
+  const errors = [];
+
+  if(!isValidEmail(payload.requester_email))
+    errors.push('Requester email is invalid');
+
+  if(!isValidEmail(payload.recipient_email))
+    errors.push('Recipient email is invalid');
+
+  if(payload.requester_email?.toLowerCase() === payload.recipient_email?.toLowerCase())
+    errors.push('You cannot send an Inner Circle invite to yourself');
+
+  if(payload.status && !VALID_CONN_STATUS.includes(payload.status))
+    errors.push('Connection status is invalid');
+
+  return errors;
+}
+
+// ── Match response validator ───────────────────────────
+function validateMatchResponse(payload){
+  const errors = [];
+
+  if(!payload.match_id)
+    errors.push('Match ID is required');
+
+  if(!isValidEmail(payload.player_email))
+    errors.push('Player email is invalid');
+
+  if(!VALID_RESPONSES.includes(payload.response))
+    errors.push('Response must be: in, out, waitlist, or pending');
+
+  return errors;
+}
+
+// ── Sanitize a full payload object ────────────────────
+function sanitizePayload(payload){
+  const clean = {};
+  Object.entries(payload).forEach(([k,v])=>{
+    if(v === null || v === undefined){ clean[k] = v; return; }
+    if(typeof v === 'string') clean[k] = sanitizeStr(v, MAX_TEXT_LEN);
+    else clean[k] = v;
+  });
+  return clean;
+}
+
+// ── Show validation errors to user ────────────────────
+function showValidationErrors(errors){
+  if(!errors.length) return;
+  // Show first error as toast, log the rest
+  showToast('⚠️ ' + errors[0], '#f59e0b');
+  if(errors.length > 1){
+    console.warn('Validation errors:', errors);
+  }
 }
 
 async function submitForm(){
@@ -4886,18 +5099,33 @@ async function submitMatch(){
   if(!myEmail){ showToast('Please sign in first','#f59e0b'); return; }
   const btn=document.getElementById('matchSendBtn');
   const status=document.getElementById('matchSendStatus');
-  btn.disabled=true; btn.textContent='Sending…';
-  status.textContent='Saving match…';
   const date=document.getElementById('matchDate')?.value;
   const timeStart=MS.isFeeler?document.getElementById('matchTimeRangeStart')?.value:MS.timeStart||document.getElementById('matchTimeStart')?.value;
   const timeEnd=MS.isFeeler?document.getElementById('matchTimeRangeEnd')?.value:null;
   const note=document.getElementById('matchNote')?.value?.trim();
   const myName=((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim();
+
+  // Validate before saving
+  const matchErrors = validateMatch({
+    organizer_email: myEmail,
+    match_date: date,
+    match_type: MS.format,
+    time_start: timeStart,
+    notes: note,
+    max_players: MS.format==='doubles'?4:2
+  });
+  if(matchErrors.length){
+    showValidationErrors(matchErrors);
+    return;
+  }
+
+  btn.disabled=true; btn.textContent='Sending…';
+  status.textContent='Saving match…';
   try{
     const matchRes=await fetch(`${SUPABASE_URL}/rest/v1/matches`,{
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=representation'},
-      body:JSON.stringify({organizer_email:myEmail,organizer_name:myName,match_type:MS.format,invite_group:MS.group,is_feeler:MS.isFeeler,match_date:date,time_start:timeStart,time_end:timeEnd,court_id:MS.courtId||null,court_name:MS.courtName||'TBD',court_address:MS.courtAddress||'',is_private_court:MS.isPrivate,max_players:MS.format==='doubles'?4:2,notes:note||null})
+      body:JSON.stringify(sanitizePayload({organizer_email:myEmail,organizer_name:myName,match_type:MS.format,invite_group:MS.group,is_feeler:MS.isFeeler,match_date:date,time_start:timeStart,time_end:timeEnd,court_id:MS.courtId||null,court_name:MS.courtName||'TBD',court_address:MS.courtAddress||'',is_private_court:MS.isPrivate,max_players:MS.format==='doubles'?4:2,notes:note||null}))
     });
     const matchRows=matchRes.ok?await matchRes.json():[];
     const matchId=matchRows[0]?.id;
@@ -5440,6 +5668,10 @@ async function respondToMatch(matchId, response){
     return;
   }
 
+  // Validate
+  const respErrors = validateMatchResponse({match_id:matchId, player_email:myEmail, response});
+  if(respErrors.length){ showValidationErrors(respErrors); return; }
+
   const btn = event?.target;
   if(btn){ btn.disabled=true; btn.textContent='Saving…'; }
 
@@ -5600,7 +5832,7 @@ async function doLogin(){
   const successMsg = document.getElementById('loginSuccessMsg');
 
   const email = (emailInput?.value||'').trim().toLowerCase();
-  if(!email || !email.includes('@')){
+  if(!isValidEmail(email)){
     if(errorEl){ errorEl.textContent='Please enter a valid email address.'; errorEl.style.display='block'; }
     return;
   }
@@ -6163,12 +6395,21 @@ async function icRespond(connId, status, btn){
 async function icSendRequest(recipientEmail, recipientName, btn){
   const myEmail=getMyEmail();
   if(!myEmail){ showToast('Please sign in first','#f59e0b'); return; }
+
+  // Validate connection
+  const connErrors = validateConnection({
+    requester_email: myEmail,
+    recipient_email: recipientEmail,
+    status: 'pending'
+  });
+  if(connErrors.length){ showValidationErrors(connErrors); return; }
+
   if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
   try{
     await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
-      body:JSON.stringify({requester_email:myEmail,requester_name:getMyName(),recipient_email:recipientEmail,recipient_name:recipientName,status:'pending'})
+      body:JSON.stringify(sanitizePayload({requester_email:myEmail,requester_name:getMyName(),recipient_email:recipientEmail,recipient_name:recipientName,status:'pending'}))
     });
     showToast('✅ Inner Circle invite sent to '+recipientName,'#4CAF7D');
     loadInnerCircle();
@@ -7042,10 +7283,25 @@ async function sendInvite(method){
   const note=document.getElementById('inviteNote')?.value?.trim();
   const statusEl=document.getElementById('inviteStatus');
   if(!myEmail){showToast('Please sign in first','#f59e0b');return;}
+
+  // Validate
+  if(method==='email' && !isValidEmail(inviteeEmail)){
+    showToast('⚠️ Please enter a valid email address to invite','#f59e0b'); return;
+  }
+  if(method==='sms' && (!inviteePhone || inviteePhone.length < 10)){
+    showToast('⚠️ Please enter a valid 10-digit phone number','#f59e0b'); return;
+  }
+  if(inviteeEmail && inviteeEmail.toLowerCase()===myEmail.toLowerCase()){
+    showToast('⚠️ You cannot invite yourself','#f59e0b'); return;
+  }
+  if(note && note.length > MAX_NOTE_LEN){
+    showToast('⚠️ Personal note is too long (max 1000 characters)','#f59e0b'); return;
+  }
+  const cleanNote = sanitizeStr(note, MAX_NOTE_LEN);
   if(statusEl) statusEl.textContent='Saving…';
   let token='';
   try{
-    const inviteRes=await fetch(`${SUPABASE_URL}/rest/v1/invites`,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=representation'},body:JSON.stringify({inviter_email:myEmail,inviter_name:myName,invitee_email:inviteeEmail||null,invitee_phone:inviteePhone||null,invite_method:method,personal_note:note||null})});
+    const inviteRes=await fetch(`${SUPABASE_URL}/rest/v1/invites`,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=representation'},body:JSON.stringify(sanitizePayload({inviter_email:myEmail,inviter_name:myName,invitee_email:inviteeEmail||null,invitee_phone:inviteePhone||null,invite_method:method,personal_note:cleanNote||null}))});
     const rows=inviteRes.ok?await inviteRes.json():[];
     token=rows[0]?.invite_token||Math.random().toString(36).slice(2);
   }catch(e){token=Math.random().toString(36).slice(2);}
@@ -7182,11 +7438,18 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
   document.body.appendChild(overlay);
   document.getElementById('icJoinYes').onclick=async()=>{
     overlay.remove();
+    // Validate before writing connection
+    const connErrors = validateConnection({
+      requester_email: newPlayerEmail,
+      recipient_email: inv.inviter_email,
+      status: 'pending'
+    });
+    if(connErrors.length){ showValidationErrors(connErrors); return; }
     try{
       await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
         method:'POST',
         headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
-        body:JSON.stringify({requester_email:newPlayerEmail,requester_name:newPlayerName,recipient_email:inv.inviter_email,recipient_name:inv.inviter_name||'',status:'pending'})
+        body:JSON.stringify(sanitizePayload({requester_email:newPlayerEmail,requester_name:newPlayerName,recipient_email:inv.inviter_email,recipient_name:inv.inviter_name||'',status:'pending'}))
       });
       showToast('Inner Circle request sent to '+inviterName+'!','#4CAF7D');
     }catch(e){ showToast('Could not send connection request','#f59e0b'); }
