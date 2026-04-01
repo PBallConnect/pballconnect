@@ -1040,18 +1040,12 @@
   <div class="card" id="step1" autocomplete="off">
     <h2>Personal Information</h2>
 
-    <!-- Profile Photo Upload -->
-    <div class="photo-upload-area" id="photoUploadArea" onclick="document.getElementById('photoInput').click()">
-      <div class="photo-upload-preview" id="photoPreview">
-        <div class="photo-upload-icon">📷</div>
-        <div class="photo-upload-title">Upload Profile Photo</div>
-        <div class="photo-upload-sub">Optional · Click or drag to upload · JPG, PNG, GIF up to 10MB</div>
+    <!-- No photo upload - use emoji avatar instead for privacy -->
+    <div style="background:rgba(76,175,125,0.06);border:1px solid rgba(76,175,125,0.2);border-radius:12px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;">
+      <span style="font-size:22px;">🔒</span>
+      <div style="font-size:12px;color:var(--dim);line-height:1.5;">
+        <strong style="color:#fff;">We don't collect profile photos.</strong> Facial images can be used for biometric identification — we protect your privacy by using emoji avatars instead. Pick one below!
       </div>
-      <input type="file" id="photoInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none" onchange="handlePhoto(event)"/>
-    </div>
-    <div class="photo-remove-row" id="photoRemoveRow" style="display:none;">
-      <span id="photoFileName" style="color:var(--dim);font-size:12px;"></span>
-      <span class="remove-photo" onclick="removePhoto();event.stopPropagation()">✕ Remove photo</span>
     </div>
 
     <div class="grid2">
@@ -1408,32 +1402,47 @@
       <div class="check-box" id="checkBoxRisk"></div>
       <div class="check-text">I understand the risks associated with playing pickleball and participate voluntarily.</div>
     </div>
-    <div class="summary-box">
-      <div class="s-title">Registration Summary</div>
-      <div class="summary-row"><span>Name</span><span id="sumName">—</span></div>
-      <div class="summary-row"><span>Nickname</span><span id="sumNickname">—</span></div>
-      <div class="summary-row"><span>Email</span><span id="sumEmail">—</span></div>
-      <div class="summary-row"><span>Phone</span><span id="sumPhone">—</span></div>
-      <div class="summary-row"><span>Age Range</span><span id="sumDob">—</span></div>
-      <div class="summary-row"><span>Gender</span><span id="sumGender">—</span></div>
-      <div class="summary-row"><span>State</span><span id="sumState">—</span></div>
-      <div class="summary-row"><span>County</span><span id="sumCounty">—</span></div>
-      <div class="summary-row"><span>City / Town</span><span id="sumCity">—</span></div>
-      <div class="summary-row" id="sumCourtRow" style="display:none;"><span>Play Venues</span><span id="sumCourt">—</span></div>
-      <div class="summary-row"><span>Playing Hand</span><span id="sumHandedness">—</span></div>
-      <div class="summary-row"><span>Skill Level</span><span id="sumSkill">—</span></div>
-      <div class="summary-row" id="sumDuprRow" style="display:none"><span>DUPR Rating</span><span id="sumDupr">—</span></div>
-      <div class="summary-row" id="sumGoalRow" style="display:none"><span>Goal Rating</span><span id="sumGoal">—</span></div>
-      <div class="summary-row"><span>Playing Since</span><span id="sumSince">—</span></div>
-      <div class="summary-row"><span>T-Shirt Size</span><span id="sumShirt">—</span></div>
-      <div class="summary-row"><span>Play Format</span><span id="sumFormat">—</span></div>
-      <div class="summary-row"><span>Play Style</span><span id="sumStyle">—</span></div>
-      <div class="summary-row"><span>Venue Preference</span><span id="sumVenuePref">—</span></div>
-      <div class="summary-row"><span>Drive Distance</span><span id="sumDrive">—</span></div>
-      <div class="summary-row"><span>Wants to Improve</span><span id="sumImprove">—</span></div>
-      <div class="summary-row"><span>Had a Lesson</span><span id="sumLesson">—</span></div>
-      <div class="summary-row"><span>Wants a Lesson</span><span id="sumWantsLesson">—</span></div>
-      <div class="summary-row"><span>Play Schedule</span><span id="sumSched">—</span></div>
+    <!-- REGISTRATION SUMMARY — 3 sections -->
+    <div style="margin-top:16px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--green);margin-bottom:12px;">Registration Summary</div>
+
+      <!-- Section 1: Personal Info -->
+      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;">
+        <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">👤 Personal Info</div>
+        <div class="summary-row"><span>Name</span><span id="sumName">—</span></div>
+        <div class="summary-row"><span>Nickname</span><span id="sumNickname">—</span></div>
+        <div class="summary-row"><span>Email</span><span id="sumEmail">—</span></div>
+        <div class="summary-row"><span>Phone</span><span id="sumPhone">—</span></div>
+        <div class="summary-row"><span>Age Range</span><span id="sumDob">—</span></div>
+        <div class="summary-row"><span>Gender</span><span id="sumGender">—</span></div>
+        <div class="summary-row"><span>City</span><span id="sumCity">—</span></div>
+        <div class="summary-row"><span>State</span><span id="sumState">—</span></div>
+        <div class="summary-row"><span>Zip</span><span id="sumZip">—</span></div>
+        <div class="summary-row"><span>T-Shirt Size</span><span id="sumShirt">—</span></div>
+      </div>
+
+      <!-- Section 2: Player Info -->
+      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;">
+        <div style="font-size:11px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">🏓 Player Info</div>
+        <div class="summary-row"><span>Playing Since</span><span id="sumSince">—</span></div>
+        <div class="summary-row"><span>Playing Hand</span><span id="sumHandedness">—</span></div>
+        <div class="summary-row"><span>Play Format</span><span id="sumFormat">—</span></div>
+        <div class="summary-row"><span>Play Style</span><span id="sumStyle">—</span></div>
+        <div class="summary-row"><span>Venue Preference</span><span id="sumVenuePref">—</span></div>
+        <div class="summary-row"><span>Drive Distance</span><span id="sumDrive">—</span></div>
+        <div class="summary-row"><span>Play Schedule</span><span id="sumSched">—</span></div>
+      </div>
+
+      <!-- Section 3: Playing Levels -->
+      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:14px 16px;">
+        <div style="font-size:11px;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">⭐ Playing Levels</div>
+        <div class="summary-row"><span>Skill Level</span><span id="sumSkill">—</span></div>
+        <div class="summary-row" id="sumDuprRow" style="display:none"><span>DUPR Rating</span><span id="sumDupr">—</span></div>
+        <div class="summary-row" id="sumGoalRow" style="display:none"><span>Target Level</span><span id="sumGoal">—</span></div>
+        <div class="summary-row"><span>Wants to Improve</span><span id="sumImprove">—</span></div>
+        <div class="summary-row"><span>Had a Lesson</span><span id="sumLesson">—</span></div>
+        <div class="summary-row"><span>Wants a Lesson</span><span id="sumWantsLesson">—</span></div>
+      </div>
     </div>
     <div class="btn-row">
       <button class="btn-back" onclick="goTo(2)">← Back</button>
@@ -3188,24 +3197,54 @@ function goTo(n){
 }
 
 function populateSummary(){
-  document.getElementById('sumName').textContent=v('firstName')+' '+v('lastName');
-  document.getElementById('sumEmail').textContent=v('email');
-  const sumCityVal=document.getElementById('addrCity')?.value||S.city;
-  const sumStateVal=document.getElementById('addrState')?.value||S.state;
-  document.getElementById('sumState').textContent=sumStateVal||'—';
-  document.getElementById('sumCounty').textContent=(document.getElementById('addrCounty')?.value||S.county)||'—';
-  document.getElementById('sumCity').textContent=sumCityVal||'—';
-  if(S.venues.size>0){document.getElementById('sumCourtRow').style.display='flex';document.getElementById('sumCourt').textContent=[...S.venues].join(', ')+(S.driveDistance?' · '+S.driveDistance+' mi radius':'');}
-  else if(S.driveDistance){document.getElementById('sumCourtRow').style.display='flex';document.getElementById('sumCourt').textContent='Drive up to '+S.driveDistance+' miles';}
-  document.getElementById('sumSkill').textContent=S.skill||'—';
-  if(S.handedness) document.getElementById('sumHandedness').textContent=S.handedness;
-  document.getElementById('sumShirt').textContent=v('shirtSize')||'—';
-  if(S.courtName){document.getElementById('sumCourtRow').style.display='flex';document.getElementById('sumCourt').textContent=S.courtName;}
-  if(S.duprVal){document.getElementById('sumDuprRow').style.display='flex';document.getElementById('sumDupr').textContent=S.duprVal;}
+  const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val||'—';};
+
+  // ── Section 1: Personal Info ──────────────────────────
+  const lastName = v('lastName') ? v('lastName').trim().charAt(0).toUpperCase()+'.' : '';
+  set('sumName',    (v('firstName')+' '+lastName).trim());
+  set('sumNickname', v('nickname')||'—');
+  set('sumEmail',   v('email'));
+  set('sumPhone',   v('phone')||'—');
+  set('sumDob',     document.getElementById('playerAge')?.value||'—');
+  set('sumGender',  S.gender||'—');
+  set('sumCity',    document.getElementById('addrCity')?.value||S.city||'—');
+  set('sumState',   document.getElementById('addrState')?.value||S.state||'—');
+  set('sumZip',     v('addrZip')||'—');
+  set('sumShirt',   v('shirtSize')||'—');
+
+  // ── Section 2: Player Info ───────────────────────────
+  set('sumSince',      v('playingSince')||S.playingSince||'—');
+  set('sumHandedness', S.handedness||'—');
+  set('sumFormat',     S.playFormat||'—');
+  set('sumStyle',      S.playStyle||'—');
+  set('sumVenuePref',  S.venuePref||'—');
+  set('sumDrive',      S.driveDistance ? 'Up to '+S.driveDistance+' miles' : '—');
+
   let sched='—';
-  if(S.anytime) sched='Anytime';
-  else if(S.schedule.size>0){const days=[...new Set([...S.schedule].map(k=>k.split('|')[0]))];sched=days.join(', ');}
-  document.getElementById('sumSched').textContent=sched;
+  if(S.anytime) sched='Anytime — I\'m flexible!';
+  else if(S.schedule.size>0){
+    const byDay={};
+    [...S.schedule].forEach(key=>{
+      const [day,time]=key.split('|');
+      if(!byDay[day]) byDay[day]=[];
+      byDay[day].push(time);
+    });
+    sched=Object.entries(byDay).map(([d,times])=>d+': '+times.join(', ')).join(' · ');
+  }
+  set('sumSched', sched);
+
+  // ── Section 3: Playing Levels ────────────────────────
+  set('sumSkill',    S.skill||'—');
+  set('sumImprove',  S.wantsToImprove||'—');
+  set('sumLesson',   S.hasHadLesson||'—');
+  set('sumWantsLesson', S.wantsLesson||'—');
+
+  const duprRow=document.getElementById('sumDuprRow');
+  const goalRow=document.getElementById('sumGoalRow');
+  if(S.duprVal){ if(duprRow)duprRow.style.display='flex'; set('sumDupr',S.duprVal); }
+  else { if(duprRow)duprRow.style.display='none'; }
+  if(S.goalRating){ if(goalRow)goalRow.style.display='flex'; set('sumGoal',S.goalRating); }
+  else { if(goalRow)goalRow.style.display='none'; }
 }
 
 
@@ -5799,7 +5838,7 @@ async function restoreSession(email, playerData){
 
   const navBtn = document.getElementById('navLoginBtn');
   if(navBtn) navBtn.classList.add('signed-in');
-  const editBtn = document.getElementById('editProfileBtn');
+  const editBtn = document.getElementById('editProfileBtnInPage');
   if(editBtn) editBtn.style.display='block';
   const reqBtn = document.getElementById('viewRequestsBtn');
   if(reqBtn) reqBtn.style.display='block';
