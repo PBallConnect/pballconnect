@@ -3292,6 +3292,7 @@ function populateSummary(){
   else { if(duprRow)duprRow.style.display='none'; }
   if(S.goalRating){ if(goalRow)goalRow.style.display='flex'; set('sumGoal',S.goalRating); }
   else { if(goalRow)goalRow.style.display='none'; }
+  console.log('📋 populateSummary: S.goalRating=', S.goalRating, '| sumGoalRow display=', goalRow?.style.display);
 }
 
 
@@ -3575,6 +3576,7 @@ async function doSaveProfile(){
     }
     // Restore S state from our captured pre-save values
     // (don't trust re-fetch — Supabase may return stale cached data)
+    console.log('💾 _savedGoalRating:', _savedGoalRating, '| S.goalRating before restore:', S.goalRating, '| SESSION_PLAYER.goal_rating:', SESSION_PLAYER?.goal_rating);
     S.goalRating     = _savedGoalRating;
     S.duprVal        = _savedDuprVal;
     S.skill          = _savedSkill    || S.skill;
