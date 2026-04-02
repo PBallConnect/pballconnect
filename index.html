@@ -1409,7 +1409,7 @@
     </div>
     <!-- REGISTRATION SUMMARY — 3 sections -->
     <div style="margin-top:16px;">
-      <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--green);margin-bottom:12px;">Registration Summary</div>
+      <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:#ef4444;text-align:center;margin-bottom:16px;letter-spacing:.01em;">Registration Summary</div>
 
       <!-- Section 1: Personal Info -->
       <div id="sumSection1" style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;">
@@ -3556,7 +3556,11 @@ async function doSaveProfile(){
       SESSION_PLAYER.play_venues   = S.venuePref     || SESSION_PLAYER.play_venues;
       SESSION_PLAYER.wants_to_improve = S.wantsToImprove || SESSION_PLAYER.wants_to_improve;
       SESSION_PLAYER.has_had_lesson= S.hasHadLesson  || SESSION_PLAYER.has_had_lesson;
-      SESSION_PLAYER.wants_lesson  = S.wantsLesson   || SESSION_PLAYER.wants_lesson;
+      SESSION_PLAYER.wants_lesson  = S.wantsLesson;
+      SESSION_PLAYER.goal_rating   = S.goalRating    || null;
+      SESSION_PLAYER.dupr_rating   = S.duprVal       || null;
+      SESSION_PLAYER.shirt_size    = v('shirtSize')  || SESSION_PLAYER.shirt_size;
+      SESSION_PLAYER.last_name     = v('lastName') ? v('lastName').trim().charAt(0).toUpperCase()+'.' : SESSION_PLAYER.last_name;
       SESSION_PLAYER.dob           = document.getElementById('playerAge')?.value || SESSION_PLAYER.dob;
       SESSION_PLAYER.phone         = encodePhone(v('phone')) || SESSION_PLAYER.phone;
       SESSION_PLAYER.address       = null;
