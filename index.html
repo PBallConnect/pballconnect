@@ -936,6 +936,7 @@
   <div class="top-header-left">
     <div class="top-logo-icon">🏓</div>
     <div class="top-logo-text">Pickleball <span>Registry</span></div>
+    <div id="memberCountBadge" style="display:none;margin-left:8px;padding:3px 10px;border-radius:999px;background:rgba(76,175,125,0.12);border:1px solid rgba(76,175,125,0.25);font-size:11px;font-weight:700;color:#4CAF7D;letter-spacing:.03em;"></div>
   </div>
   <div class="top-header-right">
     <div id="viewMatchInvitesBtn" style="display:none;">
@@ -1005,9 +1006,9 @@
         <span class="nav-label">Invited by Others</span>
         <span id="invitedByOthersBadge" style="display:none;background:rgba(59,130,246,0.85);color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;"></span>
       </div>
-      <div class="nav-item nav-lessons-dim" onclick="showPage('lessons')" id="nav-lessons" title="Get Lessons — find instructors near you">
+      <div class="nav-item nav-lessons-dim" onclick="showPage('lessons')" id="nav-lessons" title="Coaching — find or become a coach">
         <span class="nav-icon">🎓</span>
-        <span class="nav-label">Get Lessons</span>
+        <span class="nav-label">Coaching</span>
         <span class="nav-lessons-badge" id="lessonsNavBadge" style="display:none;">New</span>
       </div>
       <div class="nav-item" onclick="showPage('privacy')" id="nav-privacy" title="Privacy Policy">
@@ -1385,6 +1386,76 @@
       </div>
       <button class="anytime-btn" id="anytimeBtn" onclick="toggleAnytime()">⚡ Anytime — I'm flexible!</button>
     </div>
+
+    <div class="divider"></div>
+
+    <!-- COACH SECTION -->
+    <div class="field">
+      <label>Are you a coach or instructor?</label>
+      <div style="font-size:12px;color:var(--dim);margin-bottom:10px;line-height:1.5;">Coaches get a 🎓 badge on their player card and appear in the Find a Coach directory under Get Lessons.</div>
+      <div class="chips" id="isCoachChips">
+        <button class="chip" onclick="selChip('isCoachChips',this,'isCoach');toggleCoachSection('Yes')">Yes — I coach!</button>
+        <button class="chip" onclick="selChip('isCoachChips',this,'isCoach');toggleCoachSection('No')">Not currently</button>
+      </div>
+    </div>
+
+    <div id="coachSection" style="display:none;">
+      <div class="divider"></div>
+      <div style="background:rgba(76,175,125,0.06);border:1px solid rgba(76,175,125,0.2);border-radius:14px;padding:16px;margin-bottom:16px;">
+        <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:14px;">🎓 Coach Profile</div>
+
+        <div class="field">
+          <label>Certifications</label>
+          <div class="chips" id="coachCertChips" style="flex-wrap:wrap;">
+            <button class="chip" onclick="toggleCoachChip('coachCertChips',this,'coachCerts','PPR')">PPR Certified</button>
+            <button class="chip" onclick="toggleCoachChip('coachCertChips',this,'coachCerts','IPTPA')">IPTPA Certified</button>
+            <button class="chip" onclick="toggleCoachChip('coachCertChips',this,'coachCerts','USAPA')">USAPA Ambassador</button>
+            <button class="chip" onclick="toggleCoachChip('coachCertChips',this,'coachCerts','Self-taught')">Self-taught pro</button>
+            <button class="chip" onclick="toggleCoachChip('coachCertChips',this,'coachCerts','Tennis pro')">Tennis pro background</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Lesson types offered</label>
+          <div class="chips" id="coachLessonChips" style="flex-wrap:wrap;">
+            <button class="chip" onclick="toggleCoachChip('coachLessonChips',this,'coachLessonTypes','Beginner')">Beginner</button>
+            <button class="chip" onclick="toggleCoachChip('coachLessonChips',this,'coachLessonTypes','Intermediate')">Intermediate</button>
+            <button class="chip" onclick="toggleCoachChip('coachLessonChips',this,'coachLessonTypes','Advanced')">Advanced</button>
+            <button class="chip" onclick="toggleCoachChip('coachLessonChips',this,'coachLessonTypes','All levels')">All levels</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Lesson format</label>
+          <div class="chips" id="coachFormatChips" style="flex-wrap:wrap;">
+            <button class="chip" onclick="toggleCoachChip('coachFormatChips',this,'coachFormats','Private')">Private (1-on-1)</button>
+            <button class="chip" onclick="toggleCoachChip('coachFormatChips',this,'coachFormats','Semi-private')">Semi-private</button>
+            <button class="chip" onclick="toggleCoachChip('coachFormatChips',this,'coachFormats','Group clinic')">Group clinic</button>
+            <button class="chip" onclick="toggleCoachChip('coachFormatChips',this,'coachFormats','Drills')">Drills session</button>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label>Rate from ($/hr)</label>
+            <input type="number" id="coachRateMin" placeholder="e.g. 50" min="0" max="500"
+              style="width:100%;padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:#fff;font-size:14px;font-family:'DM Sans',sans-serif;"/>
+          </div>
+          <div class="field">
+            <label>Rate to ($/hr)</label>
+            <input type="number" id="coachRateMax" placeholder="e.g. 80" min="0" max="500"
+              style="width:100%;padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:#fff;font-size:14px;font-family:'DM Sans',sans-serif;"/>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Coach bio <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— optional · tell players about your coaching style</span></label>
+          <textarea id="coachBio" rows="3" maxlength="500" placeholder="e.g. Former tennis pro with 5 years teaching pickleball. Focus on technique, footwork and the third-shot drop…"
+            style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;resize:vertical;line-height:1.5;"></textarea>
+        </div>
+      </div>
+    </div>
+
     <div class="btn-row">
       <button class="btn-back" onclick="goTo(1)">← Back</button>
       <button class="btn-next" id="next2" disabled onclick="goTo(3)">Continue →</button>
@@ -1429,6 +1500,7 @@
         <div class="summary-row"><span>State</span><span id="sumState">—</span></div>
         <div class="summary-row"><span>Zip</span><span id="sumZip">—</span></div>
         <div class="summary-row"><span>T-Shirt Size</span><span id="sumShirt">—</span></div>
+        <div class="summary-row" id="sumClubRow" style="display:none"><span>Club Member</span><span id="sumClub" style="color:#4CAF7D;">—</span></div>
         <!-- Keep hidden fields for JS compatibility -->
         <span id="sumName" style="display:none"></span>
         <span id="sumNickname" style="display:none"></span>
@@ -2639,27 +2711,65 @@
     <!-- LESSONS PAGE -->
     <div class="page-section" id="page-lessons">
       <div class="page-header">
-        <h1>Get <span>Lessons</span></h1>
-        <p id="lessonsPageSub">Find a certified pickleball instructor near you</p>
+        <h1>🎓 <span>Coaching</span></h1>
+        <p>Find a coach or register as one</p>
       </div>
-      <div id="lessonsLockedMsg" class="lessons-locked" style="display:none;">
-        <div class="lessons-locked-icon">🔒</div>
-        <div class="lessons-locked-text">Complete your Player Profile first and indicate you'd like to improve — then this section will unlock with instructor recommendations near you!</div>
-        <button class="lessons-go-profile-btn" onclick="showPage('playerProfile')">Go to Player Profile →</button>
+
+      <!-- Tab switcher -->
+      <div style="display:flex;gap:8px;margin-bottom:20px;">
+        <button id="tabFindCoach" onclick="switchCoachTab('find')"
+          style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--green);background:var(--green);color:var(--dark);font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+          🔍 Find a Coach
+        </button>
+        <button id="tabBeCoach" onclick="switchCoachTab('be')"
+          style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+          🎓 I'm a Coach
+        </button>
       </div>
-      <div id="lessonsContent" style="display:none;">
-        <div class="lessons-banner">
-          <div class="lessons-banner-icon">🎓</div>
-          <div>
-            <div class="lessons-banner-title">You're signed up for a lesson within 30 days!</div>
-            <div class="lessons-banner-sub">Browse certified instructors below and reach out to book your session.</div>
-          </div>
+
+      <!-- FIND A COACH tab -->
+      <div id="coachFindTab">
+        <div id="lessonsLockedMsg" class="lessons-locked" style="display:none;">
+          <div class="lessons-locked-icon">🔒</div>
+          <div class="lessons-locked-text">Sign in and complete your Player Profile to see coaches near you!</div>
+          <button class="lessons-go-profile-btn" onclick="showPage('playerProfile')">Go to Player Profile →</button>
         </div>
-        <div class="coming-soon" style="min-height:30vh;">
-          <div class="coming-soon-icon">📋</div>
-          <h2>Instructor Directory</h2>
-          <p>Certified PPR and IPTPA instructors in your area will be listed here. This feature is coming soon!</p>
-          <div class="coming-soon-badge">Coming Soon</div>
+        <div id="coachDirectory" style="display:none;">
+          <div style="font-size:12px;color:var(--dim);margin-bottom:16px;" id="coachDirectoryMeta"></div>
+          <div id="coachList"></div>
+        </div>
+      </div>
+
+      <!-- BE A COACH tab -->
+      <div id="coachBeTab" style="display:none;">
+        <div style="background:rgba(76,175,125,0.06);border:1px solid rgba(76,175,125,0.2);border-radius:14px;padding:20px;margin-bottom:16px;">
+          <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:8px;">Register as a coach</div>
+          <div style="font-size:13px;color:var(--dim);line-height:1.6;margin-bottom:16px;">
+            Complete your Coach Profile in your Player Profile to appear in the coach directory. Players searching for lessons will find you based on your location, certifications, and skill level.
+          </div>
+          <div id="coachStatusMsg" style="margin-bottom:16px;"></div>
+          <button onclick="showPage('playerProfile');setTimeout(openEditProfile,400);"
+            style="padding:11px 24px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+            ✏️ Edit My Coach Profile
+          </button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:20px;">
+          <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+            <div style="font-size:28px;margin-bottom:8px;">🗺️</div>
+            <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:4px;">Local discovery</div>
+            <div style="font-size:11px;color:var(--dim);">Players near you find your profile</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+            <div style="font-size:28px;margin-bottom:8px;">🎓</div>
+            <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:4px;">Cert badge</div>
+            <div style="font-size:11px;color:var(--dim);">PPR, IPTPA credentials displayed</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+            <div style="font-size:28px;margin-bottom:8px;">💰</div>
+            <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:4px;">Set your rate</div>
+            <div style="font-size:11px;color:var(--dim);">Show your hourly range</div>
+          </div>
         </div>
       </div>
     </div>
@@ -2738,7 +2848,8 @@
 const S={gender:'',skill:'',schedule:new Set(),anytime:false,partner:false,
   waiver:false,photoSrc:null,state:'',stateFips:'',county:'',city:'',email:'',
   court:'',courtName:'',duprVal:null,venues:new Set(),driveDistance:'25 miles',
-  playStyle:'',playFormat:'Both',handedness:'',avatarEmoji:'🎾',venuePref:'',playingSince:'',nickname:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null,_privacyConsent:false,_riskConsent:false};
+  playStyle:'',playFormat:'Both',handedness:'',avatarEmoji:'🎾',venuePref:'',playingSince:'',nickname:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null,_privacyConsent:false,_riskConsent:false,
+  isCoach:'',coachCerts:new Set(),coachLessonTypes:new Set(),coachFormats:new Set()};
 
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const TIMES=['Early AM','Morning','Afternoon','Evening'];
@@ -3160,6 +3271,29 @@ function toggleCell(el){
   else S.schedule.delete(el.dataset.key);
   chk2();
 }
+// ── Coach multi-select chips ───────────────────────────
+function toggleCoachChip(gid, el, key, value){
+  el.classList.toggle('on');
+  if(el.classList.contains('on')) S[key].add(value);
+  else S[key].delete(value);
+}
+
+function toggleCoachSection(answer){
+  S.isCoach = answer;
+  const section = document.getElementById('coachSection');
+  if(section) section.style.display = (answer==='Yes') ? 'block' : 'none';
+}
+
+function restoreCoachChips(chipGroupId, sKey, savedStr){
+  if(!savedStr) return;
+  const vals = savedStr.split(',').map(v=>v.trim()).filter(Boolean);
+  vals.forEach(val=>{
+    S[sKey].add(val);
+    const chips = document.querySelectorAll('#'+chipGroupId+' .chip');
+    chips.forEach(ch=>{ if(ch.textContent.trim()===val) ch.classList.add('on'); });
+  });
+}
+
 function toggleAnytime(){
   S.anytime=!S.anytime;
   document.getElementById('anytimeBtn').classList.toggle('on',S.anytime);
@@ -3533,6 +3667,13 @@ async function doSaveProfile(){
       wants_lesson:        S.wantsLesson || SESSION_PLAYER?.wants_lesson || null,
       lat:                 S.addrLat || SESSION_PLAYER?.lat || null,
       lon:                 S.addrLon || SESSION_PLAYER?.lon || null,
+      is_coach:            S.isCoach==='Yes',
+      coach_certifications: S.coachCerts.size>0 ? [...S.coachCerts].join(', ') : null,
+      coach_lesson_types:  S.coachLessonTypes.size>0 ? [...S.coachLessonTypes].join(', ') : null,
+      coach_formats:       S.coachFormats.size>0 ? [...S.coachFormats].join(', ') : null,
+      coach_rate_min:      document.getElementById('coachRateMin')?.value ? parseInt(document.getElementById('coachRateMin').value) : null,
+      coach_rate_max:      document.getElementById('coachRateMax')?.value ? parseInt(document.getElementById('coachRateMax').value) : null,
+      coach_bio:           document.getElementById('coachBio')?.value?.trim() || null,
     });
     showToast('✅ Profile saved!', '#4CAF7D');
     // Capture current values before any navigation
@@ -3640,10 +3781,13 @@ async function doSaveProfile(){
   if(SESSION_PLAYER){
     // Clear edit mode indicator
     stopChangeDetection();
+    // Reset both buttons — neither should be lit after save
     document.getElementById('editProfileBtnEl')?.classList.remove('active');
-    const card=document.getElementById('step1');
-    if(card){ card.classList.remove('edit-mode'); }
+    const btnSub=document.getElementById('btnSubmit');
+    if(btnSub){ btnSub.classList.remove('has-changes'); btnSub.disabled=true; }
     document.getElementById('editModeBanner')?.remove();
+    // Re-lock the form to read-only
+    lockProfileForm();
     // Refresh summary immediately — no page reload needed
     try{ populateSummary(); }catch(e){}
     // Scroll to summary so user sees the updated data pulse
@@ -3838,18 +3982,99 @@ function dimLessonsNav(){
   if(badge) badge.style.display='none';
 }
 
-function renderLessonsPage(){
-  const locked=document.getElementById('lessonsLockedMsg');
-  const content=document.getElementById('lessonsContent');
-  if(!locked||!content) return;
-  if(S.wantsLesson==='Yes'){
-    locked.style.display='none';
-    content.style.display='block';
-    document.getElementById('lessonsPageSub').textContent=
-      "You're booked for a lesson within 30 days, "+(v('firstName')||'Player')+"!";
+function switchCoachTab(tab){
+  const findTab = document.getElementById('coachFindTab');
+  const beTab   = document.getElementById('coachBeTab');
+  const findBtn = document.getElementById('tabFindCoach');
+  const beBtn   = document.getElementById('tabBeCoach');
+  if(tab==='find'){
+    findTab.style.display='block'; beTab.style.display='none';
+    findBtn.style.background='var(--green)'; findBtn.style.color='var(--dark)'; findBtn.style.borderColor='var(--green)';
+    beBtn.style.background='transparent'; beBtn.style.color='var(--dim)'; beBtn.style.borderColor='var(--border)';
   } else {
-    locked.style.display='block';
-    content.style.display='none';
+    findTab.style.display='none'; beTab.style.display='block';
+    beBtn.style.background='var(--green)'; beBtn.style.color='var(--dark)'; beBtn.style.borderColor='var(--green)';
+    findBtn.style.background='transparent'; findBtn.style.color='var(--dim)'; findBtn.style.borderColor='var(--border)';
+    // Show coach status
+    const statusEl = document.getElementById('coachStatusMsg');
+    if(statusEl){
+      if(SESSION_PLAYER?.is_coach){
+        statusEl.innerHTML='<div style="padding:10px 14px;border-radius:10px;background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.3);color:var(--green);font-size:13px;font-weight:600;">✅ You are registered as a coach!</div>';
+      } else {
+        statusEl.innerHTML='<div style="padding:10px 14px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--dim);font-size:13px;">You haven\'t registered as a coach yet. Edit your profile and scroll to the Coach section.</div>';
+      }
+    }
+  }
+}
+
+function renderLessonsPage(){
+  const myEmail = getMyEmail();
+  const locked  = document.getElementById('lessonsLockedMsg');
+  const dir     = document.getElementById('coachDirectory');
+  if(!myEmail){
+    if(locked) locked.style.display='block';
+    if(dir) dir.style.display='none';
+    return;
+  }
+  if(locked) locked.style.display='none';
+  if(dir) dir.style.display='block';
+  loadCoachDirectory();
+}
+
+async function loadCoachDirectory(){
+  const list = document.getElementById('coachList');
+  const meta = document.getElementById('coachDirectoryMeta');
+  if(!list) return;
+  list.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;">🔍 Finding coaches near you…</div>';
+  try{
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/registrations?is_coach=eq.true&select=first_name,last_name,nickname,avatar_emoji,skill_level,city,state,coach_certifications,coach_lesson_types,coach_formats,coach_rate_min,coach_rate_max,coach_bio,email&order=skill_level.desc`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+    );
+    const coaches = res.ok ? await res.json() : [];
+    if(meta) meta.textContent = coaches.length+' coach'+(coaches.length!==1?'es':'')+' registered';
+    if(!coaches.length){
+      list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--dim);font-size:14px;">No coaches registered yet.<br><br>Be the first! Switch to the "I\'m a Coach" tab.</div>';
+      return;
+    }
+    list.innerHTML='';
+    coaches.forEach(c=>{
+      const name = (c.first_name||'')+(c.last_name?' '+c.last_name:'');
+      const nick = c.nickname ? '"'+c.nickname+'"' : '';
+      const location = [c.city,c.state].filter(Boolean).join(', ');
+      const rateStr = c.coach_rate_min||c.coach_rate_max
+        ? '$'+(c.coach_rate_min||'?')+(c.coach_rate_max?' – $'+c.coach_rate_max:'')+'/hr'
+        : 'Rate on request';
+      const certs = c.coach_certifications||'';
+      const types = c.coach_lesson_types||'';
+      const formats = c.coach_formats||'';
+      const card = document.createElement('div');
+      card.style.cssText='background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px;';
+      card.innerHTML=
+        '<div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:12px;">'+
+          '<div style="width:52px;height:52px;border-radius:50%;background:rgba(76,175,125,0.12);border:2px solid rgba(76,175,125,0.25);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">'+(c.avatar_emoji||'🎾')+'</div>'+
+          '<div style="flex:1;">'+
+            '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'+
+              '<span style="color:#fff;font-size:15px;font-weight:700;">'+name+'</span>'+
+              (nick?'<span style="color:var(--dim);font-size:13px;">'+nick+'</span>':'')+
+              '<span style="padding:2px 8px;border-radius:999px;background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.3);color:var(--green);font-size:10px;font-weight:700;">🎓 COACH</span>'+
+            '</div>'+
+            '<div style="color:var(--dim);font-size:12px;margin-top:3px;">'+
+              (location?'📍 '+location+' · ':'')+'⭐ '+c.skill_level+' · 💰 '+rateStr+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+        (certs?'<div style="font-size:12px;color:var(--dim);margin-bottom:6px;"><strong style="color:#fff;">Certifications:</strong> '+certs+'</div>':'')+
+        (types?'<div style="font-size:12px;color:var(--dim);margin-bottom:6px;"><strong style="color:#fff;">Teaches:</strong> '+types+'</div>':'')+
+        (formats?'<div style="font-size:12px;color:var(--dim);margin-bottom:6px;"><strong style="color:#fff;">Format:</strong> '+formats+'</div>':'')+
+        (c.coach_bio?'<div style="font-size:12px;color:rgba(255,255,255,0.65);font-style:italic;border-top:1px solid var(--border);padding-top:10px;margin-top:10px;">'+c.coach_bio+'</div>':'')+
+        '<div style="margin-top:12px;">'+
+          '<a href="mailto:'+c.email+'" style="display:inline-block;padding:8px 18px;border-radius:8px;border:1px solid rgba(76,175,125,0.4);color:var(--green);font-size:12px;font-weight:600;text-decoration:none;">✉️ Contact '+((c.first_name)||'Coach')+'</a>'+
+        '</div>';
+      list.appendChild(card);
+    });
+  }catch(e){
+    list.innerHTML='<div style="color:#f87171;font-size:13px;">Error loading coaches.</div>';
   }
 }
 function toggleNav(){
@@ -5997,6 +6222,17 @@ async function restoreSession(email, playerData){
   loadIcPending();
   setTimeout(loadMatchSquareCounts, 800);
 
+  // Fetch total member count and show badge if >= 25
+  fetch(`${SUPABASE_URL}/rest/v1/registrations?select=count`,
+    {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'count=exact','Range':'0-0'}})
+    .then(r=>{ const ct=parseInt(r.headers.get('Content-Range')?.split('/')[1]||'0');
+      if(ct>=25){ const b=document.getElementById('memberCountBadge');
+        if(b){ b.textContent=ct.toLocaleString()+' players'; b.style.display='block'; } }
+    }).catch(()=>{});
+
+  // Load club memberships for summary
+  loadPlayerCourtsForSummary(player.email);
+
   if(!S.addrLat && player.city && player.state) geocodeCityForSession(player.city, player.state);
   showPage('innerCircle');
 }
@@ -6009,6 +6245,40 @@ async function geocodeCityForSession(city, state){
     if(res.ok){
       const data = await res.json();
       if(data.length){ S.addrLat=parseFloat(data[0].lat); S.addrLon=parseFloat(data[0].lon); }
+    }
+  }catch(e){}
+}
+
+async function loadPlayerCourtsForSummary(email){
+  if(!email) return;
+  try{
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(email)}&is_member=eq.true&select=court_id`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+    );
+    if(!res.ok) return;
+    const rows = await res.json();
+    const clubRow = document.getElementById('sumClubRow');
+    const clubEl  = document.getElementById('sumClub');
+    if(rows.length > 0 && clubRow && clubEl){
+      // Fetch court names
+      const ids = rows.map(r=>r.court_id).filter(Boolean);
+      if(ids.length){
+        const cr = await fetch(
+          `${SUPABASE_URL}/rest/v1/courts?id=in.(${ids.join(',')})&select=name`,
+          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+        );
+        const courts = cr.ok ? await cr.json() : [];
+        if(courts.length){
+          clubEl.textContent = courts.map(c=>c.name).join(', ');
+          clubRow.style.display = 'flex';
+          return;
+        }
+      }
+      clubEl.textContent = rows.length+' club'+(rows.length>1?'s':'');
+      clubRow.style.display = 'flex';
+    } else if(clubRow){
+      clubRow.style.display = 'none';
     }
   }catch(e){}
 }
@@ -6077,7 +6347,9 @@ async function openEditProfile(){
   const email=localStorage.getItem('pb_email')||getMyEmail();
   if(!email){ showPage('playerProfile'); return; }
   await fetchAndRestoreProfile(email);
-  // Glow the Edit Profile button only — no card border
+  // Unlock the form for editing
+  unlockProfileForm();
+  // Glow the Edit Profile button
   document.getElementById('editProfileBtnEl')?.classList.add('active');
   // Add edit mode banner under the h2
   const card=document.getElementById('step1');
@@ -6289,9 +6561,89 @@ function restoreProfileForm(player){
     }
   }
 
+  // Restore coach profile
+  S.isCoach = player.is_coach ? 'Yes' : 'Not currently';
+  if(player.is_coach){
+    restoreChip('isCoachChips','Yes');
+    toggleCoachSection('Yes');
+    S.coachCerts = new Set();
+    S.coachLessonTypes = new Set();
+    S.coachFormats = new Set();
+    restoreCoachChips('coachCertChips','coachCerts', player.coach_certifications||'');
+    restoreCoachChips('coachLessonChips','coachLessonTypes', player.coach_lesson_types||'');
+    restoreCoachChips('coachFormatChips','coachFormats', player.coach_formats||'');
+    const rMin=document.getElementById('coachRateMin'); if(rMin&&player.coach_rate_min) rMin.value=player.coach_rate_min;
+    const rMax=document.getElementById('coachRateMax'); if(rMax&&player.coach_rate_max) rMax.value=player.coach_rate_max;
+    const bio=document.getElementById('coachBio'); if(bio&&player.coach_bio) bio.value=player.coach_bio;
+  }
+
   [1,2,3].forEach(i=>{const step=document.getElementById('step'+i);if(step)step.style.display='block';});
   try{populateSummary();}catch(e){}
+  // Lock the form — read-only until Edit Profile is clicked
+  if(SESSION_PLAYER) lockProfileForm();
   window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function lockProfileForm(){
+  // Disable all inputs, selects, buttons inside the form steps
+  ['step1','step2','step3'].forEach(id=>{
+    const step=document.getElementById(id);
+    if(!step) return;
+    step.querySelectorAll('input:not([type="hidden"]),select,textarea').forEach(el=>{
+      el.disabled=true;
+      el.style.opacity='0.6';
+      el.style.cursor='not-allowed';
+    });
+    // Disable chips
+    step.querySelectorAll('.chip,.chip-rect,.sched-cell,.anytime-btn,.day-btn').forEach(el=>{
+      el.style.pointerEvents='none';
+      el.style.opacity='0.6';
+    });
+    // Disable emoji picker
+    const emojiPreview=document.getElementById('emojiPreview');
+    if(emojiPreview){ emojiPreview.style.pointerEvents='none'; emojiPreview.style.cursor='default'; }
+    // Disable sliders
+    step.querySelectorAll('input[type="range"]').forEach(el=>{ el.disabled=true; });
+    // Hide Continue/Back buttons — not needed in read-only mode
+    step.querySelectorAll('.btn-next,.btn-back').forEach(el=>{ el.style.display='none'; });
+  });
+  // Dim the submit button
+  const btn=document.getElementById('btnSubmit');
+  if(btn){ btn.disabled=true; btn.classList.remove('has-changes'); }
+  // Show a subtle read-only indicator
+  const banner=document.getElementById('editModeBanner');
+  if(!banner){
+    const h2=document.querySelector('#step1 h2');
+    if(h2&&!document.getElementById('readOnlyBanner')){
+      const b=document.createElement('div');
+      b.id='readOnlyBanner';
+      b.style.cssText='display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.4);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px;';
+      b.innerHTML='🔒 Read-only · Click ✏️ Edit Profile to make changes';
+      h2.insertAdjacentElement('afterend',b);
+    }
+  }
+}
+
+function unlockProfileForm(){
+  ['step1','step2','step3'].forEach(id=>{
+    const step=document.getElementById(id);
+    if(!step) return;
+    step.querySelectorAll('input:not([type="hidden"]),select,textarea').forEach(el=>{
+      el.disabled=false;
+      el.style.opacity='';
+      el.style.cursor='';
+    });
+    step.querySelectorAll('.chip,.chip-rect,.sched-cell,.anytime-btn,.day-btn').forEach(el=>{
+      el.style.pointerEvents='';
+      el.style.opacity='';
+    });
+    const emojiPreview=document.getElementById('emojiPreview');
+    if(emojiPreview){ emojiPreview.style.pointerEvents=''; emojiPreview.style.cursor='pointer'; }
+    step.querySelectorAll('input[type="range"]').forEach(el=>{ el.disabled=false; });
+    step.querySelectorAll('.btn-next,.btn-back').forEach(el=>{ el.style.display=''; });
+  });
+  // Remove read-only banner
+  document.getElementById('readOnlyBanner')?.remove();
 }
 
 function formatPhoneDisplay(digits){
