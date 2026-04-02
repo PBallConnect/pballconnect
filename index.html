@@ -41,6 +41,10 @@
 
   .card{background:var(--card);border:1px solid var(--border);border-radius:24px;padding:28px 28px 24px;backdrop-filter:blur(20px);animation:slideIn .35s ease;}
   .card.edit-mode{border:2px solid #4CAF7D;box-shadow:0 0 0 4px rgba(76,175,125,0.15),0 0 24px rgba(76,175,125,0.1);transition:border .3s,box-shadow .3s;}
+  .edit-profile-btn{padding:8px 18px;border-radius:20px;border:1px solid var(--border);background:rgba(76,175,125,0.08);color:#4CAF7D;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .25s;}
+  .edit-profile-btn.active{background:#4CAF7D;color:#0a120b;border-color:#4CAF7D;box-shadow:0 0 0 3px rgba(76,175,125,0.25);}
+  .edit-profile-btn:hover{border-color:#4CAF7D;}
+  .btn-submit.has-changes{background:#4CAF7D!important;color:#0a120b!important;box-shadow:0 0 0 3px rgba(76,175,125,0.25);}
   @keyframes slideIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
   .card h2{font-family:'Playfair Display',serif;font-size:24px;color:#fff;font-weight:700;margin-bottom:22px;}
 
@@ -1020,12 +1024,7 @@
 
         <!-- Edit Profile button — shown when signed in -->
         <div id="editProfileBtnInPage" style="display:none;text-align:right;margin-bottom:12px;">
-          <button onclick="openEditProfile()"
-            style="padding:8px 18px;border-radius:20px;border:1px solid var(--border);
-              background:rgba(76,175,125,0.1);color:var(--green);font-size:13px;font-weight:600;
-              cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;"
-            onmouseover="this.style.borderColor='var(--green)'"
-            onmouseout="this.style.borderColor='var(--border)'">
+          <button id="editProfileBtnEl" class="edit-profile-btn" onclick="openEditProfile()">
             ✏️ Edit Profile
           </button>
         </div>
@@ -1431,7 +1430,26 @@
         <div class="summary-row"><span>Play Style</span><span id="sumStyle">—</span></div>
         <div class="summary-row"><span>Venue Preference</span><span id="sumVenuePref">—</span></div>
         <div class="summary-row"><span>Drive Distance</span><span id="sumDrive">—</span></div>
-        <div class="summary-row"><span>Play Schedule</span><span id="sumSched">—</span></div>
+        <!-- Schedule Grid -->
+        <div style="margin-top:10px;">
+          <div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;">Play Schedule</div>
+          <div id="sumSchedGrid" style="overflow-x:auto;">
+            <table style="border-collapse:collapse;width:100%;font-size:11px;">
+              <thead>
+                <tr>
+                  <th style="padding:6px 4px;text-align:left;color:var(--dim);font-weight:600;border-bottom:1px solid var(--border);min-width:36px;"></th>
+                  <th style="padding:6px 4px;text-align:center;color:var(--dim);font-weight:600;border-bottom:1px solid var(--border);font-size:10px;">Early AM<br><span style="font-weight:400;opacity:.7;">6–9am</span></th>
+                  <th style="padding:6px 4px;text-align:center;color:var(--dim);font-weight:600;border-bottom:1px solid var(--border);font-size:10px;">Morning<br><span style="font-weight:400;opacity:.7;">9–12</span></th>
+                  <th style="padding:6px 4px;text-align:center;color:var(--dim);font-weight:600;border-bottom:1px solid var(--border);font-size:10px;">Afternoon<br><span style="font-weight:400;opacity:.7;">12–4</span></th>
+                  <th style="padding:6px 4px;text-align:center;color:var(--dim);font-weight:600;border-bottom:1px solid var(--border);font-size:10px;">Evening<br><span style="font-weight:400;opacity:.7;">4–8pm</span></th>
+                </tr>
+              </thead>
+              <tbody id="sumSchedBody"></tbody>
+            </table>
+          </div>
+          <div id="sumAnytime" style="display:none;margin-top:6px;padding:6px 12px;border-radius:8px;background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.25);color:var(--green);font-size:12px;font-weight:600;">⚡ Anytime — I'm flexible!</div>
+        </div>
+        <input type="hidden" id="sumSched" value=""/>
       </div>
 
       <!-- Section 3: Playing Levels -->
@@ -3222,18 +3240,40 @@ function populateSummary(){
   set('sumVenuePref',  S.venuePref||'—');
   set('sumDrive',      S.driveDistance ? 'Up to '+S.driveDistance+' miles' : '—');
 
-  let sched='—';
-  if(S.anytime) sched='Anytime — I\'m flexible!';
-  else if(S.schedule.size>0){
-    const byDay={};
-    [...S.schedule].forEach(key=>{
-      const [day,time]=key.split('|');
-      if(!byDay[day]) byDay[day]=[];
-      byDay[day].push(time);
-    });
-    sched=Object.entries(byDay).map(([d,times])=>d+': '+times.join(', ')).join(' · ');
+  // ── Schedule visual grid ─────────────────────────────
+  const SCHED_DAYS  = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const SCHED_TIMES = ['Early AM','Morning','Afternoon','Evening'];
+  const anytimeDiv  = document.getElementById('sumAnytime');
+  const gridDiv     = document.getElementById('sumSchedGrid');
+  const tbody       = document.getElementById('sumSchedBody');
+  if(S.anytime){
+    if(anytimeDiv) anytimeDiv.style.display='block';
+    if(gridDiv)    gridDiv.style.display='none';
+  } else {
+    if(anytimeDiv) anytimeDiv.style.display='none';
+    if(gridDiv)    gridDiv.style.display='block';
+    if(tbody){
+      tbody.innerHTML='';
+      SCHED_DAYS.forEach(day=>{
+        const hasAny=SCHED_TIMES.some(t=>S.schedule.has(day+'|'+t));
+        const tr=document.createElement('tr');
+        const tdDay=document.createElement('td');
+        tdDay.style.cssText='padding:5px 6px;color:'+(hasAny?'#fff':'var(--dim)')+';font-weight:'+(hasAny?'700':'400')+';font-size:11px;border-bottom:1px solid rgba(255,255,255,0.04);white-space:nowrap;';
+        tdDay.textContent=day;
+        tr.appendChild(tdDay);
+        SCHED_TIMES.forEach(time=>{
+          const on=S.schedule.has(day+'|'+time);
+          const td=document.createElement('td');
+          td.style.cssText='padding:5px 4px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.04);';
+          td.innerHTML=on
+            ? '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:rgba(76,175,125,0.2);border:1px solid rgba(76,175,125,0.4);color:#4CAF7D;font-size:14px;font-weight:700;">✓</span>'
+            : '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05);"></span>';
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+    }
   }
-  set('sumSched', sched);
 
   // ── Section 3: Playing Levels ────────────────────────
   set('sumSkill',    S.skill||'—');
@@ -3566,6 +3606,8 @@ async function doSaveProfile(){
   // If editing existing profile, skip overlay — go straight to inner circle
   if(SESSION_PLAYER){
     // Clear edit mode indicator
+    stopChangeDetection();
+    document.getElementById('editProfileBtnEl')?.classList.remove('active');
     const card=document.getElementById('step1');
     if(card){ card.classList.remove('edit-mode'); }
     document.getElementById('editModeBanner')?.remove();
@@ -3700,6 +3742,8 @@ async function showCitySelector(stateName){
 
 // ── Navigation ─────────────────────────────────────────
 function showPage(page){
+  // Stop change detection if navigating away from profile
+  if(page !== 'playerProfile') stopChangeDetection();
   document.querySelectorAll('.page-section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
@@ -5988,22 +6032,62 @@ async function openEditProfile(){
   const email=localStorage.getItem('pb_email')||getMyEmail();
   if(!email){ showPage('playerProfile'); return; }
   await fetchAndRestoreProfile(email);
-  // Visual edit mode — add class to step1 card
+  // Glow the edit button
+  document.getElementById('editProfileBtnEl')?.classList.add('active');
+  // Visual edit mode on card
   const card=document.getElementById('step1');
-  if(card){
-    card.classList.add('edit-mode');
-  }
-  // Add edit mode banner under the h2 if not already there
+  if(card) card.classList.add('edit-mode');
+  // Banner under h2
   const h2=card?.querySelector('h2');
   if(h2&&!document.getElementById('editModeBanner')){
     const banner=document.createElement('div');
     banner.id='editModeBanner';
     banner.style.cssText='display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:999px;background:rgba(76,175,125,0.12);border:1px solid rgba(76,175,125,0.35);color:#4CAF7D;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px;';
-    banner.innerHTML='✏️ &nbsp;Edit Mode &nbsp;·&nbsp; changes save when you hit Update Profile';
+    banner.innerHTML='✏️ &nbsp;Edit Mode &nbsp;·&nbsp; Update Profile lights up when you make a change';
     h2.insertAdjacentElement('afterend',banner);
   }
-  // Scroll form into view
+  // Keep submit dimmed until a change is detected
+  const btn=document.getElementById('btnSubmit');
+  if(btn){ btn.classList.remove('has-changes'); btn.disabled=true; }
+  // Start watching for changes
+  startChangeDetection();
   card?.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+let _changeTimer = null;
+function startChangeDetection(){
+  if(_changeTimer) clearInterval(_changeTimer);
+  if(!SESSION_PLAYER) return;
+  const p = SESSION_PLAYER;
+  _changeTimer = setInterval(()=>{
+    const btn = document.getElementById('btnSubmit');
+    if(!btn) { clearInterval(_changeTimer); return; }
+    // Snapshot current form values against saved DB values
+    const changed =
+      v('firstName') !== (p.first_name||'') ||
+      v('nickname')  !== (p.nickname||'') ||
+      v('addrCity')  !== (p.city||'') ||
+      v('addrZip')   !== (p.zip_code||'') ||
+      S.gender       !== (p.gender||'') ||
+      S.handedness   !== (p.handedness||'') ||
+      S.playFormat   !== (p.play_format||'Both') ||
+      S.playStyle    !== (p.play_style||'') ||
+      S.venuePref    !== (p.play_venues||'') ||
+      String(S.skill||'') !== String(p.skill_level||'') ||
+      String(S.goalRating||'') !== String(p.goal_rating||'') ||
+      S.wantsToImprove !== (p.wants_to_improve||'') ||
+      (document.getElementById('playerAge')?.value||'') !== (p.dob||'');
+    if(changed){
+      btn.classList.add('has-changes');
+      btn.disabled = false;
+    } else {
+      btn.classList.remove('has-changes');
+      btn.disabled = true;
+    }
+  }, 400);
+}
+function stopChangeDetection(){
+  if(_changeTimer){ clearInterval(_changeTimer); _changeTimer=null; }
 }
 
 async function fetchAndRestoreProfile(email){
