@@ -3636,6 +3636,10 @@ async function doSaveProfile(){
     document.getElementById('editModeBanner')?.remove();
     // Refresh summary immediately — no page reload needed
     try{ populateSummary(); }catch(e){}
+    // Scroll to summary so user sees the updated data pulse
+    setTimeout(()=>{
+      document.getElementById('sumSection1')?.scrollIntoView({behavior:'smooth', block:'start'});
+    }, 150);
     // Pulse the summary sections to show they updated
     ['sumSection1','sumSection2','sumSection3'].forEach(id=>{
       const el=document.getElementById(id);
@@ -3644,12 +3648,6 @@ async function doSaveProfile(){
         setTimeout(()=>el.classList.remove('summary-section-pulse'), 4000);
       }
     });
-    // Stay on Player Profile so user sees the summary update
-    showPage('playerProfile');
-    // Scroll down to the summary so the pulse is visible
-    setTimeout(()=>{
-      document.getElementById('sumSection1')?.scrollIntoView({behavior:'smooth', block:'start'});
-    }, 150);
     showToast('✅ Profile updated! ↓ See your summary below', '#4CAF7D');
   } else {
     document.getElementById('confirmOverlay').style.display='flex';
