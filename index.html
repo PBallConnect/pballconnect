@@ -40,6 +40,7 @@
   .step-line.done{background:var(--green);}
 
   .card{background:var(--card);border:1px solid var(--border);border-radius:24px;padding:28px 28px 24px;backdrop-filter:blur(20px);animation:slideIn .35s ease;}
+  .card.edit-mode{border:2px solid #4CAF7D;box-shadow:0 0 0 4px rgba(76,175,125,0.15),0 0 24px rgba(76,175,125,0.1);transition:border .3s,box-shadow .3s;}
   @keyframes slideIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
   .card h2{font-family:'Playfair Display',serif;font-size:24px;color:#fff;font-weight:700;margin-bottom:22px;}
 
@@ -3017,6 +3018,7 @@ function toggleGoalRating(answer){
   const field=document.getElementById('goalRatingField');
   if(!field) return;
   if(answer.trim()==='Yes'){
+    unlockLessonsNav(); // light up Get Lessons immediately
     field.style.display='block';
     const personalSlider=document.getElementById('personalRatingSlider');
     const currentIdx=personalSlider?parseInt(personalSlider.value):0;
@@ -3350,6 +3352,8 @@ function showProfileDiff(){
     {label:'Play Format',  old:player.play_format||'Both', nw:S.playFormat||'Both'},
     {label:'Play Style',   old:player.play_style||'',      nw:S.playStyle||''},
     {label:'Venues',       old:player.play_venues||'',     nw:S.venuePref||''},
+    {label:'Target Level', old:String(player.goal_rating||''), nw:String(S.goalRating||'')},
+    {label:'Wants to Improve', old:player.wants_to_improve||'', nw:S.wantsToImprove||''},
     {label:'Phone',        old:decodePhone(player.phone||''), nw:(v('phone')||'').replace(/\D/g,'')},
   ];
 
@@ -3561,6 +3565,10 @@ async function doSaveProfile(){
   av.innerHTML=S.photoSrc?`<img class="confirm-avatar" src="${S.photoSrc}"/>`:`<div class="confirm-avatar-ph">👤</div>`;
   // If editing existing profile, skip overlay — go straight to inner circle
   if(SESSION_PLAYER){
+    // Clear edit mode indicator
+    const card=document.getElementById('step1');
+    if(card){ card.classList.remove('edit-mode'); }
+    document.getElementById('editModeBanner')?.remove();
     showPage('innerCircle');
     showToast('✅ Profile updated!', '#4CAF7D');
   } else {
@@ -5836,6 +5844,13 @@ async function restoreSession(email, playerData){
   S.goalRating   = player.goal_rating || null;
   SESSION_PLAYER = player;
 
+  // Illuminate Get Lessons if player has indicated they want to improve or want a lesson
+  const wantsLesson   = (player.wants_lesson||'').toLowerCase();
+  const wantsImprove  = (player.wants_to_improve||'').toLowerCase();
+  if(wantsLesson==='yes' || wantsImprove==='yes'){
+    unlockLessonsNav();
+  }
+
   const navBtn = document.getElementById('navLoginBtn');
   if(navBtn) navBtn.classList.add('signed-in');
   const editBtn = document.getElementById('editProfileBtnInPage');
@@ -5973,6 +5988,22 @@ async function openEditProfile(){
   const email=localStorage.getItem('pb_email')||getMyEmail();
   if(!email){ showPage('playerProfile'); return; }
   await fetchAndRestoreProfile(email);
+  // Visual edit mode — add class to step1 card
+  const card=document.getElementById('step1');
+  if(card){
+    card.classList.add('edit-mode');
+  }
+  // Add edit mode banner under the h2 if not already there
+  const h2=card?.querySelector('h2');
+  if(h2&&!document.getElementById('editModeBanner')){
+    const banner=document.createElement('div');
+    banner.id='editModeBanner';
+    banner.style.cssText='display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:999px;background:rgba(76,175,125,0.12);border:1px solid rgba(76,175,125,0.35);color:#4CAF7D;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px;';
+    banner.innerHTML='✏️ &nbsp;Edit Mode &nbsp;·&nbsp; changes save when you hit Update Profile';
+    h2.insertAdjacentElement('afterend',banner);
+  }
+  // Scroll form into view
+  card?.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 async function fetchAndRestoreProfile(email){
@@ -6173,7 +6204,7 @@ async function loadInnerCircle(){
     updateNavCircleBadges(IC_MEMBERS.length, IC_PENDING_PLAYERS?.length||0, IC_INCOMING_COUNT);
     // Await both so updateIcStats fires after IC_INVITED_PLAYERS is populated
     await Promise.all([loadIcInvites(), loadIcPending()]);
-    updateIcStats([]);
+    updateIcStats(null);
   }catch(e){ console.warn('loadInnerCircle error:',e); }
 }
 
@@ -6344,31 +6375,28 @@ async function icSendRequest(recipientEmail, recipientName, btn){
 
 function updateIcStats(pendingMembers){
   const mySkill=S.skill||SESSION_PLAYER?.skill_level||'';
-  const skills=mySkill?getAdjacentSkills(mySkill):null;
+  const myVal=parseFloat(mySkill||0);
   const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
   let mMale=0,mFemale=0,mOther=0,mBelow=0,mMy=0,mAbove=0;
   IC_MEMBERS.forEach(({player})=>{
     const g=(player.gender||'').toLowerCase();
     if(g==='male') mMale++; else if(g==='female') mFemale++; else mOther++;
-    if(skills){
+    if(myVal>0){
       const ps=parseFloat(player.skill_level||0);
-      if(skills.below!==null&&Math.abs(ps-skills.below)<0.13) mBelow++;
-      else if(Math.abs(ps-skills.my)<0.13) mMy++;
-      else if(skills.above!==null&&Math.abs(ps-skills.above)<0.13) mAbove++;
-      else mMy++;
+      const diff=parseFloat((ps-myVal).toFixed(4));
+      if(diff<0) mBelow++; else if(diff===0) mMy++; else mAbove++;
     }
   });
-  const pending=pendingMembers||IC_INVITED_PLAYERS||[];
+  // Fix: [] is truthy so || never reaches IC_INVITED_PLAYERS — use length check
+  const pending=(pendingMembers&&pendingMembers.length>0)?pendingMembers:IC_INVITED_PLAYERS;
   let pMale=0,pFemale=0,pOther=0,pBelow=0,pMy=0,pAbove=0;
   pending.forEach(player=>{
     const g=(player.gender||'').toLowerCase();
     if(g==='male') pMale++; else if(g==='female') pFemale++; else pOther++;
-    if(skills&&player.skill_level){
+    if(myVal>0&&player.skill_level){
       const ps=parseFloat(player.skill_level||0);
-      if(skills.below!==null&&Math.abs(ps-skills.below)<0.13) pBelow++;
-      else if(Math.abs(ps-skills.my)<0.13) pMy++;
-      else if(skills.above!==null&&Math.abs(ps-skills.above)<0.13) pAbove++;
-      else pMy++;
+      const diff=parseFloat((ps-myVal).toFixed(4));
+      if(diff<0) pBelow++; else if(diff===0) pMy++; else pAbove++;
     }
   });
   set('gMaleMember',mMale); set('gFemaleMember',mFemale); set('gOtherMember',mOther); set('gTotalMember',IC_MEMBERS.length);
@@ -6829,11 +6857,11 @@ function filterNearbyGrid(val){
 // ── IC Stats + Invites ─────────────────────────────────
 async function loadIcInvites(){
   const myEmail=getMyEmail();
+  if(!myEmail) return;
   const card=document.getElementById('icInvitesCard');
   const list=document.getElementById('icInvitesList');
-  if(!card||!list) return;
+  // Do NOT early-return on card/list — IC_INVITED_PLAYERS must always be populated for stats
   try{
-    // Fetch ALL sent invites (pending + approved + declined) for history
     const res=await fetch(`${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(myEmail)}&select=*&order=created_at.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     if(!res.ok) return;
     const allSent=await res.json();
@@ -6841,7 +6869,7 @@ async function loadIcInvites(){
     const accepted=allSent.filter(c=>c.status==='approved');
     const declined=allSent.filter(c=>c.status==='declined');
 
-    // Populate IC_INVITED_PLAYERS with profile data for pending invites (for IC stats)
+    // Always populate IC_INVITED_PLAYERS regardless of UI state
     IC_INVITED_PLAYERS = [];
     if(pending.length){
       const emails=pending.map(c=>c.recipient_email).filter(Boolean);
@@ -6849,19 +6877,20 @@ async function loadIcInvites(){
         try{
           const pr=await fetch(`${SUPABASE_URL}/rest/v1/registrations?email=in.(${emails.map(e=>encodeURIComponent(e)).join(',')})&select=email,gender,skill_level`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
           const registered = pr.ok ? await pr.json() : [];
-          // For invitees not yet registered, create placeholder entries so count is correct
           const regEmails = new Set(registered.map(r=>r.email.toLowerCase()));
           IC_INVITED_PLAYERS = [...registered];
           emails.forEach(e=>{
             if(!regEmails.has(e.toLowerCase())){
-              IC_INVITED_PLAYERS.push({email:e, gender:'', skill_level:''}); // unregistered placeholder
+              IC_INVITED_PLAYERS.push({email:e, gender:'', skill_level:''});
             }
           });
         }catch(e){ IC_INVITED_PLAYERS = pending.map(c=>({email:c.recipient_email,gender:'',skill_level:''})); }
       }
     }
-    // Refresh IC stats with updated invited data
-    updateIcStats([]);
+    // Always update stats first
+    updateIcStats(null);
+    // Only render UI if elements exist
+    if(!card||!list) return;
 
     // Update yellow badge with pending count
     const navPendBadge=document.getElementById('icNavYellowBadge');
