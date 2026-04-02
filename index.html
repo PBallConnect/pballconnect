@@ -6086,20 +6086,29 @@ function startChangeDetection(){
   _changeTimer = setInterval(()=>{
     const btn = document.getElementById('btnSubmit');
     if(!btn) { clearInterval(_changeTimer); return; }
+    const currentEmoji = document.getElementById('avatarEmoji')?.value || S.avatarEmoji || '🎾';
+    const savedEmoji   = p.avatar_emoji || '🎾';
     // Snapshot current form values against saved DB values
     const changed =
       v('firstName') !== (p.first_name||'') ||
       v('nickname')  !== (p.nickname||'') ||
       v('addrCity')  !== (p.city||'') ||
       v('addrZip')   !== (p.zip_code||'') ||
+      v('shirtSize') !== (p.shirt_size||'') ||
+      (v('phone')||'').replace(/\D/g,'') !== decodePhone(p.phone||'') ||
       S.gender       !== (p.gender||'') ||
       S.handedness   !== (p.handedness||'') ||
       S.playFormat   !== (p.play_format||'Both') ||
       S.playStyle    !== (p.play_style||'') ||
       S.venuePref    !== (p.play_venues||'') ||
-      String(S.skill||'') !== String(p.skill_level||'') ||
-      String(S.goalRating||'') !== String(p.goal_rating||'') ||
       S.wantsToImprove !== (p.wants_to_improve||'') ||
+      S.hasHadLesson !== (p.has_had_lesson||'') ||
+      S.wantsLesson  !== (p.wants_lesson||'') ||
+      S.anytime      !== (p.anytime||false) ||
+      currentEmoji   !== savedEmoji ||
+      String(S.skill||'')       !== String(p.skill_level||'') ||
+      String(S.goalRating||'')  !== String(p.goal_rating||'') ||
+      String(S.duprVal||'')     !== String(p.dupr_rating||'') ||
       (document.getElementById('playerAge')?.value||'') !== (p.dob||'');
     if(changed){
       btn.classList.add('has-changes');
