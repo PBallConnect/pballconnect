@@ -3531,6 +3531,20 @@ async function doSaveProfile(){
     const _sliderDisplay = document.getElementById('personalRatingDisplay')?.textContent?.match(/[\d\.]+/)?.[0];
     const _savedSkill    = _sliderDisplay || S.skill || SESSION_PLAYER?.skill_level || '';
     const _savedSince     = document.getElementById('playingSince')?.value || S.playingSince || '';
+    // Capture ALL form state now — before re-fetch can overwrite anything
+    const _savedGoalRating   = S.goalRating;
+    const _savedDuprVal      = S.duprVal;
+    const _savedGender       = S.gender;
+    const _savedHandedness   = S.handedness;
+    const _savedPlayFormat   = S.playFormat;
+    const _savedPlayStyle    = S.playStyle;
+    const _savedVenuePref    = S.venuePref;
+    const _savedWantsImprove = S.wantsToImprove;
+    const _savedHasLesson    = S.hasHadLesson;
+    const _savedWantsLesson  = S.wantsLesson;
+    const _savedAge          = document.getElementById('playerAge')?.value || '';
+    const _savedCity         = v('addrCity');
+    const _savedZip          = v('addrZip');
     // Update S state immediately
     S.nickname    = _savedNickname;
     S.avatarEmoji = _savedEmoji;
@@ -3542,41 +3556,7 @@ async function doSaveProfile(){
     updateTopBar({ first_name: _savedFirstName, nickname: _savedNickname,
                    skill_level: _savedSkill, playing_since: _savedSince,
                    avatar_emoji: _savedEmoji });
-    // Also update SESSION_PLAYER so next Edit Profile shows correct values
-    if(SESSION_PLAYER){
-      SESSION_PLAYER.nickname      = _savedNickname;
-      SESSION_PLAYER.avatar_emoji  = _savedEmoji;
-      SESSION_PLAYER.first_name    = _savedFirstName;
-      SESSION_PLAYER.skill_level   = _savedSkill;
-      SESSION_PLAYER.playing_since = _savedSince;
-      SESSION_PLAYER.gender        = S.gender        || SESSION_PLAYER.gender;
-      SESSION_PLAYER.handedness    = S.handedness    || SESSION_PLAYER.handedness;
-      SESSION_PLAYER.play_format   = S.playFormat    || SESSION_PLAYER.play_format;
-      SESSION_PLAYER.play_style    = S.playStyle     || SESSION_PLAYER.play_style;
-      SESSION_PLAYER.play_venues   = S.venuePref     || SESSION_PLAYER.play_venues;
-      SESSION_PLAYER.wants_to_improve = S.wantsToImprove || SESSION_PLAYER.wants_to_improve;
-      SESSION_PLAYER.has_had_lesson= S.hasHadLesson  || SESSION_PLAYER.has_had_lesson;
-      SESSION_PLAYER.wants_lesson  = S.wantsLesson;
-      SESSION_PLAYER.goal_rating   = S.goalRating    || null;
-      SESSION_PLAYER.dupr_rating   = S.duprVal       || null;
-      SESSION_PLAYER.shirt_size    = v('shirtSize')  || SESSION_PLAYER.shirt_size;
-      SESSION_PLAYER.last_name     = v('lastName') ? v('lastName').trim().charAt(0).toUpperCase()+'.' : SESSION_PLAYER.last_name;
-      SESSION_PLAYER.dob           = document.getElementById('playerAge')?.value || SESSION_PLAYER.dob;
-      SESSION_PLAYER.phone         = encodePhone(v('phone')) || SESSION_PLAYER.phone;
-      SESSION_PLAYER.address       = null;
-      SESSION_PLAYER.county        = null;
-      SESSION_PLAYER.city          = v('addrCity')   || SESSION_PLAYER.city;
-      SESSION_PLAYER.zip_code      = v('addrZip')    || SESSION_PLAYER.zip_code;
-      const rawState = v('addrState') || SESSION_PLAYER.state || '';
-      if(rawState.length===2) SESSION_PLAYER.state = rawState.toUpperCase();
-      else {
-        const found = Object.values(STATE_INFO).find(([a,n])=>n&&n.toLowerCase()===rawState.toLowerCase());
-        SESSION_PLAYER.state = found ? found[0] : rawState;
-      }
-      if(S.addrLat) SESSION_PLAYER.lat = S.addrLat;
-      if(S.addrLon) SESSION_PLAYER.lon = S.addrLon;
-    }
-    // Re-fetch the saved record to confirm DB values and sync everything
+    // Re-fetch the saved record to confirm DB and update top bar
     const savedEmail = v('email') || getMyEmail();
     if(savedEmail){
       try{
@@ -3589,21 +3569,39 @@ async function doSaveProfile(){
           if(rows.length){
             SESSION_PLAYER = rows[0];
             updateTopBar(rows[0]);
-            // Sync S state from confirmed DB values so populateSummary is accurate
-            S.goalRating     = rows[0].goal_rating   || null;
-            S.duprVal        = rows[0].dupr_rating    || null;
-            S.skill          = rows[0].skill_level    || S.skill;
-            S.gender         = rows[0].gender         || S.gender;
-            S.handedness     = rows[0].handedness     || S.handedness;
-            S.playFormat     = rows[0].play_format    || S.playFormat;
-            S.playStyle      = rows[0].play_style     || S.playStyle;
-            S.venuePref      = rows[0].play_venues    || S.venuePref;
-            S.wantsToImprove = rows[0].wants_to_improve || S.wantsToImprove;
-            S.hasHadLesson   = rows[0].has_had_lesson || S.hasHadLesson;
-            S.wantsLesson    = rows[0].wants_lesson   || S.wantsLesson;
           }
         }
       }catch(e){}
+    }
+    // Restore S state from our captured pre-save values
+    // (don't trust re-fetch — Supabase may return stale cached data)
+    S.goalRating     = _savedGoalRating;
+    S.duprVal        = _savedDuprVal;
+    S.skill          = _savedSkill    || S.skill;
+    S.gender         = _savedGender;
+    S.handedness     = _savedHandedness;
+    S.playFormat     = _savedPlayFormat   || 'Both';
+    S.playStyle      = _savedPlayStyle;
+    S.venuePref      = _savedVenuePref;
+    S.wantsToImprove = _savedWantsImprove;
+    S.hasHadLesson   = _savedHasLesson;
+    S.wantsLesson    = _savedWantsLesson;
+    // Also force SESSION_PLAYER to match what we just saved
+    if(SESSION_PLAYER){
+      SESSION_PLAYER.goal_rating    = _savedGoalRating;
+      SESSION_PLAYER.dupr_rating    = _savedDuprVal;
+      SESSION_PLAYER.skill_level    = _savedSkill    || SESSION_PLAYER.skill_level;
+      SESSION_PLAYER.gender         = _savedGender;
+      SESSION_PLAYER.handedness     = _savedHandedness;
+      SESSION_PLAYER.play_format    = _savedPlayFormat  || 'Both';
+      SESSION_PLAYER.play_style     = _savedPlayStyle;
+      SESSION_PLAYER.play_venues    = _savedVenuePref;
+      SESSION_PLAYER.wants_to_improve = _savedWantsImprove;
+      SESSION_PLAYER.has_had_lesson = _savedHasLesson;
+      SESSION_PLAYER.wants_lesson   = _savedWantsLesson;
+      SESSION_PLAYER.dob            = _savedAge          || SESSION_PLAYER.dob;
+      SESSION_PLAYER.city           = _savedCity         || SESSION_PLAYER.city;
+      SESSION_PLAYER.zip_code       = _savedZip          || SESSION_PLAYER.zip_code;
     }
   }catch(err){
     console.error('❌ Save failed:', err);
