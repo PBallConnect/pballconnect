@@ -3644,8 +3644,13 @@ async function doSaveProfile(){
         setTimeout(()=>el.classList.remove('summary-section-pulse'), 4000);
       }
     });
-    showPage('innerCircle');
-    showToast('✅ Profile updated!', '#4CAF7D');
+    // Stay on Player Profile so user sees the summary update
+    showPage('playerProfile');
+    // Scroll down to the summary so the pulse is visible
+    setTimeout(()=>{
+      document.getElementById('sumSection1')?.scrollIntoView({behavior:'smooth', block:'start'});
+    }, 150);
+    showToast('✅ Profile updated! ↓ See your summary below', '#4CAF7D');
   } else {
     document.getElementById('confirmOverlay').style.display='flex';
     // If arrived via invite link, show IC join prompt after a short delay
