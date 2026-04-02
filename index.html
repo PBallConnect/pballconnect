@@ -3613,17 +3613,19 @@ async function doSaveProfile(){
   btn.textContent = SESSION_PLAYER ? '✏️ Update Profile' : '🎉 Complete Registration';
   btn.disabled = false;
 
-  // Show confirmation screen
-  document.getElementById('confirmName').textContent=v('firstName')+' '+v('lastName');
-  document.getElementById('confirmEmailDisp').textContent=v('email');
-  document.getElementById('cEmail').textContent=v('email');
-  document.getElementById('cSkill').textContent=S.skill;
-  document.getElementById('cState').textContent=S.state||'—';
-  document.getElementById('cCity').textContent=S.city||'—';
-  document.getElementById('cDupr').textContent=S.duprVal||'Not set';
-  if(S.courtName){document.getElementById('cCourtStat').style.display='block';document.getElementById('cCourt').textContent=S.courtName;}
+  // Show confirmation screen elements (only exist for new registrations)
+  const _cn = document.getElementById('confirmName');
+  const _ce = document.getElementById('confirmEmailDisp');
+  if(_cn) _cn.textContent = v('firstName')+' '+v('lastName');
+  if(_ce) _ce.textContent = v('email');
+  const _cEmail = document.getElementById('cEmail'); if(_cEmail) _cEmail.textContent = v('email');
+  const _cSkill = document.getElementById('cSkill'); if(_cSkill) _cSkill.textContent = S.skill;
+  const _cState = document.getElementById('cState'); if(_cState) _cState.textContent = S.state||'—';
+  const _cCity  = document.getElementById('cCity');  if(_cCity)  _cCity.textContent  = S.city||'—';
+  const _cDupr  = document.getElementById('cDupr');  if(_cDupr)  _cDupr.textContent  = S.duprVal||'Not set';
+  if(S.courtName){ const cs=document.getElementById('cCourtStat'); const cc=document.getElementById('cCourt'); if(cs)cs.style.display='block'; if(cc)cc.textContent=S.courtName; }
   const av=document.getElementById('confirmAvatar');
-  av.innerHTML=S.photoSrc?`<img class="confirm-avatar" src="${S.photoSrc}"/>`:`<div class="confirm-avatar-ph">👤</div>`;
+  if(av) av.innerHTML=S.photoSrc?`<img class="confirm-avatar" src="${S.photoSrc}"/>`:`<div class="confirm-avatar-ph">👤</div>`;
   // If editing existing profile, skip overlay — go straight to inner circle
   if(SESSION_PLAYER){
     // Clear edit mode indicator
