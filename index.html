@@ -969,21 +969,15 @@
       <div class="nav-logo-title" style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);padding:16px 16px 8px;">Navigation</div>
     </div>
     <div class="nav-items">
+
+      <!-- Section 1: Profile & Stats -->
       <div class="nav-item active" onclick="showPage('playerProfile')" id="nav-playerProfile" title="Player Profile — your registration and playing preferences">
         <span class="nav-icon">👤</span>
         <span class="nav-label">Player Profile</span>
       </div>
-      <div class="nav-item" onclick="showPage('myCourts')" id="nav-myCourts" title="My Courts — find pickleball courts near you">
-        <span class="nav-icon">🏟️</span>
-        <span class="nav-label">My Courts</span>
-      </div>
       <div class="nav-item" onclick="showPage('playerStats')" id="nav-playerStats" title="Player Statistics — your performance and community snapshot">
         <span class="nav-icon">📊</span>
         <span class="nav-label">Player Statistics</span>
-      </div>
-      <div class="nav-item" onclick="showPage('findPlayers')" id="nav-findPlayers" title="Find Players — search for players wanting to play">
-        <span class="nav-icon">🔍</span>
-        <span class="nav-label">Players Wanting to Play</span>
       </div>
       <div class="nav-item" onclick="showPage('innerCircle')" id="nav-innerCircle" title="Inner Circle — your trusted pickleball connections">
         <span class="nav-icon">👥</span>
@@ -992,10 +986,15 @@
         <span id="icNavYellowBadge" class="nav-circle-badge nav-circle-yellow placeholder" style="cursor:pointer;opacity:0.4;" onclick="showIcView('invited')" title="Yellow Circle — invites you sent awaiting acceptance (click to view)">0</span>
         <span id="icNavPurpleBadge" class="nav-circle-badge nav-circle-purple placeholder" title="Purple Circle — players requesting YOU to join their Inner Circle (click to view)" style="cursor:pointer;" onclick="showIcView('incoming')">0</span>
       </div>
-      <div class="nav-item" onclick="showPage('setupMatch')" id="nav-setupMatch" title="Set Up A Match — organize a game with your Inner Circle">
-        <span class="nav-icon">🎯</span>
-        <span class="nav-label">Set Up A Match</span>
+      <div class="nav-item" onclick="showPage('myCourts')" id="nav-myCourts" title="My Courts — find pickleball courts near you">
+        <span class="nav-icon">🏟️</span>
+        <span class="nav-label">My Courts</span>
       </div>
+
+      <!-- Separator -->
+      <div style="height:1px;background:var(--border);margin:8px 20px;opacity:0.6;"></div>
+
+      <!-- Section 2: Matches -->
       <div class="nav-item" onclick="showPage('myInvites')" id="nav-myInvites" title="My Match Invites — matches you've organized">
         <span class="nav-icon">📤</span>
         <span class="nav-label">My Match Invites</span>
@@ -1006,7 +1005,24 @@
         <span class="nav-label">Invited by Others</span>
         <span id="invitedByOthersBadge" style="display:none;background:rgba(59,130,246,0.85);color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;"></span>
       </div>
-      <div class="nav-item nav-lessons-dim" onclick="showPage('lessons')" id="nav-lessons" title="Coaching — find or become a coach">
+      <div class="nav-item" onclick="showPage('setupMatch')" id="nav-setupMatch" title="Set Up A Match — organize a game with your Inner Circle">
+        <span class="nav-icon">🎯</span>
+        <span class="nav-label">Set Up A Match</span>
+      </div>
+      <div class="nav-item" onclick="showPage('findPlayers')" id="nav-findPlayers" title="Players Wanting to Play — find players looking for a game">
+        <span class="nav-icon">🔍</span>
+        <span class="nav-label">Players Wanting to Play</span>
+      </div>
+
+      <!-- Separator -->
+      <div style="height:1px;background:var(--border);margin:8px 20px;opacity:0.6;"></div>
+
+      <!-- Section 3: Lessons & Info -->
+      <div class="nav-item nav-lessons-dim" onclick="showPage('myLessons')" id="nav-myLessons" title="My Lessons — track your lesson bookings">
+        <span class="nav-icon">📚</span>
+        <span class="nav-label">My Lessons</span>
+      </div>
+      <div class="nav-item nav-lessons-dim" onclick="showPage('lessons')" id="nav-lessons" title="Coaching — find a coach or register as one">
         <span class="nav-icon">🎓</span>
         <span class="nav-label">Coaching</span>
         <span class="nav-lessons-badge" id="lessonsNavBadge" style="display:none;">New</span>
@@ -1015,6 +1031,7 @@
         <span class="nav-icon">🔒</span>
         <span class="nav-label">Privacy Policy</span>
       </div>
+
     </div>
     <div class="nav-footer">
       <div class="nav-footer-text">Pickleball Registry v1.0<br>Powered by Supabase</div>
@@ -2646,6 +2663,21 @@
       <div id="invitedByOthersList" style="max-width:700px;"></div>
     </div>
 
+    <!-- MY LESSONS PAGE -->
+    <div class="page-section" id="page-myLessons">
+      <div class="page-header">
+        <h1>My <span>Lessons</span></h1>
+        <p>Track your lesson bookings and history</p>
+      </div>
+      <div class="coming-soon" style="min-height:40vh;">
+        <div class="coming-soon-icon">📚</div>
+        <h2>Lesson Tracker</h2>
+        <p>Once you book a lesson with a coach, your sessions will appear here — dates, coach, notes, and progress tracking.</p>
+        <div class="coming-soon-badge">Coming Soon</div>
+        <button onclick="showPage('lessons')" style="margin-top:20px;padding:10px 24px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;">🎓 Find a Coach →</button>
+      </div>
+    </div>
+
     <!-- PRIVACY POLICY PAGE -->
     <div class="page-section" id="page-privacy">
       <div class="page-header">
@@ -3949,6 +3981,7 @@ function showPage(page){
   // Page-specific loaders
   if(page==='myCourts')    loadMyCourts();
   if(page==='lessons')     renderLessonsPage();
+  if(page==='myLessons')   { /* static page */ }
   if(page==='innerCircle'){ loadInnerCircle(); loadNearbyPlayers(); setTimeout(updateColStickyTop,300); }
   if(page==='playerProfile'){
     if(SESSION_PLAYER){
@@ -3967,22 +4000,20 @@ function showPage(page){
 }
 
 function unlockLessonsNav(){
-  const navItem=document.getElementById('nav-lessons');
+  ['nav-lessons','nav-myLessons'].forEach(id=>{
+    const navItem=document.getElementById(id);
+    if(navItem){ navItem.classList.remove('nav-lessons-dim'); navItem.classList.add('unlocked','pulsing'); }
+  });
   const badge=document.getElementById('lessonsNavBadge');
-  if(navItem){
-    navItem.classList.remove('nav-lessons-dim');
-    navItem.classList.add('unlocked','pulsing');
-  }
   if(badge) badge.style.display='inline-block';
 }
 
 function dimLessonsNav(){
-  const navItem=document.getElementById('nav-lessons');
+  ['nav-lessons','nav-myLessons'].forEach(id=>{
+    const navItem=document.getElementById(id);
+    if(navItem){ navItem.classList.add('nav-lessons-dim'); navItem.classList.remove('unlocked','pulsing'); }
+  });
   const badge=document.getElementById('lessonsNavBadge');
-  if(navItem){
-    navItem.classList.add('nav-lessons-dim');
-    navItem.classList.remove('unlocked','pulsing');
-  }
   if(badge) badge.style.display='none';
 }
 
