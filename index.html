@@ -3382,6 +3382,7 @@ function showProfileDiff(){
     {label:'First Name',   old:player.first_name||'',      nw:v('firstName')},
     {label:'Last Name',    old:player.last_name||'',       nw:v('lastName')?v('lastName').trim().charAt(0).toUpperCase()+'.':''},
     {label:'Nickname',     old:player.nickname||'',        nw:v('nickname')},
+    {label:'Avatar Emoji', old:player.avatar_emoji||'🎾',  nw:document.getElementById('avatarEmoji')?.value||S.avatarEmoji||'🎾'},
     {label:'Age Range',    old:player.dob||'',             nw:document.getElementById('playerAge')?.value||''},
     {label:'City',         old:player.city||'',            nw:v('addrCity')},
     {label:'State',        old:player.state||'',           nw:stateAbbr(v('addrState'))},
