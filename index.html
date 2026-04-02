@@ -191,8 +191,13 @@
   /* Summary */
   .summary-box{background:rgba(76,175,125,0.07);border:1px solid rgba(76,175,125,0.18);border-radius:16px;padding:16px;margin-top:16px;}
   .summary-box .s-title{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--green);margin-bottom:12px;}
-  .summary-row{display:flex;justify-content:space-between;font-size:13px;color:rgba(255,255,255,0.55);margin-bottom:8px;flex-wrap:wrap;gap:4px;}
+  .summary-row{display:flex;justify-content:space-between;font-size:15px;color:rgba(255,255,255,0.55);margin-bottom:10px;flex-wrap:wrap;gap:4px;}
   .summary-row span:last-child{color:#fff;font-weight:500;text-align:right;max-width:65%;}
+  @keyframes summary-pulse{
+    0%,100%{box-shadow:0 0 0 0 rgba(76,175,125,0);border-color:rgba(76,175,125,0.18);}
+    50%{box-shadow:0 0 18px 4px rgba(76,175,125,0.3);border-color:rgba(76,175,125,0.6);}
+  }
+  .summary-section-pulse{animation:summary-pulse 2.5s ease-in-out infinite;}
 
   /* Waiver */
   .waiver-box{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:16px;}
@@ -1407,8 +1412,8 @@
       <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--green);margin-bottom:12px;">Registration Summary</div>
 
       <!-- Section 1: Personal Info -->
-      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;">
-        <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">👤 Personal Info</div>
+      <div id="sumSection1" style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;">
+        <div style="font-size:12px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">👤 Personal Info</div>
         <div class="summary-row"><span>Name</span><span id="sumName">—</span></div>
         <div class="summary-row"><span>Nickname</span><span id="sumNickname">—</span></div>
         <div class="summary-row"><span>Email</span><span id="sumEmail">—</span></div>
@@ -1422,8 +1427,8 @@
       </div>
 
       <!-- Section 2: Player Info -->
-      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;">
-        <div style="font-size:11px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">🏓 Player Info</div>
+      <div id="sumSection2" style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;">
+        <div style="font-size:12px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">🏓 Player Info</div>
         <div class="summary-row"><span>Playing Since</span><span id="sumSince">—</span></div>
         <div class="summary-row"><span>Playing Hand</span><span id="sumHandedness">—</span></div>
         <div class="summary-row"><span>Play Format</span><span id="sumFormat">—</span></div>
@@ -1432,29 +1437,29 @@
         <div class="summary-row"><span>Drive Distance</span><span id="sumDrive">—</span></div>
         <!-- Schedule Grid -->
         <div style="margin-top:10px;">
-          <div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;">Play Schedule</div>
+          <div style="font-size:12px;color:var(--dim);font-weight:600;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;">Play Schedule</div>
           <div id="sumSchedGrid" style="overflow-x:auto;">
-            <table style="border-collapse:collapse;width:100%;font-size:11px;">
+            <table style="border-collapse:collapse;width:100%;font-size:12px;">
               <thead>
                 <tr>
                   <th style="padding:6px 4px;text-align:left;color:var(--dim);font-weight:600;border-bottom:1px solid var(--border);min-width:36px;"></th>
-                  <th style="padding:6px 4px;text-align:center;color:var(--dim);font-weight:600;border-bottom:1px solid var(--border);font-size:10px;">Early AM<br><span style="font-weight:400;opacity:.7;">6–9am</span></th>
-                  <th style="padding:6px 4px;text-align:center;color:var(--dim);font-weight:600;border-bottom:1px solid var(--border);font-size:10px;">Morning<br><span style="font-weight:400;opacity:.7;">9–12</span></th>
-                  <th style="padding:6px 4px;text-align:center;color:var(--dim);font-weight:600;border-bottom:1px solid var(--border);font-size:10px;">Afternoon<br><span style="font-weight:400;opacity:.7;">12–4</span></th>
-                  <th style="padding:6px 4px;text-align:center;color:var(--dim);font-weight:600;border-bottom:1px solid var(--border);font-size:10px;">Evening<br><span style="font-weight:400;opacity:.7;">4–8pm</span></th>
+                  <th style="padding:6px 4px;text-align:center;color:var(--dim);font-weight:600;border-bottom:1px solid var(--border);font-size:11px;">Early AM<br><span style="font-weight:400;opacity:.7;">6–9am</span></th>
+                  <th style="padding:6px 4px;text-align:center;color:var(--dim);font-weight:600;border-bottom:1px solid var(--border);font-size:11px;">Morning<br><span style="font-weight:400;opacity:.7;">9–12</span></th>
+                  <th style="padding:6px 4px;text-align:center;color:var(--dim);font-weight:600;border-bottom:1px solid var(--border);font-size:11px;">Afternoon<br><span style="font-weight:400;opacity:.7;">12–4</span></th>
+                  <th style="padding:6px 4px;text-align:center;color:var(--dim);font-weight:600;border-bottom:1px solid var(--border);font-size:11px;">Evening<br><span style="font-weight:400;opacity:.7;">4–8pm</span></th>
                 </tr>
               </thead>
               <tbody id="sumSchedBody"></tbody>
             </table>
           </div>
-          <div id="sumAnytime" style="display:none;margin-top:6px;padding:6px 12px;border-radius:8px;background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.25);color:var(--green);font-size:12px;font-weight:600;">⚡ Anytime — I'm flexible!</div>
+          <div id="sumAnytime" style="display:none;margin-top:6px;padding:6px 12px;border-radius:8px;background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.25);color:var(--green);font-size:13px;font-weight:600;">⚡ Anytime — I'm flexible!</div>
         </div>
         <input type="hidden" id="sumSched" value=""/>
       </div>
 
       <!-- Section 3: Playing Levels -->
-      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:14px 16px;">
-        <div style="font-size:11px;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">⭐ Playing Levels</div>
+      <div id="sumSection3" style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:14px 16px;">
+        <div style="font-size:12px;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">⭐ Playing Levels</div>
         <div class="summary-row"><span>Skill Level</span><span id="sumSkill">—</span></div>
         <div class="summary-row" id="sumDuprRow" style="display:none"><span>DUPR Rating</span><span id="sumDupr">—</span></div>
         <div class="summary-row" id="sumGoalRow" style="display:none"><span>Target Level</span><span id="sumGoal">—</span></div>
@@ -3611,6 +3616,16 @@ async function doSaveProfile(){
     const card=document.getElementById('step1');
     if(card){ card.classList.remove('edit-mode'); }
     document.getElementById('editModeBanner')?.remove();
+    // Refresh summary immediately — no page reload needed
+    try{ populateSummary(); }catch(e){}
+    // Pulse the summary sections to show they updated
+    ['sumSection1','sumSection2','sumSection3'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el){
+        el.classList.add('summary-section-pulse');
+        setTimeout(()=>el.classList.remove('summary-section-pulse'), 4000);
+      }
+    });
     showPage('innerCircle');
     showToast('✅ Profile updated!', '#4CAF7D');
   } else {
@@ -6032,12 +6047,10 @@ async function openEditProfile(){
   const email=localStorage.getItem('pb_email')||getMyEmail();
   if(!email){ showPage('playerProfile'); return; }
   await fetchAndRestoreProfile(email);
-  // Glow the edit button
+  // Glow the Edit Profile button only — no card border
   document.getElementById('editProfileBtnEl')?.classList.add('active');
-  // Visual edit mode on card
+  // Add edit mode banner under the h2
   const card=document.getElementById('step1');
-  if(card) card.classList.add('edit-mode');
-  // Banner under h2
   const h2=card?.querySelector('h2');
   if(h2&&!document.getElementById('editModeBanner')){
     const banner=document.createElement('div');
@@ -6046,10 +6059,9 @@ async function openEditProfile(){
     banner.innerHTML='✏️ &nbsp;Edit Mode &nbsp;·&nbsp; Update Profile lights up when you make a change';
     h2.insertAdjacentElement('afterend',banner);
   }
-  // Keep submit dimmed until a change is detected
+  // Dim submit until a change is detected
   const btn=document.getElementById('btnSubmit');
   if(btn){ btn.classList.remove('has-changes'); btn.disabled=true; }
-  // Start watching for changes
   startChangeDetection();
   card?.scrollIntoView({behavior:'smooth', block:'start'});
 }
