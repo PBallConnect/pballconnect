@@ -3576,7 +3576,7 @@ async function doSaveProfile(){
       if(S.addrLat) SESSION_PLAYER.lat = S.addrLat;
       if(S.addrLon) SESSION_PLAYER.lon = S.addrLon;
     }
-    // Re-fetch the saved record and restore to ensure top bar is accurate
+    // Re-fetch the saved record to confirm DB values and sync everything
     const savedEmail = v('email') || getMyEmail();
     if(savedEmail){
       try{
@@ -3589,6 +3589,18 @@ async function doSaveProfile(){
           if(rows.length){
             SESSION_PLAYER = rows[0];
             updateTopBar(rows[0]);
+            // Sync S state from confirmed DB values so populateSummary is accurate
+            S.goalRating     = rows[0].goal_rating   || null;
+            S.duprVal        = rows[0].dupr_rating    || null;
+            S.skill          = rows[0].skill_level    || S.skill;
+            S.gender         = rows[0].gender         || S.gender;
+            S.handedness     = rows[0].handedness     || S.handedness;
+            S.playFormat     = rows[0].play_format    || S.playFormat;
+            S.playStyle      = rows[0].play_style     || S.playStyle;
+            S.venuePref      = rows[0].play_venues    || S.venuePref;
+            S.wantsToImprove = rows[0].wants_to_improve || S.wantsToImprove;
+            S.hasHadLesson   = rows[0].has_had_lesson || S.hasHadLesson;
+            S.wantsLesson    = rows[0].wants_lesson   || S.wantsLesson;
           }
         }
       }catch(e){}
