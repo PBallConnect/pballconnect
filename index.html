@@ -3292,7 +3292,6 @@ function populateSummary(){
   else { if(duprRow)duprRow.style.display='none'; }
   if(S.goalRating){ if(goalRow)goalRow.style.display='flex'; set('sumGoal',S.goalRating); }
   else { if(goalRow)goalRow.style.display='none'; }
-  console.log('📋 populateSummary: S.goalRating=', S.goalRating, '| sumGoalRow display=', goalRow?.style.display);
 }
 
 
@@ -3304,8 +3303,6 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 async function saveRegistration(payload){
   const url = `${SUPABASE_URL}/rest/v1/registrations`;
-  console.log('🔵 Attempting Supabase save to:', url);
-  console.log('🔵 Payload:', JSON.stringify(payload).substring(0,200));
   
   try{
     // Check if player already exists — use PATCH if so, POST if new
@@ -3331,10 +3328,7 @@ async function saveRegistration(payload){
         body: JSON.stringify(payload)
       }
     );
-    console.log('🔵 Response status:', res.status, res.statusText);
-    console.log('🔵 Response headers:', [...res.headers.entries()].map(([k,v])=>k+':'+v).join(', '));
     if(res.ok){
-      console.log('✅ Save successful!');
       return true;
     }
     const text = await res.text();
@@ -3522,7 +3516,6 @@ async function doSaveProfile(){
       lat:                 S.addrLat || SESSION_PLAYER?.lat || null,
       lon:                 S.addrLon || SESSION_PLAYER?.lon || null,
     });
-    console.log('✅ Registration saved');
     showToast('✅ Profile saved!', '#4CAF7D');
     // Capture current values before any navigation
     const _savedNickname  = v('nickname') || S.nickname || '';
@@ -3576,7 +3569,6 @@ async function doSaveProfile(){
     }
     // Restore S state from our captured pre-save values
     // (don't trust re-fetch — Supabase may return stale cached data)
-    console.log('💾 _savedGoalRating:', _savedGoalRating, '| S.goalRating before restore:', S.goalRating, '| SESSION_PLAYER.goal_rating:', SESSION_PLAYER?.goal_rating);
     S.goalRating     = _savedGoalRating;
     S.duprVal        = _savedDuprVal;
     S.skill          = _savedSkill    || S.skill;
@@ -5989,7 +5981,6 @@ async function restoreSession(email, playerData){
 
   if(!S.addrLat && player.city && player.state) geocodeCityForSession(player.city, player.state);
   showPage('innerCircle');
-  console.log('✅ Session restored for', email);
 }
 
 async function geocodeCityForSession(city, state){
