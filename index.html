@@ -3781,6 +3781,7 @@ async function doSaveProfile(){
   if(SESSION_PLAYER){
     // Clear edit mode indicator
     stopChangeDetection();
+    _editModeActive = false; // allow lockProfileForm to work again
     // Reset both buttons — neither should be lit after save
     document.getElementById('editProfileBtnEl')?.classList.remove('active');
     const btnSub=document.getElementById('btnSubmit');
@@ -3932,8 +3933,11 @@ async function showCitySelector(stateName){
 
 // ── Navigation ─────────────────────────────────────────
 function showPage(page){
-  // Stop change detection if navigating away from profile
-  if(page !== 'playerProfile') stopChangeDetection();
+  // Stop change detection and clear edit mode if navigating away from profile
+  if(page !== 'playerProfile'){
+    stopChangeDetection();
+    _editModeActive = false;
+  }
   document.querySelectorAll('.page-section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
@@ -6346,10 +6350,9 @@ function openProfileMenu(){
 async function openEditProfile(){
   const email=localStorage.getItem('pb_email')||getMyEmail();
   if(!email){ showPage('playerProfile'); return; }
+  _editModeActive = true; // prevent lockProfileForm from firing during restore
   await fetchAndRestoreProfile(email);
-  // Unlock the form for editing
   unlockProfileForm();
-  // Glow the Edit Profile button
   document.getElementById('editProfileBtnEl')?.classList.add('active');
   // Add edit mode banner under the h2
   const card=document.getElementById('step1');
@@ -6584,8 +6587,10 @@ function restoreProfileForm(player){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
+let _editModeActive = false;
+
 function lockProfileForm(){
-  // Disable all inputs, selects, buttons inside the form steps
+  if(_editModeActive) return; // don't lock while user is actively editing
   ['step1','step2','step3'].forEach(id=>{
     const step=document.getElementById(id);
     if(!step) return;
