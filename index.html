@@ -2915,6 +2915,107 @@
 </div>
 
 
+<!-- Score Recorder Modal -->
+<div id="scoreRecorderModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;align-items:flex-end;justify-content:center;padding:0;">
+  <div style="background:#0a1a0d;border:1px solid rgba(76,175,125,0.3);border-radius:24px 24px 0 0;padding:24px 20px 40px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div style="font-size:18px;font-weight:800;color:#fff;">🏓 Record Score</div>
+      <button onclick="closeScoreRecorder()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:22px;padding:0;">✕</button>
+    </div>
+
+    <!-- Match info -->
+    <div id="srMatchInfo" style="font-size:13px;color:var(--dim);margin-bottom:20px;padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:10px;"></div>
+
+    <!-- Step 1: Team assignment -->
+    <div id="srStep1">
+      <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:12px;">Who played together?</div>
+      <div style="font-size:12px;color:var(--dim);margin-bottom:14px;">Tap a player to move them between teams. Tap ⇄ to swap teams.</div>
+
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:start;margin-bottom:20px;">
+        <!-- Team A -->
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#4CAF7D;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;text-align:center;">Team A</div>
+          <div id="srTeamA" style="min-height:80px;background:rgba(76,175,125,0.08);border:1px solid rgba(76,175,125,0.25);border-radius:12px;padding:8px;"></div>
+        </div>
+        <!-- Swap button -->
+        <div style="display:flex;align-items:center;padding-top:28px;">
+          <button onclick="swapTeams()" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:8px;color:var(--dim);font-size:18px;cursor:pointer;padding:8px 10px;">⇄</button>
+        </div>
+        <!-- Team B -->
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;text-align:center;">Team B</div>
+          <div id="srTeamB" style="min-height:80px;background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.25);border-radius:12px;padding:8px;"></div>
+        </div>
+      </div>
+
+      <button onclick="srGoToScore()" id="srNextBtn"
+        style="width:100%;padding:14px;border-radius:12px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:15px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+        Enter Score →
+      </button>
+    </div>
+
+    <!-- Step 2: Score entry -->
+    <div id="srStep2" style="display:none;">
+      <div id="srGameLabel" style="font-size:14px;font-weight:700;color:#fff;margin-bottom:16px;text-align:center;">Game 1</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+        <!-- Team A score -->
+        <div style="text-align:center;">
+          <div id="srTeamALabel" style="font-size:12px;font-weight:700;color:#4CAF7D;margin-bottom:10px;">Team A</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
+            <button onclick="adjustScore('A',-1)" style="width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">−</button>
+            <div id="srScoreA" style="font-size:52px;font-weight:900;color:#fff;min-width:64px;text-align:center;line-height:1;">0</div>
+            <button onclick="adjustScore('A',1)" style="width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
+          </div>
+        </div>
+        <!-- Team B score -->
+        <div style="text-align:center;">
+          <div id="srTeamBLabel" style="font-size:12px;font-weight:700;color:#60a5fa;margin-bottom:10px;">Team B</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
+            <button onclick="adjustScore('B',-1)" style="width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">−</button>
+            <div id="srScoreB" style="font-size:52px;font-weight:900;color:#fff;min-width:64px;text-align:center;line-height:1;">0</div>
+            <button onclick="adjustScore('B',1)" style="width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Score validation message -->
+      <div id="srScoreMsg" style="text-align:center;font-size:12px;min-height:20px;margin-bottom:12px;"></div>
+
+      <!-- Confirm button -->
+      <button onclick="srConfirmGame()" id="srConfirmBtn"
+        style="width:100%;padding:14px;border-radius:12px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:15px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:10px;">
+        ✓ Confirm Score
+      </button>
+      <button onclick="srBackToTeams()"
+        style="width:100%;padding:10px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+        ← Back to Teams
+      </button>
+    </div>
+
+    <!-- Step 3: Confirmation -->
+    <div id="srStep3" style="display:none;text-align:center;">
+      <div style="font-size:40px;margin-bottom:12px;">🏆</div>
+      <div id="srResultSummary" style="font-size:15px;color:#fff;font-weight:600;line-height:1.6;margin-bottom:20px;"></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+        <button onclick="srAddGame()"
+          style="padding:12px;border-radius:12px;border:1px solid rgba(76,175,125,0.4);background:rgba(76,175,125,0.08);color:var(--green);font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+          + Record Game 2
+        </button>
+        <button onclick="srFinish()"
+          style="padding:12px;border-radius:12px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+          Done ✓
+        </button>
+      </div>
+      <div id="srGamesSaved" style="font-size:12px;color:var(--dim);"></div>
+    </div>
+
+  </div>
+</div>
+
 <!-- Waiver Modal -->
 <div class="modal-overlay" id="waiverModal" style="display:none" onclick="document.getElementById('waiverModal').style.display='none'">
   <div class="modal" onclick="event.stopPropagation()">
@@ -4025,6 +4126,291 @@ async function loadCoachDirectory(){
     });
   }catch(e){list.innerHTML='<div style="color:#f87171;font-size:13px;">Error loading coaches.</div>';}
 }
+// ══════════════════════════════════════════════════════
+// SCORE RECORDER
+// ══════════════════════════════════════════════════════
+
+const SR = {
+  matchId: null,
+  matchType: 'doubles',
+  players: [],        // [{email, name, emoji}]
+  teamA: [],          // indices into players[]
+  teamB: [],          // indices into players[]
+  scoreA: 0,
+  scoreB: 0,
+  gameNumber: 1,
+  gamesPlayed: [],    // [{gameNumber, teamAScore, teamBScore}]
+};
+
+async function openRecordResults(matchId, matchType){
+  SR.matchId = matchId;
+  SR.matchType = matchType || 'doubles';
+  SR.players = [];
+  SR.teamA = [];
+  SR.teamB = [];
+  SR.scoreA = 0;
+  SR.scoreB = 0;
+  SR.gameNumber = 1;
+  SR.gamesPlayed = [];
+
+  // Fetch match details
+  try{
+    const [mRes, rRes] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}&select=*`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}),
+      fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.in&select=player_email,player_name`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}})
+    ]);
+    const matches = mRes.ok ? await mRes.json() : [];
+    const responses = rRes.ok ? await rRes.json() : [];
+    const match = matches[0];
+
+    // Build info line
+    const infoEl = document.getElementById('srMatchInfo');
+    if(infoEl && match){
+      const d = match.match_date ? new Date(match.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) : '';
+      const t = match.time_start ? fmt12(match.time_start) : '';
+      infoEl.textContent = (match.court_name||'Court TBD') + (d?' · '+d:'') + (t?' · '+t:'');
+    }
+
+    // Fetch player profiles for emojis
+    const emails = responses.map(r=>r.player_email).filter(Boolean);
+    let profiles = [];
+    if(emails.length){
+      const pRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/registrations?email=in.(${emails.map(e=>encodeURIComponent(e)).join(',')})&select=email,first_name,last_name,avatar_emoji`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      profiles = pRes.ok ? await pRes.json() : [];
+    }
+
+    // Build player list — confirmed "in" players, up to 4 for doubles
+    const limit = SR.matchType === 'singles' ? 2 : 4;
+    responses.slice(0, limit).forEach(r=>{
+      const prof = profiles.find(p=>p.email===r.player_email);
+      SR.players.push({
+        email: r.player_email,
+        name: r.player_name || (prof ? (prof.first_name||'')+(prof.last_name?' '+prof.last_name:'') : r.player_email),
+        emoji: prof?.avatar_emoji || '🎾'
+      });
+    });
+
+    // Default team assignment — first 2 vs last 2
+    if(SR.matchType === 'doubles'){
+      SR.teamA = SR.players.slice(0,2).map((_,i)=>i);
+      SR.teamB = SR.players.slice(2,4).map((_,i)=>i+2);
+    } else {
+      SR.teamA = [0];
+      SR.teamB = [1];
+    }
+
+    // If we have fewer than expected players, show a message
+    if(SR.players.length < 2){
+      showToast('⚠️ Need at least 2 confirmed players to record a score','#f59e0b');
+      return;
+    }
+
+  }catch(e){
+    showToast('⚠️ Could not load match details','#f59e0b');
+    return;
+  }
+
+  srRenderTeams();
+  srShowStep(1);
+  document.getElementById('scoreRecorderModal').style.display='flex';
+}
+
+function closeScoreRecorder(){
+  document.getElementById('scoreRecorderModal').style.display='none';
+}
+
+function srShowStep(n){
+  document.getElementById('srStep1').style.display = n===1 ? 'block' : 'none';
+  document.getElementById('srStep2').style.display = n===2 ? 'block' : 'none';
+  document.getElementById('srStep3').style.display = n===3 ? 'block' : 'none';
+}
+
+function srPlayerPill(playerIdx, team){
+  const p = SR.players[playerIdx];
+  if(!p) return '';
+  const otherTeam = team === 'A' ? 'B' : 'A';
+  return `<div onclick="srMovePlayer(${playerIdx},'${otherTeam}')"
+    style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;
+      background:rgba(255,255,255,0.05);margin-bottom:6px;cursor:pointer;
+      transition:background .15s;" title="Tap to move to Team ${otherTeam}">
+    <span style="font-size:18px;">${p.emoji}</span>
+    <span style="font-size:13px;color:#fff;font-weight:500;">${p.name}</span>
+  </div>`;
+}
+
+function srRenderTeams(){
+  const a = document.getElementById('srTeamA');
+  const b = document.getElementById('srTeamB');
+  if(a) a.innerHTML = SR.teamA.map(i=>srPlayerPill(i,'A')).join('') ||
+    '<div style="color:var(--dim);font-size:12px;text-align:center;padding:12px;">Empty</div>';
+  if(b) b.innerHTML = SR.teamB.map(i=>srPlayerPill(i,'B')).join('') ||
+    '<div style="color:var(--dim);font-size:12px;text-align:center;padding:12px;">Empty</div>';
+
+  // Update team labels in score step
+  const aNames = SR.teamA.map(i=>SR.players[i]?.name.split(' ')[0]).filter(Boolean).join(' & ');
+  const bNames = SR.teamB.map(i=>SR.players[i]?.name.split(' ')[0]).filter(Boolean).join(' & ');
+  const elA = document.getElementById('srTeamALabel');
+  const elB = document.getElementById('srTeamBLabel');
+  if(elA) elA.textContent = aNames || 'Team A';
+  if(elB) elB.textContent = bNames || 'Team B';
+}
+
+function srMovePlayer(playerIdx, toTeam){
+  SR.teamA = SR.teamA.filter(i=>i!==playerIdx);
+  SR.teamB = SR.teamB.filter(i=>i!==playerIdx);
+  if(toTeam==='A') SR.teamA.push(playerIdx);
+  else SR.teamB.push(playerIdx);
+  srRenderTeams();
+}
+
+function swapTeams(){
+  [SR.teamA, SR.teamB] = [SR.teamB, SR.teamA];
+  srRenderTeams();
+}
+
+function srGoToScore(){
+  if(SR.teamA.length===0 || SR.teamB.length===0){
+    showToast('⚠️ Both teams need at least one player','#f59e0b');
+    return;
+  }
+  SR.scoreA = 0;
+  SR.scoreB = 0;
+  document.getElementById('srScoreA').textContent = '0';
+  document.getElementById('srScoreB').textContent = '0';
+  document.getElementById('srGameLabel').textContent = 'Game '+SR.gameNumber;
+  document.getElementById('srScoreMsg').textContent = '';
+  srShowStep(2);
+}
+
+function adjustScore(team, delta){
+  if(team==='A'){
+    SR.scoreA = Math.max(0, SR.scoreA + delta);
+    document.getElementById('srScoreA').textContent = SR.scoreA;
+  } else {
+    SR.scoreB = Math.max(0, SR.scoreB + delta);
+    document.getElementById('srScoreB').textContent = SR.scoreB;
+  }
+  srValidateScore();
+}
+
+function srValidateScore(){
+  const a = SR.scoreA, b = SR.scoreB;
+  const msgEl = document.getElementById('srScoreMsg');
+  const confirmBtn = document.getElementById('srConfirmBtn');
+
+  // Must have a winner
+  if(a === 0 && b === 0){
+    if(msgEl) msgEl.textContent = '';
+    if(confirmBtn) confirmBtn.disabled = true;
+    return;
+  }
+
+  const winner = a > b ? a : b;
+  const loser  = a > b ? b : a;
+
+  // Pickleball scoring rules: win by 2, typically to 11 (or 15/21 in tiebreakers)
+  let msg = '';
+  let valid = true;
+
+  if(winner < 11){
+    msg = 'Games are usually played to 11'; valid = false;
+  } else if(winner - loser < 2){
+    msg = 'Must win by 2 points'; valid = false;
+  } else if(winner > 21){
+    msg = 'That score seems high — are you sure?';
+  }
+
+  if(msgEl){
+    msgEl.textContent = msg;
+    msgEl.style.color = valid ? '#f59e0b' : '#f87171';
+  }
+  if(confirmBtn) confirmBtn.disabled = !valid && winner >= 11;
+}
+
+async function srConfirmGame(){
+  const a = SR.scoreA, b = SR.scoreB;
+  if(a === b){ showToast('⚠️ Scores can\'t be tied','#f59e0b'); return; }
+
+  // Save to Supabase
+  try{
+    const payload = {
+      match_id: SR.matchId,
+      game_number: SR.gameNumber,
+      team_a_player1_email: SR.players[SR.teamA[0]]?.email || null,
+      team_a_player2_email: SR.players[SR.teamA[1]]?.email || null,
+      team_b_player1_email: SR.players[SR.teamB[0]]?.email || null,
+      team_b_player2_email: SR.players[SR.teamB[1]]?.email || null,
+      team_a_score: a,
+      team_b_score: b,
+      recorded_by: getMyEmail()
+    };
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/match_results`,{
+      method: 'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+      body: JSON.stringify(payload)
+    });
+    if(!res.ok) throw new Error('Save failed');
+  }catch(e){
+    showToast('⚠️ Could not save score: '+e.message,'#f87171');
+    return;
+  }
+
+  SR.gamesPlayed.push({gameNumber: SR.gameNumber, teamAScore: a, teamBScore: b});
+
+  // Build result summary
+  const aNames = SR.teamA.map(i=>SR.players[i]?.name.split(' ')[0]).filter(Boolean).join(' & ');
+  const bNames = SR.teamB.map(i=>SR.players[i]?.name.split(' ')[0]).filter(Boolean).join(' & ');
+  const winner = a > b ? aNames : bNames;
+  const wScore = Math.max(a,b);
+  const lScore = Math.min(a,b);
+
+  const summaryEl = document.getElementById('srResultSummary');
+  if(summaryEl){
+    let html = `<strong style="color:var(--green);">🏆 ${winner}</strong> won Game ${SR.gameNumber}<br>`;
+    html += `<span style="font-size:24px;font-weight:900;">${wScore} – ${lScore}</span><br>`;
+    if(SR.gamesPlayed.length > 1){
+      html += '<div style="font-size:12px;color:var(--dim);margin-top:8px;">Games recorded: ';
+      html += SR.gamesPlayed.map(g=>`G${g.gameNumber}: ${g.teamAScore}-${g.teamBScore}`).join(' · ');
+      html += '</div>';
+    }
+    summaryEl.innerHTML = html;
+  }
+
+  const savedEl = document.getElementById('srGamesSaved');
+  if(savedEl) savedEl.textContent = SR.gamesPlayed.length + ' game'+(SR.gamesPlayed.length!==1?'s':'')+' saved ✓';
+
+  srShowStep(3);
+}
+
+function srAddGame(){
+  SR.gameNumber++;
+  SR.scoreA = 0;
+  SR.scoreB = 0;
+  document.getElementById('srScoreA').textContent = '0';
+  document.getElementById('srScoreB').textContent = '0';
+  document.getElementById('srGameLabel').textContent = 'Game '+SR.gameNumber;
+  document.getElementById('srScoreMsg').textContent = '';
+  const confirmBtn = document.getElementById('srConfirmBtn');
+  if(confirmBtn) confirmBtn.disabled = false;
+  srShowStep(2);
+}
+
+function srBackToTeams(){
+  srShowStep(1);
+}
+
+function srFinish(){
+  closeScoreRecorder();
+  showToast('✅ '+SR.gamesPlayed.length+' game'+(SR.gamesPlayed.length!==1?'s':'')+' recorded!','#4CAF7D');
+  // Refresh the page the user was on
+  if(document.getElementById('page-myInvites').classList.contains('active')) loadMyInvitesPage();
+  if(document.getElementById('page-invitedByOthers').classList.contains('active')) loadInvitedByOthersPage();
+}
+
 function toggleNav(){
   document.getElementById('leftNav').classList.toggle('open');
   document.getElementById('navOverlay').classList.toggle('visible');
@@ -5371,6 +5757,25 @@ function fmt12(t){
   return ((h%12)||12)+':'+String(m).padStart(2,'0')+ampm;
 }
 
+function isMatchPast(match){
+  if(!match.match_date) return false;
+  const timeStr = match.time_end || match.time_start || '23:59';
+  const matchEnd = new Date(match.match_date+'T'+timeStr);
+  return matchEnd < new Date();
+}
+
+function getMatchStatusDisplay(match){
+  const past = isMatchPast(match);
+  if(past){
+    if(match.status==='full') return {label:'✅ Played', color:'var(--green)', bg:'rgba(76,175,125,0.08)', border:'rgba(76,175,125,0.3)'};
+    return {label:'⏰ Expired', color:'#94a3b8', bg:'rgba(255,255,255,0.02)', border:'rgba(255,255,255,0.08)'};
+  }
+  if(match.status==='full')      return {label:'🟢 Confirmed', color:'var(--green)', bg:'rgba(76,175,125,0.08)', border:'rgba(76,175,125,0.3)'};
+  if(match.status==='open')      return {label:'🔴 Open',      color:'#f87171',       bg:'rgba(239,68,68,0.06)',  border:'rgba(239,68,68,0.2)'};
+  if(match.status==='cancelled') return {label:'❌ Cancelled', color:'#f87171',       bg:'rgba(239,68,68,0.06)',  border:'rgba(239,68,68,0.2)'};
+  return {label:match.status, color:'var(--dim)', bg:'rgba(255,255,255,0.03)', border:'var(--border)'};
+}
+
 async function submitMatch(){
   const myEmail = getMyEmail();
   if(!myEmail){ showToast('Please sign in first','#f59e0b'); return; }
@@ -5575,67 +5980,80 @@ async function loadMyInvitesPage(){
   const myEmail=getMyEmail();
   const container=document.getElementById('myInvitesList');
   if(!container) return;
-  if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in to view your invites.</div>'; return; }
+  if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in.</div>'; return; }
   container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:12px 0;">Loading…</div>';
   try{
     const res=await fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&order=match_date.desc,time_start.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     const matches=res.ok?await res.json():[];
-
-    // Fetch responses for all matches
     const ids=matches.map(m=>m.id);
     let responses=[];
     if(ids.length){
       const rr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${ids.join(',')})&select=match_id,player_name,player_email,response`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
       responses=rr.ok?await rr.json():[];
     }
-
     container.innerHTML='';
     if(!matches.length){
-      container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">You haven\'t set up any matches yet.<br><br><button onclick="showPage(\'setupMatch\')" style="padding:10px 20px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;cursor:pointer;font-family:\'DM Sans\',sans-serif;">+ Set Up A Match</button></div>';
+      container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">No matches yet.<br><br><button onclick="showPage(\'setupMatch\')" style="padding:10px 20px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;cursor:pointer;">+ Set Up A Match</button></div>';
       return;
     }
+    const upcoming=matches.filter(m=>!isMatchPast(m));
+    const past=matches.filter(m=>isMatchPast(m));
 
-    matches.forEach(m=>{
-      const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}):'—';
+    const renderCard=(m,isPast)=>{
+      const sd=getMatchStatusDisplay(m);
+      const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}):'—';
       const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):''):'—';
       const mRes=responses.filter(r=>r.match_id===m.id);
-      const inPlayers=mRes.filter(r=>r.response==='in');
-      const pending=mRes.filter(r=>r.response==='pending');
-      const waitlist=mRes.filter(r=>r.response==='waitlist');
+      const inP=mRes.filter(r=>r.response==='in');
+      const pend=mRes.filter(r=>r.response==='pending');
+      const wait=mRes.filter(r=>r.response==='waitlist');
       const out=mRes.filter(r=>r.response==='out');
-      const maxNeeded=m.match_type==='doubles'?3:1;
-      const spotsLeft=Math.max(0,maxNeeded-inPlayers.length);
-
+      const maxNeeded=m.match_type==='doubles'?4:2;
       const card=document.createElement('div');
-      card.style.cssText='background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px;';
-
-      const statusColor=m.status==='open'?'var(--green)':m.status==='full'?'#fbbf24':'var(--dim)';
-
+      card.style.cssText='border:1px solid '+sd.border+';border-radius:16px;padding:16px;margin-bottom:12px;background:'+sd.bg+';'+(isPast?'opacity:0.9;':'');
+      let bottom='';
+      if(isPast){
+        bottom='<div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:rgba(76,175,125,0.08);border:1px solid rgba(76,175,125,0.2);border-radius:10px;">'+
+          '<span style="font-size:12px;color:var(--green);font-weight:600;">Record the scores from this match</span>'+
+          '<button onclick="openRecordResults(\''+m.id+'\',\''+m.match_type+'\')" style="padding:8px 16px;border-radius:8px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;flex-shrink:0;">🏓 Record Score</button>'+
+          '</div>';
+      } else {
+        bottom='<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-top:10px;">'+
+          makeResponsePill('In',inP,'var(--green)')+makeResponsePill('Pending',pend,'#94a3b8')+
+          makeResponsePill('Waitlist',wait,'#f59e0b')+makeResponsePill('Out',out,'#f87171')+
+          '</div>'+
+          (inP.length?'<div style="font-size:11px;color:var(--green);margin-top:6px;">In: '+inP.map(p=>p.player_name||p.player_email).join(' · ')+'</div>':'')+
+          (pend.length?'<div style="font-size:11px;color:#94a3b8;margin-top:2px;">Awaiting: '+pend.map(p=>p.player_name||p.player_email).join(' · ')+'</div>':'');
+      }
       card.innerHTML=
-        '<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">'+
-          '<span style="font-size:24px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span>'+
-          '<div style="flex:1;">'+
-            '<div style="color:#fff;font-size:14px;font-weight:700;">'+dateStr+' · '+timeStr+'</div>'+
-            '<div style="color:var(--dim);font-size:12px;margin-top:2px;">'+(m.court_name||'TBD')+(m.notes?' · <em>'+m.notes+'</em>':'')+'</div>'+
-          '</div>'+
-          '<div style="text-align:right;">'+
-            '<div style="font-size:11px;font-weight:800;color:'+statusColor+';text-transform:uppercase;">'+m.status+'</div>'+
-            '<div style="font-size:10px;color:var(--dim);">'+inPlayers.length+'/'+maxNeeded+' confirmed</div>'+
-            (spotsLeft>0?'<div style="font-size:10px;color:#fbbf24;">'+spotsLeft+' spot'+(spotsLeft>1?'s':'')+' open</div>':'')+
-          '</div>'+
+        '<div style="display:flex;align-items:flex-start;gap:10px;">'+
+        '<span style="font-size:22px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span>'+
+        '<div style="flex:1;">'+
+          '<div style="color:'+(isPast?'#94a3b8':'#fff')+';font-size:14px;font-weight:700;">'+(isPast?'<s>':'')+dateStr+' · '+timeStr+(isPast?'</s>':'')+'</div>'+
+          '<div style="color:var(--dim);font-size:12px;">'+(m.court_name||'TBD')+'</div>'+
         '</div>'+
-        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:10px;">'+
-          makeResponsePill('✅ In',inPlayers,'var(--green)')+
-          makeResponsePill('⏳ Pending',pending,'#94a3b8')+
-          makeResponsePill('⌛ Waitlist',waitlist,'#f59e0b')+
-          makeResponsePill('❌ Out',out,'#f87171')+
-        '</div>'+
-        (inPlayers.length?'<div style="font-size:11px;color:var(--green);margin-top:4px;">✅ '+inPlayers.map(p=>p.player_name||p.player_email).join(' · ')+'</div>':'')+
-        (pending.length?'<div style="font-size:11px;color:#94a3b8;margin-top:2px;">⏳ Awaiting: '+pending.map(p=>p.player_name||p.player_email).join(' · ')+'</div>':'');
+        '<div style="text-align:right;flex-shrink:0;">'+
+          '<div style="font-size:12px;font-weight:700;color:'+sd.color+';">'+sd.label+'</div>'+
+          (!isPast?'<div style="font-size:10px;color:var(--dim);">'+inP.length+'/'+maxNeeded+' confirmed</div>':'')+
+        '</div></div>'+bottom;
+      return card;
+    };
 
-      container.appendChild(card);
-    });
-  }catch(e){ container.innerHTML='<div style="color:#f87171;font-size:13px;">Error loading invites.</div>'; console.warn(e); }
+    if(upcoming.length){
+      const h=document.createElement('div');
+      h.style.cssText='font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;padding:4px 0 10px;';
+      h.textContent='Upcoming ('+upcoming.length+')';
+      container.appendChild(h);
+      upcoming.forEach(m=>container.appendChild(renderCard(m,false)));
+    }
+    if(past.length){
+      const h=document.createElement('div');
+      h.style.cssText='font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;padding:16px 0 10px;border-top:1px solid var(--border);margin-top:8px;';
+      h.textContent='Past Matches ('+past.length+')';
+      container.appendChild(h);
+      past.forEach(m=>container.appendChild(renderCard(m,true)));
+    }
+  }catch(e){ container.innerHTML='<div style="color:#f87171;font-size:13px;">Error loading invites.</div>'; }
 }
 
 function makeResponsePill(label, players, color){
