@@ -3583,6 +3583,28 @@ function toggleCell(el){
   else S.schedule.delete(el.dataset.key);
   chk2();
 }
+
+// ── Coach multi-select chips ─────────────────────────────
+function toggleCoachChip(gid,el,key,value){
+  el.classList.toggle('on');
+  if(el.classList.contains('on')) S[key].add(value);
+  else S[key].delete(value);
+}
+function toggleCoachSection(answer){
+  S.isCoach=answer;
+  const section=document.getElementById('coachSection');
+  if(section) section.style.display=(answer==='Yes')?'block':'none';
+}
+function restoreCoachChips(chipGroupId,sKey,savedStr){
+  if(!savedStr) return;
+  const vals=savedStr.split(',').map(v=>v.trim()).filter(Boolean);
+  vals.forEach(val=>{
+    S[sKey].add(val);
+    document.querySelectorAll('#'+chipGroupId+' .chip').forEach(ch=>{
+      if(ch.textContent.trim()===val) ch.classList.add('on');
+    });
+  });
+}
 function toggleAnytime(){
   S.anytime=!S.anytime;
   document.getElementById('anytimeBtn').classList.toggle('on',S.anytime);
@@ -3855,8 +3877,7 @@ function showProfileDiff(){
 async function doSaveProfile(){
   // Disable button and show saving state
   const btn = document.getElementById('btnSubmit');
-  btn.disabled = true;
-  btn.textContent = '⏳ Saving…';
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ Saving…'; }
 
   // Build schedule string
   let schedStr = 'Not specified';
@@ -3928,6 +3949,13 @@ async function doSaveProfile(){
       wants_lesson:        S.wantsLesson || null,
       lat:                 S.addrLat || SESSION_PLAYER?.lat || null,
       lon:                 S.addrLon || SESSION_PLAYER?.lon || null,
+      is_coach:            S.isCoach==='Yes',
+      coach_certifications: S.coachCerts&&S.coachCerts.size>0 ? [...S.coachCerts].join(', ') : null,
+      coach_lesson_types:  S.coachLessonTypes&&S.coachLessonTypes.size>0 ? [...S.coachLessonTypes].join(', ') : null,
+      coach_formats:       S.coachFormats&&S.coachFormats.size>0 ? [...S.coachFormats].join(', ') : null,
+      coach_rate_min:      document.getElementById('coachRateMin')?.value ? parseInt(document.getElementById('coachRateMin').value)||null : null,
+      coach_rate_max:      document.getElementById('coachRateMax')?.value ? parseInt(document.getElementById('coachRateMax').value)||null : null,
+      coach_bio:           document.getElementById('coachBio')?.value?.trim()||null,
     });
     console.log('✅ Registration saved');
     showToast('✅ Profile saved!', '#4CAF7D');
@@ -6994,8 +7022,56 @@ function restoreProfileForm(player){
     }
   }
 
+  // Restore age
+  const ageEl=document.getElementById('playerAge');
+  if(ageEl&&player.dob) ageEl.value=player.dob;
+
+  // Restore phone (decoded)
+  const phoneEl=document.getElementById('phone');
+  if(phoneEl&&player.phone){
+    const digits=decodePhone(player.phone);
+    phoneEl.value=digits.length===10?'('+digits.substring(0,3)+') '+digits.substring(3,6)+'-'+digits.substring(6):digits;
+  }
+
+  // Restore consent checkboxes (existing players auto-checked)
+  S._privacyConsent=!!(player.waiver_agreed||player.privacy_consent);
+  S._riskConsent=!!(player.waiver_agreed||player.risk_consent);
+  const cbp=document.getElementById('checkBoxPrivacy');
+  if(cbp) cbp.classList.toggle('on',S._privacyConsent);
+  const cbr=document.getElementById('checkBoxRisk');
+  if(cbr) cbr.classList.toggle('on',S._riskConsent);
+
+  // Restore coach profile
+  if(player.is_coach){
+    S.isCoach='Yes';
+    const isCoachChips=document.getElementById('isCoachChips');
+    if(isCoachChips){
+      isCoachChips.querySelectorAll('.chip').forEach(ch=>{
+        if(ch.textContent.trim()==='Yes — I coach!') ch.classList.add('on');
+      });
+    }
+    toggleCoachSection('Yes');
+    S.coachCerts=new Set();S.coachLessonTypes=new Set();S.coachFormats=new Set();
+    restoreCoachChips('coachCertChips','coachCerts',player.coach_certifications||'');
+    restoreCoachChips('coachLessonChips','coachLessonTypes',player.coach_lesson_types||'');
+    restoreCoachChips('coachFormatChips','coachFormats',player.coach_formats||'');
+    const rMin=document.getElementById('coachRateMin');if(rMin&&player.coach_rate_min)rMin.value=player.coach_rate_min;
+    const rMax=document.getElementById('coachRateMax');if(rMax&&player.coach_rate_max)rMax.value=player.coach_rate_max;
+    const bio=document.getElementById('coachBio');if(bio&&player.coach_bio)bio.value=player.coach_bio;
+  } else {
+    S.isCoach='Not currently';
+    const isCoachChips=document.getElementById('isCoachChips');
+    if(isCoachChips){
+      isCoachChips.querySelectorAll('.chip').forEach(ch=>{
+        if(ch.textContent.trim()==='Not currently') ch.classList.add('on');
+      });
+    }
+  }
+
   [1,2,3].forEach(i=>{const step=document.getElementById('step'+i);if(step)step.style.display='block';});
   try{populateSummary();}catch(e){}
+  // Lock form on restore — edit mode flag controls whether lock applies
+  if(SESSION_PLAYER) lockProfileForm();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -7299,7 +7375,7 @@ function updateIcStats(pendingMembers){
       else mMy++;
     }
   });
-  const pending=pendingMembers||IC_INVITED_PLAYERS||[];
+  const pending=pendingMembers&&pendingMembers.length?pendingMembers:IC_INVITED_PLAYERS||[];
   let pMale=0,pFemale=0,pOther=0,pBelow=0,pMy=0,pAbove=0;
   pending.forEach(player=>{
     const g=(player.gender||'').toLowerCase();
