@@ -289,11 +289,95 @@
     background:var(--dark);border:1px solid var(--border);border-radius:10px;
     padding:8px 12px;cursor:pointer;font-size:18px;color:#fff;}
   @media(max-width:768px){
+    /* ── Nav ── */
     .nav-toggle{display:block;}
     .left-nav{transform:translateX(-240px);}
     .left-nav.open{transform:translateX(0);}
-    .right-column{margin-left:0!important;} .top-header{position:sticky!important;top:0!important;}
+    .right-column{margin-left:0!important;}
+    .top-header{position:sticky!important;top:0!important;}
     .nav-overlay{display:block;}
+
+    /* ── Page padding ── */
+    .page-section{padding:16px 14px 100px;}
+    .page-header h1{font-size:22px;}
+    .page-header p{font-size:12px;}
+
+    /* ── Cards ── */
+    .card{padding:18px 16px 16px;border-radius:18px;}
+    .card h2{font-size:20px;margin-bottom:16px;}
+
+    /* ── Registration wrapper ── */
+    .reg-wrapper{max-width:100%;}
+
+    /* ── 2-column grids → single column ── */
+    .grid2{grid-template-columns:1fr;}
+    .match-options{grid-template-columns:1fr;}
+    .confirm-grid{grid-template-columns:1fr;}
+    .ic-two-grids{grid-template-columns:1fr;}
+    .ic-identifier-grid{grid-template-columns:1fr;}
+    .pc-stats-grid{grid-template-columns:1fr 1fr;}
+    .courts-page-grid{grid-template-columns:1fr;}
+
+    /* ── IC skill columns → 2 col on mobile ── */
+    .ic-skill-grid-wrap{grid-template-columns:1fr 1fr;}
+
+    /* ── Top header ── */
+    .top-logo-text{font-size:13px;}
+    #memberCountBadge{display:none!important;}
+    .top-header-right{gap:6px;}
+    .top-edit-btn{padding:5px 10px;font-size:12px;}
+    .top-btn-label{display:none;}
+    .top-signin-btn{padding:6px 10px!important;}
+    .top-requests-btn{padding:6px 10px!important;}
+
+    /* ── Summary rows ── */
+    .summary-row{font-size:13px;}
+    .summary-row span:last-child{max-width:55%;}
+
+    /* ── Schedule table ── */
+    .sched-table{font-size:10px;}
+    .sched-table th{padding:6px 3px;font-size:9px;}
+    .sched-table td{padding:0;}
+    .sched-cell{min-width:32px;min-height:32px;font-size:9px;}
+
+    /* ── Chips ── */
+    .chip{padding:7px 12px;font-size:12px;}
+    .chips{gap:6px;}
+
+    /* ── Match steps ── */
+    .match-steps{max-width:100%;}
+    .match-step-dot{width:26px;height:26px;font-size:11px;}
+
+    /* ── IC tables ── */
+    .ic-stats-table th,.ic-stats-table td{padding:6px 4px;font-size:11px;}
+    .ic-stats-table{font-size:11px;}
+
+    /* ── Buttons ── */
+    .btn-submit,.btn-next{padding:11px 20px;font-size:13px;}
+
+    /* ── Match cards ── */
+    .match-card-grid{grid-template-columns:1fr!important;}
+
+    /* ── Edit profile button ── */
+    .edit-profile-btn{font-size:12px;padding:6px 14px;}
+    #editProfileBtnInPage{margin-bottom:8px;}
+
+    /* ── Coach section ── */
+    #coachSection .grid2{grid-template-columns:1fr;}
+
+    /* ── Find players / IC member cards ── */
+    .ic-member-card{padding:12px;}
+    .ic-member-emoji{width:40px;height:40px;font-size:20px;}
+  }
+
+  /* ── Extra small phones (< 390px) ── */
+  @media(max-width:390px){
+    .page-section{padding:12px 10px 100px;}
+    .card{padding:14px 12px;}
+    .chip{padding:6px 10px;font-size:11px;}
+    .ic-skill-grid-wrap{grid-template-columns:1fr;}
+    .sched-cell{min-width:28px;min-height:28px;}
+    .page-header h1{font-size:20px;}
   }
   .nav-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:49;}
   .nav-overlay.visible{display:block;}
@@ -944,20 +1028,20 @@
         style="display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;
           background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.3);cursor:pointer;">
         <span>📥</span>
-        <span id="topMatchInvitesLabel" style="color:#60a5fa;font-size:12px;font-weight:700;">Invited to Play</span>
+        <span id="topMatchInvitesLabel" class="top-btn-label" style="color:#60a5fa;font-size:12px;font-weight:700;">Invited to Play</span>
         <span id="topMatchInvitesBadge" style="display:none;background:#3b82f6;color:#fff;font-size:9px;font-weight:800;padding:1px 6px;border-radius:999px;margin-left:2px;"></span>
       </div>
     </div>
     <div id="viewRequestsBtn" style="display:none;">
       <div class="top-requests-btn" id="topRequestsBtn" onclick="showIcView('incoming')" title="Member Requests Button — players who want you to join their Inner Circle">
         <span>🟣</span>
-        <span id="topRequestsLabel">View Member Requests</span>
+        <span id="topRequestsLabel" class="top-btn-label">View Member Requests</span>
         <span id="topRequestsBadge" style="display:none;background:#7c3aed;color:#fff;font-size:9px;font-weight:800;padding:1px 6px;border-radius:999px;margin-left:4px;"></span>
       </div>
     </div>
     <div id="navLoginBtn" class="top-signin-btn" title="Your Profile — click to edit or sign out" onclick="S.email||getMyEmail()?openProfileMenu():openLoginModal()">
       <span id="navLoginEmoji" style="font-size:16px;">👤</span>
-      <span id="navLoginLabel">Sign In</span>
+      <span id="navLoginLabel" class="top-btn-label">Sign In</span>
     </div>
   </div>
 </div>
@@ -2745,12 +2829,12 @@
 
         <div style="font-size:16px;font-weight:700;color:#fff;margin:20px 0 10px;">Your Rights</div>
         <div style="margin-bottom:24px;">
-          You can request deletion of your account and all associated data at any time by emailing <span style="color:var(--green);">dippa777@gmail.com</span>. We will process deletion requests within 30 days.
+          You can request deletion of your account and all associated data at any time by emailing <span style="color:var(--green);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="1f7b766f6f7e2828285f78727e7673317c7072">[email&#160;protected]</a></span>. We will process deletion requests within 30 days.
         </div>
 
         <div style="font-size:16px;font-weight:700;color:#fff;margin:20px 0 10px;">Contact</div>
         <div style="margin-bottom:32px;">
-          Questions about this policy? Email us at <span style="color:var(--green);">dippa777@gmail.com</span>. We're real people — you'll get a real response.
+          Questions about this policy? Email us at <span style="color:var(--green);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="aecac7dedecf999999eec9c3cfc7c280cdc1c3">[email&#160;protected]</a></span>. We're real people — you'll get a real response.
         </div>
 
         <div style="text-align:center;padding:20px;border-top:1px solid var(--border);color:var(--dim);font-size:12px;">
@@ -2894,14 +2978,14 @@
 </div>
 
 
+
 <script>
 
 
 const S={gender:'',skill:'',schedule:new Set(),anytime:false,partner:false,
   waiver:false,photoSrc:null,state:'',stateFips:'',county:'',city:'',email:'',
   court:'',courtName:'',duprVal:null,venues:new Set(),driveDistance:'25 miles',
-  playStyle:'',playFormat:'Both',handedness:'',avatarEmoji:'🎾',venuePref:'',playingSince:'',nickname:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null,_privacyConsent:false,_riskConsent:false,
-  isCoach:'',coachCerts:new Set(),coachLessonTypes:new Set(),coachFormats:new Set()};
+  playStyle:'',playFormat:'Both',handedness:'',avatarEmoji:'🎾',venuePref:'',playingSince:'',nickname:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null,_privacyConsent:false,_riskConsent:false,isCoach:'',coachCerts:new Set(),coachLessonTypes:new Set(),coachFormats:new Set()};
 
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const TIMES=['Early AM','Morning','Afternoon','Evening'];
@@ -3212,7 +3296,6 @@ function toggleGoalRating(answer){
   const field=document.getElementById('goalRatingField');
   if(!field) return;
   if(answer.trim()==='Yes'){
-    unlockLessonsNav(); // light up Get Lessons immediately
     field.style.display='block';
     const personalSlider=document.getElementById('personalRatingSlider');
     const currentIdx=personalSlider?parseInt(personalSlider.value):0;
@@ -3323,29 +3406,6 @@ function toggleCell(el){
   else S.schedule.delete(el.dataset.key);
   chk2();
 }
-// ── Coach multi-select chips ───────────────────────────
-function toggleCoachChip(gid, el, key, value){
-  el.classList.toggle('on');
-  if(el.classList.contains('on')) S[key].add(value);
-  else S[key].delete(value);
-}
-
-function toggleCoachSection(answer){
-  S.isCoach = answer;
-  const section = document.getElementById('coachSection');
-  if(section) section.style.display = (answer==='Yes') ? 'block' : 'none';
-}
-
-function restoreCoachChips(chipGroupId, sKey, savedStr){
-  if(!savedStr) return;
-  const vals = savedStr.split(',').map(v=>v.trim()).filter(Boolean);
-  vals.forEach(val=>{
-    S[sKey].add(val);
-    const chips = document.querySelectorAll('#'+chipGroupId+' .chip');
-    chips.forEach(ch=>{ if(ch.textContent.trim()===val) ch.classList.add('on'); });
-  });
-}
-
 function toggleAnytime(){
   S.anytime=!S.anytime;
   document.getElementById('anytimeBtn').classList.toggle('on',S.anytime);
@@ -3354,51 +3414,20 @@ function toggleAnytime(){
 }
 function togglePartner(){S.partner=!S.partner;const pt=document.getElementById('partnerTrack');if(pt)pt.classList.toggle('on',S.partner);}
 function toggleConsent(type){
-  if(type==='privacy'){
-    S._privacyConsent = !S._privacyConsent;
-    document.getElementById('checkBoxPrivacy')?.classList.toggle('on', S._privacyConsent);
-  } else {
-    S._riskConsent = !S._riskConsent;
-    document.getElementById('checkBoxRisk')?.classList.toggle('on', S._riskConsent);
-  }
-  const btn = document.getElementById('btnSubmit');
-  if(btn) btn.disabled = !(S._privacyConsent && S._riskConsent);
+  if(type==='privacy'){S._privacyConsent=!S._privacyConsent;document.getElementById('checkBoxPrivacy')?.classList.toggle('on',S._privacyConsent);}
+  else{S._riskConsent=!S._riskConsent;document.getElementById('checkBoxRisk')?.classList.toggle('on',S._riskConsent);}
+  const btn=document.getElementById('btnSubmit');
+  if(btn)btn.disabled=!(S._privacyConsent&&S._riskConsent);
   chk1();
 }
-function toggleWaiver(){ toggleConsent('risk'); }
-
-// ── Phone encoding (Base64 obfuscation) ───────────────
-function encodePhone(phone){
-  if(!phone) return null;
-  const digits = String(phone).replace(/\D/g,'');
-  if(!digits) return null;
-  try{ return btoa(digits); }catch(e){ return digits; }
-}
-function decodePhone(encoded){
-  if(!encoded) return '';
-  if(/^\d+$/.test(encoded)) return encoded; // already plain digits (legacy)
-  try{
-    const decoded = atob(encoded);
-    if(/^\d+$/.test(decoded)) return decoded;
-    return encoded;
-  }catch(e){ return encoded; }
-}
-function formatPhoneForDisplay(encoded){
-  if(!encoded) return '';
-  const digits = decodePhone(encoded).replace(/\D/g,'');
-  if(digits.length===10) return '('+digits.substring(0,3)+') '+digits.substring(3,6)+'-'+digits.substring(6);
-  if(digits.length===11&&digits[0]==='1') return '('+digits.substring(1,4)+') '+digits.substring(4,7)+'-'+digits.substring(7);
-  return digits;
-}
+function toggleWaiver(){toggleConsent('risk');}
 
 function v(id){return document.getElementById(id).value.trim();}
 function chk1(){
-  const btn = document.getElementById('next1');
-  if(!btn) return;
-  const ok = v('firstName') && v('email') && v('addrCity') && v('addrState') && v('addrZip') && S.gender
-    && document.getElementById('playerAge')?.value
-    && S._privacyConsent && S._riskConsent;
-  btn.disabled = !ok;
+  const btn=document.getElementById('next1');if(!btn)return;
+  const ok=v('firstName')&&v('email')&&v('addrCity')&&v('addrState')&&v('addrZip')&&S.gender
+    &&document.getElementById('playerAge')?.value&&S._privacyConsent&&S._riskConsent;
+  btn.disabled=!ok;
 }
 function chk2(){document.getElementById('next2').disabled=!(v('shirtSize')&&v('playingSince')&&(S.anytime||S.schedule.size>0));}
 
@@ -3416,85 +3445,24 @@ function goTo(n){
 }
 
 function populateSummary(){
-  const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val||'—';};
-
-  // ── Section 1: Personal Info ──────────────────────────
-  const lastName = v('lastName') ? v('lastName').trim().charAt(0).toUpperCase()+'.' : '';
-  const fullName = (v('firstName')+' '+lastName).trim();
-  const nick     = v('nickname')||S.nickname||'';
-  const emoji    = document.getElementById('avatarEmoji')?.value || S.avatarEmoji || '🎾';
-
-  // Emoji circle + name header
-  const emojiEl = document.getElementById('sumEmojiDisplay');
-  if(emojiEl) emojiEl.textContent = emoji;
-  const nameBig = document.getElementById('sumNameBig');
-  if(nameBig) nameBig.textContent = fullName || '—';
-  const nickSub = document.getElementById('sumNicknameSub');
-  if(nickSub) nickSub.textContent = nick ? '"'+nick+'"' : '';
-  set('sumEmail',   v('email'));
-  set('sumPhone',   v('phone')||'—');
-  set('sumDob',     document.getElementById('playerAge')?.value||'—');
-  set('sumGender',  S.gender||'—');
-  set('sumCity',    document.getElementById('addrCity')?.value||S.city||'—');
-  set('sumState',   document.getElementById('addrState')?.value||S.state||'—');
-  set('sumZip',     v('addrZip')||'—');
-  set('sumShirt',   v('shirtSize')||'—');
-
-  // ── Section 2: Player Info ───────────────────────────
-  set('sumSince',      v('playingSince')||S.playingSince||'—');
-  set('sumHandedness', S.handedness||'—');
-  set('sumFormat',     S.playFormat||'—');
-  set('sumStyle',      S.playStyle||'—');
-  set('sumVenuePref',  S.venuePref||'—');
-  set('sumDrive',      S.driveDistance ? 'Up to '+S.driveDistance+' miles' : '—');
-
-  // ── Schedule visual grid ─────────────────────────────
-  const SCHED_DAYS  = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  const SCHED_TIMES = ['Early AM','Morning','Afternoon','Evening'];
-  const anytimeDiv  = document.getElementById('sumAnytime');
-  const gridDiv     = document.getElementById('sumSchedGrid');
-  const tbody       = document.getElementById('sumSchedBody');
-  if(S.anytime){
-    if(anytimeDiv) anytimeDiv.style.display='block';
-    if(gridDiv)    gridDiv.style.display='none';
-  } else {
-    if(anytimeDiv) anytimeDiv.style.display='none';
-    if(gridDiv)    gridDiv.style.display='block';
-    if(tbody){
-      tbody.innerHTML='';
-      SCHED_DAYS.forEach(day=>{
-        const hasAny=SCHED_TIMES.some(t=>S.schedule.has(day+'|'+t));
-        const tr=document.createElement('tr');
-        const tdDay=document.createElement('td');
-        tdDay.style.cssText='padding:5px 6px;color:'+(hasAny?'#fff':'var(--dim)')+';font-weight:'+(hasAny?'700':'400')+';font-size:11px;border-bottom:1px solid rgba(255,255,255,0.04);white-space:nowrap;';
-        tdDay.textContent=day;
-        tr.appendChild(tdDay);
-        SCHED_TIMES.forEach(time=>{
-          const on=S.schedule.has(day+'|'+time);
-          const td=document.createElement('td');
-          td.style.cssText='padding:5px 4px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.04);';
-          td.innerHTML=on
-            ? '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:rgba(76,175,125,0.2);border:1px solid rgba(76,175,125,0.4);color:#4CAF7D;font-size:14px;font-weight:700;">✓</span>'
-            : '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05);"></span>';
-          tr.appendChild(td);
-        });
-        tbody.appendChild(tr);
-      });
-    }
-  }
-
-  // ── Section 3: Playing Levels ────────────────────────
-  set('sumSkill',    S.skill||'—');
-  set('sumImprove',  S.wantsToImprove||'—');
-  set('sumLesson',   S.hasHadLesson||'—');
-  set('sumWantsLesson', S.wantsLesson||'—');
-
-  const duprRow=document.getElementById('sumDuprRow');
-  const goalRow=document.getElementById('sumGoalRow');
-  if(S.duprVal){ if(duprRow)duprRow.style.display='flex'; set('sumDupr',S.duprVal); }
-  else { if(duprRow)duprRow.style.display='none'; }
-  if(S.goalRating){ if(goalRow)goalRow.style.display='flex'; set('sumGoal',S.goalRating); }
-  else { if(goalRow)goalRow.style.display='none'; }
+  document.getElementById('sumName').textContent=v('firstName')+' '+v('lastName');
+  document.getElementById('sumEmail').textContent=v('email');
+  const sumCityVal=document.getElementById('addrCity')?.value||S.city;
+  const sumStateVal=document.getElementById('addrState')?.value||S.state;
+  document.getElementById('sumState').textContent=sumStateVal||'—';
+  document.getElementById('sumCounty').textContent=(document.getElementById('addrCounty')?.value||S.county)||'—';
+  document.getElementById('sumCity').textContent=sumCityVal||'—';
+  if(S.venues.size>0){document.getElementById('sumCourtRow').style.display='flex';document.getElementById('sumCourt').textContent=[...S.venues].join(', ')+(S.driveDistance?' · '+S.driveDistance+' mi radius':'');}
+  else if(S.driveDistance){document.getElementById('sumCourtRow').style.display='flex';document.getElementById('sumCourt').textContent='Drive up to '+S.driveDistance+' miles';}
+  document.getElementById('sumSkill').textContent=S.skill||'—';
+  if(S.handedness) document.getElementById('sumHandedness').textContent=S.handedness;
+  document.getElementById('sumShirt').textContent=v('shirtSize')||'—';
+  if(S.courtName){document.getElementById('sumCourtRow').style.display='flex';document.getElementById('sumCourt').textContent=S.courtName;}
+  if(S.duprVal){document.getElementById('sumDuprRow').style.display='flex';document.getElementById('sumDupr').textContent=S.duprVal;}
+  let sched='—';
+  if(S.anytime) sched='Anytime';
+  else if(S.schedule.size>0){const days=[...new Set([...S.schedule].map(k=>k.split('|')[0]))];sched=days.join(', ');}
+  document.getElementById('sumSched').textContent=sched;
 }
 
 
@@ -3506,6 +3474,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 async function saveRegistration(payload){
   const url = `${SUPABASE_URL}/rest/v1/registrations`;
+  console.log('🔵 Attempting Supabase save to:', url);
+  console.log('🔵 Payload:', JSON.stringify(payload).substring(0,200));
   
   try{
     // Check if player already exists — use PATCH if so, POST if new
@@ -3531,7 +3501,10 @@ async function saveRegistration(payload){
         body: JSON.stringify(payload)
       }
     );
+    console.log('🔵 Response status:', res.status, res.statusText);
+    console.log('🔵 Response headers:', [...res.headers.entries()].map(([k,v])=>k+':'+v).join(', '));
     if(res.ok){
+      console.log('✅ Save successful!');
       return true;
     }
     const text = await res.text();
@@ -3550,6 +3523,26 @@ async function saveRegistration(payload){
     }
     throw e;
   }
+}
+
+
+// ── Phone encoding ─────────────────────────────────────
+function encodePhone(phone){
+  if(!phone)return null;
+  const digits=String(phone).replace(/\D/g,'');
+  if(!digits)return null;
+  try{return btoa(digits);}catch(e){return digits;}
+}
+function decodePhone(encoded){
+  if(!encoded)return '';
+  if(/^\d+$/.test(encoded))return encoded;
+  try{const d=atob(encoded);if(/^\d+$/.test(d))return d;return encoded;}catch(e){return encoded;}
+}
+function formatPhoneForDisplay(encoded){
+  if(!encoded)return '';
+  const digits=decodePhone(encoded).replace(/\D/g,'');
+  if(digits.length===10)return '('+digits.substring(0,3)+') '+digits.substring(3,6)+'-'+digits.substring(6);
+  return digits;
 }
 
 function showToast(msg, color='#ef4444'){
@@ -3582,23 +3575,17 @@ function showProfileDiff(){
     return found?found[0]:st;
   };
   const fields=[
-    {label:'First Name',   old:player.first_name||'',      nw:v('firstName')},
-    {label:'Last Name',    old:player.last_name||'',       nw:v('lastName')?v('lastName').trim().charAt(0).toUpperCase()+'.':''},
-    {label:'Nickname',     old:player.nickname||'',        nw:v('nickname')},
-    {label:'Avatar Emoji', old:player.avatar_emoji||'🎾',  nw:document.getElementById('avatarEmoji')?.value||S.avatarEmoji||'🎾'},
-    {label:'Age Range',    old:player.dob||'',             nw:document.getElementById('playerAge')?.value||''},
-    {label:'City',         old:player.city||'',            nw:v('addrCity')},
-    {label:'State',        old:player.state||'',           nw:stateAbbr(v('addrState'))},
-    {label:'Zip',          old:player.zip_code||'',        nw:v('addrZip')},
+    {label:'First Name',   old:player.first_name||'', nw:v('firstName')},
+    {label:'Last Name',    old:player.last_name||'',  nw:v('lastName')},
+    {label:'Nickname',     old:player.nickname||'',   nw:v('nickname')},
+    {label:'Address',      old:player.address||'',    nw:v('addressSearch')},
+    {label:'City',         old:player.city||'',       nw:v('addrCity')},
+    {label:'State',        old:player.state||'',      nw:stateAbbr(v('addrState'))},
+    {label:'Zip',          old:player.zip_code||'',   nw:v('addrZip')},
     {label:'Skill Level',  old:String(player.skill_level||''), nw:String(S.skill||player.skill_level||'')},
-    {label:'Gender',       old:player.gender||'',          nw:S.gender||''},
-    {label:'Handedness',   old:player.handedness||'',      nw:S.handedness||''},
-    {label:'Play Format',  old:player.play_format||'Both', nw:S.playFormat||'Both'},
-    {label:'Play Style',   old:player.play_style||'',      nw:S.playStyle||''},
-    {label:'Venues',       old:player.play_venues||'',     nw:S.venuePref||''},
-    {label:'Target Level', old:String(player.goal_rating||''), nw:String(S.goalRating||'')},
-    {label:'Wants to Improve', old:player.wants_to_improve||'', nw:S.wantsToImprove||''},
-    {label:'Phone',        old:decodePhone(player.phone||''), nw:(v('phone')||'').replace(/\D/g,'')},
+    {label:'Gender',       old:player.gender||'',     nw:S.gender||player.gender||''},
+    {label:'Handedness',   old:player.handedness||'', nw:S.handedness||player.handedness||''},
+    {label:'Phone',        old:player.phone||'',      nw:(v('phone')||'').replace(/\D/g,'')},
   ];
 
   const changed = fields.filter(f=>String(f.old).trim()!==String(f.nw).trim());
@@ -3651,14 +3638,6 @@ async function doSaveProfile(){
     schedStr = [...S.schedule].join(', ');
   }
 
-  // Validate raw phone before encoding (if provided)
-  const rawPhone = (document.getElementById('phone')?.value||'').replace(/\D/g,'');
-  if(rawPhone && rawPhone.length !== 10 && rawPhone.length !== 11){
-    showToast('⚠️ Phone number must be 10 digits','#f59e0b');
-    btn.disabled=false; btn.textContent = SESSION_PLAYER ? '✏️ Update Profile' : '🎉 Complete Registration';
-    return;
-  }
-
   // If no lat/lon from autocomplete, try to geocode city+state before saving
   if(!S.addrLat || !S.addrLon){
     const city = document.getElementById('addrCity')?.value?.trim();
@@ -3681,52 +3660,48 @@ async function doSaveProfile(){
   try{
     await saveRegistration({
       first_name:          v('firstName'),
-      last_name:           v('lastName') ? v('lastName').trim().charAt(0).toUpperCase()+'.' : (SESSION_PLAYER?.last_name||null),
+      last_name:           v('lastName'),
       nickname:            v('nickname')||null,
       email:               v('email'),
-      phone:               encodePhone(v('phone')) || SESSION_PLAYER?.phone || null,
-      dob:                 document.getElementById('playerAge')?.value || SESSION_PLAYER?.dob || null,
+      phone:               (v('phone')||'').replace(/\D/g,''),
+      dob:                 v('dob'),
       gender:              S.gender,
-      address:             null,
+      address:             v('addressSearch'),
       city:                v('addrCity')||S.city,
       state:               (()=>{ 
         const st = v('addrState')||S.state||'';
         if(!st) return '';
         if(st.length===2) return st.toUpperCase();
+        // Convert full state name to abbreviation
         const found = Object.values(STATE_INFO).find(([abbr,name])=>name&&name.toLowerCase()===st.toLowerCase());
         return found ? found[0] : st;
       })(),
       zip_code:            v('addrZip'),
-      county:              null,
+      county:              v('addrCounty')||S.county,
       court_name:          S.courtName || null,
       skill_level:         S.skill || SESSION_PLAYER?.skill_level || null,
       dupr_rating:         S.duprVal || null,
       shirt_size:          v('shirtSize'),
       schedule:            schedStr,
       anytime:             S.anytime,
-      photo_url:           S.photoSrc || SESSION_PLAYER?.photo_url || null,
-      waiver_agreed:       (S._privacyConsent && S._riskConsent) || SESSION_PLAYER?.waiver_agreed || false,
-      play_venues:         S.venuePref || SESSION_PLAYER?.play_venues || null,
-      drive_distance_miles: S.driveDistance || SESSION_PLAYER?.drive_distance_miles || null,
-      play_style:          S.playStyle || SESSION_PLAYER?.play_style || null,
-      play_format:         S.playFormat || SESSION_PLAYER?.play_format || 'Both',
-      handedness:          S.handedness || SESSION_PLAYER?.handedness || null,
+      photo_url:           null,
+      waiver_agreed:       S.waiver,
+      play_venues:         S.venuePref || (S.venues&&S.venues.size>0 ? [...S.venues].join(', ') : null),
+      drive_distance_miles: S.driveDistance || null,
+      play_style:          S.playStyle || null,
+      play_format:         S.playFormat || 'Both',
+      handedness:          S.handedness || null,
       avatar_emoji:        S.avatarEmoji || '🎾',
-      playing_since:       S.playingSince || SESSION_PLAYER?.playing_since || null,
-      wants_to_improve:    S.wantsToImprove || SESSION_PLAYER?.wants_to_improve || null,
-      goal_rating:         S.goalRating || SESSION_PLAYER?.goal_rating || null,
-      has_had_lesson:      S.hasHadLesson || SESSION_PLAYER?.has_had_lesson || null,
-      wants_lesson:        S.wantsLesson || SESSION_PLAYER?.wants_lesson || null,
+      play_venues:         S.venuePref   || null,
+      playing_since:       S.playingSince || null,
+      wants_to_improve:    S.wantsToImprove || null,
+      goal_rating:         S.goalRating || null,
+      has_had_lesson:      S.hasHadLesson || null,
+      wants_lesson:        S.wantsLesson || null,
       lat:                 S.addrLat || SESSION_PLAYER?.lat || null,
       lon:                 S.addrLon || SESSION_PLAYER?.lon || null,
-      is_coach:            S.isCoach==='Yes',
-      coach_certifications: S.coachCerts.size>0 ? [...S.coachCerts].join(', ') : null,
-      coach_lesson_types:  S.coachLessonTypes.size>0 ? [...S.coachLessonTypes].join(', ') : null,
-      coach_formats:       S.coachFormats.size>0 ? [...S.coachFormats].join(', ') : null,
-      coach_rate_min:      document.getElementById('coachRateMin')?.value ? parseInt(document.getElementById('coachRateMin').value) : null,
-      coach_rate_max:      document.getElementById('coachRateMax')?.value ? parseInt(document.getElementById('coachRateMax').value) : null,
-      coach_bio:           document.getElementById('coachBio')?.value?.trim() || null,
     });
+    console.log('✅ Registration saved');
     showToast('✅ Profile saved!', '#4CAF7D');
     // Capture current values before any navigation
     const _savedNickname  = v('nickname') || S.nickname || '';
@@ -3736,20 +3711,6 @@ async function doSaveProfile(){
     const _sliderDisplay = document.getElementById('personalRatingDisplay')?.textContent?.match(/[\d\.]+/)?.[0];
     const _savedSkill    = _sliderDisplay || S.skill || SESSION_PLAYER?.skill_level || '';
     const _savedSince     = document.getElementById('playingSince')?.value || S.playingSince || '';
-    // Capture ALL form state now — before re-fetch can overwrite anything
-    const _savedGoalRating   = S.goalRating;
-    const _savedDuprVal      = S.duprVal;
-    const _savedGender       = S.gender;
-    const _savedHandedness   = S.handedness;
-    const _savedPlayFormat   = S.playFormat;
-    const _savedPlayStyle    = S.playStyle;
-    const _savedVenuePref    = S.venuePref;
-    const _savedWantsImprove = S.wantsToImprove;
-    const _savedHasLesson    = S.hasHadLesson;
-    const _savedWantsLesson  = S.wantsLesson;
-    const _savedAge          = document.getElementById('playerAge')?.value || '';
-    const _savedCity         = v('addrCity');
-    const _savedZip          = v('addrZip');
     // Update S state immediately
     S.nickname    = _savedNickname;
     S.avatarEmoji = _savedEmoji;
@@ -3761,7 +3722,28 @@ async function doSaveProfile(){
     updateTopBar({ first_name: _savedFirstName, nickname: _savedNickname,
                    skill_level: _savedSkill, playing_since: _savedSince,
                    avatar_emoji: _savedEmoji });
-    // Re-fetch the saved record to confirm DB and update top bar
+    // Also update SESSION_PLAYER so next Edit Profile shows correct values
+    if(SESSION_PLAYER){
+      SESSION_PLAYER.nickname     = _savedNickname;
+      SESSION_PLAYER.avatar_emoji = _savedEmoji;
+      SESSION_PLAYER.first_name   = _savedFirstName;
+      SESSION_PLAYER.skill_level  = _savedSkill;
+      SESSION_PLAYER.playing_since = _savedSince;
+      // Explicitly update address fields so Edit Profile shows new values
+      SESSION_PLAYER.address  = v('addressSearch') || SESSION_PLAYER.address;
+      SESSION_PLAYER.city     = v('addrCity')       || SESSION_PLAYER.city;
+      SESSION_PLAYER.zip_code = v('addrZip')        || SESSION_PLAYER.zip_code;
+      SESSION_PLAYER.county   = v('addrCounty')     || SESSION_PLAYER.county;
+      const rawState = v('addrState') || SESSION_PLAYER.state || '';
+      if(rawState.length===2) SESSION_PLAYER.state = rawState.toUpperCase();
+      else {
+        const found = Object.values(STATE_INFO).find(([a,n])=>n&&n.toLowerCase()===rawState.toLowerCase());
+        SESSION_PLAYER.state = found ? found[0] : rawState;
+      }
+      if(S.addrLat) SESSION_PLAYER.lat = S.addrLat;
+      if(S.addrLon) SESSION_PLAYER.lon = S.addrLon;
+    }
+    // Re-fetch the saved record and restore to ensure top bar is accurate
     const savedEmail = v('email') || getMyEmail();
     if(savedEmail){
       try{
@@ -3778,36 +3760,6 @@ async function doSaveProfile(){
         }
       }catch(e){}
     }
-    // Restore S state from our captured pre-save values
-    // (don't trust re-fetch — Supabase may return stale cached data)
-    S.goalRating     = _savedGoalRating;
-    S.duprVal        = _savedDuprVal;
-    S.skill          = _savedSkill    || S.skill;
-    S.gender         = _savedGender;
-    S.handedness     = _savedHandedness;
-    S.playFormat     = _savedPlayFormat   || 'Both';
-    S.playStyle      = _savedPlayStyle;
-    S.venuePref      = _savedVenuePref;
-    S.wantsToImprove = _savedWantsImprove;
-    S.hasHadLesson   = _savedHasLesson;
-    S.wantsLesson    = _savedWantsLesson;
-    // Also force SESSION_PLAYER to match what we just saved
-    if(SESSION_PLAYER){
-      SESSION_PLAYER.goal_rating    = _savedGoalRating;
-      SESSION_PLAYER.dupr_rating    = _savedDuprVal;
-      SESSION_PLAYER.skill_level    = _savedSkill    || SESSION_PLAYER.skill_level;
-      SESSION_PLAYER.gender         = _savedGender;
-      SESSION_PLAYER.handedness     = _savedHandedness;
-      SESSION_PLAYER.play_format    = _savedPlayFormat  || 'Both';
-      SESSION_PLAYER.play_style     = _savedPlayStyle;
-      SESSION_PLAYER.play_venues    = _savedVenuePref;
-      SESSION_PLAYER.wants_to_improve = _savedWantsImprove;
-      SESSION_PLAYER.has_had_lesson = _savedHasLesson;
-      SESSION_PLAYER.wants_lesson   = _savedWantsLesson;
-      SESSION_PLAYER.dob            = _savedAge          || SESSION_PLAYER.dob;
-      SESSION_PLAYER.city           = _savedCity         || SESSION_PLAYER.city;
-      SESSION_PLAYER.zip_code       = _savedZip          || SESSION_PLAYER.zip_code;
-    }
   }catch(err){
     console.error('❌ Save failed:', err);
     showToast('⚠️ Could not save: ' + err.message);
@@ -3816,46 +3768,21 @@ async function doSaveProfile(){
   btn.textContent = SESSION_PLAYER ? '✏️ Update Profile' : '🎉 Complete Registration';
   btn.disabled = false;
 
-  // Show confirmation screen elements (only exist for new registrations)
-  const _cn = document.getElementById('confirmName');
-  const _ce = document.getElementById('confirmEmailDisp');
-  if(_cn) _cn.textContent = v('firstName')+' '+v('lastName');
-  if(_ce) _ce.textContent = v('email');
-  const _cEmail = document.getElementById('cEmail'); if(_cEmail) _cEmail.textContent = v('email');
-  const _cSkill = document.getElementById('cSkill'); if(_cSkill) _cSkill.textContent = S.skill;
-  const _cState = document.getElementById('cState'); if(_cState) _cState.textContent = S.state||'—';
-  const _cCity  = document.getElementById('cCity');  if(_cCity)  _cCity.textContent  = S.city||'—';
-  const _cDupr  = document.getElementById('cDupr');  if(_cDupr)  _cDupr.textContent  = S.duprVal||'Not set';
-  if(S.courtName){ const cs=document.getElementById('cCourtStat'); const cc=document.getElementById('cCourt'); if(cs)cs.style.display='block'; if(cc)cc.textContent=S.courtName; }
+  // Show confirmation screen
+  document.getElementById('confirmName').textContent=v('firstName')+' '+v('lastName');
+  document.getElementById('confirmEmailDisp').textContent=v('email');
+  document.getElementById('cEmail').textContent=v('email');
+  document.getElementById('cSkill').textContent=S.skill;
+  document.getElementById('cState').textContent=S.state||'—';
+  document.getElementById('cCity').textContent=S.city||'—';
+  document.getElementById('cDupr').textContent=S.duprVal||'Not set';
+  if(S.courtName){document.getElementById('cCourtStat').style.display='block';document.getElementById('cCourt').textContent=S.courtName;}
   const av=document.getElementById('confirmAvatar');
-  if(av) av.innerHTML=S.photoSrc?`<img class="confirm-avatar" src="${S.photoSrc}"/>`:`<div class="confirm-avatar-ph">👤</div>`;
+  av.innerHTML=S.photoSrc?`<img class="confirm-avatar" src="${S.photoSrc}"/>`:`<div class="confirm-avatar-ph">👤</div>`;
   // If editing existing profile, skip overlay — go straight to inner circle
   if(SESSION_PLAYER){
-    // Clear edit mode indicator
-    stopChangeDetection();
-    _editModeActive = false; // allow lockProfileForm to work again
-    // Reset both buttons — neither should be lit after save
-    document.getElementById('editProfileBtnEl')?.classList.remove('active');
-    const btnSub=document.getElementById('btnSubmit');
-    if(btnSub){ btnSub.classList.remove('has-changes'); btnSub.disabled=true; }
-    document.getElementById('editModeBanner')?.remove();
-    // Re-lock the form to read-only
-    lockProfileForm();
-    // Refresh summary immediately — no page reload needed
-    try{ populateSummary(); }catch(e){}
-    // Scroll to summary so user sees the updated data pulse
-    setTimeout(()=>{
-      document.getElementById('sumSection1')?.scrollIntoView({behavior:'smooth', block:'start'});
-    }, 150);
-    // Pulse the summary sections to show they updated
-    ['sumSection1','sumSection2','sumSection3'].forEach(id=>{
-      const el=document.getElementById(id);
-      if(el){
-        el.classList.add('summary-section-pulse');
-        setTimeout(()=>el.classList.remove('summary-section-pulse'), 4000);
-      }
-    });
-    showToast('✅ Profile updated! ↓ See your summary below', '#4CAF7D');
+    showPage('innerCircle');
+    showToast('✅ Profile updated!', '#4CAF7D');
   } else {
     document.getElementById('confirmOverlay').style.display='flex';
     // If arrived via invite link, show IC join prompt after a short delay
@@ -3985,11 +3912,7 @@ async function showCitySelector(stateName){
 
 // ── Navigation ─────────────────────────────────────────
 function showPage(page){
-  // Stop change detection and clear edit mode if navigating away from profile
-  if(page !== 'playerProfile'){
-    stopChangeDetection();
-    _editModeActive = false;
-  }
+  if(page!=='playerProfile'){stopChangeDetection();_editModeActive=false;}
   document.querySelectorAll('.page-section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
@@ -4021,116 +3944,86 @@ function showPage(page){
 
 function unlockLessonsNav(){
   ['nav-lessons','nav-myLessons'].forEach(id=>{
-    const navItem=document.getElementById(id);
-    if(navItem){ navItem.classList.remove('nav-lessons-dim'); navItem.classList.add('unlocked','pulsing'); }
+    const n=document.getElementById(id);
+    if(n){n.classList.remove('nav-lessons-dim');n.classList.add('unlocked','pulsing');}
   });
   const badge=document.getElementById('lessonsNavBadge');
-  if(badge) badge.style.display='inline-block';
+  if(badge)badge.style.display='inline-block';
 }
-
 function dimLessonsNav(){
   ['nav-lessons','nav-myLessons'].forEach(id=>{
-    const navItem=document.getElementById(id);
-    if(navItem){ navItem.classList.add('nav-lessons-dim'); navItem.classList.remove('unlocked','pulsing'); }
+    const n=document.getElementById(id);
+    if(n){n.classList.add('nav-lessons-dim');n.classList.remove('unlocked','pulsing');}
   });
   const badge=document.getElementById('lessonsNavBadge');
-  if(badge) badge.style.display='none';
+  if(badge)badge.style.display='none';
 }
 
 function switchCoachTab(tab){
-  const findTab = document.getElementById('coachFindTab');
-  const beTab   = document.getElementById('coachBeTab');
-  const findBtn = document.getElementById('tabFindCoach');
-  const beBtn   = document.getElementById('tabBeCoach');
+  const findTab=document.getElementById('coachFindTab');
+  const beTab=document.getElementById('coachBeTab');
+  const findBtn=document.getElementById('tabFindCoach');
+  const beBtn=document.getElementById('tabBeCoach');
   if(tab==='find'){
-    findTab.style.display='block'; beTab.style.display='none';
-    findBtn.style.background='var(--green)'; findBtn.style.color='var(--dark)'; findBtn.style.borderColor='var(--green)';
-    beBtn.style.background='transparent'; beBtn.style.color='var(--dim)'; beBtn.style.borderColor='var(--border)';
-  } else {
-    findTab.style.display='none'; beTab.style.display='block';
-    beBtn.style.background='var(--green)'; beBtn.style.color='var(--dark)'; beBtn.style.borderColor='var(--green)';
-    findBtn.style.background='transparent'; findBtn.style.color='var(--dim)'; findBtn.style.borderColor='var(--border)';
-    // Show coach status
-    const statusEl = document.getElementById('coachStatusMsg');
+    if(findTab)findTab.style.display='block';if(beTab)beTab.style.display='none';
+    if(findBtn){findBtn.style.background='var(--green)';findBtn.style.color='var(--dark)';findBtn.style.borderColor='var(--green)';}
+    if(beBtn){beBtn.style.background='transparent';beBtn.style.color='var(--dim)';beBtn.style.borderColor='var(--border)';}
+  }else{
+    if(findTab)findTab.style.display='none';if(beTab)beTab.style.display='block';
+    if(beBtn){beBtn.style.background='var(--green)';beBtn.style.color='var(--dark)';beBtn.style.borderColor='var(--green)';}
+    if(findBtn){findBtn.style.background='transparent';findBtn.style.color='var(--dim)';findBtn.style.borderColor='var(--border)';}
+    const statusEl=document.getElementById('coachStatusMsg');
     if(statusEl){
-      if(SESSION_PLAYER?.is_coach){
-        statusEl.innerHTML='<div style="padding:10px 14px;border-radius:10px;background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.3);color:var(--green);font-size:13px;font-weight:600;">✅ You are registered as a coach!</div>';
-      } else {
-        statusEl.innerHTML='<div style="padding:10px 14px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--dim);font-size:13px;">You haven\'t registered as a coach yet. Edit your profile and scroll to the Coach section.</div>';
-      }
+      if(SESSION_PLAYER?.is_coach){statusEl.innerHTML='<div style="padding:10px 14px;border-radius:10px;background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.3);color:var(--green);font-size:13px;font-weight:600;">✅ You are registered as a coach!</div>';}
+      else{statusEl.innerHTML='<div style="padding:10px 14px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--dim);font-size:13px;">You haven\'t registered as a coach yet.</div>';}
     }
   }
 }
-
 function renderLessonsPage(){
-  const myEmail = getMyEmail();
-  const locked  = document.getElementById('lessonsLockedMsg');
-  const dir     = document.getElementById('coachDirectory');
-  if(!myEmail){
-    if(locked) locked.style.display='block';
-    if(dir) dir.style.display='none';
-    return;
-  }
-  if(locked) locked.style.display='none';
-  if(dir) dir.style.display='block';
+  const myEmail=getMyEmail();
+  const locked=document.getElementById('lessonsLockedMsg');
+  const dir=document.getElementById('coachDirectory');
+  if(!myEmail){if(locked)locked.style.display='block';if(dir)dir.style.display='none';return;}
+  if(locked)locked.style.display='none';
+  if(dir)dir.style.display='block';
   loadCoachDirectory();
 }
-
 async function loadCoachDirectory(){
-  const list = document.getElementById('coachList');
-  const meta = document.getElementById('coachDirectoryMeta');
-  if(!list) return;
+  const list=document.getElementById('coachList');
+  const meta=document.getElementById('coachDirectoryMeta');
+  if(!list)return;
   list.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;">🔍 Finding coaches near you…</div>';
   try{
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/registrations?is_coach=eq.true&select=first_name,last_name,nickname,avatar_emoji,skill_level,city,state,coach_certifications,coach_lesson_types,coach_formats,coach_rate_min,coach_rate_max,coach_bio,email&order=skill_level.desc`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
-    );
-    const coaches = res.ok ? await res.json() : [];
-    if(meta) meta.textContent = coaches.length+' coach'+(coaches.length!==1?'es':'')+' registered';
-    if(!coaches.length){
-      list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--dim);font-size:14px;">No coaches registered yet.<br><br>Be the first! Switch to the "I\'m a Coach" tab.</div>';
-      return;
-    }
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/registrations?is_coach=eq.true&select=first_name,last_name,nickname,avatar_emoji,skill_level,city,state,coach_certifications,coach_lesson_types,coach_formats,coach_rate_min,coach_rate_max,coach_bio,email&order=skill_level.desc`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const coaches=res.ok?await res.json():[];
+    if(meta)meta.textContent=coaches.length+' coach'+(coaches.length!==1?'es':'')+' registered';
+    if(!coaches.length){list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--dim);font-size:14px;">No coaches registered yet. Be the first!</div>';return;}
     list.innerHTML='';
-    coaches.forEach(c=>{
-      const name = (c.first_name||'')+(c.last_name?' '+c.last_name:'');
-      const nick = c.nickname ? '"'+c.nickname+'"' : '';
-      const location = [c.city,c.state].filter(Boolean).join(', ');
-      const rateStr = c.coach_rate_min||c.coach_rate_max
-        ? '$'+(c.coach_rate_min||'?')+(c.coach_rate_max?' – $'+c.coach_rate_max:'')+'/hr'
-        : 'Rate on request';
-      const certs = c.coach_certifications||'';
-      const types = c.coach_lesson_types||'';
-      const formats = c.coach_formats||'';
-      const card = document.createElement('div');
+    coaches.forEach(coach=>{
+      const name=(coach.first_name||'')+(coach.last_name?' '+coach.last_name:'');
+      const loc=[coach.city,coach.state].filter(Boolean).join(', ');
+      const rate=coach.coach_rate_min||coach.coach_rate_max?'$'+(coach.coach_rate_min||'?')+(coach.coach_rate_max?' – $'+coach.coach_rate_max:'')+'/hr':'Rate on request';
+      const card=document.createElement('div');
       card.style.cssText='background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px;';
       card.innerHTML=
         '<div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:12px;">'+
-          '<div style="width:52px;height:52px;border-radius:50%;background:rgba(76,175,125,0.12);border:2px solid rgba(76,175,125,0.25);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">'+(c.avatar_emoji||'🎾')+'</div>'+
-          '<div style="flex:1;">'+
-            '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'+
-              '<span style="color:#fff;font-size:15px;font-weight:700;">'+name+'</span>'+
-              (nick?'<span style="color:var(--dim);font-size:13px;">'+nick+'</span>':'')+
-              '<span style="padding:2px 8px;border-radius:999px;background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.3);color:var(--green);font-size:10px;font-weight:700;">🎓 COACH</span>'+
-            '</div>'+
-            '<div style="color:var(--dim);font-size:12px;margin-top:3px;">'+
-              (location?'📍 '+location+' · ':'')+'⭐ '+c.skill_level+' · 💰 '+rateStr+
-            '</div>'+
+        '<div style="width:52px;height:52px;border-radius:50%;background:rgba(76,175,125,0.12);border:2px solid rgba(76,175,125,0.25);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">'+(coach.avatar_emoji||'🎾')+'</div>'+
+        '<div style="flex:1;">'+
+          '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'+
+            '<span style="color:#fff;font-size:15px;font-weight:700;">'+name+'</span>'+
+            (coach.nickname?'<span style="color:var(--dim);font-size:13px;">"'+coach.nickname+'"</span>':'')+
+            '<span style="padding:2px 8px;border-radius:999px;background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.3);color:var(--green);font-size:10px;font-weight:700;">🎓 COACH</span>'+
           '</div>'+
-        '</div>'+
-        (certs?'<div style="font-size:12px;color:var(--dim);margin-bottom:6px;"><strong style="color:#fff;">Certifications:</strong> '+certs+'</div>':'')+
-        (types?'<div style="font-size:12px;color:var(--dim);margin-bottom:6px;"><strong style="color:#fff;">Teaches:</strong> '+types+'</div>':'')+
-        (formats?'<div style="font-size:12px;color:var(--dim);margin-bottom:6px;"><strong style="color:#fff;">Format:</strong> '+formats+'</div>':'')+
-        (c.coach_bio?'<div style="font-size:12px;color:rgba(255,255,255,0.65);font-style:italic;border-top:1px solid var(--border);padding-top:10px;margin-top:10px;">'+c.coach_bio+'</div>':'')+
-        '<div style="margin-top:12px;">'+
-          '<a href="mailto:'+c.email+'" style="display:inline-block;padding:8px 18px;border-radius:8px;border:1px solid rgba(76,175,125,0.4);color:var(--green);font-size:12px;font-weight:600;text-decoration:none;">✉️ Contact '+((c.first_name)||'Coach')+'</a>'+
-        '</div>';
+          '<div style="color:var(--dim);font-size:12px;margin-top:3px;">'+(loc?'📍 '+loc+' · ':'')+' ⭐ '+coach.skill_level+' · 💰 '+rate+'</div>'+
+        '</div></div>'+
+        (coach.coach_certifications?'<div style="font-size:12px;color:var(--dim);margin-bottom:6px;"><strong style="color:#fff;">Certifications:</strong> '+coach.coach_certifications+'</div>':'')+
+        (coach.coach_lesson_types?'<div style="font-size:12px;color:var(--dim);margin-bottom:6px;"><strong style="color:#fff;">Teaches:</strong> '+coach.coach_lesson_types+'</div>':'')+
+        (coach.coach_bio?'<div style="font-size:12px;color:rgba(255,255,255,0.65);font-style:italic;border-top:1px solid var(--border);padding-top:10px;margin-top:10px;">'+coach.coach_bio+'</div>':'')+
+        '<div style="margin-top:12px;"><a href="mailto:'+coach.email+'" style="display:inline-block;padding:8px 18px;border-radius:8px;border:1px solid rgba(76,175,125,0.4);color:var(--green);font-size:12px;font-weight:600;text-decoration:none;">✉️ Contact '+(coach.first_name||'Coach')+'</a></div>';
       list.appendChild(card);
     });
-  }catch(e){
-    list.innerHTML='<div style="color:#f87171;font-size:13px;">Error loading coaches.</div>';
-  }
+  }catch(e){list.innerHTML='<div style="color:#f87171;font-size:13px;">Error loading coaches.</div>';}
 }
 function toggleNav(){
   document.getElementById('leftNav').classList.toggle('open');
@@ -6214,16 +6107,9 @@ async function restoreSession(email, playerData){
   S.goalRating   = player.goal_rating || null;
   SESSION_PLAYER = player;
 
-  // Illuminate Get Lessons if player has indicated they want to improve or want a lesson
-  const wantsLesson   = (player.wants_lesson||'').toLowerCase();
-  const wantsImprove  = (player.wants_to_improve||'').toLowerCase();
-  if(wantsLesson==='yes' || wantsImprove==='yes'){
-    unlockLessonsNav();
-  }
-
   const navBtn = document.getElementById('navLoginBtn');
   if(navBtn) navBtn.classList.add('signed-in');
-  const editBtn = document.getElementById('editProfileBtnInPage');
+  const editBtn = document.getElementById('editProfileBtn');
   if(editBtn) editBtn.style.display='block';
   const reqBtn = document.getElementById('viewRequestsBtn');
   if(reqBtn) reqBtn.style.display='block';
@@ -6277,19 +6163,9 @@ async function restoreSession(email, playerData){
   loadIcPending();
   setTimeout(loadMatchSquareCounts, 800);
 
-  // Fetch total member count and show badge if >= 25
-  fetch(`${SUPABASE_URL}/rest/v1/registrations?select=count`,
-    {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'count=exact','Range':'0-0'}})
-    .then(r=>{ const ct=parseInt(r.headers.get('Content-Range')?.split('/')[1]||'0');
-      if(ct>=25){ const b=document.getElementById('memberCountBadge');
-        if(b){ b.textContent=ct.toLocaleString()+' players'; b.style.display='block'; } }
-    }).catch(()=>{});
-
-  // Load club memberships for summary
-  loadPlayerCourtsForSummary(player.email);
-
   if(!S.addrLat && player.city && player.state) geocodeCityForSession(player.city, player.state);
   showPage('innerCircle');
+  console.log('✅ Session restored for', email);
 }
 
 async function geocodeCityForSession(city, state){
@@ -6300,40 +6176,6 @@ async function geocodeCityForSession(city, state){
     if(res.ok){
       const data = await res.json();
       if(data.length){ S.addrLat=parseFloat(data[0].lat); S.addrLon=parseFloat(data[0].lon); }
-    }
-  }catch(e){}
-}
-
-async function loadPlayerCourtsForSummary(email){
-  if(!email) return;
-  try{
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(email)}&is_member=eq.true&select=court_id`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
-    );
-    if(!res.ok) return;
-    const rows = await res.json();
-    const clubRow = document.getElementById('sumClubRow');
-    const clubEl  = document.getElementById('sumClub');
-    if(rows.length > 0 && clubRow && clubEl){
-      // Fetch court names
-      const ids = rows.map(r=>r.court_id).filter(Boolean);
-      if(ids.length){
-        const cr = await fetch(
-          `${SUPABASE_URL}/rest/v1/courts?id=in.(${ids.join(',')})&select=name`,
-          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
-        );
-        const courts = cr.ok ? await cr.json() : [];
-        if(courts.length){
-          clubEl.textContent = courts.map(c=>c.name).join(', ');
-          clubRow.style.display = 'flex';
-          return;
-        }
-      }
-      clubEl.textContent = rows.length+' club'+(rows.length>1?'s':'');
-      clubRow.style.display = 'flex';
-    } else if(clubRow){
-      clubRow.style.display = 'none';
     }
   }catch(e){}
 }
@@ -6400,71 +6242,45 @@ function openProfileMenu(){
 
 async function openEditProfile(){
   const email=localStorage.getItem('pb_email')||getMyEmail();
-  if(!email){ showPage('playerProfile'); return; }
-  _editModeActive = true; // prevent lockProfileForm from firing during restore
+  if(!email){showPage('playerProfile');return;}
+  _editModeActive=true;
   await fetchAndRestoreProfile(email);
   unlockProfileForm();
   document.getElementById('editProfileBtnEl')?.classList.add('active');
-  // Add edit mode banner under the h2
   const card=document.getElementById('step1');
   const h2=card?.querySelector('h2');
   if(h2&&!document.getElementById('editModeBanner')){
-    const banner=document.createElement('div');
-    banner.id='editModeBanner';
+    const banner=document.createElement('div');banner.id='editModeBanner';
     banner.style.cssText='display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:999px;background:rgba(76,175,125,0.12);border:1px solid rgba(76,175,125,0.35);color:#4CAF7D;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px;';
     banner.innerHTML='✏️ &nbsp;Edit Mode &nbsp;·&nbsp; Update Profile lights up when you make a change';
     h2.insertAdjacentElement('afterend',banner);
   }
-  // Dim submit until a change is detected
   const btn=document.getElementById('btnSubmit');
-  if(btn){ btn.classList.remove('has-changes'); btn.disabled=true; }
+  if(btn){btn.classList.remove('has-changes');btn.disabled=true;}
   startChangeDetection();
-  card?.scrollIntoView({behavior:'smooth', block:'start'});
+  card?.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-let _changeTimer = null;
-function startChangeDetection(){
-  if(_changeTimer) clearInterval(_changeTimer);
-  if(!SESSION_PLAYER) return;
-  const p = SESSION_PLAYER;
-  _changeTimer = setInterval(()=>{
-    const btn = document.getElementById('btnSubmit');
-    if(!btn) { clearInterval(_changeTimer); return; }
-    const currentEmoji = document.getElementById('avatarEmoji')?.value || S.avatarEmoji || '🎾';
-    const savedEmoji   = p.avatar_emoji || '🎾';
-    // Snapshot current form values against saved DB values
-    const changed =
-      v('firstName') !== (p.first_name||'') ||
-      v('nickname')  !== (p.nickname||'') ||
-      v('addrCity')  !== (p.city||'') ||
-      v('addrZip')   !== (p.zip_code||'') ||
-      v('shirtSize') !== (p.shirt_size||'') ||
-      (v('phone')||'').replace(/\D/g,'') !== decodePhone(p.phone||'') ||
-      S.gender       !== (p.gender||'') ||
-      S.handedness   !== (p.handedness||'') ||
-      S.playFormat   !== (p.play_format||'Both') ||
-      S.playStyle    !== (p.play_style||'') ||
-      S.venuePref    !== (p.play_venues||'') ||
-      S.wantsToImprove !== (p.wants_to_improve||'') ||
-      S.hasHadLesson !== (p.has_had_lesson||'') ||
-      S.wantsLesson  !== (p.wants_lesson||'') ||
-      S.anytime      !== (p.anytime||false) ||
-      currentEmoji   !== savedEmoji ||
-      String(S.skill||'')       !== String(p.skill_level||'') ||
-      String(S.goalRating||'')  !== String(p.goal_rating||'') ||
-      String(S.duprVal||'')     !== String(p.dupr_rating||'') ||
-      (document.getElementById('playerAge')?.value||'') !== (p.dob||'');
-    if(changed){
-      btn.classList.add('has-changes');
-      btn.disabled = false;
-    } else {
-      btn.classList.remove('has-changes');
-      btn.disabled = true;
-    }
-  }, 400);
-}
-function stopChangeDetection(){
-  if(_changeTimer){ clearInterval(_changeTimer); _changeTimer=null; }
+async function loadPlayerCourtsForSummary(email){
+  if(!email)return;
+  try{
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(email)}&is_member=eq.true&select=court_id`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    if(!res.ok)return;
+    const rows=await res.json();
+    const clubRow=document.getElementById('sumClubRow');
+    const clubEl=document.getElementById('sumClub');
+    if(rows.length>0&&clubRow&&clubEl){
+      const ids=rows.map(r=>r.court_id).filter(Boolean);
+      if(ids.length){
+        const cr=await fetch(`${SUPABASE_URL}/rest/v1/courts?id=in.(${ids.join(',')})&select=name`,
+          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+        const courts=cr.ok?await cr.json():[];
+        if(courts.length){clubEl.textContent=courts.map(c=>c.name).join(', ');clubRow.style.display='flex';return;}
+      }
+      clubEl.textContent=rows.length+' club'+(rows.length>1?'s':'');clubRow.style.display='flex';
+    }else if(clubRow){clubRow.style.display='none';}
+  }catch(e){}
 }
 
 async function fetchAndRestoreProfile(email){
@@ -6510,11 +6326,11 @@ function restoreProfileForm(player){
   const textFields={
     firstName:player.first_name,lastName:player.last_name,
     nickname:S.nickname||player.nickname,email:player.email,
-    phone:player.phone ? formatPhoneForDisplay(player.phone) : '',
-    dob:'', addressSearch:'',
+    phone:player.phone?formatPhoneDisplay(player.phone):'',
+    dob:player.dob,addressSearch:player.address,
     addrCity:player.city,
     addrState:(()=>{const st=player.state||'';if(st.length===2)return st.toUpperCase();const found=Object.values(STATE_INFO).find(([a,n])=>n&&n.toLowerCase()===st.toLowerCase());return found?found[0]:st;})(),
-    addrZip:player.zip_code,addrCounty:''
+    addrZip:player.zip_code,addrCounty:player.county,
   };
   Object.entries(textFields).forEach(([id,val])=>{
     const el=document.getElementById(id); if(el&&val) el.value=val;
@@ -6522,24 +6338,6 @@ function restoreProfileForm(player){
 
   if(player.playing_since){const el=document.getElementById('playingSince');if(el)el.value=player.playing_since;}
   if(player.shirt_size){const el=document.getElementById('shirtSize');if(el)el.value=player.shirt_size;}
-
-  // Restore age dropdown (stored in dob field as age range string)
-  if(player.dob){
-    const ageEl=document.getElementById('playerAge');
-    if(ageEl) ageEl.value=player.dob;
-  }
-
-  // Restore playFormat to S state (was missing before)
-  S.playFormat=player.play_format||'Both';
-
-  // Restore consent — existing players already agreed
-  if(player.waiver_agreed){
-    S._privacyConsent=true; S._riskConsent=true;
-    document.getElementById('checkBoxPrivacy')?.classList.add('on');
-    document.getElementById('checkBoxRisk')?.classList.add('on');
-    const btn=document.getElementById('btnSubmit');
-    if(btn){ btn.disabled=false; btn.textContent='✏️ Update Profile'; }
-  }
 
   document.querySelectorAll('.chip,.chip-rect').forEach(c=>c.classList.remove('on'));
   restoreChip('genderChips',player.gender);
@@ -6615,97 +6413,85 @@ function restoreProfileForm(player){
     }
   }
 
-  // Restore coach profile
-  S.isCoach = player.is_coach ? 'Yes' : 'Not currently';
-  if(player.is_coach){
-    restoreChip('isCoachChips','Yes');
-    toggleCoachSection('Yes');
-    S.coachCerts = new Set();
-    S.coachLessonTypes = new Set();
-    S.coachFormats = new Set();
-    restoreCoachChips('coachCertChips','coachCerts', player.coach_certifications||'');
-    restoreCoachChips('coachLessonChips','coachLessonTypes', player.coach_lesson_types||'');
-    restoreCoachChips('coachFormatChips','coachFormats', player.coach_formats||'');
-    const rMin=document.getElementById('coachRateMin'); if(rMin&&player.coach_rate_min) rMin.value=player.coach_rate_min;
-    const rMax=document.getElementById('coachRateMax'); if(rMax&&player.coach_rate_max) rMax.value=player.coach_rate_max;
-    const bio=document.getElementById('coachBio'); if(bio&&player.coach_bio) bio.value=player.coach_bio;
-  }
-
   [1,2,3].forEach(i=>{const step=document.getElementById('step'+i);if(step)step.style.display='block';});
   try{populateSummary();}catch(e){}
-  // Lock the form — read-only until Edit Profile is clicked
-  if(SESSION_PLAYER) lockProfileForm();
   window.scrollTo({top:0,behavior:'smooth'});
-}
-
-let _editModeActive = false;
-
-function lockProfileForm(){
-  if(_editModeActive) return; // don't lock while user is actively editing
-  ['step1','step2','step3'].forEach(id=>{
-    const step=document.getElementById(id);
-    if(!step) return;
-    step.querySelectorAll('input:not([type="hidden"]),select,textarea').forEach(el=>{
-      el.disabled=true;
-      el.style.opacity='0.6';
-      el.style.cursor='not-allowed';
-    });
-    // Disable chips
-    step.querySelectorAll('.chip,.chip-rect,.sched-cell,.anytime-btn,.day-btn').forEach(el=>{
-      el.style.pointerEvents='none';
-      el.style.opacity='0.6';
-    });
-    // Disable emoji picker
-    const emojiPreview=document.getElementById('emojiPreview');
-    if(emojiPreview){ emojiPreview.style.pointerEvents='none'; emojiPreview.style.cursor='default'; }
-    // Disable sliders
-    step.querySelectorAll('input[type="range"]').forEach(el=>{ el.disabled=true; });
-    // Hide Continue/Back buttons — not needed in read-only mode
-    step.querySelectorAll('.btn-next,.btn-back').forEach(el=>{ el.style.display='none'; });
-  });
-  // Dim the submit button
-  const btn=document.getElementById('btnSubmit');
-  if(btn){ btn.disabled=true; btn.classList.remove('has-changes'); }
-  // Show a subtle read-only indicator
-  const banner=document.getElementById('editModeBanner');
-  if(!banner){
-    const h2=document.querySelector('#step1 h2');
-    if(h2&&!document.getElementById('readOnlyBanner')){
-      const b=document.createElement('div');
-      b.id='readOnlyBanner';
-      b.style.cssText='display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.4);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px;';
-      b.innerHTML='🔒 Read-only · Click ✏️ Edit Profile to make changes';
-      h2.insertAdjacentElement('afterend',b);
-    }
-  }
-}
-
-function unlockProfileForm(){
-  ['step1','step2','step3'].forEach(id=>{
-    const step=document.getElementById(id);
-    if(!step) return;
-    step.querySelectorAll('input:not([type="hidden"]),select,textarea').forEach(el=>{
-      el.disabled=false;
-      el.style.opacity='';
-      el.style.cursor='';
-    });
-    step.querySelectorAll('.chip,.chip-rect,.sched-cell,.anytime-btn,.day-btn').forEach(el=>{
-      el.style.pointerEvents='';
-      el.style.opacity='';
-    });
-    const emojiPreview=document.getElementById('emojiPreview');
-    if(emojiPreview){ emojiPreview.style.pointerEvents=''; emojiPreview.style.cursor='pointer'; }
-    step.querySelectorAll('input[type="range"]').forEach(el=>{ el.disabled=false; });
-    step.querySelectorAll('.btn-next,.btn-back').forEach(el=>{ el.style.display=''; });
-  });
-  // Remove read-only banner
-  document.getElementById('readOnlyBanner')?.remove();
 }
 
 function formatPhoneDisplay(digits){
   const d=(digits||'').replace(/\D/g,'');
   if(d.length===10) return '('+d.substring(0,3)+') '+d.substring(3,6)+'-'+d.substring(6);
   return digits;
+}
+
+
+let _editModeActive = false;
+let _changeTimer = null;
+
+function startChangeDetection(){
+  if(_changeTimer)clearInterval(_changeTimer);
+  if(!SESSION_PLAYER)return;
+  const p=SESSION_PLAYER;
+  _changeTimer=setInterval(()=>{
+    const btn=document.getElementById('btnSubmit');
+    if(!btn){clearInterval(_changeTimer);return;}
+    const currentEmoji=document.getElementById('avatarEmoji')?.value||S.avatarEmoji||'🎾';
+    const changed=
+      v('firstName')!==(p.first_name||'')||
+      v('nickname')!==(p.nickname||'')||
+      v('addrCity')!==(p.city||'')||
+      v('addrZip')!==(p.zip_code||'')||
+      v('shirtSize')!==(p.shirt_size||'')||
+      (v('phone')||'').replace(/\D/g,'')!==decodePhone(p.phone||'')||
+      S.gender!==(p.gender||'')||
+      S.handedness!==(p.handedness||'')||
+      S.playFormat!==(p.play_format||'Both')||
+      S.playStyle!==(p.play_style||'')||
+      S.venuePref!==(p.play_venues||'')||
+      S.wantsToImprove!==(p.wants_to_improve||'')||
+      S.hasHadLesson!==(p.has_had_lesson||'')||
+      S.wantsLesson!==(p.wants_lesson||'')||
+      S.anytime!==(p.anytime||false)||
+      currentEmoji!==(p.avatar_emoji||'🎾')||
+      String(S.skill||'')!==String(p.skill_level||'')||
+      String(S.goalRating||'')!==String(p.goal_rating||'')||
+      String(S.duprVal||'')!==String(p.dupr_rating||'')||
+      (document.getElementById('playerAge')?.value||'')!==(p.dob||'');
+    if(changed){btn.classList.add('has-changes');btn.disabled=false;}
+    else{btn.classList.remove('has-changes');btn.disabled=true;}
+  },400);
+}
+function stopChangeDetection(){if(_changeTimer){clearInterval(_changeTimer);_changeTimer=null;}}
+
+function lockProfileForm(){
+  if(_editModeActive)return;
+  ['step1','step2','step3'].forEach(id=>{
+    const step=document.getElementById(id);if(!step)return;
+    step.querySelectorAll('input:not([type="hidden"]),select,textarea').forEach(el=>{el.disabled=true;el.style.opacity='0.6';el.style.cursor='not-allowed';});
+    step.querySelectorAll('.chip,.chip-rect,.sched-cell,.anytime-btn,.day-btn').forEach(el=>{el.style.pointerEvents='none';el.style.opacity='0.6';});
+    const ep=document.getElementById('emojiPreview');if(ep){ep.style.pointerEvents='none';ep.style.cursor='default';}
+    step.querySelectorAll('input[type="range"]').forEach(el=>{el.disabled=true;});
+    step.querySelectorAll('.btn-next,.btn-back').forEach(el=>{el.style.display='none';});
+  });
+  const btn=document.getElementById('btnSubmit');if(btn){btn.disabled=true;btn.classList.remove('has-changes');}
+  const h2=document.querySelector('#step1 h2');
+  if(h2&&!document.getElementById('readOnlyBanner')){
+    const b=document.createElement('div');b.id='readOnlyBanner';
+    b.style.cssText='display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.4);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px;';
+    b.innerHTML='🔒 Read-only · Click ✏️ Edit Profile to make changes';
+    h2.insertAdjacentElement('afterend',b);
+  }
+}
+function unlockProfileForm(){
+  ['step1','step2','step3'].forEach(id=>{
+    const step=document.getElementById(id);if(!step)return;
+    step.querySelectorAll('input:not([type="hidden"]),select,textarea').forEach(el=>{el.disabled=false;el.style.opacity='';el.style.cursor='';});
+    step.querySelectorAll('.chip,.chip-rect,.sched-cell,.anytime-btn,.day-btn').forEach(el=>{el.style.pointerEvents='';el.style.opacity='';});
+    const ep=document.getElementById('emojiPreview');if(ep){ep.style.pointerEvents='';ep.style.cursor='pointer';}
+    step.querySelectorAll('input[type="range"]').forEach(el=>{el.disabled=false;});
+    step.querySelectorAll('.btn-next,.btn-back').forEach(el=>{el.style.display='';});
+  });
+  document.getElementById('readOnlyBanner')?.remove();
 }
 
 // ══════════════════════════════════════════════════════
@@ -6747,7 +6533,7 @@ async function loadInnerCircle(){
     updateNavCircleBadges(IC_MEMBERS.length, IC_PENDING_PLAYERS?.length||0, IC_INCOMING_COUNT);
     // Await both so updateIcStats fires after IC_INVITED_PLAYERS is populated
     await Promise.all([loadIcInvites(), loadIcPending()]);
-    updateIcStats(null);
+    updateIcStats([]);
   }catch(e){ console.warn('loadInnerCircle error:',e); }
 }
 
@@ -6918,28 +6704,31 @@ async function icSendRequest(recipientEmail, recipientName, btn){
 
 function updateIcStats(pendingMembers){
   const mySkill=S.skill||SESSION_PLAYER?.skill_level||'';
-  const myVal=parseFloat(mySkill||0);
+  const skills=mySkill?getAdjacentSkills(mySkill):null;
   const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
   let mMale=0,mFemale=0,mOther=0,mBelow=0,mMy=0,mAbove=0;
   IC_MEMBERS.forEach(({player})=>{
     const g=(player.gender||'').toLowerCase();
     if(g==='male') mMale++; else if(g==='female') mFemale++; else mOther++;
-    if(myVal>0){
+    if(skills){
       const ps=parseFloat(player.skill_level||0);
-      const diff=parseFloat((ps-myVal).toFixed(4));
-      if(diff<0) mBelow++; else if(diff===0) mMy++; else mAbove++;
+      if(skills.below!==null&&Math.abs(ps-skills.below)<0.13) mBelow++;
+      else if(Math.abs(ps-skills.my)<0.13) mMy++;
+      else if(skills.above!==null&&Math.abs(ps-skills.above)<0.13) mAbove++;
+      else mMy++;
     }
   });
-  // Fix: [] is truthy so || never reaches IC_INVITED_PLAYERS — use length check
-  const pending=(pendingMembers&&pendingMembers.length>0)?pendingMembers:IC_INVITED_PLAYERS;
+  const pending=pendingMembers||IC_INVITED_PLAYERS||[];
   let pMale=0,pFemale=0,pOther=0,pBelow=0,pMy=0,pAbove=0;
   pending.forEach(player=>{
     const g=(player.gender||'').toLowerCase();
     if(g==='male') pMale++; else if(g==='female') pFemale++; else pOther++;
-    if(myVal>0&&player.skill_level){
+    if(skills&&player.skill_level){
       const ps=parseFloat(player.skill_level||0);
-      const diff=parseFloat((ps-myVal).toFixed(4));
-      if(diff<0) pBelow++; else if(diff===0) pMy++; else pAbove++;
+      if(skills.below!==null&&Math.abs(ps-skills.below)<0.13) pBelow++;
+      else if(Math.abs(ps-skills.my)<0.13) pMy++;
+      else if(skills.above!==null&&Math.abs(ps-skills.above)<0.13) pAbove++;
+      else pMy++;
     }
   });
   set('gMaleMember',mMale); set('gFemaleMember',mFemale); set('gOtherMember',mOther); set('gTotalMember',IC_MEMBERS.length);
@@ -7400,11 +7189,11 @@ function filterNearbyGrid(val){
 // ── IC Stats + Invites ─────────────────────────────────
 async function loadIcInvites(){
   const myEmail=getMyEmail();
-  if(!myEmail) return;
   const card=document.getElementById('icInvitesCard');
   const list=document.getElementById('icInvitesList');
-  // Do NOT early-return on card/list — IC_INVITED_PLAYERS must always be populated for stats
+  if(!card||!list) return;
   try{
+    // Fetch ALL sent invites (pending + approved + declined) for history
     const res=await fetch(`${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(myEmail)}&select=*&order=created_at.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     if(!res.ok) return;
     const allSent=await res.json();
@@ -7412,7 +7201,7 @@ async function loadIcInvites(){
     const accepted=allSent.filter(c=>c.status==='approved');
     const declined=allSent.filter(c=>c.status==='declined');
 
-    // Always populate IC_INVITED_PLAYERS regardless of UI state
+    // Populate IC_INVITED_PLAYERS with profile data for pending invites (for IC stats)
     IC_INVITED_PLAYERS = [];
     if(pending.length){
       const emails=pending.map(c=>c.recipient_email).filter(Boolean);
@@ -7420,20 +7209,19 @@ async function loadIcInvites(){
         try{
           const pr=await fetch(`${SUPABASE_URL}/rest/v1/registrations?email=in.(${emails.map(e=>encodeURIComponent(e)).join(',')})&select=email,gender,skill_level`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
           const registered = pr.ok ? await pr.json() : [];
+          // For invitees not yet registered, create placeholder entries so count is correct
           const regEmails = new Set(registered.map(r=>r.email.toLowerCase()));
           IC_INVITED_PLAYERS = [...registered];
           emails.forEach(e=>{
             if(!regEmails.has(e.toLowerCase())){
-              IC_INVITED_PLAYERS.push({email:e, gender:'', skill_level:''});
+              IC_INVITED_PLAYERS.push({email:e, gender:'', skill_level:''}); // unregistered placeholder
             }
           });
         }catch(e){ IC_INVITED_PLAYERS = pending.map(c=>({email:c.recipient_email,gender:'',skill_level:''})); }
       }
     }
-    // Always update stats first
-    updateIcStats(null);
-    // Only render UI if elements exist
-    if(!card||!list) return;
+    // Refresh IC stats with updated invited data
+    updateIcStats([]);
 
     // Update yellow badge with pending count
     const navPendBadge=document.getElementById('icNavYellowBadge');
