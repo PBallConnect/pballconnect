@@ -326,6 +326,8 @@
 
     /* ── Nav toggle in header ── */
     .nav-toggle{display:flex!important;}
+    .left-nav{top:52px!important;z-index:300!important;height:calc(100vh - 52px)!important;}
+    .nav-overlay{z-index:299!important;top:52px!important;}
 
     /* ── Better tap targets ── */
     .nav-item{padding:14px 20px;min-height:48px;}
@@ -8123,30 +8125,30 @@ function checkInviteToken(){
 }
 
 function showInviteBanner(invite){
+  if(getMyEmail()) return;
+  const existing=document.getElementById('inviteBanner');
+  if(existing) existing.remove();
   const banner=document.createElement('div');
-  banner.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:600;'+
-    'background:#0a120b;border:1px solid var(--green);border-radius:16px;padding:20px 24px;'+
-    'max-width:500px;width:92%;box-shadow:0 8px 32px rgba(0,0,0,0.5);';
+  banner.id='inviteBanner';
+  banner.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:400;background:#0a120b;border-top:2px solid #4CAF7D;padding:16px 20px 28px;box-shadow:0 -8px 32px rgba(0,0,0,0.6);';
   const inviterName=invite.inviter_name||'A fellow player';
   const note=invite.personal_note?'<div style="margin-top:6px;font-size:12px;color:#fff;font-style:italic;padding:8px 10px;background:rgba(255,255,255,0.05);border-radius:8px;">"'+invite.personal_note+'"</div>':'';
   banner.innerHTML=
     '<div style="display:flex;align-items:flex-start;gap:12px;">'+
-      '<span style="font-size:28px;flex-shrink:0;">&#127934;</span>'+
-      '<div style="flex:1;">'+
-        '<div style="color:var(--green);font-weight:800;font-size:15px;margin-bottom:4px;">'+inviterName+' invited you to Pickleball Registry!</div>'+
-        note+
-        '<div style="color:rgba(255,255,255,0.75);font-size:12px;margin-top:8px;line-height:1.5;">Fill out your profile below to join and connect with '+inviterName+'.</div>'+
-        '<button onclick="window.scrollTo({top:0,behavior:\'smooth\'});this.closest(\'div\').closest(\'div\').remove();" '+
-          'style="margin-top:10px;padding:8px 16px;border-radius:8px;border:none;background:var(--green);'+
-          'color:var(--dark);font-weight:700;font-size:12px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+
-          '&#8595; Start My Profile'+
-        '</button>'+
-      '</div>'+
-      '<button onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:18px;flex-shrink:0;">&times;</button>'+
+    '<span style="font-size:26px;flex-shrink:0;">🎾</span>'+
+    '<div style="flex:1;">'+
+      '<div style="color:#4CAF7D;font-weight:800;font-size:15px;margin-bottom:4px;">'+inviterName+' invited you!</div>'+
+      '<div style="color:rgba(255,255,255,0.75);font-size:12px;line-height:1.5;">Create your profile to join and connect with '+inviterName+'.</div>'+
+      note+
+      '<button onclick="document.getElementById(\'inviteBanner\').remove();openLoginModal();" '+
+        'style="margin-top:12px;width:100%;padding:12px;border-radius:10px;border:none;background:#4CAF7D;color:#0a120b;font-weight:700;font-size:14px;cursor:pointer;">'+
+        '↓ Start My Profile</button>'+
+    '</div>'+
+    '<button onclick="document.getElementById(\'inviteBanner\').remove()" style="background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:22px;flex-shrink:0;padding:0;line-height:1;">✕</button>'+
     '</div>';
   document.body.appendChild(banner);
-  setTimeout(()=>{ window.scrollTo({top:0,behavior:'smooth'}); },300);
 }
+
 async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
   if(!PENDING_INVITE) return;
   const inv=PENDING_INVITE;
