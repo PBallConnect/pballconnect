@@ -2694,28 +2694,48 @@
         <div style="font-size:16px;font-weight:700;color:#fff;margin:20px 0 8px;">What We Collect</div>
         <div style="color:var(--dim);font-size:13px;margin-bottom:16px;">And why we need it:</div>
         <div style="display:grid;gap:10px;margin-bottom:24px;">
-          ${[
-            ['First Name + Nickname', 'So other players can identify you in the app'],
-            ['Last Name initial (optional)', 'For your player card display only'],
-            ['Email address', 'Required to sign in and receive match invites'],
-            ['Phone number (optional)', 'For future match notifications and score recording'],
-            ['Age range (e.g. 41–45)', 'For community statistics — no exact birthdate stored'],
-            ['City, State, Zip', 'To find nearby players and courts — no street address stored'],
-            ['Skill level & play preferences', 'To match you with compatible players'],
-            ['Play schedule', 'So others know when you like to play'],
-          ].map(([field, reason])=>`
-            <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid var(--border);">
-              <div style="color:#fff;font-weight:600;font-size:13px;">${field}</div>
-              <div style="color:var(--dim);font-size:13px;">${reason}</div>
-            </div>
-          `).join('')}
+          <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid var(--border);">
+            <div style="color:#fff;font-weight:600;font-size:13px;">First Name + Nickname</div>
+            <div style="color:var(--dim);font-size:13px;">So other players can identify you in the app</div>
+          </div>
+          <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid var(--border);">
+            <div style="color:#fff;font-weight:600;font-size:13px;">Last Name initial (optional)</div>
+            <div style="color:var(--dim);font-size:13px;">For your player card display only</div>
+          </div>
+          <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid var(--border);">
+            <div style="color:#fff;font-weight:600;font-size:13px;">Email address</div>
+            <div style="color:var(--dim);font-size:13px;">Required to sign in and receive match invites</div>
+          </div>
+          <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid var(--border);">
+            <div style="color:#fff;font-weight:600;font-size:13px;">Phone number (optional)</div>
+            <div style="color:var(--dim);font-size:13px;">For future match notifications and score recording</div>
+          </div>
+          <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid var(--border);">
+            <div style="color:#fff;font-weight:600;font-size:13px;">Age range (e.g. 41–45)</div>
+            <div style="color:var(--dim);font-size:13px;">For community statistics — no exact birthdate stored</div>
+          </div>
+          <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid var(--border);">
+            <div style="color:#fff;font-weight:600;font-size:13px;">City, State, Zip</div>
+            <div style="color:var(--dim);font-size:13px;">To find nearby players and courts — no street address stored</div>
+          </div>
+          <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid var(--border);">
+            <div style="color:#fff;font-weight:600;font-size:13px;">Skill level &amp; play preferences</div>
+            <div style="color:var(--dim);font-size:13px;">To match you with compatible players</div>
+          </div>
+          <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid var(--border);">
+            <div style="color:#fff;font-weight:600;font-size:13px;">Play schedule</div>
+            <div style="color:var(--dim);font-size:13px;">So others know when you like to play</div>
+          </div>
         </div>
 
         <div style="font-size:16px;font-weight:700;color:#fff;margin:20px 0 10px;">What We Never Collect</div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;">
-          ${['Street address','Full date of birth','Financial information','Social Security number','Facial images or biometrics','Health records'].map(item=>`
-            <span style="padding:6px 12px;border-radius:999px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#f87171;font-size:12px;font-weight:600;">✕ ${item}</span>
-          `).join('')}
+          <span style="padding:6px 12px;border-radius:999px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#f87171;font-size:12px;font-weight:600;">✕ Street address</span>
+          <span style="padding:6px 12px;border-radius:999px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#f87171;font-size:12px;font-weight:600;">✕ Full date of birth</span>
+          <span style="padding:6px 12px;border-radius:999px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#f87171;font-size:12px;font-weight:600;">✕ Financial information</span>
+          <span style="padding:6px 12px;border-radius:999px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#f87171;font-size:12px;font-weight:600;">✕ Social Security number</span>
+          <span style="padding:6px 12px;border-radius:999px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#f87171;font-size:12px;font-weight:600;">✕ Facial images or biometrics</span>
+          <span style="padding:6px 12px;border-radius:999px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#f87171;font-size:12px;font-weight:600;">✕ Health records</span>
         </div>
 
         <div style="font-size:16px;font-weight:700;color:#fff;margin:20px 0 10px;">How We Protect Your Data</div>
@@ -2725,12 +2745,12 @@
 
         <div style="font-size:16px;font-weight:700;color:#fff;margin:20px 0 10px;">Your Rights</div>
         <div style="margin-bottom:24px;">
-          You can request deletion of your account and all associated data at any time by emailing <span style="color:var(--green);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f3979a838392c4c4c4b3949e929a9fdd909c9e">[email&#160;protected]</a></span>. We will process deletion requests within 30 days.
+          You can request deletion of your account and all associated data at any time by emailing <span style="color:var(--green);">dippa777@gmail.com</span>. We will process deletion requests within 30 days.
         </div>
 
         <div style="font-size:16px;font-weight:700;color:#fff;margin:20px 0 10px;">Contact</div>
         <div style="margin-bottom:32px;">
-          Questions about this policy? Email us at <span style="color:var(--green);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="9df9f4ededfcaaaaaaddfaf0fcf4f1b3fef2f0">[email&#160;protected]</a></span>. We're real people — you'll get a real response.
+          Questions about this policy? Email us at <span style="color:var(--green);">dippa777@gmail.com</span>. We're real people — you'll get a real response.
         </div>
 
         <div style="text-align:center;padding:20px;border-top:1px solid var(--border);color:var(--dim);font-size:12px;">
