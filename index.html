@@ -3601,7 +3601,9 @@ function restoreCoachChips(chipGroupId,sKey,savedStr){
   vals.forEach(val=>{
     S[sKey].add(val);
     document.querySelectorAll('#'+chipGroupId+' .chip').forEach(ch=>{
-      if(ch.textContent.trim()===val) ch.classList.add('on');
+      // Match by data-value attribute OR by chip text starting with the value
+      const chipVal = ch.dataset.value || ch.textContent.trim();
+      if(chipVal===val || ch.textContent.trim().startsWith(val)) ch.classList.add('on');
     });
   });
 }
@@ -3837,7 +3839,7 @@ function showProfileDiff(){
     {label:'T-Shirt',       old:player.shirt_size||'',                nw:v('shirtSize')},
     {label:'Gender',        old:player.gender||'',                    nw:S.gender||''},
     {label:'Handedness',    old:player.handedness||'',                nw:S.handedness||''},
-    {label:'Play Format',   old:player.play_format||'Both',           nw:S.playFormat||'Both'},
+    {label:'Play Format',   old:player.play_format||'Both',           nw:S.playFormat||player.play_format||'Both'},
     {label:'Play Style',    old:player.play_style||'',                nw:S.playStyle||''},
     {label:'Venues',        old:player.play_venues||'',               nw:S.venuePref||''},
     {label:'Skill Level',   old:String(player.skill_level||''),       nw:String(S.skill||player.skill_level||'')},
@@ -3846,9 +3848,25 @@ function showProfileDiff(){
     {label:'Wants to Improve', old:player.wants_to_improve||'',      nw:S.wantsToImprove||''},
     {label:'Had a Lesson',  old:player.has_had_lesson||'',            nw:S.hasHadLesson||''},
     {label:'Wants Lesson',  old:player.wants_lesson||'',              nw:S.wantsLesson||''},
-    {label:'Schedule',      old:player.play_schedule||'',             nw:[...S.schedule].sort().join(',')},
+    {label:'Schedule',      old:(()=>{
+       const stored=(player.schedule||player.play_schedule||'');
+       if(!stored||stored==='Not specified') return '';
+       if(stored==='Anytime') return 'Anytime';
+       return stored.split(',').map(s=>s.trim()).filter(Boolean).sort().join(',');
+     })(),
+     nw:(()=>{
+       if(S.anytime) return 'Anytime';
+       if(!S.schedule||S.schedule.size===0) return '';
+       return [...S.schedule].sort().join(',');
+     })()},
     {label:'Anytime',       old:String(player.anytime||false),        nw:String(S.anytime||false)},
     {label:'Is Coach',      old:String(player.is_coach||false),       nw:String(S.isCoach==='Yes')},
+    {label:'Coach Certs',   old:player.coach_certifications||'',      nw:S.coachCerts&&S.coachCerts.size>0?[...S.coachCerts].join(', '):''},
+    {label:'Lesson Types',  old:player.coach_lesson_types||'',        nw:S.coachLessonTypes&&S.coachLessonTypes.size>0?[...S.coachLessonTypes].join(', '):''},
+    {label:'Lesson Format', old:player.coach_formats||'',             nw:S.coachFormats&&S.coachFormats.size>0?[...S.coachFormats].join(', '):''},
+    {label:'Rate Min',      old:String(player.coach_rate_min||''),    nw:document.getElementById('coachRateMin')?.value||''},
+    {label:'Rate Max',      old:String(player.coach_rate_max||''),    nw:document.getElementById('coachRateMax')?.value||''},
+    {label:'Coach Bio',     old:player.coach_bio||'',                 nw:document.getElementById('coachBio')?.value?.trim()||''},
   ];
 
   const changed = fields.filter(f=>String(f.old).trim()!==String(f.nw).trim());
@@ -6965,6 +6983,7 @@ function restoreProfileForm(player){
   restoreChip('handednessChips',player.handedness);
   restoreChip('venuePrefChips',player.play_venues);
   restoreChip('playStyleChips',player.play_style);
+  S.playFormat=player.play_format||'Both';
   restoreChip('playFormatChips',player.play_format||'Both');
   restoreChip('improveChips',player.wants_to_improve);
   restoreChip('lessonChips',player.has_had_lesson);
@@ -7121,6 +7140,12 @@ function startChangeDetection(){
       S.hasHadLesson!==(p.has_had_lesson||'')||
       S.wantsLesson!==(p.wants_lesson||'')||
       S.anytime!==(p.anytime||false)||
+      (()=>{
+        const stored=(p.schedule||p.play_schedule||'');
+        const storedNorm=(!stored||stored==='Not specified'||stored==='Anytime')?stored:stored.split(',').map(s=>s.trim()).filter(Boolean).sort().join(',');
+        const currentNorm=S.anytime?'Anytime':[...S.schedule].sort().join(',');
+        return storedNorm!==currentNorm;
+      })()||
       currentEmoji!==(p.avatar_emoji||'🎾')||
       String(S.skill||'')!==String(p.skill_level||'')||
       String(S.goalRating||'')!==String(p.goal_rating||'')||
@@ -7160,6 +7185,12 @@ function unlockProfileForm(){
     step.querySelectorAll('input[type="range"]').forEach(el=>{el.disabled=false;});
     step.querySelectorAll('.btn-next,.btn-back').forEach(el=>{el.style.display='';});
   });
+  // Also unlock chips inside hidden subsections (coach section is display:none by default)
+  const coachSec=document.getElementById('coachSection');
+  if(coachSec){
+    coachSec.querySelectorAll('.chip,.chip-rect').forEach(el=>{el.style.pointerEvents='';el.style.opacity='';});
+    coachSec.querySelectorAll('input,select,textarea').forEach(el=>{el.disabled=false;el.style.opacity='';el.style.cursor='';});
+  }
   document.getElementById('readOnlyBanner')?.remove();
 }
 
