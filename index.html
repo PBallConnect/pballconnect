@@ -3817,25 +3817,38 @@ function showProfileDiff(){
   const diffList = document.getElementById('profileDiffList');
   if(!diffList) return;
 
-  // Field labels and current vs new values
   const stateAbbr=(st)=>{
     if(!st) return '';
-    if(st.length===2) return st.toUpperCase(); // already an abbreviation
-    const found=Object.values(STATE_INFO).find(v=>v[1]&&v[1].toLowerCase()===st.toLowerCase());
+    if(st.length===2) return st.toUpperCase();
+    const found=Object.values(STATE_INFO||{}).find(v=>v[1]&&v[1].toLowerCase()===st.toLowerCase());
     return found?found[0]:st;
   };
+
+  const currentEmoji = document.getElementById('avatarEmoji')?.value || S.avatarEmoji || '🎾';
   const fields=[
-    {label:'First Name',   old:player.first_name||'', nw:v('firstName')},
-    {label:'Last Name',    old:player.last_name||'',  nw:v('lastName')},
-    {label:'Nickname',     old:player.nickname||'',   nw:v('nickname')},
-    {label:'Address',      old:player.address||'',    nw:v('addressSearch')},
-    {label:'City',         old:player.city||'',       nw:v('addrCity')},
-    {label:'State',        old:player.state||'',      nw:stateAbbr(v('addrState'))},
-    {label:'Zip',          old:player.zip_code||'',   nw:v('addrZip')},
-    {label:'Skill Level',  old:String(player.skill_level||''), nw:String(S.skill||player.skill_level||'')},
-    {label:'Gender',       old:player.gender||'',     nw:S.gender||player.gender||''},
-    {label:'Handedness',   old:player.handedness||'', nw:S.handedness||player.handedness||''},
-    {label:'Phone', old:decodePhone(player.phone||''), nw:(v('phone')||'').replace(/\D/g,'')},
+    {label:'Emoji',         old:player.avatar_emoji||'🎾',           nw:currentEmoji},
+    {label:'First Name',    old:player.first_name||'',               nw:v('firstName')},
+    {label:'Nickname',      old:player.nickname||'',                  nw:v('nickname')},
+    {label:'Age Range',     old:player.dob||'',                       nw:document.getElementById('playerAge')?.value||''},
+    {label:'City',          old:player.city||'',                      nw:v('addrCity')},
+    {label:'State',         old:player.state||'',                     nw:stateAbbr(v('addrState'))},
+    {label:'Zip',           old:player.zip_code||'',                  nw:v('addrZip')},
+    {label:'Phone',         old:decodePhone(player.phone||''),         nw:(v('phone')||'').replace(/\D/g,'')},
+    {label:'T-Shirt',       old:player.shirt_size||'',                nw:v('shirtSize')},
+    {label:'Gender',        old:player.gender||'',                    nw:S.gender||''},
+    {label:'Handedness',    old:player.handedness||'',                nw:S.handedness||''},
+    {label:'Play Format',   old:player.play_format||'Both',           nw:S.playFormat||'Both'},
+    {label:'Play Style',    old:player.play_style||'',                nw:S.playStyle||''},
+    {label:'Venues',        old:player.play_venues||'',               nw:S.venuePref||''},
+    {label:'Skill Level',   old:String(player.skill_level||''),       nw:String(S.skill||player.skill_level||'')},
+    {label:'DUPR Rating',   old:String(player.dupr_rating||''),       nw:String(S.duprVal||'')},
+    {label:'Target Level',  old:String(player.goal_rating||''),       nw:String(S.goalRating||'')},
+    {label:'Wants to Improve', old:player.wants_to_improve||'',      nw:S.wantsToImprove||''},
+    {label:'Had a Lesson',  old:player.has_had_lesson||'',            nw:S.hasHadLesson||''},
+    {label:'Wants Lesson',  old:player.wants_lesson||'',              nw:S.wantsLesson||''},
+    {label:'Schedule',      old:player.play_schedule||'',             nw:[...S.schedule].sort().join(',')},
+    {label:'Anytime',       old:String(player.anytime||false),        nw:String(S.anytime||false)},
+    {label:'Is Coach',      old:String(player.is_coach||false),       nw:String(S.isCoach==='Yes')},
   ];
 
   const changed = fields.filter(f=>String(f.old).trim()!==String(f.nw).trim());
@@ -3844,29 +3857,28 @@ function showProfileDiff(){
   if(!changed.length){
     diffList.innerHTML='<div style="color:var(--dim);font-size:13px;text-align:center;padding:16px;">No changes detected.</div>';
   } else {
+    // Header row
+    const hdr=document.createElement('div');
+    hdr.style.cssText='padding:4px 0 8px;display:grid;grid-template-columns:110px 1fr 1fr;gap:8px;';
+    hdr.innerHTML=
+      '<div></div>'+
+      '<div style="font-size:10px;font-weight:700;color:#f87171;text-transform:uppercase;">Before</div>'+
+      '<div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;">After</div>';
+    diffList.appendChild(hdr);
     changed.forEach(f=>{
       const row=document.createElement('div');
-      row.style.cssText='padding:10px 0;border-bottom:1px solid var(--border);display:grid;grid-template-columns:100px 1fr 1fr;gap:8px;align-items:center;';
+      row.style.cssText='padding:10px 0;border-bottom:1px solid var(--border);display:grid;grid-template-columns:110px 1fr 1fr;gap:8px;align-items:center;';
       row.innerHTML=
         '<div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;">'+f.label+'</div>'+
         '<div style="font-size:12px;color:#f87171;text-decoration:line-through;word-break:break-word;">'+(f.old||'—')+'</div>'+
         '<div style="font-size:12px;color:var(--green);font-weight:600;word-break:break-word;">'+(f.nw||'—')+'</div>';
       diffList.appendChild(row);
     });
-    // Header row
-    const hdr=document.createElement('div');
-    hdr.style.cssText='padding:4px 0 8px;display:grid;grid-template-columns:100px 1fr 1fr;gap:8px;';
-    hdr.innerHTML=
-      '<div></div>'+
-      '<div style="font-size:10px;font-weight:700;color:#f87171;text-transform:uppercase;">Before</div>'+
-      '<div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;">After</div>';
-    diffList.insertBefore(hdr, diffList.firstChild);
   }
 
   const overlay=document.getElementById('profileDiffOverlay');
   overlay.style.display='flex';
 
-  // Wire confirm button
   const confirmBtn=document.getElementById('profileDiffConfirm');
   confirmBtn.onclick=async()=>{
     overlay.style.display='none';
@@ -3953,8 +3965,8 @@ async function doSaveProfile(){
       coach_certifications: S.coachCerts&&S.coachCerts.size>0 ? [...S.coachCerts].join(', ') : null,
       coach_lesson_types:  S.coachLessonTypes&&S.coachLessonTypes.size>0 ? [...S.coachLessonTypes].join(', ') : null,
       coach_formats:       S.coachFormats&&S.coachFormats.size>0 ? [...S.coachFormats].join(', ') : null,
-      coach_rate_min:      document.getElementById('coachRateMin')?.value ? parseInt(document.getElementById('coachRateMin').value)||null : null,
-      coach_rate_max:      document.getElementById('coachRateMax')?.value ? parseInt(document.getElementById('coachRateMax').value)||null : null,
+      coach_rate_min:      (()=>{const el=document.getElementById('coachRateMin');return el?.value?parseInt(el.value)||null:null;})(),
+      coach_rate_max:      (()=>{const el=document.getElementById('coachRateMax');return el?.value?parseInt(el.value)||null:null;})(),
       coach_bio:           document.getElementById('coachBio')?.value?.trim()||null,
     });
     console.log('✅ Registration saved');
@@ -4053,7 +4065,7 @@ function resetForm(){
   Object.assign(S,{gender:'',skill:'',schedule:new Set(),anytime:false,partner:false,waiver:false,photoSrc:null,state:'',stateFips:'',county:'',city:'',court:'',courtName:'',duprVal:null,venues:new Set(),driveDistance:'25 miles',playStyle:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null});
 
   ['firstName','lastName','nickname','email','phone','dob','addressSearch','addrCity','addrState','addrZip','addrCounty'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('shirtSize').value='';
+  const shirtEl=document.getElementById('shirtSize');if(shirtEl)shirtEl.value='';
   const sl=document.getElementById('duprSlider');if(sl){sl.value=0;sl.style.setProperty('--pct','0%');}
   const prs=document.getElementById('personalRatingSlider');if(prs){prs.value=0;prs.style.setProperty('--pct','0%');}
   const prd=document.getElementById('personalRatingDisplay');if(prd) prd.innerHTML='-- <span>not set — slide to choose</span>';
