@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <style>
 
   :root {
@@ -326,8 +327,8 @@
 
     /* ── Nav toggle in header ── */
     .nav-toggle{display:flex!important;}
-    .left-nav{top:52px!important;z-index:300!important;height:calc(100vh - 52px)!important;}
-    .nav-overlay{z-index:299!important;top:52px!important;}
+    .left-nav{top:52px!important;z-index:350!important;height:calc(100vh - 52px)!important;}
+    .nav-overlay{z-index:349!important;top:52px!important;}
 
     /* ── Better tap targets ── */
     .nav-item{padding:14px 20px;min-height:48px;}
@@ -832,7 +833,7 @@
   /* ── Top Header Bar ───────────────────────────────── */
   .top-header{display:flex;align-items:center;justify-content:space-between;
     padding:0 20px;height:52px;background:#0a120b;
-    border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;
+    border-bottom:1px solid var(--border);position:sticky;top:0;z-index:400;
     flex-shrink:0;width:100%;box-sizing:border-box;}
   .top-header-left{display:flex;align-items:center;gap:10px;}
   .top-logo-icon{font-size:22px;line-height:1;}
@@ -1149,11 +1150,17 @@
     <div class="page-section active" id="page-playerProfile">
       <div class="reg-wrapper">
 
-        <!-- Edit Profile button — shown when signed in -->
+        <!-- Edit Profile + Share buttons — shown when signed in -->
         <div id="editProfileBtnInPage" style="display:none;text-align:right;margin-bottom:12px;">
-          <button id="editProfileBtnEl" class="edit-profile-btn" onclick="openEditProfile()">
-            ✏️ Edit Profile
-          </button>
+          <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
+            <button onclick="openQrModal()" title="Share your profile QR code"
+              style="padding:8px 14px;border-radius:20px;border:1px solid rgba(76,175,125,0.3);background:rgba(76,175,125,0.08);color:var(--green);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
+              📱 Share
+            </button>
+            <button id="editProfileBtnEl" class="edit-profile-btn" onclick="openEditProfile()">
+              ✏️ Edit Profile
+            </button>
+          </div>
         </div>
         <div class="steps">
           <div class="step-item"><div class="step-dot active" id="dot1">1</div><span class="step-label active" id="lbl1">Personal Info</span></div>
@@ -1926,9 +1933,15 @@
             <h1 style="font-size:20px;font-weight:800;margin:0 0 2px;color:#fff;">Inner <span style="color:var(--green);">Circle</span></h1>
             <div style="font-size:11px;color:var(--dim);">Overview</div>
           </div>
-          <button class="ic-view-toggle-btn" id="icListToggleBtn" onclick="toggleIcListView()" title="Circle List Toggle — shows your members sorted by skill level in 3 columns">
-            📋 See Current Inner Circle List
-          </button>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button onclick="openQrModal()" title="Share My Profile — show QR code to invite players"
+              style="padding:7px 14px;border-radius:20px;border:1px solid rgba(76,175,125,0.35);background:rgba(76,175,125,0.1);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:5px;">
+              📱 Share
+            </button>
+            <button class="ic-view-toggle-btn" id="icListToggleBtn" onclick="toggleIcListView()" title="Circle List Toggle — shows your members sorted by skill level in 3 columns">
+              📋 See Current Inner Circle List
+            </button>
+          </div>
         </div>
 
         <!-- Inline 5-column circle list (hidden by default) -->
@@ -2935,6 +2948,49 @@
 </div>
 
 
+<!-- QR Code Share Modal -->
+<div id="qrModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.96);z-index:700;flex-direction:column;align-items:center;justify-content:center;padding:24px;">
+  <div style="width:100%;max-width:360px;text-align:center;">
+
+    <!-- Header -->
+    <div style="margin-bottom:20px;">
+      <div style="font-size:28px;margin-bottom:8px;">📱</div>
+      <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:4px;">Share My Profile</div>
+      <div style="font-size:13px;color:var(--dim);line-height:1.5;">Point a phone camera at this code to join Pickleball Registry and connect with you instantly</div>
+    </div>
+
+    <!-- QR Code canvas -->
+    <div style="background:#fff;border-radius:20px;padding:20px;display:inline-block;margin-bottom:16px;">
+      <canvas id="qrCanvas"></canvas>
+    </div>
+
+    <!-- Player info strip -->
+    <div id="qrPlayerInfo" style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:20px;padding:12px 16px;background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.25);border-radius:12px;">
+      <span id="qrEmoji" style="font-size:28px;">🎾</span>
+      <div style="text-align:left;">
+        <div id="qrName" style="font-size:15px;font-weight:700;color:#fff;"></div>
+        <div id="qrSkill" style="font-size:12px;color:var(--green);"></div>
+      </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+      <button onclick="shareInviteLink()" style="padding:12px;border-radius:10px;border:1px solid rgba(76,175,125,0.4);background:rgba(76,175,125,0.1);color:var(--green);font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+        🔗 Share Link
+      </button>
+      <button onclick="copyInviteLink()" style="padding:12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;" id="qrCopyBtn">
+        📋 Copy Link
+      </button>
+    </div>
+
+    <div id="qrInviteUrl" style="font-size:10px;color:var(--dim);margin-bottom:20px;word-break:break-all;padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:8px;"></div>
+
+    <button onclick="closeQrModal()" style="width:100%;padding:13px;border-radius:12px;border:none;background:rgba(255,255,255,0.08);color:var(--dim);font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
+      Close
+    </button>
+  </div>
+</div>
+
 <!-- Score Recorder Modal -->
 <div id="scoreRecorderModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;align-items:flex-end;justify-content:center;padding:0;">
   <div style="background:#0a1a0d;border:1px solid rgba(76,175,125,0.3);border-radius:24px 24px 0 0;padding:24px 20px 40px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;">
@@ -3566,24 +3622,77 @@ function goTo(n){
 }
 
 function populateSummary(){
-  document.getElementById('sumName').textContent=v('firstName')+' '+v('lastName');
-  document.getElementById('sumEmail').textContent=v('email');
-  const sumCityVal=document.getElementById('addrCity')?.value||S.city;
-  const sumStateVal=document.getElementById('addrState')?.value||S.state;
-  document.getElementById('sumState').textContent=sumStateVal||'—';
-  document.getElementById('sumCounty').textContent=(document.getElementById('addrCounty')?.value||S.county)||'—';
-  document.getElementById('sumCity').textContent=sumCityVal||'—';
-  if(S.venues.size>0){document.getElementById('sumCourtRow').style.display='flex';document.getElementById('sumCourt').textContent=[...S.venues].join(', ')+(S.driveDistance?' · '+S.driveDistance+' mi radius':'');}
-  else if(S.driveDistance){document.getElementById('sumCourtRow').style.display='flex';document.getElementById('sumCourt').textContent='Drive up to '+S.driveDistance+' miles';}
-  document.getElementById('sumSkill').textContent=S.skill||'—';
-  if(S.handedness) document.getElementById('sumHandedness').textContent=S.handedness;
-  document.getElementById('sumShirt').textContent=v('shirtSize')||'—';
-  if(S.courtName){document.getElementById('sumCourtRow').style.display='flex';document.getElementById('sumCourt').textContent=S.courtName;}
-  if(S.duprVal){document.getElementById('sumDuprRow').style.display='flex';document.getElementById('sumDupr').textContent=S.duprVal;}
-  let sched='—';
-  if(S.anytime) sched='Anytime';
-  else if(S.schedule.size>0){const days=[...new Set([...S.schedule].map(k=>k.split('|')[0]))];sched=days.join(', ');}
-  document.getElementById('sumSched').textContent=sched;
+  const set = (id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val||'—'; };
+  const show = (id,val)=>{ const el=document.getElementById(id); if(el) el.style.display=val?'flex':'none'; };
+
+  // Section 1 header — emoji + name + nickname
+  const lastName = v('lastName') ? v('lastName').trim().charAt(0).toUpperCase()+'.' : '';
+  const fullName = (v('firstName')+' '+lastName).trim();
+  const nick = v('nickname')||S.nickname||'';
+  const emoji = document.getElementById('avatarEmoji')?.value || S.avatarEmoji || '🎾';
+  const emojiEl = document.getElementById('sumEmojiDisplay');
+  if(emojiEl) emojiEl.textContent = emoji;
+  const nameBig = document.getElementById('sumNameBig');
+  if(nameBig) nameBig.textContent = fullName||'—';
+  const nickSub = document.getElementById('sumNicknameSub');
+  if(nickSub) nickSub.textContent = nick ? '"'+nick+'"' : '';
+
+  // Hidden legacy fields (used by some older code)
+  set('sumName', fullName);
+  set('sumNickname', nick||'—');
+
+  // Personal info rows
+  set('sumEmail', v('email')||getMyEmail()||'—');
+  const rawPhone = v('phone')||'';
+  const digits = rawPhone.replace(/\D/g,'');
+  const fmtPhone = digits.length===10?'('+digits.substring(0,3)+') '+digits.substring(3,6)+'-'+digits.substring(6):digits||formatPhoneForDisplay(S.phone)||'—';
+  set('sumPhone', fmtPhone);
+  set('sumDob', document.getElementById('playerAge')?.value || S.dob || '—');
+  set('sumGender', S.gender||'—');
+  set('sumCity', document.getElementById('addrCity')?.value||S.city||'—');
+  set('sumState', document.getElementById('addrState')?.value||S.state||'—');
+  set('sumZip', v('addrZip')||S.zip||'—');
+  set('sumShirt', v('shirtSize')||'—');
+
+  // Section 2 — Player info
+  set('sumSince', v('playingSince')||S.playingSince||'—');
+  set('sumHandedness', S.handedness||'—');
+  set('sumFormat', S.playFormat||'—');
+  set('sumStyle', S.playStyle||'—');
+  set('sumVenue', S.venuePref||'—');
+  const driveEl=document.getElementById('driveDistance');
+  set('sumDrive', driveEl?driveEl.value+' miles':'—');
+
+  // Schedule grid
+  const schedGrid = document.getElementById('sumSchedGrid');
+  if(schedGrid){
+    const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const times=['Morning','Afternoon','Evening'];
+    let html='<table style="border-collapse:collapse;width:100%;font-size:11px;">';
+    html+='<tr><th style="padding:4px;"></th>';
+    days.forEach(d=>html+='<th style="padding:4px;color:var(--green);font-size:9px;">'+d+'</th>');
+    html+='</tr>';
+    times.forEach(t=>{
+      html+='<tr><td style="padding:4px;color:var(--dim);font-size:9px;white-space:nowrap;">'+t+'</td>';
+      days.forEach(d=>{
+        const key=d+'|'+t;
+        const on=S.anytime||S.schedule.has(key);
+        html+='<td style="padding:4px;text-align:center;color:'+(on?'var(--green)':'rgba(255,255,255,0.12)')+';">'+(on?'✓':'·')+'</td>';
+      });
+      html+='</tr>';
+    });
+    html+='</table>';
+    schedGrid.innerHTML=html;
+  }
+
+  // Section 3 — Levels
+  set('sumSkill', S.skill||'—');
+  set('sumDupr', S.duprVal||'Not set');
+  if(S.goalRating){ show('sumGoalRow',true); set('sumGoal', S.goalRating); }
+  else show('sumGoalRow',false);
+  set('sumImprove', S.wantsToImprove||'—');
+  set('sumLesson', S.hasHadLesson||'—');
+  set('sumWantsLesson', S.wantsLesson||'—');
 }
 
 
@@ -3595,8 +3704,6 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 async function saveRegistration(payload){
   const url = `${SUPABASE_URL}/rest/v1/registrations`;
-  console.log('🔵 Attempting Supabase save to:', url);
-  console.log('🔵 Payload:', JSON.stringify(payload).substring(0,200));
   
   try{
     // Check if player already exists — use PATCH if so, POST if new
@@ -3706,7 +3813,7 @@ function showProfileDiff(){
     {label:'Skill Level',  old:String(player.skill_level||''), nw:String(S.skill||player.skill_level||'')},
     {label:'Gender',       old:player.gender||'',     nw:S.gender||player.gender||''},
     {label:'Handedness',   old:player.handedness||'', nw:S.handedness||player.handedness||''},
-    {label:'Phone',        old:player.phone||'',      nw:(v('phone')||'').replace(/\D/g,'')},
+    {label:'Phone', old:decodePhone(player.phone||''), nw:(v('phone')||'').replace(/\D/g,'')},
   ];
 
   const changed = fields.filter(f=>String(f.old).trim()!==String(f.nw).trim());
@@ -6583,7 +6690,7 @@ async function restoreSession(email, playerData){
 
   const navBtn = document.getElementById('navLoginBtn');
   if(navBtn) navBtn.classList.add('signed-in');
-  const editBtn = document.getElementById('editProfileBtn');
+  const editBtn = document.getElementById('editProfileBtnInPage');
   if(editBtn) editBtn.style.display='block';
   const reqBtn = document.getElementById('viewRequestsBtn');
   if(reqBtn) reqBtn.style.display='block';
@@ -8026,6 +8133,98 @@ function validateInviteForm(){
   const validPhone=phone&&phone.replace(/\D/g,'').length===10;
   if(emailBtn){emailBtn.style.opacity=validEmail?'1':'0.4';emailBtn.style.pointerEvents=validEmail?'auto':'none';}
   if(smsBtn){smsBtn.style.opacity=validPhone?'1':'0.4';smsBtn.style.pointerEvents=validPhone?'auto':'none';}
+}
+
+// ══════════════════════════════════════════════════════
+// QR CODE SHARE
+// ══════════════════════════════════════════════════════
+
+let _qrInviteUrl = '';
+
+async function openQrModal(){
+  const myEmail = getMyEmail();
+  if(!myEmail){ openLoginModal(); return; }
+
+  // Get or create an invite token for this user
+  let token = '';
+  try{
+    // Check for existing invite token
+    const existing = await fetch(
+      `${SUPABASE_URL}/rest/v1/invites?inviter_email=eq.${encodeURIComponent(myEmail)}&order=created_at.desc&limit=1`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+    );
+    const rows = existing.ok ? await existing.json() : [];
+    if(rows.length && rows[0].invite_token){
+      token = rows[0].invite_token;
+    } else {
+      // Create a permanent invite token for this user
+      const myName = ((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim()||'A fellow player';
+      const created = await fetch(`${SUPABASE_URL}/rest/v1/invites`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=representation'},
+        body:JSON.stringify({inviter_email:myEmail,inviter_name:myName,invite_method:'qr'})
+      });
+      const newRows = created.ok ? await created.json() : [];
+      token = newRows[0]?.invite_token || Math.random().toString(36).slice(2);
+    }
+  }catch(e){ token = Math.random().toString(36).slice(2); }
+
+  const inviteUrl = window.location.origin + window.location.pathname + '?invite=' + token;
+  _qrInviteUrl = inviteUrl;
+
+  // Fill player info
+  const emoji = SESSION_PLAYER?.avatar_emoji || '🎾';
+  const name  = ((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.nickname?' "'+SESSION_PLAYER.nickname+'"':'')).trim() || myEmail;
+  const skill = SESSION_PLAYER?.skill_level ? 'Skill ' + SESSION_PLAYER.skill_level : '';
+  document.getElementById('qrEmoji').textContent = emoji;
+  document.getElementById('qrName').textContent  = name;
+  document.getElementById('qrSkill').textContent = skill;
+  document.getElementById('qrInviteUrl').textContent = inviteUrl;
+
+  // Generate QR code
+  const canvas = document.getElementById('qrCanvas');
+  try{
+    await QRCode.toCanvas(canvas, inviteUrl, {
+      width: 240,
+      margin: 1,
+      color: { dark: '#000000', light: '#ffffff' }
+    });
+  }catch(e){ canvas.parentElement.innerHTML = '<div style="color:#f87171;font-size:13px;">QR generation failed</div>'; }
+
+  document.getElementById('qrModal').style.display = 'flex';
+}
+
+function closeQrModal(){
+  document.getElementById('qrModal').style.display = 'none';
+}
+
+async function shareInviteLink(){
+  if(!_qrInviteUrl) return;
+  const myName = ((SESSION_PLAYER?.first_name||'')).trim() || 'Someone';
+  const shareData = {
+    title: 'Join me on Pickleball Registry!',
+    text: myName + ' invited you to join Pickleball Registry — the best way to find pickleball players near you. 🎾',
+    url: _qrInviteUrl
+  };
+  try{
+    if(navigator.share) await navigator.share(shareData);
+    else { await navigator.clipboard.writeText(_qrInviteUrl); showToast('📋 Link copied!','#4CAF7D'); }
+  }catch(e){
+    await navigator.clipboard.writeText(_qrInviteUrl).catch(()=>{});
+    showToast('📋 Link copied!','#4CAF7D');
+  }
+}
+
+async function copyInviteLink(){
+  if(!_qrInviteUrl) return;
+  try{
+    await navigator.clipboard.writeText(_qrInviteUrl);
+    const btn = document.getElementById('qrCopyBtn');
+    if(btn){ btn.textContent = '✓ Copied!'; btn.style.color = 'var(--green)'; btn.style.borderColor = 'rgba(76,175,125,0.4)'; }
+    setTimeout(()=>{
+      if(btn){ btn.textContent = '📋 Copy Link'; btn.style.color = ''; btn.style.borderColor = ''; }
+    }, 2000);
+  }catch(e){ showToast('📋 ' + _qrInviteUrl,'#4CAF7D'); }
 }
 
 async function sendInvite(method){
