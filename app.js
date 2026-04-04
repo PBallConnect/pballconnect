@@ -3374,9 +3374,8 @@ async function loadConfirmedMatches(){
   const container = document.getElementById('confirmedMatchesList');
   if(!container) return;
   if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in.</div>'; return; }
-  container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;">Loading…</div>';
+  container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;">Loading...</div>';
   try{
-    // Get matches where I'm organizer OR confirmed "in"
     const [orgRes, respRes] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=eq.full&order=match_date.asc,time_start.asc`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}),
@@ -3385,8 +3384,6 @@ async function loadConfirmedMatches(){
     ]);
     const orgMatches = orgRes.ok ? await orgRes.json() : [];
     const myResponses = respRes.ok ? await respRes.json() : [];
-
-    // Fetch matches I'm confirmed in (organized by others)
     let invitedMatches = [];
     if(myResponses.length){
       const ids = myResponses.map(r=>r.match_id);
@@ -3395,73 +3392,143 @@ async function loadConfirmedMatches(){
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
       invitedMatches = imRes.ok ? await imRes.json() : [];
     }
-
-    // Combine, dedupe, filter to FUTURE only
     const allIds = new Set();
-    const allMatches = [...orgMatches, ...invitedMatches].filter(m=>{
-      if(allIds.has(m.id)) return false;
-      allIds.add(m.id);
-      return !isMatchPast(m);
+    const allMatches = [...orgMatches,...invitedMatches].filter(m=>{
+      if(allIds.has(m.id)) return false; allIds.add(m.id); return !isMatchPast(m);
     });
-
-    // Update nav badge
     updateConfirmedBadge(allMatches.length);
-
     container.innerHTML='';
     if(!allMatches.length){
-      container.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--dim);font-size:14px;">'+
-        'No confirmed upcoming matches yet.<br><br>'+
-        '<button onclick="showPage(\'setupMatch\')" style="padding:10px 22px;border-radius:10px;border:none;'+
-        'background:var(--green);color:var(--dark);font-weight:700;cursor:pointer;font-size:13px;">🎯 Set Up A Match</button>'+
-        '</div>';
+      container.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--dim);font-size:14px;">No confirmed upcoming matches yet.<br><br>'+
+        '<button onclick="showPage(&quot;setupMatch&quot;)" style="padding:10px 22px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;cursor:pointer;font-size:13px;">Set Up A Match</button></div>';
       return;
     }
-
-    // Fetch responses for all matches
     const matchIds = allMatches.map(m=>m.id);
+    // Fetch ALL responses (in + waitlist) so we can split them properly
     const rRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${matchIds.join(',')})&response=eq.in&select=match_id,player_name,player_email`,
+      `${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${matchIds.join(',')})&response=in.(in,waitlist)&select=match_id,player_name,player_email,response`,
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     const responses = rRes.ok ? await rRes.json() : [];
-
-    allMatches.forEach(m=>{
-      const dateStr = m.match_date ? new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}) : '—';
-      const timeStr = m.time_start ? fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):'') : '—';
-      const players = responses.filter(r=>r.match_id===m.id);
+    // Fetch court lat/lon for weather
+    const courtIds = allMatches.map(m=>m.court_id).filter(Boolean);
+    let courtData = {};
+    if(courtIds.length){
+      const cRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/courts?id=in.(${courtIds.map(id=>encodeURIComponent(id)).join(',')})&select=id,lat,lon,indoor`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      const courts = cRes.ok ? await cRes.json() : [];
+      courts.forEach(co=>{ courtData[co.id]=co; });
+    }
+    for(const m of allMatches){
+      const dateStr = m.match_date ? new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}) : '-';
+      const timeStr = m.time_start ? fmt12(m.time_start)+(m.time_end?' - '+fmt12(m.time_end):'') : '-';
+      const maxNeeded = m.max_players || (m.match_type==='doubles'?4:2);
+      const allResps = responses.filter(r=>r.match_id===m.id);
+      const inPlayers = allResps.filter(r=>r.response==='in');
+      const waitlist  = allResps.filter(r=>r.response==='waitlist');
       const daysUntil = m.match_date ? Math.ceil((new Date(m.match_date+'T12:00')-new Date())/(1000*60*60*24)) : null;
-      const urgency = daysUntil===0?'TODAY 🔥':daysUntil===1?'TOMORROW ⚡':daysUntil!=null?`In ${daysUntil} days`:'';
+      const urgency = daysUntil===0?'TODAY':daysUntil===1?'TOMORROW':daysUntil!=null?'In '+daysUntil+' days':'';
+      const isOutdoor = !m.is_private_court;
 
-      // Build player name chips
-      const playerChips = players.map(p=>{
-        // Show first name from player_name, or capitalize first part of email
-        const rawName = p.player_name || '';
-        const firstName = rawName.split(' ')[0] || 
-          (p.player_email||'').split('@')[0].replace(/[+_\.]/g,' ').split(' ')[0];
-        return '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;'+
-          'background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.25);'+
-          'font-size:12px;color:#fff;margin:2px;">'+firstName+'</span>';
-      }).join('');
+      function nameChip(p, color, borderColor){
+        const rawName=p.player_name||'';
+        const firstName=rawName.split(' ')[0]||(p.player_email||'').split('@')[0].replace(/[+_.]/g,' ').split(' ')[0];
+        return '<span style="display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;'+
+          'background:'+color+';border:1px solid '+borderColor+';font-size:12px;color:#fff;margin:2px;">'+firstName+'</span>';
+      }
+
+      const inChips = inPlayers.map(p=>nameChip(p,'rgba(76,175,125,0.12)','rgba(76,175,125,0.3)')).join('');
+      const waitChips = waitlist.map((p,i)=>nameChip(p,'rgba(251,191,36,0.1)','rgba(251,191,36,0.3)')+
+        '<span style="font-size:9px;color:#fbbf24;vertical-align:middle;margin-left:-4px;margin-right:4px;">#'+(i+1)+'</span>').join('');
+
+      const mapsBase = 'https://www.google.com/maps/search/?api=1&query=';
+      const directionsUrl = m.court_address ? mapsBase+encodeURIComponent(m.court_address)
+        : m.court_name&&m.court_name!=='TBD' ? mapsBase+encodeURIComponent(m.court_name) : null;
+      const court = courtData[m.court_id];
+      const showWeather = isOutdoor && m.match_date && court && court.lat;
 
       const card = document.createElement('div');
       card.style.cssText='background:rgba(76,175,125,0.06);border:1px solid rgba(76,175,125,0.25);border-radius:16px;padding:16px;margin-bottom:14px;';
       card.innerHTML=
-        '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;">'+
-          '<span style="font-size:24px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span>'+
+        // Header
+        '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">'+
+          '<span style="font-size:24px;">'+(m.match_type==='doubles'?'&#127955;&#127955;':'&#127955;')+'</span>'+
           '<div style="flex:1;">'+
             '<div style="color:#fff;font-size:15px;font-weight:700;">'+dateStr+'</div>'+
-            '<div style="color:var(--dim);font-size:12px;">'+timeStr+' · '+(m.court_name||'Court TBD')+'</div>'+
+            '<div style="color:var(--dim);font-size:12px;">'+timeStr+'</div>'+
           '</div>'+
-          (urgency?'<div style="padding:3px 10px;border-radius:999px;background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.3);color:var(--green);font-size:10px;font-weight:700;">'+urgency+'</div>':'')+
+          (urgency?'<div style="padding:3px 10px;border-radius:999px;background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.3);color:var(--green);font-size:10px;font-weight:700;white-space:nowrap;">'+urgency+'</div>':'')+
         '</div>'+
+        // Court row
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:10px;margin-bottom:10px;">'+
+          '<div style="display:flex;align-items:center;gap:8px;">'+
+            '<span style="font-size:16px;">'+(isOutdoor?'&#127795;':'&#127970;')+'</span>'+
+            '<div>'+
+              '<div style="font-size:13px;color:#fff;font-weight:600;">'+(m.court_name||'Court TBD')+'</div>'+
+              (m.court_address?'<div style="font-size:11px;color:var(--dim);">'+m.court_address+'</div>':'')+
+            '</div>'+
+          '</div>'+
+          (directionsUrl?'<a href="'+directionsUrl+'" target="_blank" style="padding:5px 12px;border-radius:8px;border:1px solid rgba(76,175,125,0.35);color:var(--green);font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;">&#128205; Directions</a>':'')+
+        '</div>'+
+        // Weather placeholder
+        (showWeather?'<div id="weather-'+m.id+'" style="padding:10px 12px;background:rgba(255,255,255,0.02);border-radius:10px;margin-bottom:10px;font-size:12px;color:var(--dim);">Loading forecast...</div>':'')+
+        // Players In
         '<div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:10px;">'+
-          '<div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Players ('+players.length+')</div>'+
-          '<div style="display:flex;flex-wrap:wrap;gap:4px;">'+playerChips+'</div>'+
+          '<div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">'+
+            'In the Match ('+inPlayers.length+'/'+maxNeeded+')'+
+          '</div>'+
+          '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:'+(waitlist.length?'10':'0')+'px;">'+
+            (inChips||'<span style="color:var(--dim);font-size:12px;">No confirmed players yet</span>')+
+          '</div>'+
+          // Waitlist
+          (waitlist.length?
+            '<div style="font-size:10px;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">'+
+              'Waitlist ('+waitlist.length+')'+
+            '</div>'+
+            '<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;">'+waitChips+'</div>'
+          : '')+
         '</div>';
       container.appendChild(card);
-    });
+      if(showWeather) loadConfirmedMatchWeather(m.id, m.match_date, court.lat, court.lon);
+    }
   }catch(e){
-    container.innerHTML='<div style="color:#f87171;font-size:13px;">Error loading matches.</div>';
+    container.innerHTML='<div style="color:#f87171;font-size:13px;">Error: '+e.message+'</div>';
   }
+}
+
+async function loadConfirmedMatchWeather(matchId, date, lat, lon){
+  const el = document.getElementById('weather-'+matchId);
+  if(!el) return;
+  try{
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`+
+      `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,windspeed_10m_max,weathercode`+
+      `&temperature_unit=fahrenheit&windspeed_unit=mph&forecast_days=14&timezone=America%2FNew_York`;
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('Weather unavailable');
+    const data = await res.json();
+    const idx = data.daily.time.indexOf(date);
+    if(idx<0){ el.textContent='Forecast not available for this date'; return; }
+    const code=data.daily.weathercode[idx],high=Math.round(data.daily.temperature_2m_max[idx]);
+    const low=Math.round(data.daily.temperature_2m_min[idx]),precip=data.daily.precipitation_probability_max[idx];
+    const wind=Math.round(data.daily.windspeed_10m_max[idx]);
+    const emoji=getWeatherEmoji(code),desc=getWeatherDesc(code);
+    const windLevel=wind<10?'Calm':wind<20?'Breezy':wind<30?'Windy':'Very Windy';
+    const precipColor=precip<20?'var(--green)':precip<50?'#fbbf24':'#f87171';
+    const windColor=wind<10?'var(--green)':wind<20?'#fbbf24':'#f87171';
+    el.innerHTML=
+      '<div style="display:flex;align-items:center;gap:10px;">'+
+        '<span style="font-size:28px;">'+emoji+'</span>'+
+        '<div style="flex:1;">'+
+          '<div style="color:#fff;font-size:13px;font-weight:600;">'+desc+' - '+high+'F high / '+low+'F low</div>'+
+          '<div style="display:flex;gap:12px;margin-top:3px;flex-wrap:wrap;">'+
+            '<span style="font-size:11px;color:'+precipColor+';">Rain: '+precip+'%</span>'+
+            '<span style="font-size:11px;color:'+windColor+';">Wind: '+wind+' mph ('+windLevel+')</span>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+      (precip>=50?'<div style="margin-top:6px;font-size:11px;color:#f87171;background:rgba(239,68,68,0.08);border-radius:6px;padding:5px 8px;">High rain chance - consider an indoor backup</div>':'')+
+      (wind>=25?'<div style="margin-top:4px;font-size:11px;color:#fbbf24;background:rgba(251,191,36,0.08);border-radius:6px;padding:5px 8px;">High winds may affect play</div>':'');
+  }catch(e){ el.textContent='Weather unavailable'; }
 }
 
 async function loadRecordScores(){
