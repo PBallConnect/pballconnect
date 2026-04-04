@@ -2,9 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="application-name" content="PBConnect"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="PBConnect"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="theme-color" content="#0a120b"/>
+<meta name="description" content="Connect with pickleball players near you. Find games, build your Inner Circle, track scores and stats."/>
+<meta property="og:title" content="PBConnect — Find Pickleball Players Near You"/>
+<meta property="og:description" content="Connect with pickleball players, organize matches, track scores."/>
+<meta property="og:type" content="website"/>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com data:; connect-src *; img-src 'self' data: blob: https:; worker-src 'none';">
-<title>Pickleball Registry</title>
+<title>PBConnect</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
@@ -1023,6 +1033,32 @@
     window.EMAILJS_SERVICE_ID  = 'service_hsjjktl';
     window.EMAILJS_TEMPLATE_ID = 'template_ijs8usp';
   </script>
+
+<script>
+// ── PWA Manifest (injected inline for single-file deployment) ──
+(function(){
+  const manifest = {
+    name: "PBConnect",
+    short_name: "PBConnect",
+    description: "Connect with pickleball players near you",
+    start_url: "/",
+    display: "standalone",
+    background_color: "#0a120b",
+    theme_color: "#0a120b",
+    orientation: "portrait-primary",
+    icons: [
+      { src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='80' fill='%230a120b'/><text y='380' x='256' text-anchor='middle' font-size='380'>🏓</text></svg>", sizes: "512x512", type: "image/svg+xml", purpose: "any maskable" },
+      { src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='30' fill='%230a120b'/><text y='148' x='96' text-anchor='middle' font-size='140'>🏓</text></svg>", sizes: "192x192", type: "image/svg+xml" }
+    ]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = url;
+  document.head.appendChild(link);
+})();
+</script>
 </head>
 <body>
 
@@ -1035,7 +1071,7 @@
     <!-- Hamburger INSIDE header so it's always visible and tappable -->
     <button class="nav-toggle" onclick="toggleNav()">☰</button>
     <div class="top-logo-icon">🏓</div>
-    <div class="top-logo-text">Pickleball <span>Registry</span></div>
+    <div class="top-logo-text">PB<span>Connect</span></div>
     <div id="memberCountBadge" style="display:none;margin-left:8px;padding:3px 10px;border-radius:999px;background:rgba(76,175,125,0.12);border:1px solid rgba(76,175,125,0.25);font-size:11px;font-weight:700;color:#4CAF7D;letter-spacing:.03em;"></div>
   </div>
   <div class="top-header-right">
@@ -1139,7 +1175,7 @@
 
     </div>
     <div class="nav-footer">
-      <div class="nav-footer-text">Pickleball Registry v1.0<br>Powered by Supabase</div>
+      <div class="nav-footer-text">PBConnect v1.0<br>Powered by Supabase</div>
     </div>
   </nav>
 
@@ -2871,7 +2907,7 @@
         </div>
 
         <div style="text-align:center;padding:20px;border-top:1px solid var(--border);color:var(--dim);font-size:12px;">
-          Pickleball Registry · Built with ❤️ for the pickleball community<br>
+          PBConnect · Built with ❤️ for the pickleball community<br>
           A portion of future proceeds supports <strong style="color:var(--green);">A Tiny Ripple of Hope</strong>
         </div>
       </div>
@@ -2956,7 +2992,7 @@
     <div style="margin-bottom:20px;">
       <div style="font-size:28px;margin-bottom:8px;">📱</div>
       <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:4px;">Share My Profile</div>
-      <div style="font-size:13px;color:var(--dim);line-height:1.5;">Point a phone camera at this code to join Pickleball Registry and connect with you instantly</div>
+      <div style="font-size:13px;color:var(--dim);line-height:1.5;">Point a phone camera at this code to join PBConnect and connect with you instantly</div>
     </div>
 
     <!-- QR Code canvas -->
@@ -7146,6 +7182,14 @@ function startChangeDetection(){
         const currentNorm=S.anytime?'Anytime':[...S.schedule].sort().join(',');
         return storedNorm!==currentNorm;
       })()||
+      // Coach fields
+      (S.isCoach==='Yes')!==(p.is_coach||false)||
+      [...(S.coachCerts||[])].sort().join(',')!==(p.coach_certifications||'').split(',').map(s=>s.trim()).filter(Boolean).sort().join(',')||
+      [...(S.coachLessonTypes||[])].sort().join(',')!==(p.coach_lesson_types||'').split(',').map(s=>s.trim()).filter(Boolean).sort().join(',')||
+      [...(S.coachFormats||[])].sort().join(',')!==(p.coach_formats||'').split(',').map(s=>s.trim()).filter(Boolean).sort().join(',')||
+      String(document.getElementById('coachRateMin')?.value||'')!==String(p.coach_rate_min||'')||
+      String(document.getElementById('coachRateMax')?.value||'')!==String(p.coach_rate_max||'')||
+      (document.getElementById('coachBio')?.value||'').trim()!==(p.coach_bio||'').trim()||
       currentEmoji!==(p.avatar_emoji||'🎾')||
       String(S.skill||'')!==String(p.skill_level||'')||
       String(S.goalRating||'')!==String(p.goal_rating||'')||
@@ -8321,8 +8365,8 @@ async function shareInviteLink(){
   if(!_qrInviteUrl) return;
   const myName = ((SESSION_PLAYER?.first_name||'')).trim() || 'Someone';
   const shareData = {
-    title: 'Join me on Pickleball Registry!',
-    text: myName + ' invited you to join Pickleball Registry — the best way to find pickleball players near you. 🎾',
+    title: 'Join me on PBConnect!',
+    text: myName + ' invited you to join PBConnect — the best way to find pickleball players near you. 🎾',
     url: _qrInviteUrl
   };
   try{
@@ -8365,8 +8409,8 @@ async function sendInvite(method){
   if(method==='email'){
     const pubKey=window.EMAILJS_PUBLIC_KEY;
     if(!pubKey||pubKey==='YOUR_PUBLIC_KEY'){
-      const subject=encodeURIComponent(myName+' invited you to Pickleball Registry! 🎾');
-      const body=encodeURIComponent('Hi!\n\n'+myName+' personally invited you to join Pickleball Registry.\n\n'+(note?'"'+note+'"\n\n':'')+'Set up your player profile here:\n'+inviteUrl+'\n\nSee you on the court! 🏓');
+      const subject=encodeURIComponent(myName+' invited you to PBConnect! 🎾');
+      const body=encodeURIComponent('Hi!\n\n'+myName+' personally invited you to join PBConnect.\n\n'+(note?'"'+note+'"\n\n':'')+'Set up your player profile here:\n'+inviteUrl+'\n\nSee you on the court! 🏓');
       window.open('mailto:'+inviteeEmail+'?subject='+subject+'&body='+body);
       if(statusEl) statusEl.textContent='';
       showToast('📧 Email app opened!','#4CAF7D');
@@ -8393,7 +8437,7 @@ async function sendInvite(method){
     }catch(e){if(statusEl) statusEl.textContent='⚠️ Email error: '+(e.text||e.message||'Unknown error');}
   }
   if(method==='sms'){
-    const smsBody=encodeURIComponent(myName+' invited you to join Pickleball Registry! 🎾 '+(note?'"'+note+'" ':'')+inviteUrl);
+    const smsBody=encodeURIComponent(myName+' invited you to join PBConnect! 🎾 '+(note?'"'+note+'" ':'')+inviteUrl);
     window.open('sms:'+(inviteePhone?'+1'+inviteePhone:'')+'?body='+smsBody);
     if(statusEl) statusEl.textContent='';
     showToast('✅ SMS app opened!','#4CAF7D');
