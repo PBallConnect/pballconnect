@@ -3,16 +3,32 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-<meta name="application-name" content="PBConnect"/>
+<meta name="application-name" content="Pickleball Registry"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<meta name="apple-mobile-web-app-title" content="PBConnect"/>
+<meta name="apple-mobile-web-app-title" content="PB Registry"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="theme-color" content="#0a120b"/>
 <meta name="description" content="Connect with pickleball players near you. Find games, build your Inner Circle, track scores and stats."/>
-<meta property="og:title" content="PBConnect — Find Pickleball Players Near You"/>
+<meta property="og:title" content="Pickleball Registry — Find Players Near You"/>
 <meta property="og:description" content="Connect with pickleball players, organize matches, track scores."/>
 <meta property="og:type" content="website"/>
+<!-- PWA Manifest (inline) -->
+<link rel="manifest" href="data:application/manifest+json,{
+  &quot;name&quot;:&quot;Pickleball Registry&quot;,
+  &quot;short_name&quot;:&quot;PB Registry&quot;,
+  &quot;description&quot;:&quot;Find pickleball players near you&quot;,
+  &quot;start_url&quot;:&quot;/&quot;,
+  &quot;display&quot;:&quot;standalone&quot;,
+  &quot;background_color&quot;:&quot;#0a120b&quot;,
+  &quot;theme_color&quot;:&quot;#0a120b&quot;,
+  &quot;orientation&quot;:&quot;portrait&quot;,
+  &quot;icons&quot;:[
+    {&quot;src&quot;:&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230a120b'/><text y='.9em' font-size='80' x='10'>🏓</text></svg>&quot;,&quot;sizes&quot;:&quot;any&quot;,&quot;type&quot;:&quot;image/svg+xml&quot;}
+  ]
+}"/>
+<!-- Apple touch icon (emoji-based) -->
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230a120b'/><text y='.9em' font-size='80' x='10'>🏓</text></svg>"/>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com data:; connect-src *; img-src 'self' data: blob: https:; worker-src 'none';">
 <title>PBConnect</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
@@ -4087,20 +4103,20 @@ async function doSaveProfile(){
     showToast('⚠️ Could not save: ' + err.message);
   }
 
-  btn.textContent = SESSION_PLAYER ? '✏️ Update Profile' : '🎉 Complete Registration';
-  btn.disabled = false;
+  if(btn){ btn.textContent = SESSION_PLAYER ? '✏️ Update Profile' : '🎉 Complete Registration';
+  btn.disabled = false; }
 
-  // Show confirmation screen
-  document.getElementById('confirmName').textContent=v('firstName')+' '+v('lastName');
-  document.getElementById('confirmEmailDisp').textContent=v('email');
-  document.getElementById('cEmail').textContent=v('email');
-  document.getElementById('cSkill').textContent=S.skill;
-  document.getElementById('cState').textContent=S.state||'—';
-  document.getElementById('cCity').textContent=S.city||'—';
-  document.getElementById('cDupr').textContent=S.duprVal||'Not set';
-  if(S.courtName){document.getElementById('cCourtStat').style.display='block';document.getElementById('cCourt').textContent=S.courtName;}
+  // Show confirmation screen elements — only exist for new registrations, guard all
+  const _cn=document.getElementById('confirmName'); if(_cn) _cn.textContent=v('firstName')+' '+v('lastName');
+  const _ce=document.getElementById('confirmEmailDisp'); if(_ce) _ce.textContent=v('email');
+  const _cEmail=document.getElementById('cEmail'); if(_cEmail) _cEmail.textContent=v('email');
+  const _cSkill=document.getElementById('cSkill'); if(_cSkill) _cSkill.textContent=S.skill;
+  const _cState=document.getElementById('cState'); if(_cState) _cState.textContent=S.state||'—';
+  const _cCity=document.getElementById('cCity'); if(_cCity) _cCity.textContent=S.city||'—';
+  const _cDupr=document.getElementById('cDupr'); if(_cDupr) _cDupr.textContent=S.duprVal||'Not set';
+  if(S.courtName){const cs=document.getElementById('cCourtStat');const cc=document.getElementById('cCourt');if(cs)cs.style.display='block';if(cc)cc.textContent=S.courtName;}
   const av=document.getElementById('confirmAvatar');
-  av.innerHTML=S.photoSrc?`<img class="confirm-avatar" src="${S.photoSrc}"/>`:`<div class="confirm-avatar-ph">👤</div>`;
+  if(av) av.innerHTML=S.photoSrc?`<img class="confirm-avatar" src="${S.photoSrc}"/>`:`<div class="confirm-avatar-ph">👤</div>`;
   // If editing existing profile, skip overlay — go straight to inner circle
   if(SESSION_PLAYER){
     showPage('innerCircle');
@@ -8551,6 +8567,40 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
 }
 
 document.addEventListener('DOMContentLoaded',checkInviteToken);
+
+// Register service worker for PWA offline support
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    // Inline service worker via blob URL
+    const swCode = `
+      const CACHE = 'pb-registry-v1';
+      const OFFLINE_URLS = ['/'];
+      self.addEventListener('install', e => {
+        e.waitUntil(caches.open(CACHE).then(c => c.addAll(OFFLINE_URLS)));
+        self.skipWaiting();
+      });
+      self.addEventListener('activate', e => {
+        e.waitUntil(caches.keys().then(keys =>
+          Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+        ));
+        self.clients.claim();
+      });
+      self.addEventListener('fetch', e => {
+        if(e.request.method !== 'GET') return;
+        // Network first for API calls, cache first for app shell
+        if(e.request.url.includes('supabase') || e.request.url.includes('emailjs') || e.request.url.includes('nominatim')){
+          return; // Always network for API calls
+        }
+        e.respondWith(
+          fetch(e.request).catch(() => caches.match(e.request).then(r => r || caches.match('/')))
+        );
+      });
+    `;
+    const blob = new Blob([swCode], {type:'application/javascript'});
+    const swUrl = URL.createObjectURL(blob);
+    navigator.serviceWorker.register(swUrl).catch(()=>{});
+  });
+}
 
 // ══════════════════════════════════════════════════════
 // MATCH WEATHER
