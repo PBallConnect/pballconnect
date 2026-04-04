@@ -310,6 +310,8 @@
     padding:2px 7px;border-radius:999px;}
   .nav-footer{padding:16px 20px;border-top:1px solid rgba(76,175,125,0.12);}
   .nav-footer-text{color:var(--dim);font-size:10px;line-height:1.6;}
+  .nav-section-label{font-size:9px;font-weight:800;color:var(--dim);text-transform:uppercase;
+    letter-spacing:.12em;padding:10px 20px 4px;opacity:0.6;}
 
   /* ── Mobile nav toggle ────────────────────────────── */
   .nav-toggle{display:none;background:none;border:none;color:#fff;font-size:22px;
@@ -1127,68 +1129,75 @@
     </div>
     <div class="nav-items">
 
-      <!-- Section 1: Profile & Stats -->
-      <div class="nav-item active" onclick="showPage('playerProfile')" id="nav-playerProfile" title="Player Profile — your registration and playing preferences">
-        <span class="nav-icon">👤</span>
-        <span class="nav-label">Player Profile</span>
+      <!-- ── Player ── -->
+      <div class="nav-section-label">Player</div>
+      <div class="nav-item active" onclick="showPage('playerProfile')" id="nav-playerProfile" title="Player Profile">
+        <span class="nav-icon">👤</span><span class="nav-label">Player Profile</span>
       </div>
-      <div class="nav-item" onclick="showPage('playerStats')" id="nav-playerStats" title="Player Statistics — your performance and community snapshot">
-        <span class="nav-icon">📊</span>
-        <span class="nav-label">Player Statistics</span>
+      <div class="nav-item" onclick="showPage('playerStats')" id="nav-playerStats" title="Player Statistics">
+        <span class="nav-icon">📊</span><span class="nav-label">Player Statistics</span>
       </div>
-      <div class="nav-item" onclick="showPage('innerCircle')" id="nav-innerCircle" title="Inner Circle — your trusted pickleball connections">
-        <span class="nav-icon">👥</span>
-        <span class="nav-label">Inner Circle</span>
-        <span id="icNavGreenBadge" class="nav-circle-badge nav-circle-green placeholder" style="cursor:pointer;opacity:0.4;" onclick="showIcView('members')" title="Green Circle — your approved Inner Circle members (click to view)">0</span>
-        <span id="icNavYellowBadge" class="nav-circle-badge nav-circle-yellow placeholder" style="cursor:pointer;opacity:0.4;" onclick="showIcView('invited')" title="Yellow Circle — invites you sent awaiting acceptance (click to view)">0</span>
-        <span id="icNavPurpleBadge" class="nav-circle-badge nav-circle-purple placeholder" title="Purple Circle — players requesting YOU to join their Inner Circle (click to view)" style="cursor:pointer;" onclick="showIcView('incoming')">0</span>
+      <div class="nav-item" onclick="showPage('recordScores')" id="nav-recordScores" title="Record / View Scores">
+        <span class="nav-icon">🏆</span><span class="nav-label">Record / View Scores</span>
       </div>
-      <div class="nav-item" onclick="showPage('myCourts')" id="nav-myCourts" title="My Courts — find pickleball courts near you">
-        <span class="nav-icon">🏟️</span>
-        <span class="nav-label">My Courts</span>
+
+      <!-- Separator -->
+      <div style="height:1px;background:var(--border);margin:6px 20px;opacity:0.5;"></div>
+
+      <div class="nav-item" onclick="showPage('innerCircle')" id="nav-innerCircle" title="Inner Circle">
+        <span class="nav-icon">👥</span><span class="nav-label">Inner Circle</span>
+        <span id="icNavGreenBadge" class="nav-circle-badge nav-circle-green placeholder" style="cursor:pointer;opacity:0.4;" onclick="showIcView('members')" title="Approved members">0</span>
+        <span id="icNavYellowBadge" class="nav-circle-badge nav-circle-yellow placeholder" style="cursor:pointer;opacity:0.4;" onclick="showIcView('invited')" title="Pending invites">0</span>
+        <span id="icNavPurpleBadge" class="nav-circle-badge nav-circle-purple placeholder" style="cursor:pointer;" onclick="showIcView('incoming')" title="Requests to you">0</span>
+      </div>
+      <div class="nav-item" onclick="showPage('myCourts')" id="nav-myCourts" title="My Courts">
+        <span class="nav-icon">🏟️</span><span class="nav-label">My Courts</span>
         <span id="navCourtPublic" title="Public Courts" style="display:none;margin-left:2px;min-width:20px;height:20px;border-radius:4px;background:rgba(76,175,125,0.2);border:1px solid rgba(76,175,125,0.4);color:var(--green);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 5px;cursor:default;"></span>
         <span id="navCourtPrivate" title="Private Courts" style="display:none;margin-left:3px;min-width:20px;height:20px;border-radius:4px;background:rgba(140,100,255,0.2);border:1px solid rgba(140,100,255,0.4);color:#a78bfa;font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 5px;cursor:default;"></span>
       </div>
 
       <!-- Separator -->
-      <div style="height:1px;background:var(--border);margin:8px 20px;opacity:0.6;"></div>
+      <div style="height:1px;background:var(--border);margin:6px 20px;opacity:0.5;"></div>
 
-      <!-- Section 2: Matches -->
-      <div class="nav-item" onclick="showPage('myInvites')" id="nav-myInvites" title="My Match Invites — matches you've organized">
-        <span class="nav-icon">📤</span>
-        <span class="nav-label">My Match Invites</span>
-        <span id="myInvitesBadge" style="display:none;background:rgba(239,68,68,0.85);color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;"></span>
-      </div>
-      <div class="nav-item" onclick="showPage('invitedByOthers')" id="nav-invitedByOthers" title="Invited by Others — matches you've been invited to">
-        <span class="nav-icon">📥</span>
-        <span class="nav-label">Invited by Others</span>
-        <span id="invitedByOthersBadge" style="display:none;background:rgba(59,130,246,0.85);color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;"></span>
-      </div>
-      <div class="nav-item" onclick="showPage('setupMatch')" id="nav-setupMatch" title="Set Up A Match — organize a game with your Inner Circle">
-        <span class="nav-icon">🎯</span>
-        <span class="nav-label">Set Up A Match</span>
-      </div>
-      <div class="nav-item" onclick="showPage('findPlayers')" id="nav-findPlayers" title="Players Wanting to Play — find players looking for a game">
-        <span class="nav-icon">🔍</span>
-        <span class="nav-label">Players Wanting to Play</span>
+      <!-- ── Matches ── -->
+      <div class="nav-section-label">Matches</div>
+      <div class="nav-item" onclick="showPage('confirmedMatches')" id="nav-confirmedMatches" title="Confirmed Matches — upcoming confirmed games">
+        <span class="nav-icon">✅</span><span class="nav-label">Confirmed Matches</span>
+        <span id="confirmedMatchesBadge" style="display:none;min-width:20px;height:20px;border-radius:50%;background:rgba(76,175,125,0.85);color:#0a120b;font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;"></span>
       </div>
 
       <!-- Separator -->
-      <div style="height:1px;background:var(--border);margin:8px 20px;opacity:0.6;"></div>
+      <div style="height:1px;background:var(--border);margin:6px 20px;opacity:0.5;"></div>
 
-      <!-- Section 3: Lessons & Info -->
-      <div class="nav-item nav-lessons-dim" onclick="showPage('myLessons')" id="nav-myLessons" title="My Lessons — track your lesson bookings">
-        <span class="nav-icon">📚</span>
-        <span class="nav-label">My Lessons</span>
+      <div class="nav-item" onclick="showPage('myInvites')" id="nav-myInvites" title="My Match Invites — pending matches you organized">
+        <span class="nav-icon">📤</span><span class="nav-label">My Match Invites</span>
+        <span id="myInvitesBadge" style="display:none;min-width:18px;height:18px;border-radius:999px;background:rgba(239,68,68,0.85);color:#fff;font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;"></span>
       </div>
-      <div class="nav-item nav-lessons-dim" onclick="showPage('lessons')" id="nav-lessons" title="Coaching — find a coach or register as one">
-        <span class="nav-icon">🎓</span>
-        <span class="nav-label">Coaching</span>
+      <div class="nav-item" onclick="showPage('invitedByOthers')" id="nav-invitedByOthers" title="Invited by Others — matches needing your response">
+        <span class="nav-icon">📥</span><span class="nav-label">Invited by Others</span>
+        <span id="invitedByOthersBadge" style="display:none;min-width:18px;height:18px;border-radius:999px;background:rgba(59,130,246,0.85);color:#fff;font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;"></span>
+      </div>
+      <div class="nav-item" onclick="showPage('setupMatch')" id="nav-setupMatch" title="Set Up A Match">
+        <span class="nav-icon">🎯</span><span class="nav-label">Set Up A Match</span>
+      </div>
+      <div class="nav-item" onclick="showPage('findPlayers')" id="nav-findPlayers" title="Players Wanting to Play">
+        <span class="nav-icon">🔍</span><span class="nav-label">Players Wanting to Play</span>
+      </div>
+
+      <!-- Separator -->
+      <div style="height:1px;background:var(--border);margin:6px 20px;opacity:0.5;"></div>
+
+      <!-- ── Lessons ── -->
+      <div class="nav-section-label">Lessons</div>
+      <div class="nav-item nav-lessons-dim" onclick="showPage('myLessons')" id="nav-myLessons" title="My Lessons">
+        <span class="nav-icon">📚</span><span class="nav-label">My Lessons</span>
+      </div>
+      <div class="nav-item nav-lessons-dim" onclick="showPage('lessons')" id="nav-lessons" title="Coaching">
+        <span class="nav-icon">🎓</span><span class="nav-label">Coaching</span>
         <span class="nav-lessons-badge" id="lessonsNavBadge" style="display:none;">New</span>
       </div>
       <div class="nav-item" onclick="showPage('privacy')" id="nav-privacy" title="Privacy Policy">
-        <span class="nav-icon">🔒</span>
-        <span class="nav-label">Privacy Policy</span>
+        <span class="nav-icon">🔒</span><span class="nav-label">Privacy Policy</span>
       </div>
 
     </div>
@@ -2817,6 +2826,24 @@
       </div>
     </div>
     <!-- MY INVITES PAGE -->
+    <!-- CONFIRMED MATCHES PAGE -->
+    <div class="page-section" id="page-confirmedMatches">
+      <div class="page-header">
+        <h1>✅ Confirmed <span>Matches</span></h1>
+        <p>Upcoming matches you're confirmed to play</p>
+      </div>
+      <div id="confirmedMatchesList"></div>
+    </div>
+
+    <!-- RECORD / VIEW SCORES PAGE -->
+    <div class="page-section" id="page-recordScores">
+      <div class="page-header">
+        <h1>🏆 Record / <span>View Scores</span></h1>
+        <p>Record scores and view your match history</p>
+      </div>
+      <div id="recordScoresList"></div>
+    </div>
+
     <div class="page-section" id="page-myInvites">
       <div class="page-header">
         <h1>My Match <span>Invites</span></h1>
@@ -4333,6 +4360,8 @@ function showPage(page){
   if(page==='findPlayers')  initFindPlayers();
   if(page==='playerStats')   { loadCommunitySnapshot(); }
   if(page==='setupMatch')     { initSetupMatch(); loadMatchSquareCounts(); }
+  if(page==='confirmedMatches') { loadConfirmedMatches(); }
+  if(page==='recordScores')  { loadRecordScores(); }
   if(page==='myInvites')      { loadMyInvitesPage(); }
   if(page==='invitedByOthers'){ loadInvitedByOthersPage(); }
 }
@@ -6333,6 +6362,240 @@ async function loadMatchSquareCounts(){
 }
 
 // ── My Match Invites page ────────────────────────────────
+// ══════════════════════════════════════════════════════
+// CONFIRMED MATCHES + RECORD/VIEW SCORES
+// ══════════════════════════════════════════════════════
+
+async function loadConfirmedMatches(){
+  const myEmail = getMyEmail();
+  const container = document.getElementById('confirmedMatchesList');
+  if(!container) return;
+  if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in.</div>'; return; }
+  container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;">Loading…</div>';
+  try{
+    // Get matches where I'm organizer OR confirmed "in"
+    const [orgRes, respRes] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=eq.full&order=match_date.asc,time_start.asc`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}),
+      fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.in&select=match_id`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}})
+    ]);
+    const orgMatches = orgRes.ok ? await orgRes.json() : [];
+    const myResponses = respRes.ok ? await respRes.json() : [];
+
+    // Fetch matches I'm confirmed in (organized by others)
+    let invitedMatches = [];
+    if(myResponses.length){
+      const ids = myResponses.map(r=>r.match_id);
+      const imRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/matches?id=in.(${ids.join(',')})&status=eq.full&order=match_date.asc`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      invitedMatches = imRes.ok ? await imRes.json() : [];
+    }
+
+    // Combine, dedupe, filter to FUTURE only
+    const allIds = new Set();
+    const allMatches = [...orgMatches, ...invitedMatches].filter(m=>{
+      if(allIds.has(m.id)) return false;
+      allIds.add(m.id);
+      return !isMatchPast(m);
+    });
+
+    // Update nav badge
+    updateConfirmedBadge(allMatches.length);
+
+    container.innerHTML='';
+    if(!allMatches.length){
+      container.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--dim);font-size:14px;">'+
+        'No confirmed upcoming matches yet.<br><br>'+
+        '<button onclick="showPage(\'setupMatch\')" style="padding:10px 22px;border-radius:10px;border:none;'+
+        'background:var(--green);color:var(--dark);font-weight:700;cursor:pointer;font-size:13px;">🎯 Set Up A Match</button>'+
+        '</div>';
+      return;
+    }
+
+    // Fetch responses for all matches
+    const matchIds = allMatches.map(m=>m.id);
+    const rRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${matchIds.join(',')})&response=eq.in&select=match_id,player_name,player_email`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const responses = rRes.ok ? await rRes.json() : [];
+
+    allMatches.forEach(m=>{
+      const dateStr = m.match_date ? new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}) : '—';
+      const timeStr = m.time_start ? fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):'') : '—';
+      const players = responses.filter(r=>r.match_id===m.id);
+      const daysUntil = m.match_date ? Math.ceil((new Date(m.match_date+'T12:00')-new Date())/(1000*60*60*24)) : null;
+      const urgency = daysUntil===0?'TODAY 🔥':daysUntil===1?'TOMORROW ⚡':daysUntil!=null?`In ${daysUntil} days`:'';
+
+      const card = document.createElement('div');
+      card.style.cssText='background:rgba(76,175,125,0.06);border:1px solid rgba(76,175,125,0.25);border-radius:16px;padding:16px;margin-bottom:14px;';
+      card.innerHTML=
+        '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;">'+
+          '<span style="font-size:24px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span>'+
+          '<div style="flex:1;">'+
+            '<div style="color:#fff;font-size:15px;font-weight:700;">'+dateStr+'</div>'+
+            '<div style="color:var(--dim);font-size:12px;">'+timeStr+' · '+(m.court_name||'Court TBD')+'</div>'+
+          '</div>'+
+          (urgency?'<div style="padding:3px 10px;border-radius:999px;background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.3);color:var(--green);font-size:10px;font-weight:700;">'+urgency+'</div>':'')+
+        '</div>'+
+        '<div style="font-size:12px;color:var(--dim);border-top:1px solid rgba(255,255,255,0.06);padding-top:8px;">'+
+          '✅ Confirmed: '+players.map(p=>p.player_name||p.player_email).join(', ')+
+        '</div>';
+      container.appendChild(card);
+    });
+  }catch(e){
+    container.innerHTML='<div style="color:#f87171;font-size:13px;">Error loading matches.</div>';
+  }
+}
+
+async function loadRecordScores(){
+  const myEmail = getMyEmail();
+  const container = document.getElementById('recordScoresList');
+  if(!container) return;
+  if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in.</div>'; return; }
+  container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;">Loading…</div>';
+  try{
+    // Get past matches where I'm organizer or confirmed in
+    const [orgRes, respRes] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&order=match_date.desc`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}),
+      fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.in&select=match_id`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}})
+    ]);
+    const orgMatches = orgRes.ok ? await orgRes.json() : [];
+    const myResponses = respRes.ok ? await respRes.json() : [];
+    let invitedMatches = [];
+    if(myResponses.length){
+      const ids = myResponses.map(r=>r.match_id);
+      const imRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/matches?id=in.(${ids.join(',')})&order=match_date.desc`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      invitedMatches = imRes.ok ? await imRes.json() : [];
+    }
+    const allIds = new Set();
+    const pastMatches = [...orgMatches,...invitedMatches].filter(m=>{
+      if(allIds.has(m.id)) return false; allIds.add(m.id); return isMatchPast(m);
+    });
+
+    container.innerHTML='';
+    if(!pastMatches.length){
+      container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">No past matches yet.</div>';
+      return;
+    }
+
+    // Fetch existing scores
+    const matchIds = pastMatches.map(m=>m.id);
+    const srRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/match_results?match_id=in.(${matchIds.join(',')})&select=match_id,game_number,team_a_score,team_b_score`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const scores = srRes.ok ? await srRes.json() : [];
+
+    pastMatches.forEach(m=>{
+      const dateStr = m.match_date ? new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}) : '—';
+      const timeStr = m.time_start ? fmt12(m.time_start) : '';
+      const matchScores = scores.filter(s=>s.match_id===m.id);
+      const hasScores = matchScores.length > 0;
+
+      const card = document.createElement('div');
+      card.style.cssText='background:rgba(255,255,255,0.03);border:1px solid '+(hasScores?'rgba(76,175,125,0.2)':'var(--border)')+';border-radius:16px;padding:16px;margin-bottom:12px;';
+
+      let scoresHtml = '';
+      if(hasScores){
+        scoresHtml = '<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);">';
+        matchScores.forEach(s=>{
+          scoresHtml += '<div style="font-size:13px;color:#fff;margin-bottom:4px;">'+
+            'Game '+s.game_number+': <strong>'+(s.team_a_score>s.team_b_score?s.team_a_score:s.team_b_score)+'</strong> – '+(s.team_a_score>s.team_b_score?s.team_b_score:s.team_a_score)+'</div>';
+        });
+        scoresHtml += '</div>';
+      }
+
+      card.innerHTML=
+        '<div style="display:flex;align-items:flex-start;gap:10px;">'+
+          '<span style="font-size:22px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span>'+
+          '<div style="flex:1;">'+
+            '<div style="color:'+(hasScores?'var(--green)':'#fff')+';font-size:14px;font-weight:700;">'+dateStr+(timeStr?' · '+timeStr:'')+'</div>'+
+            '<div style="color:var(--dim);font-size:12px;">'+(m.court_name||'Court TBD')+'</div>'+
+          '</div>'+
+          '<button onclick="openRecordResults(\''+m.id+'\',\''+m.match_type+'\')" '+
+            'style="padding:7px 14px;border-radius:8px;border:none;background:var(--green);color:var(--dark);'+
+            'font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0;">'+
+            (hasScores?'✏️ Edit Score':'🏓 Record Score')+
+          '</button>'+
+        '</div>'+scoresHtml;
+      container.appendChild(card);
+    });
+  }catch(e){
+    container.innerHTML='<div style="color:#f87171;font-size:13px;">Error loading scores.</div>';
+  }
+}
+
+function updateConfirmedBadge(count){
+  const badge = document.getElementById('confirmedMatchesBadge');
+  if(!badge) return;
+  if(count > 0){
+    badge.textContent = count;
+    badge.style.display = 'inline-flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+async function loadAllMatchBadges(){
+  const myEmail = getMyEmail();
+  if(!myEmail) return;
+  try{
+    // Pending invites I organized (open, not full, not past)
+    const orgRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=eq.open&select=id,match_date,time_end,time_start`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const orgMatches = orgRes.ok ? await orgRes.json() : [];
+    const pendingOrg = orgMatches.filter(m=>!isMatchPast(m)).length;
+    const myInvBadge = document.getElementById('myInvitesBadge');
+    if(myInvBadge){
+      myInvBadge.textContent = pendingOrg;
+      myInvBadge.style.display = pendingOrg > 0 ? 'inline-flex' : 'none';
+    }
+
+    // Invites to me that I haven't responded to (pending response)
+    const rRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.pending&select=match_id`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const pending = rRes.ok ? await rRes.json() : [];
+    const iboCount = pending.length;
+    const iboBadge = document.getElementById('invitedByOthersBadge');
+    if(iboBadge){
+      iboBadge.textContent = iboCount;
+      iboBadge.style.display = iboCount > 0 ? 'inline-flex' : 'none';
+    }
+
+    // Confirmed future matches
+    const [cfOrgRes, cfRespRes] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=eq.full&select=id,match_date,time_start,time_end`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}),
+      fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.in&select=match_id`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}})
+    ]);
+    const cfOrg = cfOrgRes.ok ? await cfOrgRes.json() : [];
+    const cfResp = cfRespRes.ok ? await cfRespRes.json() : [];
+    let cfInvited = [];
+    if(cfResp.length){
+      const ids = cfResp.map(r=>r.match_id);
+      const cfIRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/matches?id=in.(${ids.join(',')})&status=eq.full&select=id,match_date,time_start,time_end`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      cfInvited = cfIRes.ok ? await cfIRes.json() : [];
+    }
+    const allConfirmedIds = new Set();
+    const confirmedCount = [...cfOrg,...cfInvited].filter(m=>{
+      if(allConfirmedIds.has(m.id)) return false;
+      allConfirmedIds.add(m.id);
+      return !isMatchPast(m);
+    }).length;
+    updateConfirmedBadge(confirmedCount);
+  }catch(e){}
+}
+
 async function loadMyInvitesPage(){
   const myEmail=getMyEmail();
   const container=document.getElementById('myInvitesList');
@@ -6811,8 +7074,15 @@ async function doLogin(){
     if(!players.length){
       if(loadingEl) loadingEl.style.display='none';
       if(formEl) formEl.style.display='block';
-      if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent='Sign In →'; }
-      if(errorEl){ errorEl.textContent='No account found for that email.'; errorEl.style.display='block'; }
+      if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent='Create My Profile →'; }
+      // New user — save email, close modal, take them to registration
+      if(errorEl){
+        errorEl.innerHTML='<div style="padding:10px 12px;background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.25);border-radius:8px;color:var(--green);">'+
+          '👋 Looks like you\'re new! Let\'s build your profile.'+
+          '<br><button onclick="startNewRegistration(\''+email+'\')" style="margin-top:8px;width:100%;padding:10px;border-radius:8px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:13px;cursor:pointer;">'+
+          '🎾 Create My Profile →</button></div>';
+        errorEl.style.display='block';
+      }
       return;
     }
     const player = players[0];
@@ -6939,6 +7209,8 @@ async function restoreSession(email, playerData){
   setTimeout(loadMatchSquareCounts, 800);
   // Load court badges for nav
   setTimeout(()=>loadCourtBadgesForNav(player.email), 600);
+  // Load all match nav badges
+  setTimeout(loadAllMatchBadges, 1000);
 
   if(!S.addrLat && player.city && player.state) geocodeCityForSession(player.city, player.state);
   showPage('innerCircle');
@@ -8737,43 +9009,113 @@ async function sendMutualInvite(theirEmail, theirName){
   setTimeout(()=>document.getElementById('mutualInvitePrompt')?.remove(), 1500);
 }
 
+function startNewRegistration(email){
+  // Close login modal, pre-fill email, scroll to registration form
+  closeLoginModal();
+  const emailEl = document.getElementById('email');
+  if(emailEl){ emailEl.value = email; }
+  showPage('playerProfile');
+  setTimeout(()=>{
+    window.scrollTo({top:0,behavior:'smooth'});
+    showToast('👋 Welcome! Fill out your profile below.','#4CAF7D');
+  }, 300);
+}
+
 async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
   if(!PENDING_INVITE) return;
-  const inv=PENDING_INVITE;
-  PENDING_INVITE=null;
+  const inv = PENDING_INVITE;
+  PENDING_INVITE = null;
+
+  // Mark invite as registered
   fetch(`${SUPABASE_URL}/rest/v1/invites?invite_token=eq.${inv.invite_token}`,{
     method:'PATCH',
     headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
     body:JSON.stringify({status:'registered'})
   }).catch(()=>{});
-  const inviterName=inv.inviter_name||'your inviter';
-  const overlay=document.createElement('div');
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.88);display:flex;align-items:center;justify-content:center;padding:16px;z-index:700;';
-  overlay.innerHTML=
-    '<div style="background:#0f1f12;border:1px solid var(--green);border-radius:20px;padding:28px 24px;max-width:420px;width:100%;text-align:center;">'+
-      '<div style="font-size:40px;margin-bottom:12px;">&#129309;</div>'+
-      '<div style="font-size:18px;font-weight:800;color:#fff;margin-bottom:8px;">Join '+inviterName+'\'s Inner Circle?</div>'+
-      '<div style="font-size:13px;color:var(--dim);margin-bottom:20px;line-height:1.6;">'+
-        inviterName+' personally invited you. Add them to your Inner Circle so you can set up matches together!'+
+
+  const inviterName = inv.inviter_name || 'Your inviter';
+  const shortName   = inviterName.split(' ')[0];
+
+  // Step 1 overlay — Accept IC invite from inviter
+  const overlay = document.createElement('div');
+  overlay.id = 'inviteAcceptOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);display:flex;align-items:center;justify-content:center;padding:20px;z-index:700;';
+  overlay.innerHTML =
+    '<div style="background:#0f1f12;border:1px solid rgba(76,175,125,0.4);border-radius:20px;padding:28px 24px;max-width:420px;width:100%;text-align:center;">'+
+      '<div style="font-size:48px;margin-bottom:12px;">🤝</div>'+
+      '<div style="font-size:19px;font-weight:800;color:#fff;margin-bottom:8px;">You\'re in, '+newPlayerName.split(' ')[0]+'!</div>'+
+      '<div style="font-size:13px;color:var(--dim);margin-bottom:6px;line-height:1.6;">'+
+        shortName+' invited you to PBConnect. Would you like to join '+shortName+'\'s Inner Circle?'+
       '</div>'+
+      '<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:20px;">Inner Circle lets you set up matches, see schedules, and connect on the court.</div>'+
       '<div style="display:flex;gap:10px;">'+
-        '<button id="icJoinYes" style="flex:1;padding:12px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:14px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">&#10003; Yes, Connect!</button>'+
-        '<button id="icJoinNo" style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Maybe Later</button>'+
+        '<button id="icJoinYes" style="flex:1;padding:13px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:14px;cursor:pointer;">'+
+          '✅ Yes — Join '+shortName+'\'s IC!'+
+        '</button>'+
+        '<button id="icJoinNo" style="flex:1;padding:13px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;">'+
+          'Maybe Later'+
+        '</button>'+
       '</div>'+
     '</div>';
   document.body.appendChild(overlay);
-  document.getElementById('icJoinYes').onclick=async()=>{
+
+  // Step 2 — after accepting or skipping, ask if they want to invite inviter back
+  const showStep2 = async (accepted)=>{
     overlay.remove();
-    try{
-      await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
-        method:'POST',
-        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
-        body:JSON.stringify({requester_email:newPlayerEmail,requester_name:newPlayerName,recipient_email:inv.inviter_email,recipient_name:inv.inviter_name||'',status:'pending'})
-      });
-      showToast('Inner Circle request sent to '+inviterName+'!','#4CAF7D');
-    }catch(e){ showToast('Could not send connection request','#f59e0b'); }
+    if(accepted){
+      try{
+        await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+          body:JSON.stringify({requester_email:newPlayerEmail,requester_name:newPlayerName,recipient_email:inv.inviter_email,recipient_name:inv.inviter_name||'',status:'pending'})
+        });
+        showToast('✅ Inner Circle request sent to '+shortName+'!','#4CAF7D');
+      }catch(e){}
+    }
+
+    // Prompt: would YOU like to invite THEM back to YOUR IC?
+    setTimeout(()=>{
+      const step2 = document.createElement('div');
+      step2.id = 'inviteMutualOverlay';
+      step2.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:700;background:#0a120b;border-top:2px solid rgba(76,175,125,0.4);padding:20px 20px 32px;box-shadow:0 -8px 32px rgba(0,0,0,0.7);';
+      step2.innerHTML =
+        '<div style="display:flex;align-items:flex-start;gap:12px;">'+
+          '<span style="font-size:28px;flex-shrink:0;">👥</span>'+
+          '<div style="flex:1;">'+
+            '<div style="color:#fff;font-weight:700;font-size:15px;margin-bottom:6px;">Invite '+shortName+' to YOUR Inner Circle?</div>'+
+            '<div style="color:var(--dim);font-size:13px;margin-bottom:14px;">'+
+              'Send '+shortName+' a request so they can also add YOU to their Inner Circle — then you can organize matches together!'+
+            '</div>'+
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
+              '<button id="mutualYes2" style="padding:12px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:13px;cursor:pointer;">'+
+                '🏓 Yes, invite '+shortName+'!'+
+              '</button>'+
+              '<button onclick="document.getElementById(\'inviteMutualOverlay\').remove()" style="padding:12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;">Not now</button>'+
+            '</div>'+
+          '</div>'+
+          '<button onclick="document.getElementById(\'inviteMutualOverlay\').remove()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer;flex-shrink:0;padding:0;">✕</button>'+
+        '</div>';
+      document.body.appendChild(step2);
+      document.getElementById('mutualYes2').onclick = async()=>{
+        const btn = document.getElementById('mutualYes2');
+        if(btn){btn.disabled=true;btn.textContent='Sending…';}
+        try{
+          await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
+            method:'POST',
+            headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+            body:JSON.stringify({requester_email:inv.inviter_email,requester_name:inv.inviter_name||'',recipient_email:newPlayerEmail,recipient_name:newPlayerName,status:'pending'})
+          });
+          showToast('🎾 Invite sent! '+shortName+' will be notified.','#4CAF7D');
+        }catch(e){}
+        setTimeout(()=>document.getElementById('inviteMutualOverlay')?.remove(), 1500);
+      };
+      // Auto-dismiss after 20s
+      setTimeout(()=>document.getElementById('inviteMutualOverlay')?.remove(), 20000);
+    }, 500);
   };
-  document.getElementById('icJoinNo').onclick=()=>overlay.remove();
+
+  document.getElementById('icJoinYes').onclick = ()=>showStep2(true);
+  document.getElementById('icJoinNo').onclick  = ()=>showStep2(false);
 }
 
 document.addEventListener('DOMContentLoaded',checkInviteToken);
