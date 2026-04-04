@@ -1146,6 +1146,8 @@
       <div class="nav-item" onclick="showPage('myCourts')" id="nav-myCourts" title="My Courts — find pickleball courts near you">
         <span class="nav-icon">🏟️</span>
         <span class="nav-label">My Courts</span>
+        <span id="navCourtPublic" title="Public Courts" style="display:none;margin-left:2px;min-width:20px;height:20px;border-radius:4px;background:rgba(76,175,125,0.2);border:1px solid rgba(76,175,125,0.4);color:var(--green);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 5px;cursor:default;"></span>
+        <span id="navCourtPrivate" title="Private Courts" style="display:none;margin-left:3px;min-width:20px;height:20px;border-radius:4px;background:rgba(140,100,255,0.2);border:1px solid rgba(140,100,255,0.4);color:#a78bfa;font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 5px;cursor:default;"></span>
       </div>
 
       <!-- Separator -->
@@ -4872,6 +4874,8 @@ async function loadMyCourts(){
       ? `✅ Found ${total} courts — ${priv} private, ${pub} public`
       : '⚠️ No courts found in this area yet';
   }
+  // Update nav court badges
+  updateNavCourtBadges(myCourtsState.public.length, myCourtsState.private.length);
 }
 
 function getCityLatLon(){
@@ -5066,6 +5070,7 @@ async function saveMyCourts(){
   try{
     await Promise.all(promises);
     showToast('✅ Your courts saved!','#4CAF7D');
+    updateNavCourtBadges(myCourtsState.public.length, myCourtsState.private.length);
   }catch(e){
     showToast('⚠️ Could not save courts: '+e.message);
   }
@@ -6877,10 +6882,11 @@ async function restoreSession(email, playerData){
 
   loadIcPending();
   setTimeout(loadMatchSquareCounts, 800);
+  // Load court badges for nav
+  setTimeout(()=>loadCourtBadgesForNav(player.email), 600);
 
   if(!S.addrLat && player.city && player.state) geocodeCityForSession(player.city, player.state);
   showPage('innerCircle');
-  console.log('✅ Session restored for', email);
 }
 
 async function geocodeCityForSession(city, state){
@@ -6892,6 +6898,32 @@ async function geocodeCityForSession(city, state){
       const data = await res.json();
       if(data.length){ S.addrLat=parseFloat(data[0].lat); S.addrLon=parseFloat(data[0].lon); }
     }
+  }catch(e){}
+}
+
+async function loadCourtBadgesForNav(email){
+  if(!email) return;
+  try{
+    // Get player's saved courts
+    const pcRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(email)}&select=court_id`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+    );
+    if(!pcRes.ok) return;
+    const rows = await pcRes.json();
+    if(!rows.length){ updateNavCourtBadges(0,0); return; }
+    const ids = rows.map(r=>r.court_id).filter(Boolean);
+    if(!ids.length){ updateNavCourtBadges(0,0); return; }
+    // Fetch court details to get is_private flag
+    const cRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/courts?id=in.(${ids.map(i=>encodeURIComponent(i)).join(',')})&select=id,is_private`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+    );
+    if(!cRes.ok){ updateNavCourtBadges(ids.length, 0); return; }
+    const courts = await cRes.json();
+    const pubCount  = courts.filter(c=>!c.is_private).length;
+    const privCount = courts.filter(c=> c.is_private).length;
+    updateNavCourtBadges(pubCount, privCount);
   }catch(e){}
 }
 
@@ -7456,12 +7488,38 @@ function buildPendingRequestRow(conn){
 async function icRespond(connId, status, btn){
   btn.disabled=true; btn.textContent=status==='approved'?'Accepting…':'Declining…';
   try{
+    // Get the connection details before patching
+    const connRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/connections?id=eq.${connId}&select=*`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+    );
+    const conns = connRes.ok ? await connRes.json() : [];
+    const conn = conns[0];
+
     await fetch(`${SUPABASE_URL}/rest/v1/connections?id=eq.${connId}`,{
       method:'PATCH',
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
       body:JSON.stringify({status})
     });
-    showToast(status==='approved'?'✅ Added to Inner Circle!':'Request declined','#4CAF7D');
+
+    if(status==='approved'){
+      showToast('✅ Added to Inner Circle!','#4CAF7D');
+      // Check if we already have a connection going the other way
+      if(conn){
+        const myEmail = getMyEmail();
+        const reverseRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(myEmail)}&recipient_email=eq.${encodeURIComponent(conn.requester_email)}&select=id`,
+          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+        );
+        const reverse = reverseRes.ok ? await reverseRes.json() : [];
+        if(!reverse.length){
+          // No reverse connection — offer mutual invite
+          setTimeout(()=>showMutualInvitePrompt(conn.requester_email, conn.requester_name||conn.requester_email), 800);
+        }
+      }
+    } else {
+      showToast('Request declined','#f59e0b');
+    }
     loadIcPending();
     loadInnerCircle();
   }catch(e){ btn.disabled=false; btn.textContent=status==='approved'?'Accept':'Decline'; }
@@ -7528,6 +7586,21 @@ function updateNavCircleBadges(memberCount,pendingCount,incomingCount){
   if(gb){gb.textContent=memberCount;gb.classList.toggle('placeholder',memberCount===0);gb.style.opacity=memberCount>0?'1':'0.4';gb.style.display='inline-flex';}
   if(yb){yb.textContent=pendingCount;yb.classList.toggle('placeholder',pendingCount===0);yb.style.opacity=pendingCount>0?'1':'0.4';yb.style.display='inline-flex';}
   if(pb){const inc=incomingCount||0;pb.textContent=inc;pb.classList.toggle('placeholder',inc===0);pb.style.opacity=inc>0?'1':'0.5';pb.style.display='inline-flex';}
+}
+
+function updateNavCourtBadges(publicCount, privateCount){
+  const pub = document.getElementById('navCourtPublic');
+  const prv = document.getElementById('navCourtPrivate');
+  if(pub){
+    pub.textContent = publicCount;
+    pub.style.display = publicCount > 0 ? 'inline-flex' : 'none';
+    pub.title = publicCount + ' Public Court' + (publicCount !== 1 ? 's' : '');
+  }
+  if(prv){
+    prv.textContent = privateCount;
+    prv.style.display = privateCount > 0 ? 'inline-flex' : 'none';
+    prv.title = privateCount + ' Private Court' + (privateCount !== 1 ? 's' : '');
+  }
 }
 
 // ── Find Players ──────────────────────────────────────
@@ -8058,6 +8131,21 @@ async function loadIcInvites(){
           };
           row.appendChild(cancelBtn);
         }
+        // For accepted invites — offer to send a reverse request
+        if(conn.status==='approved'){
+          const addBackBtn=document.createElement('button');
+          addBackBtn.style.cssText='margin-left:8px;padding:4px 10px;font-size:11px;border-radius:6px;'+
+            'border:1px solid rgba(76,175,125,0.4);background:rgba(76,175,125,0.1);color:var(--green);cursor:pointer;white-space:nowrap;';
+          addBackBtn.textContent='+ Add to my IC';
+          addBackBtn.title='Send '+name+' a request to join your Inner Circle';
+          addBackBtn.onclick=async function(){
+            addBackBtn.disabled=true; addBackBtn.textContent='Sending…';
+            await icSendRequest(conn.recipient_email, conn.recipient_name||name, addBackBtn);
+            addBackBtn.textContent='✅ Sent!';
+          };
+          // Only show if they haven't already requested us back
+          row.appendChild(addBackBtn);
+        }
         list.appendChild(row);
       });
     };
@@ -8549,6 +8637,57 @@ function showInviteBanner(invite){
     '<button onclick="document.getElementById(\'inviteBanner\').remove()" style="background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:22px;flex-shrink:0;padding:0;line-height:1;">✕</button>'+
     '</div>';
   document.body.appendChild(banner);
+}
+
+function showMutualInvitePrompt(theirEmail, theirName){
+  // Remove any existing prompt
+  document.getElementById('mutualInvitePrompt')?.remove();
+
+  const prompt = document.createElement('div');
+  prompt.id = 'mutualInvitePrompt';
+  prompt.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:500;'+
+    'background:#0a120b;border-top:2px solid rgba(76,175,125,0.5);'+
+    'padding:16px 20px 28px;box-shadow:0 -8px 32px rgba(0,0,0,0.7);'+
+    'animation:slideUp .3s ease;';
+
+  const shortName = (theirName||theirEmail).split(' ')[0];
+  prompt.innerHTML =
+    '<div style="display:flex;align-items:flex-start;gap:12px;">'+
+    '<span style="font-size:26px;flex-shrink:0;">👥</span>'+
+    '<div style="flex:1;">'+
+      '<div style="color:#fff;font-weight:700;font-size:15px;margin-bottom:4px;">'+
+        shortName+' is now in your Inner Circle!'+
+      '</div>'+
+      '<div style="color:var(--dim);font-size:13px;line-height:1.5;margin-bottom:12px;">'+
+        'Would you like to add yourself to '+shortName+'\'s Inner Circle too?'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
+        '<button id="mutualYesBtn" onclick="sendMutualInvite(\''+theirEmail+'\',\''+theirName+'\')" '+
+          'style="padding:11px;border-radius:10px;border:none;background:var(--green);'+
+          'color:var(--dark);font-weight:700;font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+
+          '✅ Yes, add me to '+shortName+'\'s IC'+
+        '</button>'+
+        '<button onclick="document.getElementById(\'mutualInvitePrompt\').remove()" '+
+          'style="padding:11px;border-radius:10px;border:1px solid var(--border);'+
+          'background:transparent;color:var(--dim);font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+
+          'Not right now'+
+        '</button>'+
+      '</div>'+
+    '</div>'+
+    '<button onclick="document.getElementById(\'mutualInvitePrompt\').remove()" '+
+      'style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:20px;flex-shrink:0;padding:0;">✕</button>'+
+    '</div>';
+
+  document.body.appendChild(prompt);
+  // Auto-dismiss after 15 seconds
+  setTimeout(()=>document.getElementById('mutualInvitePrompt')?.remove(), 15000);
+}
+
+async function sendMutualInvite(theirEmail, theirName){
+  const btn = document.getElementById('mutualYesBtn');
+  if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
+  await icSendRequest(theirEmail, theirName, btn);
+  setTimeout(()=>document.getElementById('mutualInvitePrompt')?.remove(), 1500);
 }
 
 async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
