@@ -3,20 +3,20 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-<meta name="application-name" content="PBConnect"/>
+<meta name="application-name" content="PBallConnect"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<meta name="apple-mobile-web-app-title" content="PBConnect"/>
+<meta name="apple-mobile-web-app-title" content="PBallConnect"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="theme-color" content="#0a120b"/>
 <meta name="description" content="Connect with pickleball players near you. Find games, build your Inner Circle, track scores and stats."/>
-<meta property="og:title" content="PBConnect — Find Pickleball Players Near You"/>
+<meta property="og:title" content="PBallConnect — Find Pickleball Players Near You"/>
 <meta property="og:description" content="Connect with pickleball players, organize matches, track scores."/>
 <meta property="og:type" content="website"/>
 <!-- PWA Manifest (inline) -->
 <link rel="manifest" href="data:application/manifest+json,{
-  &quot;name&quot;:&quot;PBConnect&quot;,
-  &quot;short_name&quot;:&quot;PBConnect&quot;,
+  &quot;name&quot;:&quot;PBallConnect&quot;,
+  &quot;short_name&quot;:&quot;PBallConnect&quot;,
   &quot;description&quot;:&quot;Find pickleball players near you&quot;,
   &quot;start_url&quot;:&quot;/&quot;,
   &quot;display&quot;:&quot;standalone&quot;,
@@ -30,7 +30,7 @@
 <!-- Apple touch icon (emoji-based) -->
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230a120b'/><text y='.9em' font-size='80' x='10'>🏓</text></svg>"/>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com data:; connect-src *; img-src 'self' data: blob: https:; worker-src 'none';">
-<title>PBConnect — Find Pickleball Players Near You</title>
+<title>PBallConnect — Find Pickleball Players Near You</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
@@ -1056,8 +1056,8 @@
 // ── PWA Manifest (injected inline for single-file deployment) ──
 (function(){
   const manifest = {
-    name: "PBConnect",
-    short_name: "PBConnect",
+    name: "PBallConnect",
+    short_name: "PBallConnect",
     description: "Connect with pickleball players near you",
     start_url: "/",
     display: "standalone",
@@ -1163,7 +1163,7 @@
       <div class="nav-section-label">Matches</div>
       <div class="nav-item" onclick="showPage('confirmedMatches')" id="nav-confirmedMatches" title="Confirmed Matches — upcoming confirmed games">
         <span class="nav-icon">✅</span><span class="nav-label">Confirmed Matches</span>
-        <span id="confirmedMatchesBadge" style="display:none;min-width:20px;height:20px;border-radius:50%;background:rgba(76,175,125,0.85);color:#0a120b;font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;"></span>
+        <span id="confirmedMatchesBadge" style="display:inline-flex;min-width:20px;height:20px;border-radius:50%;background:rgba(76,175,125,0.2);color:rgba(76,175,125,0.5);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;">0></span>
       </div>
 
       <!-- Separator -->
@@ -1171,11 +1171,11 @@
 
       <div class="nav-item" onclick="showPage('myInvites')" id="nav-myInvites" title="My Match Invites — pending matches you organized">
         <span class="nav-icon">📤</span><span class="nav-label">My Match Invites</span>
-        <span id="myInvitesBadge" style="display:none;min-width:18px;height:18px;border-radius:999px;background:rgba(239,68,68,0.85);color:#fff;font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;"></span>
+        <span id="myInvitesBadge" style="display:inline-flex;min-width:18px;height:18px;border-radius:999px;background:rgba(239,68,68,0.3);color:rgba(255,255,255,0.5);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;">0></span>
       </div>
       <div class="nav-item" onclick="showPage('invitedByOthers')" id="nav-invitedByOthers" title="Invited by Others — matches needing your response">
         <span class="nav-icon">📥</span><span class="nav-label">Invited by Others</span>
-        <span id="invitedByOthersBadge" style="display:none;min-width:18px;height:18px;border-radius:999px;background:rgba(59,130,246,0.85);color:#fff;font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;"></span>
+        <span id="invitedByOthersBadge" style="display:inline-flex;min-width:18px;height:18px;border-radius:999px;background:rgba(59,130,246,0.3);color:rgba(255,255,255,0.5);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;">0></span>
       </div>
       <div class="nav-item" onclick="showPage('setupMatch')" id="nav-setupMatch" title="Set Up A Match">
         <span class="nav-icon">🎯</span><span class="nav-label">Set Up A Match</span>
@@ -1202,7 +1202,7 @@
 
     </div>
     <div class="nav-footer">
-      <div class="nav-footer-text">PBConnect v1.0<br>Powered by Supabase</div>
+      <div class="nav-footer-text">PBallConnect v1.0<br>Powered by Supabase</div>
     </div>
   </nav>
 
@@ -1670,7 +1670,7 @@
       <div class="check-text">
         I have read and agree to the
         <span onclick="event.stopPropagation();showPage('privacy')" style="color:var(--green);cursor:pointer;font-weight:600;">Privacy Policy</span>.
-        I understand that PBConnect collects only the minimum data needed to connect players, never sells my information, and I can request deletion of my data at any time.
+        I understand that PBallConnect collects only the minimum data needed to connect players, never sells my information, and I can request deletion of my data at any time.
       </div>
     </div>
     <div class="check-row" onclick="toggleConsent('risk')" style="margin-bottom:20px;">
@@ -2134,7 +2134,7 @@
       <div class="ic-card" id="icInviteCard" style="max-width:100%;margin-bottom:16px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
           <div>
-            <div class="ic-section-label" style="margin-bottom:2px;">📨 Invite a Friend to PBConnect</div>
+            <div class="ic-section-label" style="margin-bottom:2px;">📨 Invite a Friend to PBallConnect</div>
             <div style="font-size:11px;color:var(--dim);">Invite someone by email or text — they'll get a link to set up their profile</div>
           </div>
           <button class="ic-view-toggle-btn" onclick="toggleInviteForm()" id="inviteToggleBtn">
@@ -2165,7 +2165,7 @@
 
           <div style="margin-bottom:14px;">
             <label style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:6px;">Personal Note <span style="color:var(--dim);font-weight:400;">(optional)</span></label>
-            <textarea id="inviteNote" placeholder="Hey! I'd love to play pickleball with you! Join me on PBConnect 🎾"
+            <textarea id="inviteNote" placeholder="Hey! I'd love to play pickleball with you! Join me on PBallConnect 🎾"
               style="width:100%;background:rgba(255,255,255,0.08);border:1px solid var(--border);
                      border-radius:10px;padding:10px 14px;color:#fff;font-size:13px;
                      font-family:'DM Sans',sans-serif;outline:none;resize:vertical;
@@ -2849,6 +2849,14 @@
         <h1>🏆 Record / <span>View Scores</span></h1>
         <p>Record scores and view your match history</p>
       </div>
+      <!-- Walk-on match button -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+        <div style="font-size:13px;color:var(--dim);">Past matches you were part of</div>
+        <button onclick="openWalkOnMatchModal()"
+          style="padding:9px 16px;border-radius:10px;border:1px solid rgba(76,175,125,0.4);background:rgba(76,175,125,0.1);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;">
+          + Record Walk-On Match
+        </button>
+      </div>
       <div id="recordScoresList"></div>
     </div>
 
@@ -2894,7 +2902,7 @@
 
         <div style="background:rgba(76,175,125,0.08);border:1px solid rgba(76,175,125,0.25);border-radius:14px;padding:20px;margin-bottom:24px;">
           <div style="font-size:18px;font-weight:800;color:var(--green);margin-bottom:8px;">Our Commitment to You</div>
-          <div>PBConnect was built by pickleball players, for pickleball players. We collect only what we need to connect you with others who want to play. We will never sell your data, never use it for advertising, and you can delete your account at any time.</div>
+          <div>PBallConnect was built by pickleball players, for pickleball players. We collect only what we need to connect you with others who want to play. We will never sell your data, never use it for advertising, and you can delete your account at any time.</div>
         </div>
 
         <div style="font-size:16px;font-weight:700;color:#fff;margin:20px 0 8px;">What We Collect</div>
@@ -2960,7 +2968,7 @@
         </div>
 
         <div style="text-align:center;padding:20px;border-top:1px solid var(--border);color:var(--dim);font-size:12px;">
-          PBConnect · Built with ❤️ for the pickleball community<br>
+          PBallConnect · Built with ❤️ for the pickleball community<br>
           A portion of future proceeds supports <strong style="color:var(--green);">A Tiny Ripple of Hope</strong>
         </div>
       </div>
@@ -3045,7 +3053,7 @@
     <div style="margin-bottom:20px;">
       <div style="font-size:28px;margin-bottom:8px;">📱</div>
       <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:4px;">Share My Profile</div>
-      <div style="font-size:13px;color:var(--dim);line-height:1.5;">Point a phone camera at this code to join PBConnect and connect with you instantly</div>
+      <div style="font-size:13px;color:var(--dim);line-height:1.5;">Point a phone camera at this code to join PBallConnect and connect with you instantly</div>
     </div>
 
     <!-- QR Code canvas -->
@@ -3076,6 +3084,57 @@
 
     <button onclick="closeQrModal()" style="width:100%;padding:13px;border-radius:12px;border:none;background:rgba(255,255,255,0.08);color:var(--dim);font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
       Close
+    </button>
+  </div>
+</div>
+
+<!-- Walk-On Match Modal -->
+<div id="walkOnModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;align-items:flex-end;justify-content:center;">
+  <div style="background:#0a1a0d;border:1px solid rgba(76,175,125,0.3);border-radius:24px 24px 0 0;padding:24px 20px 40px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div style="font-size:17px;font-weight:800;color:#fff;">+ Record Walk-On Match</div>
+      <button onclick="document.getElementById('walkOnModal').style.display='none'" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:22px;">✕</button>
+    </div>
+    <div style="font-size:13px;color:var(--dim);margin-bottom:20px;line-height:1.5;">
+      Played a match that wasn't set up in the app? Record it here and it'll count toward your stats.
+    </div>
+    <div class="field" style="margin-bottom:14px;">
+      <label>Date Played</label>
+      <input type="date" id="walkOnDate" style="width:100%;padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:#fff;font-size:14px;font-family:'DM Sans',sans-serif;box-sizing:border-box;"/>
+    </div>
+    <div class="field" style="margin-bottom:14px;">
+      <label>Match Type</label>
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <button id="walkOnDoubles" onclick="walkOnSetType('doubles')" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(76,175,125,0.4);background:rgba(76,175,125,0.15);color:var(--green);font-weight:700;font-size:13px;cursor:pointer;">🏓🏓 Doubles</button>
+        <button id="walkOnSingles" onclick="walkOnSetType('singles')" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;">🏓 Singles</button>
+      </div>
+    </div>
+    <div id="walkOnTeamsSection">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#4CAF7D;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Team A</div>
+          <input type="text" id="walkOnA1" placeholder="Player 1 name" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;box-sizing:border-box;margin-bottom:6px;"/>
+          <input type="text" id="walkOnA2" placeholder="Player 2 name (doubles)" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;box-sizing:border-box;"/>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Team B</div>
+          <input type="text" id="walkOnB1" placeholder="Player 1 name" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;box-sizing:border-box;margin-bottom:6px;"/>
+          <input type="text" id="walkOnB2" placeholder="Player 2 name (doubles)" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;box-sizing:border-box;"/>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#4CAF7D;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Team A Score</div>
+          <input type="number" id="walkOnScoreA" placeholder="11" min="0" max="30" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:#fff;font-size:20px;font-weight:700;font-family:'DM Sans',sans-serif;box-sizing:border-box;"/>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Team B Score</div>
+          <input type="number" id="walkOnScoreB" placeholder="8" min="0" max="30" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:#fff;font-size:20px;font-weight:700;font-family:'DM Sans',sans-serif;box-sizing:border-box;"/>
+        </div>
+      </div>
+    </div>
+    <button onclick="saveWalkOnMatch()" style="width:100%;padding:14px;border-radius:12px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:15px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+      ✓ Save Match Result
     </button>
   </div>
 </div>
@@ -3196,7 +3255,7 @@
       <ul style="font-size:12px;color:rgba(255,255,255,0.75);line-height:1.8;margin:8px 0 0 16px;padding:0;">
         <li>This is a photo of yourself</li>
         <li>You are 18 years or older</li>
-        <li>You consent to PBConnect storing this photo</li>
+        <li>You consent to PBallConnect storing this photo</li>
         <li>Your consent and timestamp will be logged for our records</li>
         <li>You can remove your photo at any time</li>
       </ul>
@@ -3284,6 +3343,7 @@
 
 
 <script>
+
 
 
 const S={gender:'',skill:'',schedule:new Set(),anytime:false,partner:false,
@@ -4920,6 +4980,99 @@ window.addEventListener('resize', ()=>{
   if(rb) rb.style.display = window.innerWidth<=768 ? 'flex' : 'none';
 });
 
+// ── Walk-On Match Recording ────────────────────────────
+let _walkOnType = 'doubles';
+
+function openWalkOnMatchModal(){
+  // Default date to today
+  const today = new Date().toISOString().split('T')[0];
+  const dateEl = document.getElementById('walkOnDate');
+  if(dateEl) dateEl.value = today;
+  _walkOnType = 'doubles';
+  // Pre-fill player 1 with current user
+  const a1 = document.getElementById('walkOnA1');
+  if(a1 && SESSION_PLAYER){
+    a1.value = (SESSION_PLAYER.first_name||'') + (SESSION_PLAYER.last_name?' '+SESSION_PLAYER.last_name:'');
+  }
+  document.getElementById('walkOnModal').style.display = 'flex';
+}
+
+function walkOnSetType(type){
+  _walkOnType = type;
+  const doublesBtn = document.getElementById('walkOnDoubles');
+  const singlesBtn = document.getElementById('walkOnSingles');
+  const a2 = document.getElementById('walkOnA2');
+  const b2 = document.getElementById('walkOnB2');
+  if(type==='doubles'){
+    if(doublesBtn){doublesBtn.style.background='rgba(76,175,125,0.15)';doublesBtn.style.color='var(--green)';doublesBtn.style.borderColor='rgba(76,175,125,0.4)';}
+    if(singlesBtn){singlesBtn.style.background='transparent';singlesBtn.style.color='var(--dim)';singlesBtn.style.borderColor='var(--border)';}
+    if(a2) a2.style.display='';
+    if(b2) b2.style.display='';
+  } else {
+    if(singlesBtn){singlesBtn.style.background='rgba(96,165,250,0.15)';singlesBtn.style.color='#60a5fa';singlesBtn.style.borderColor='rgba(96,165,250,0.4)';}
+    if(doublesBtn){doublesBtn.style.background='transparent';doublesBtn.style.color='var(--dim)';doublesBtn.style.borderColor='var(--border)';}
+    if(a2){a2.style.display='none';a2.value='';}
+    if(b2){b2.style.display='none';b2.value='';}
+  }
+}
+
+async function saveWalkOnMatch(){
+  const date   = document.getElementById('walkOnDate')?.value;
+  const a1     = document.getElementById('walkOnA1')?.value?.trim();
+  const b1     = document.getElementById('walkOnB1')?.value?.trim();
+  const scoreA = parseInt(document.getElementById('walkOnScoreA')?.value||'0');
+  const scoreB = parseInt(document.getElementById('walkOnScoreB')?.value||'0');
+
+  if(!date){ showToast('⚠️ Please enter a date','#f59e0b'); return; }
+  if(!a1||!b1){ showToast('⚠️ Please enter at least one player per team','#f59e0b'); return; }
+  if(isNaN(scoreA)||isNaN(scoreB)||scoreA===scoreB){ showToast('⚠️ Please enter valid scores','#f59e0b'); return; }
+
+  const myEmail = getMyEmail();
+  try{
+    // Create a walk-on match record
+    const matchRes = await fetch(`${SUPABASE_URL}/rest/v1/matches`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=representation'},
+      body:JSON.stringify({
+        organizer_email: myEmail,
+        organizer_name: (SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:''),
+        match_type: _walkOnType,
+        match_date: date,
+        status: 'full',
+        is_walk_on: true,
+        court_name: 'Walk-On Match'
+      })
+    });
+    const matches = matchRes.ok ? await matchRes.json() : [];
+    const matchId = matches[0]?.id;
+    if(!matchId) throw new Error('Could not create match');
+
+    // Save score
+    await fetch(`${SUPABASE_URL}/rest/v1/match_results`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+      body:JSON.stringify({
+        match_id: matchId,
+        game_number: 1,
+        team_a_player1_email: myEmail,
+        team_a_player2_email: null,
+        team_b_player1_email: null,
+        team_b_player2_email: null,
+        team_a_score: scoreA,
+        team_b_score: scoreB,
+        recorded_by: myEmail,
+        notes: `A:${a1}${document.getElementById('walkOnA2')?.value?' & '+document.getElementById('walkOnA2').value:''} vs B:${b1}${document.getElementById('walkOnB2')?.value?' & '+document.getElementById('walkOnB2').value:''}`
+      })
+    });
+
+    document.getElementById('walkOnModal').style.display='none';
+    showToast('✅ Walk-on match recorded!','#4CAF7D');
+    loadRecordScores(); // Refresh the list
+  }catch(e){
+    showToast('⚠️ Could not save match: '+e.message,'#f87171');
+  }
+}
+
 function toggleNav(){
   document.getElementById('leftNav').classList.toggle('open');
   document.getElementById('navOverlay').classList.toggle('visible');
@@ -6394,81 +6547,85 @@ async function loadSentMatches(){
   const list=document.getElementById('matchSentList');
   if(!list||!myEmail) return;
   try{
-    // Fetch recent matches
-    const res=await fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&order=created_at.desc&limit=10`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&order=created_at.desc&limit=20`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     const matches=res.ok?await res.json():[];
-
-    // Fetch all responses for these matches
     const matchIds=matches.map(m=>m.id);
     let allResponses=[];
     if(matchIds.length){
       const rRes=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${matchIds.join(',')})&select=match_id,player_name,player_email,response`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
       allResponses=rRes.ok?await rRes.json():[];
     }
-
     list.innerHTML='';
     if(!matches.length){
       list.innerHTML='<div style="color:var(--dim);font-size:13px;padding:12px 0;">No match invites sent yet.</div>';
       return;
     }
 
-    matches.forEach(m=>{
+    const active = matches.filter(m=>!isMatchPast(m));
+    const past   = matches.filter(m=>isMatchPast(m));
+
+    const renderMatch = (m, isPast)=>{
       const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}):'—';
       const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):''):'—';
       const responses=allResponses.filter(r=>r.match_id===m.id);
-      const inPlayers   =responses.filter(r=>r.response==='in');
-      const outPlayers  =responses.filter(r=>r.response==='out');
-      const waitlist    =responses.filter(r=>r.response==='waitlist');
-      const pending     =responses.filter(r=>r.response==='pending');
-      const maxNeeded   =m.match_type==='doubles'?3:1;
+      const inPlayers=responses.filter(r=>r.response==='in');
+      const outPlayers=responses.filter(r=>r.response==='out');
+      const waitlist=responses.filter(r=>r.response==='waitlist');
+      const pending=responses.filter(r=>r.response==='pending');
+      const maxNeeded=m.match_type==='doubles'?4:2;
+      const statusColor=isPast?'#94a3b8':m.status==='open'?'var(--green)':m.status==='full'?'#fbbf24':'var(--dim)';
 
       const card=document.createElement('div');
-      card.style.cssText='padding:14px 0;border-bottom:1px solid var(--border);';
+      card.style.cssText='padding:12px 0;border-bottom:1px solid var(--border);'+(isPast?'opacity:0.6;':'');
 
-      // Header row
       const hdr=document.createElement('div');
-      hdr.style.cssText='display:flex;align-items:center;gap:12px;margin-bottom:8px;cursor:pointer;';
+      hdr.style.cssText='display:flex;align-items:center;gap:12px;margin-bottom:6px;cursor:pointer;';
       hdr.innerHTML=
         '<span style="font-size:20px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span>'+
         '<div style="flex:1;">'+
-          '<div style="color:#fff;font-size:13px;font-weight:600;">'+dateStr+' · '+timeStr+'</div>'+
+          '<div style="color:'+(isPast?'#94a3b8':'#fff')+';font-size:13px;font-weight:600;">'+(isPast?'<s>':'')+dateStr+' · '+timeStr+(isPast?'</s>':'')+'</div>'+
           '<div style="color:var(--dim);font-size:11px;">'+(m.court_name||'TBD')+(m.is_feeler?' · Feeler':'')+'</div>'+
         '</div>'+
         '<div style="text-align:right;">'+
-          '<div style="font-size:11px;font-weight:700;color:'+(m.status==='open'?'var(--green)':m.status==='full'?'#fbbf24':'var(--dim)')+';">'+m.status.toUpperCase()+'</div>'+
+          '<div style="font-size:11px;font-weight:700;color:'+statusColor+';">'+(isPast?'EXPIRED':m.status.toUpperCase())+'</div>'+
           '<div style="font-size:10px;color:var(--dim);">'+inPlayers.length+'/'+maxNeeded+' confirmed</div>'+
         '</div>';
 
-      // Response breakdown
       const detail=document.createElement('div');
       detail.style.cssText='display:none;margin-top:8px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid var(--border);';
-
-      const makeGroup=(emoji, label, color, players)=>{
+      const makeGroup=(emoji,label,color,players)=>{
         if(!players.length) return '';
-        return '<div style="margin-bottom:6px;">'+
-          '<div style="font-size:10px;font-weight:700;color:'+color+';text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">'+emoji+' '+label+' ('+players.length+')</div>'+
-          '<div style="font-size:12px;color:#fff;line-height:1.8;">'+players.map(p=>p.player_name||p.player_email).join(' · ')+'</div>'+
-        '</div>';
+        return '<div style="margin-bottom:6px;"><div style="font-size:10px;font-weight:700;color:'+color+';text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">'+emoji+' '+label+' ('+players.length+')</div>'+
+          '<div style="font-size:12px;color:#fff;line-height:1.8;">'+players.map(p=>p.player_name||p.player_email).join(' · ')+'</div></div>';
       };
-
       detail.innerHTML=
-        makeGroup('✅','In',  'var(--green)', inPlayers)+
-        makeGroup('⏳','Pending','#94a3b8', pending)+
-        makeGroup('⌛','Waitlist','#f59e0b', waitlist)+
-        makeGroup('❌','Out', '#f87171',    outPlayers)||
+        makeGroup('✅','In','var(--green)',inPlayers)+
+        makeGroup('⏳','Pending','#94a3b8',pending)+
+        makeGroup('⌛','Waitlist','#f59e0b',waitlist)+
+        makeGroup('❌','Out','#f87171',outPlayers)||
         '<div style="color:var(--dim);font-size:12px;">No responses yet.</div>';
 
-      // Toggle detail on click
-      let open=false;
-      hdr.onclick=()=>{
-        open=!open;
-        detail.style.display=open?'block':'none';
-      };
-
+      let isOpen=false;
+      hdr.onclick=()=>{ isOpen=!isOpen; detail.style.display=isOpen?'block':'none'; };
       card.appendChild(hdr);
       card.appendChild(detail);
       list.appendChild(card);
-    });
+    };
+
+    if(active.length){
+      const h=document.createElement('div');
+      h.style.cssText='font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.08em;padding:4px 0 8px;';
+      h.textContent='Active ('+active.length+')';
+      list.appendChild(h);
+      active.forEach(m=>renderMatch(m,false));
+    }
+    if(past.length){
+      const h=document.createElement('div');
+      h.style.cssText='font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;padding:12px 0 8px;border-top:1px solid var(--border);margin-top:4px;';
+      h.textContent='Past Matches ('+past.length+')';
+      list.appendChild(h);
+      past.forEach(m=>renderMatch(m,true));
+    }
   }catch(e){ console.warn('loadSentMatches error:',e); }
 }
 
@@ -6478,18 +6635,18 @@ async function loadMatchSquareCounts(){
   if(!myEmail) return;
   try{
     // My matches — split confirmed (full) vs pending (open)
-    const myRes=await fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=neq.cancelled&select=id,status,max_players`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const myRes=await fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=neq.cancelled&select=id,status,max_players,match_date,time_start,time_end`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     const myMatches=myRes.ok?await myRes.json():[];
-    const myConfirmed=myMatches.filter(m=>m.status==='full').length;
-    const myPending  =myMatches.filter(m=>m.status==='open').length;
+    // Only count future matches
+    const myFuture    = myMatches.filter(m=>!isMatchPast(m));
+    const myConfirmed = myFuture.filter(m=>m.status==='full').length;
+    const myPending   = myFuture.filter(m=>m.status==='open').length;
     const setEl=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
     setEl('matchSquareMyConfirmed', myConfirmed);
     setEl('matchSquareMyCount',     myPending);
 
-    // Nav badge — total my matches
-    const myTotal=myMatches.length;
-    const myBadge=document.getElementById('myInvitesBadge');
-    if(myBadge){myBadge.textContent=myTotal;myBadge.style.display=myTotal>0?'inline-flex':'none';}
+    // Nav badge — only open future matches
+    updateMatchBadge('myInvitesBadge', myPending, 'rgba(239,68,68,0.85)');
 
     // Invited to — fetch my responses and join with match status
     const invRes=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&select=match_id,response`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
@@ -6497,10 +6654,11 @@ async function loadMatchSquareCounts(){
     const invMatchIds=invRows.map(r=>r.match_id);
     let invConfirmed=0, invOpen=0;
     if(invMatchIds.length){
-      const mRes=await fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${invMatchIds.join(',')})&select=id,status`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      const mRes=await fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${invMatchIds.join(',')})&select=id,status,match_date,time_start,time_end`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
       const invMatches=mRes.ok?await mRes.json():[];
-      invConfirmed=invMatches.filter(m=>m.status==='full').length;
-      invOpen     =invMatches.filter(m=>m.status==='open').length;
+      const invFuture = invMatches.filter(m=>!isMatchPast(m));
+      invConfirmed=invFuture.filter(m=>m.status==='full').length;
+      invOpen     =invFuture.filter(m=>m.status==='open').length;
     }
     setEl('matchSquareInvitedCount',     invOpen);
     setEl('matchSquareInvitedConfirmed', invConfirmed);
@@ -6690,11 +6848,26 @@ async function loadRecordScores(){
 function updateConfirmedBadge(count){
   const badge = document.getElementById('confirmedMatchesBadge');
   if(!badge) return;
+  badge.textContent = count;
   if(count > 0){
-    badge.textContent = count;
-    badge.style.display = 'inline-flex';
+    badge.style.background = 'rgba(76,175,125,0.85)';
+    badge.style.color = '#0a120b';
   } else {
-    badge.style.display = 'none';
+    badge.style.background = 'rgba(76,175,125,0.2)';
+    badge.style.color = 'rgba(76,175,125,0.5)';
+  }
+}
+
+function updateMatchBadge(id, count, activeColor, activeTxtColor){
+  const badge = document.getElementById(id);
+  if(!badge) return;
+  badge.textContent = count;
+  if(count > 0){
+    badge.style.background = activeColor;
+    badge.style.color = activeTxtColor||'#fff';
+  } else {
+    badge.style.background = activeColor.replace('0.85','0.2').replace('rgb(','rgba(').replace(')',',0.2)');
+    badge.style.color = 'rgba(255,255,255,0.4)';
   }
 }
 
@@ -6708,11 +6881,7 @@ async function loadAllMatchBadges(){
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     const orgMatches = orgRes.ok ? await orgRes.json() : [];
     const pendingOrg = orgMatches.filter(m=>!isMatchPast(m)).length;
-    const myInvBadge = document.getElementById('myInvitesBadge');
-    if(myInvBadge){
-      myInvBadge.textContent = pendingOrg;
-      myInvBadge.style.display = pendingOrg > 0 ? 'inline-flex' : 'none';
-    }
+    updateMatchBadge('myInvitesBadge', pendingOrg, 'rgba(239,68,68,0.85)');
 
     // Invites to me — pending response AND match is still open (not full)
     const rRes = await fetch(
@@ -6729,11 +6898,7 @@ async function loadAllMatchBadges(){
       const openMatches = openMatchRes.ok ? await openMatchRes.json() : [];
       iboCount = openMatches.filter(m=>!isMatchPast(m)).length;
     }
-    const iboBadge = document.getElementById('invitedByOthersBadge');
-    if(iboBadge){
-      iboBadge.textContent = iboCount;
-      iboBadge.style.display = iboCount > 0 ? 'inline-flex' : 'none';
-    }
+    updateMatchBadge('invitedByOthersBadge', iboCount, 'rgba(59,130,246,0.85)');
 
     // Confirmed future matches
     const [cfOrgRes, cfRespRes] = await Promise.all([
@@ -7150,7 +7315,7 @@ async function notifyOrganizerOfDecline(matchId, declinerEmail){
       emailjs.init(pubKey);
       emailjs.send(window.EMAILJS_SERVICE_ID, window.EMAILJS_TEMPLATE_ID, {
         to_email:      match.organizer_email,
-        from_name:     'PBConnect',
+        from_name:     'PBallConnect',
         from_email:    'noreply@pickleballregistry.app',
         invite_url:    window.location.origin + window.location.pathname + '?setupmatch=1',
         personal_note: declinerEmail+' declined your '+match.match_type+' match invite for '+dateStr+
@@ -9033,8 +9198,8 @@ async function shareInviteLink(){
   if(!_qrInviteUrl) return;
   const myName = ((SESSION_PLAYER?.first_name||'')).trim() || 'Someone';
   const shareData = {
-    title: 'Join me on PBConnect!',
-    text: myName + ' invited you to join PBConnect — the best way to find pickleball players near you. 🎾',
+    title: 'Join me on PBallConnect!',
+    text: myName + ' invited you to join PBallConnect — the best way to find pickleball players near you. 🎾',
     url: _qrInviteUrl
   };
   try{
@@ -9077,8 +9242,8 @@ async function sendInvite(method){
   if(method==='email'){
     const pubKey=window.EMAILJS_PUBLIC_KEY;
     if(!pubKey||pubKey==='YOUR_PUBLIC_KEY'){
-      const subject=encodeURIComponent(myName+' invited you to PBConnect! 🎾');
-      const body=encodeURIComponent('Hi!\n\n'+myName+' personally invited you to join PBConnect.\n\n'+(note?'"'+note+'"\n\n':'')+'Set up your player profile here:\n'+inviteUrl+'\n\nSee you on the court! 🏓');
+      const subject=encodeURIComponent(myName+' invited you to PBallConnect! 🎾');
+      const body=encodeURIComponent('Hi!\n\n'+myName+' personally invited you to join PBallConnect.\n\n'+(note?'"'+note+'"\n\n':'')+'Set up your player profile here:\n'+inviteUrl+'\n\nSee you on the court! 🏓');
       window.open('mailto:'+inviteeEmail+'?subject='+subject+'&body='+body);
       if(statusEl) statusEl.textContent='';
       showToast('📧 Email app opened!','#4CAF7D');
@@ -9105,7 +9270,7 @@ async function sendInvite(method){
     }catch(e){if(statusEl) statusEl.textContent='⚠️ Email error: '+(e.text||e.message||'Unknown error');}
   }
   if(method==='sms'){
-    const smsBody=encodeURIComponent(myName+' invited you to join PBConnect! 🎾 '+(note?'"'+note+'" ':'')+inviteUrl);
+    const smsBody=encodeURIComponent(myName+' invited you to join PBallConnect! 🎾 '+(note?'"'+note+'" ':'')+inviteUrl);
     window.open('sms:'+(inviteePhone?'+1'+inviteePhone:'')+'?body='+smsBody);
     if(statusEl) statusEl.textContent='';
     showToast('✅ SMS app opened!','#4CAF7D');
@@ -9266,7 +9431,7 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
       '<div style="font-size:48px;margin-bottom:12px;">🤝</div>'+
       '<div style="font-size:19px;font-weight:800;color:#fff;margin-bottom:8px;">You\'re in, '+newPlayerName.split(' ')[0]+'!</div>'+
       '<div style="font-size:13px;color:var(--dim);margin-bottom:6px;line-height:1.6;">'+
-        shortName+' invited you to PBConnect. Would you like to join '+shortName+'\'s Inner Circle?'+
+        shortName+' invited you to PBallConnect. Would you like to join '+shortName+'\'s Inner Circle?'+
       '</div>'+
       '<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:20px;">Inner Circle lets you set up matches, see schedules, and connect on the court.</div>'+
       '<div style="display:flex;gap:10px;">'+
@@ -9622,6 +9787,7 @@ function updateInviteCounter(){
   counter.style.background = total>0 ? 'rgba(76,175,125,0.12)' : 'rgba(255,255,255,0.06)';
   counter.style.color       = total>0 ? 'var(--green)' : 'var(--dim)';
 }
+
 
 </script>
 </body>
