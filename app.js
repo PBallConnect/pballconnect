@@ -4467,21 +4467,25 @@ async function openEditProfile(){
   const email=localStorage.getItem('pb_email')||getMyEmail();
   if(!email){showPage('playerProfile');return;}
   _editModeActive=true;
+  // Fetch fresh data FIRST, then unlock and restore
   await fetchAndRestoreProfile(email);
-  unlockProfileForm();
-  document.getElementById('editProfileBtnEl')?.classList.add('active');
-  const card=document.getElementById('step1');
-  const h2=card?.querySelector('h2');
-  if(h2&&!document.getElementById('editModeBanner')){
-    const banner=document.createElement('div');banner.id='editModeBanner';
-    banner.style.cssText='display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:999px;background:rgba(76,175,125,0.12);border:1px solid rgba(76,175,125,0.35);color:#4CAF7D;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px;';
-    banner.innerHTML='✏️ &nbsp;Edit Mode &nbsp;·&nbsp; Update Profile lights up when you make a change';
-    h2.insertAdjacentElement('afterend',banner);
-  }
-  const btn=document.getElementById('btnSubmit');
-  if(btn){btn.classList.remove('has-changes');btn.disabled=true;}
-  startChangeDetection();
-  card?.scrollIntoView({behavior:'smooth',block:'start'});
+  // Give restoreProfileForm time to populate fields before unlocking
+  setTimeout(()=>{
+    unlockProfileForm();
+    document.getElementById('editProfileBtnEl')?.classList.add('active');
+    const card=document.getElementById('step1');
+    const h2=card?.querySelector('h2');
+    if(h2&&!document.getElementById('editModeBanner')){
+      const banner=document.createElement('div');banner.id='editModeBanner';
+      banner.style.cssText='display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:999px;background:rgba(76,175,125,0.12);border:1px solid rgba(76,175,125,0.35);color:#4CAF7D;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px;';
+      banner.innerHTML='&#9999;&#65039; &nbsp;Edit Mode &nbsp;&middot;&nbsp; Update Profile lights up when you make a change';
+      h2.insertAdjacentElement('afterend',banner);
+    }
+    const btn=document.getElementById('btnSubmit');
+    if(btn){btn.classList.remove('has-changes');btn.disabled=true;}
+    startChangeDetection();
+    card?.scrollIntoView({behavior:'smooth',block:'start'});
+  }, 300);
 }
 
 async function loadPlayerCourtsForSummary(email){
@@ -4521,6 +4525,8 @@ async function fetchAndRestoreProfile(email){
         if(S.skill)        SESSION_PLAYER.skill_level  =S.skill;
         updateTopBar(SESSION_PLAYER);
         showPage('playerProfile');
+        // Restore form fields from fetched data
+        setTimeout(()=>restoreProfileForm(SESSION_PLAYER), 150);
         return;
       }
     }

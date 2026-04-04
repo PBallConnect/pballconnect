@@ -288,7 +288,7 @@
     </div>
     <div class="grid2">
       <div class="field"><label>City</label><input type="text" id="addrCity" oninput="onManualAddress();chk1()" placeholder="City" autocomplete="off"/></div>
-      <div class="field"><label>State</label><input type="text" id="addrState" oninput="this.value=this.value.toUpperCase().substring(0,2);onManualAddress();chk1()" placeholder="NH" autocomplete="off"/></div>
+      <div class="field"><label>State</label><input type="text" id="addrState" oninput="this.value=this.value.replace(/[^a-zA-Z]/g,'').toUpperCase().substring(0,2);onManualAddress();chk1()" onblur="this.value=this.value.replace(/[^a-zA-Z]/g,'').toUpperCase().substring(0,2)" placeholder="NH" autocomplete="new-password" maxlength="2"/></div>
     </div>
     <div class="field" style="max-width:160px;">
       <label>Zip Code</label>
