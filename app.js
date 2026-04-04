@@ -4552,6 +4552,8 @@ function restoreProfileForm(player){
     });
   }
 
+  // Debug: log what we're restoring
+  console.log('[restoreProfileForm] player.first_name=',player.first_name,'player.last_name=',player.last_name,'player.nickname=',player.nickname);
   const textFields={
     firstName:player.first_name,lastName:player.last_name,
     nickname:player.nickname||S.nickname||"",email:player.email,
