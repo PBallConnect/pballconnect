@@ -4021,37 +4021,67 @@ async function respondToMatch(matchId, response){
     openLoginModal();
     return;
   }
-
   const btn = event?.target;
-  if(btn){ btn.disabled=true; btn.textContent='Saving…'; }
-
+  if(btn){ btn.disabled=true; btn.textContent='Saving...'; }
   try{
-    // Use the DB function for proper waitlist handling
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/handle_match_response`, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY},
-      body: JSON.stringify({p_match_id:matchId, p_player_email:myEmail, p_response:response})
+    // Check current match + confirmed count
+    const [matchRes, confirmedRes] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}&select=match_type,status,max_players`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}),
+      fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.in&select=player_email`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}})
+    ]);
+    const matches = matchRes.ok ? await matchRes.json() : [];
+    const confirmed = confirmedRes.ok ? await confirmedRes.json() : [];
+    const match = matches[0];
+    if(!match){ showToast('Match not found','#f87171'); return; }
+    const needed = match.max_players || (match.match_type==='doubles' ? 4 : 2);
+    const spotsLeft = needed - confirmed.length;
+    const alreadyIn = confirmed.some(r=>r.player_email===myEmail);
+    // If spots full and not already in, go to waitlist
+    let actualResponse = response;
+    if(response==='in' && spotsLeft <= 0 && !alreadyIn) actualResponse = 'waitlist';
+    // UPSERT the response
+    const myName = getMyName() || myEmail.split('@')[0];
+    const upsertRes = await fetch(`${SUPABASE_URL}/rest/v1/match_responses`,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'apikey':SUPABASE_ANON_KEY,
+        'Authorization':'Bearer '+SUPABASE_ANON_KEY,
+        'Prefer':'resolution=merge-duplicates,return=minimal',
+        'on_conflict':'match_id,player_email'
+      },
+      body:JSON.stringify({
+        match_id:matchId,
+        player_email:myEmail,
+        player_name:myName,
+        response:actualResponse,
+        responded_at:new Date().toISOString()
+      })
     });
-    const data = res.ok ? await res.json() : null;
-
+    if(!upsertRes.ok){ throw new Error('Save failed: '+await upsertRes.text()); }
     const banner = document.getElementById('matchResponseBanner');
     if(banner) banner.remove();
-
-    if(response==='in'){
-      if(data?.status==='waitlist'){
-        showToast('⏳ On the waitlist — position #'+data.position,'#f59e0b');
-      } else {
-        showToast("🎾 You're in! See you on the court!",'#4CAF7D');
-        // Check if match is now full and auto-update status
-        setTimeout(()=>checkAndUpdateMatchStatus(matchId), 500);
-      }
-    } else if(response==='waitlist'){
-      showToast('⏳ Added to waitlist — position #'+(data?.position||'?'),'#f59e0b');
+    if(actualResponse==='in'){
+      showToast("You're in! See you on the court!",'#4CAF7D');
+      setTimeout(()=>checkAndUpdateMatchStatus(matchId), 500);
+      setTimeout(()=>loadAllMatchBadges(), 800);
+    } else if(actualResponse==='waitlist'){
+      const wRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.waitlist&select=player_email&order=responded_at.asc`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      const waitlist = wRes.ok ? await wRes.json() : [];
+      const pos = waitlist.findIndex(r=>r.player_email===myEmail)+1;
+      showToast('On the waitlist - position #'+pos,'#f59e0b');
     } else {
-      showToast('Declined — the organizer has been notified','var(--dim)');
-      // Notify organizer of decline via email
+      showToast('Declined','var(--dim)');
       notifyOrganizerOfDecline(matchId, myEmail);
     }
+    // Refresh current page
+    const activePage = document.querySelector('.page-section.active')?.id?.replace('page-','');
+    if(activePage==='invitedByOthers') setTimeout(()=>loadInvitedByOthersPage(), 600);
+    if(activePage==='confirmedMatches') setTimeout(()=>loadConfirmedMatches(), 600);
   }catch(e){
     showToast('Error: '+e.message,'#f87171');
     if(btn){ btn.disabled=false; btn.textContent='Try again'; }
@@ -4161,6 +4191,70 @@ function getMyEmail(){
 function getMyName(){
   if(SESSION_PLAYER) return ((SESSION_PLAYER.first_name||'')+(SESSION_PLAYER.last_name?' '+SESSION_PLAYER.last_name:'')).trim();
   return '';
+}
+
+// ── Real-time invite polling ───────────────────────────
+let _pollInterval = null;
+let _lastSeenInviteCount = 0;
+
+function startInvitePolling(email){
+  if(_pollInterval) clearInterval(_pollInterval);
+  // Poll every 30 seconds for new pending match invites
+  _pollInterval = setInterval(()=>checkForNewInvites(email), 30000);
+}
+
+async function checkForNewInvites(email){
+  if(!email) return;
+  try{
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(email)}&response=eq.pending&select=match_id`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+    );
+    if(!res.ok) return;
+    const rows = await res.json();
+    const count = rows.length;
+    // Update badge
+    updateMatchBadge('invitedByOthersBadge', count, 'rgba(59,130,246,0.85)');
+    // Show popup if count increased since last check
+    if(count > _lastSeenInviteCount && _lastSeenInviteCount >= 0){
+      const newCount = count - _lastSeenInviteCount;
+      showNewInvitePopup(newCount, rows[0]?.match_id);
+    }
+    _lastSeenInviteCount = count;
+  }catch(e){}
+}
+
+function showNewInvitePopup(count, matchId){
+  // Don't stack popups
+  if(document.getElementById('newInvitePopup')) return;
+  const popup = document.createElement('div');
+  popup.id = 'newInvitePopup';
+  popup.style.cssText =
+    'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:800;'+
+    'background:#0a120b;border:2px solid rgba(59,130,246,0.6);border-radius:16px;'+
+    'padding:14px 20px;max-width:340px;width:92%;box-shadow:0 8px 32px rgba(0,0,0,0.6);'+
+    'display:flex;align-items:center;gap:12px;cursor:pointer;'+
+    'animation:slideUp 0.3s ease;';
+  popup.innerHTML =
+    '<span style="font-size:26px;">📥</span>'+
+    '<div style="flex:1;">'+
+      '<div style="color:#60a5fa;font-weight:800;font-size:14px;">New Match Invite!</div>'+
+      '<div style="color:var(--dim);font-size:12px;margin-top:2px;">'+count+' new invite'+(count>1?'s':'')+' — tap to view</div>'+
+    '</div>'+
+    '<button onclick="document.getElementById(\'newInvitePopup\').remove()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:18px;padding:0;">✕</button>';
+  popup.onclick = (e)=>{
+    if(e.target.tagName==='BUTTON') return;
+    popup.remove();
+    if(matchId){
+      // Show the specific match invite banner
+      showPage('invitedByOthers');
+    } else {
+      showPage('invitedByOthers');
+    }
+  };
+  document.body.appendChild(popup);
+  // Auto-dismiss after 8 seconds
+  setTimeout(()=>popup?.remove(), 8000);
 }
 
 function openLoginModal(){
@@ -4368,6 +4462,8 @@ async function restoreSession(email, playerData){
   setTimeout(()=>loadCourtBadgesForNav(player.email), 600);
   // Load all match nav badges
   setTimeout(loadAllMatchBadges, 1000);
+  // Start real-time polling for new invites
+  startInvitePolling(player.email);
 
   if(!S.addrLat && player.city && player.state) geocodeCityForSession(player.city, player.state);
   showPage('innerCircle');
