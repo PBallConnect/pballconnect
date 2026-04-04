@@ -3,20 +3,20 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-<meta name="application-name" content="Pickleball Registry"/>
+<meta name="application-name" content="PBConnect"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<meta name="apple-mobile-web-app-title" content="PB Registry"/>
+<meta name="apple-mobile-web-app-title" content="PBConnect"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="theme-color" content="#0a120b"/>
 <meta name="description" content="Connect with pickleball players near you. Find games, build your Inner Circle, track scores and stats."/>
-<meta property="og:title" content="Pickleball Registry — Find Players Near You"/>
+<meta property="og:title" content="PBConnect — Find Pickleball Players Near You"/>
 <meta property="og:description" content="Connect with pickleball players, organize matches, track scores."/>
 <meta property="og:type" content="website"/>
 <!-- PWA Manifest (inline) -->
 <link rel="manifest" href="data:application/manifest+json,{
-  &quot;name&quot;:&quot;Pickleball Registry&quot;,
-  &quot;short_name&quot;:&quot;PB Registry&quot;,
+  &quot;name&quot;:&quot;PBConnect&quot;,
+  &quot;short_name&quot;:&quot;PBConnect&quot;,
   &quot;description&quot;:&quot;Find pickleball players near you&quot;,
   &quot;start_url&quot;:&quot;/&quot;,
   &quot;display&quot;:&quot;standalone&quot;,
@@ -30,7 +30,7 @@
 <!-- Apple touch icon (emoji-based) -->
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230a120b'/><text y='.9em' font-size='80' x='10'>🏓</text></svg>"/>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com data:; connect-src *; img-src 'self' data: blob: https:; worker-src 'none';">
-<title>PBConnect</title>
+<title>PBConnect — Find Pickleball Players Near You</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
@@ -1651,7 +1651,7 @@
       <div class="check-text">
         I have read and agree to the
         <span onclick="event.stopPropagation();showPage('privacy')" style="color:var(--green);cursor:pointer;font-weight:600;">Privacy Policy</span>.
-        I understand that Pickleball Registry collects only the minimum data needed to connect players, never sells my information, and I can request deletion of my data at any time.
+        I understand that PBConnect collects only the minimum data needed to connect players, never sells my information, and I can request deletion of my data at any time.
       </div>
     </div>
     <div class="check-row" onclick="toggleConsent('risk')" style="margin-bottom:20px;">
@@ -2115,7 +2115,7 @@
       <div class="ic-card" id="icInviteCard" style="max-width:100%;margin-bottom:16px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
           <div>
-            <div class="ic-section-label" style="margin-bottom:2px;">📨 Invite a Friend to Pickleball Registry</div>
+            <div class="ic-section-label" style="margin-bottom:2px;">📨 Invite a Friend to PBConnect</div>
             <div style="font-size:11px;color:var(--dim);">Invite someone by email or text — they'll get a link to set up their profile</div>
           </div>
           <button class="ic-view-toggle-btn" onclick="toggleInviteForm()" id="inviteToggleBtn">
@@ -2146,7 +2146,7 @@
 
           <div style="margin-bottom:14px;">
             <label style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:6px;">Personal Note <span style="color:var(--dim);font-weight:400;">(optional)</span></label>
-            <textarea id="inviteNote" placeholder="Hey! I'd love to play pickleball with you. Come join me on Pickleball Registry!"
+            <textarea id="inviteNote" placeholder="Hey! I'd love to play pickleball with you! Join me on PBConnect 🎾"
               style="width:100%;background:rgba(255,255,255,0.08);border:1px solid var(--border);
                      border-radius:10px;padding:10px 14px;color:#fff;font-size:13px;
                      font-family:'DM Sans',sans-serif;outline:none;resize:vertical;
@@ -2857,7 +2857,7 @@
 
         <div style="background:rgba(76,175,125,0.08);border:1px solid rgba(76,175,125,0.25);border-radius:14px;padding:20px;margin-bottom:24px;">
           <div style="font-size:18px;font-weight:800;color:var(--green);margin-bottom:8px;">Our Commitment to You</div>
-          <div>Pickleball Registry was built by pickleball players, for pickleball players. We collect only what we need to connect you with others who want to play. We will never sell your data, never use it for advertising, and you can delete your account at any time.</div>
+          <div>PBConnect was built by pickleball players, for pickleball players. We collect only what we need to connect you with others who want to play. We will never sell your data, never use it for advertising, and you can delete your account at any time.</div>
         </div>
 
         <div style="font-size:16px;font-weight:700;color:#fff;margin:20px 0 8px;">What We Collect</div>
@@ -3675,7 +3675,7 @@ function toggleConsent(type){
 }
 function toggleWaiver(){toggleConsent('risk');}
 
-function v(id){return document.getElementById(id).value.trim();}
+function v(id){const el=document.getElementById(id);return el?el.value.trim():'';}
 function chk1(){
   const btn=document.getElementById('next1');if(!btn)return;
   const ok=v('firstName')&&v('email')&&v('addrCity')&&v('addrState')&&v('addrZip')&&S.gender
@@ -3995,7 +3995,7 @@ async function doSaveProfile(){
       nickname:            v('nickname')||null,
       email:               v('email'),
       phone:               (v('phone')||'').replace(/\D/g,''),
-      dob:                 v('dob'),
+      dob:                 document.getElementById('playerAge')?.value||S.dob||'',
       gender:              S.gender,
       address:             v('addressSearch'),
       city:                v('addrCity')||S.city,
@@ -6601,7 +6601,7 @@ async function notifyOrganizerOfDecline(matchId, declinerEmail){
       emailjs.init(pubKey);
       emailjs.send(window.EMAILJS_SERVICE_ID, window.EMAILJS_TEMPLATE_ID, {
         to_email:      match.organizer_email,
-        from_name:     'Pickleball Registry',
+        from_name:     'PBConnect',
         from_email:    'noreply@pickleballregistry.app',
         invite_url:    window.location.origin + window.location.pathname + '?setupmatch=1',
         personal_note: declinerEmail+' declined your '+match.match_type+' match invite for '+dateStr+
