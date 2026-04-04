@@ -4117,10 +4117,34 @@ async function doSaveProfile(){
   if(S.courtName){const cs=document.getElementById('cCourtStat');const cc=document.getElementById('cCourt');if(cs)cs.style.display='block';if(cc)cc.textContent=S.courtName;}
   const av=document.getElementById('confirmAvatar');
   if(av) av.innerHTML=S.photoSrc?`<img class="confirm-avatar" src="${S.photoSrc}"/>`:`<div class="confirm-avatar-ph">👤</div>`;
-  // If editing existing profile, skip overlay — go straight to inner circle
+  // If editing existing profile, skip overlay — go straight to summary
   if(SESSION_PLAYER){
-    showPage('innerCircle');
-    showToast('✅ Profile updated!', '#4CAF7D');
+    // Clean up edit mode fully
+    stopChangeDetection();
+    _editModeActive = false;
+    document.getElementById('editProfileBtnEl')?.classList.remove('active');
+    document.getElementById('editModeBanner')?.remove();
+    document.getElementById('readOnlyBanner')?.remove();
+    // Ensure consent stays checked — once agreed, always agreed
+    S._privacyConsent = true;
+    S._riskConsent = true;
+    SESSION_PLAYER.waiver_agreed = true;
+    const cbp = document.getElementById('checkBoxPrivacy');
+    if(cbp) cbp.classList.add('on');
+    const cbr = document.getElementById('checkBoxRisk');
+    if(cbr) cbr.classList.add('on');
+    // Re-lock the form
+    lockProfileForm();
+    // Scroll to summary so user sees updated data pulse
+    setTimeout(()=>{
+      document.getElementById('sumSection1')?.scrollIntoView({behavior:'smooth',block:'start'});
+    }, 150);
+    // Pulse summary sections
+    ['sumSection1','sumSection2','sumSection3'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el){ el.classList.add('summary-section-pulse'); setTimeout(()=>el.classList.remove('summary-section-pulse'),4000); }
+    });
+    showToast('✅ Profile updated!','#4CAF7D');
   } else {
     document.getElementById('confirmOverlay').style.display='flex';
     // If arrived via invite link, show IC join prompt after a short delay
@@ -7116,13 +7140,13 @@ function restoreProfileForm(player){
     phoneEl.value=digits.length===10?'('+digits.substring(0,3)+') '+digits.substring(3,6)+'-'+digits.substring(6):digits;
   }
 
-  // Restore consent checkboxes (existing players auto-checked)
-  S._privacyConsent=!!(player.waiver_agreed||player.privacy_consent);
-  S._riskConsent=!!(player.waiver_agreed||player.risk_consent);
+  // Restore consent checkboxes — once a player has agreed, always keep checked
+  S._privacyConsent = !!(player.waiver_agreed || player.privacy_consent || SESSION_PLAYER);
+  S._riskConsent    = !!(player.waiver_agreed || player.risk_consent    || SESSION_PLAYER);
   const cbp=document.getElementById('checkBoxPrivacy');
-  if(cbp) cbp.classList.toggle('on',S._privacyConsent);
+  if(cbp) cbp.classList.toggle('on', S._privacyConsent);
   const cbr=document.getElementById('checkBoxRisk');
-  if(cbr) cbr.classList.toggle('on',S._riskConsent);
+  if(cbr) cbr.classList.toggle('on', S._riskConsent);
 
   // Restore coach profile
   if(player.is_coach){
