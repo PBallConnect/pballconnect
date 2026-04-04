@@ -6353,8 +6353,9 @@ async function loadMatchSquareCounts(){
     setEl('matchSquareInvitedConfirmed', invConfirmed);
 
     // Nav badge
+    // Badge = only open (not full) matches I've been invited to
     const invBadge=document.getElementById('invitedByOthersBadge');
-    if(invBadge){const t=invMatchIds.length;invBadge.textContent=t;invBadge.style.display=t>0?'inline-flex':'none';}
+    if(invBadge){invBadge.textContent=invOpen;invBadge.style.display=invOpen>0?'inline-flex':'none';}
     // Top blue badge — show pending (open) invites
     const topBadge=document.getElementById('topMatchInvitesBadge');
     if(topBadge){topBadge.textContent=invOpen;topBadge.style.display=invOpen>0?'inline-block':'none';}
@@ -7222,8 +7223,8 @@ async function restoreSession(email, playerData){
       if(topBadge){topBadge.textContent=mCount;topBadge.style.display=mCount>0?'inline-block':'none';}
       const topLabel=document.getElementById('topMatchInvitesLabel');
       if(topLabel) topLabel.textContent=mCount>0?'Invited to Play ('+mCount+')':'Invited to Play';
-      const navBadge=document.getElementById('invitedByOthersBadge');
-      if(navBadge){navBadge.textContent=mCount;navBadge.style.display=mCount>0?'inline-flex':'none';}
+      // Don't set badge here — loadAllMatchBadges handles this with proper open-match filtering
+      // const navBadge=document.getElementById('invitedByOthersBadge');
     }catch(e){}
   }, 600);
 
