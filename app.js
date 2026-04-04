@@ -3811,67 +3811,139 @@ async function loadInvitedByOthersPage(){
   const container=document.getElementById('invitedByOthersList');
   if(!container) return;
   if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in to view your invites.</div>'; return; }
-  container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:12px 0;">Loading…</div>';
+  container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:12px 0;">Loading...</div>';
   try{
-    // Get my match_responses
-    const rr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&select=match_id,response,responded_at&order=responded_at.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const rr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&select=match_id,response,responded_at&order=responded_at.desc`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     const myResponses=rr.ok?await rr.json():[];
-
     if(!myResponses.length){
-      container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">You haven\'t been invited to any matches yet.</div>';
+      container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">You have not been invited to any matches yet.</div>';
       return;
     }
-
-    // Fetch match details — only open matches (full/confirmed go to Confirmed Matches)
     const matchIds=myResponses.map(r=>r.match_id);
-    const mr=await fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${matchIds.join(',')})&status=neq.full&status=neq.cancelled&select=*&order=match_date.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    // Fetch open matches only
+    const mr=await fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${matchIds.join(',')})&status=neq.full&status=neq.cancelled&select=*&order=match_date.asc`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     const allMatches=mr.ok?await mr.json():[];
-    // Also filter out past matches
     const matches=allMatches.filter(m=>!isMatchPast(m));
-
     container.innerHTML='';
     if(!matches.length){
-      container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">No open match invites.<br><span style="font-size:12px;">Confirmed matches appear under ✅ Confirmed Matches.</span></div>';
+      container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">No open match invites.<br><span style="font-size:12px;">Confirmed matches appear under Confirmed Matches.</span></div>';
       return;
     }
+    // Fetch all responses for these matches to show confirmed players
+    const rRes=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${matches.map(m=>m.id).join(',')})&response=eq.in&select=match_id,player_name,player_email`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const allResponses=rRes.ok?await rRes.json():[];
 
     matches.forEach(m=>{
       const myResp=myResponses.find(r=>r.match_id===m.id);
-      const response=myResp?.response||'pending';
-      const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}):'—';
-      const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):''):'—';
+      const myResponse=myResp?.response||'pending';
+      const inPlayers=allResponses.filter(r=>r.match_id===m.id);
+      const maxNeeded=m.max_players||(m.match_type==='doubles'?4:2);
+      const spotsLeft=Math.max(0,maxNeeded-inPlayers.length);
+      const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'long',day:'numeric'}):'TBD';
+      const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' - '+fmt12(m.time_end):''):'TBD';
+      const daysUntil=m.match_date?Math.ceil((new Date(m.match_date+'T12:00')-new Date())/(1000*60*60*24)):null;
+      const urgency=daysUntil===0?'TODAY':daysUntil===1?'TOMORROW':daysUntil!=null?'In '+daysUntil+' days':'';
 
-      const respColor=response==='in'?'var(--green)':response==='out'?'#f87171':response==='waitlist'?'#f59e0b':'#94a3b8';
-      const respLabel=response==='in'?'✅ You\'re In':response==='out'?'❌ Declined':response==='waitlist'?'⌛ Waitlist':'⏳ Pending';
-      const matchStatusColor=m.status==='open'?'var(--green)':m.status==='full'?'#fbbf24':'var(--dim)';
+      // Player chips — confirmed players including organizer
+      // Always show organizer first
+      const organizerChip = '<span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.25);font-size:11px;color:var(--green);margin:2px;">'+
+        (m.organizer_name||'Organizer').split(' ')[0]+' &#9733;</span>';
+      const playerChips = inPlayers
+        .filter(p=>p.player_email!==m.organizer_email) // organizer shown separately
+        .map(p=>{
+          const firstName=(p.player_name||p.player_email||'').split(' ')[0];
+          return '<span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,0.06);border:1px solid var(--border);font-size:11px;color:#fff;margin:2px;">'+firstName+'</span>';
+        }).join('');
+
+      // Response state
+      const isPending = myResponse==='pending';
+      const isIn = myResponse==='in';
+      const isOut = myResponse==='out';
+      const isWaitlist = myResponse==='waitlist';
 
       const card=document.createElement('div');
-      card.style.cssText='background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px;';
-      card.innerHTML=
-        '<div style="display:flex;align-items:flex-start;gap:12px;">'+
-          '<span style="font-size:24px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span>'+
-          '<div style="flex:1;">'+
-            '<div style="color:#fff;font-size:14px;font-weight:700;">'+dateStr+' · '+timeStr+'</div>'+
-            '<div style="color:var(--dim);font-size:12px;margin-top:2px;">Organized by <strong style="color:#fff;">'+m.organizer_name+'</strong></div>'+
-            '<div style="color:var(--dim);font-size:12px;">'+(m.court_name||'TBD')+'</div>'+
-            (m.notes?'<div style="color:var(--dim);font-size:11px;font-style:italic;margin-top:2px;">'+m.notes+'</div>':'')+
-          '</div>'+
-          '<div style="text-align:right;">'+
-            '<div style="font-size:11px;font-weight:800;color:'+matchStatusColor+';text-transform:uppercase;margin-bottom:4px;">'+m.status+'</div>'+
-            '<div style="font-size:12px;font-weight:700;color:'+respColor+';">'+respLabel+'</div>'+
-          '</div>'+
-        '</div>'+
-        // If still pending and match is open, show respond buttons
-        (response==='pending'&&m.status==='open'?
-          '<div style="display:flex;gap:8px;margin-top:12px;">'+
-            '<button onclick="respondToMatch(\''+m.id+'\',\'in\')" style="flex:1;padding:9px;border-radius:8px;border:none;background:var(--green);color:#fff;font-weight:700;font-size:12px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">✅ I\'m In!</button>'+
-            '<button onclick="respondToMatch(\''+m.id+'\',\'out\')" style="flex:1;padding:9px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:12px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">❌ Can\'t Make It</button>'+
-          '</div>':'');
+      card.style.cssText='background:rgba(255,255,255,0.03);border:1px solid '+(isPending?'rgba(59,130,246,0.4)':'var(--border)')+';border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;';
 
+      // Expand/collapse state
+      let expanded = isPending; // auto-expand if pending response needed
+
+      function render(){
+        card.innerHTML =
+          // Header — always visible, tappable
+          '<div onclick="this.parentElement._toggle()" style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;cursor:pointer;">'+
+            '<span style="font-size:22px;flex-shrink:0;">'+(m.match_type==='doubles'?'&#127955;&#127955;':'&#127955;')+'</span>'+
+            '<div style="flex:1;min-width:0;">'+
+              '<div style="color:#fff;font-size:14px;font-weight:700;">'+dateStr+'</div>'+
+              '<div style="color:var(--dim);font-size:12px;">'+timeStr+' &middot; '+(m.court_name||'Court TBD')+'</div>'+
+              '<div style="color:var(--dim);font-size:11px;margin-top:2px;">'+
+                'By <strong style="color:#fff;">'+(m.organizer_name||'Unknown')+'</strong>'+
+                (m.match_type==='singles'?' &middot; Singles':'')+(m.match_type==='doubles'?' &middot; Doubles':'')+
+              '</div>'+
+            '</div>'+
+            '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">'+
+              (urgency?'<div style="padding:2px 8px;border-radius:999px;background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.3);color:var(--green);font-size:9px;font-weight:700;">'+urgency+'</div>':'')+
+              '<div style="font-size:11px;font-weight:700;color:'+(isPending?'#60a5fa':isIn?'var(--green)':isWaitlist?'#f59e0b':'#f87171')+';">'+
+                (isPending?'Awaiting your response':isIn?'You are in!':isWaitlist?'On waitlist':'Declined')+
+              '</div>'+
+              '<div style="font-size:10px;color:var(--dim);">'+(expanded?'&#9650; less':'&#9660; more')+'</div>'+
+            '</div>'+
+          '</div>'+
+          // Expandable detail section
+          (expanded ?
+            '<div style="padding:0 16px 14px;border-top:1px solid rgba(255,255,255,0.06);">'+
+              // Players confirmed
+              '<div style="margin-top:10px;">'+
+                '<div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">'+
+                  'Players ('+inPlayers.length+'/'+maxNeeded+') &middot; '+spotsLeft+' spot'+(spotsLeft!==1?'s':'')+' left'+
+                '</div>'+
+                '<div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:12px;">'+
+                  organizerChip+playerChips+
+                '</div>'+
+              '</div>'+
+              // Respond buttons (only if pending)
+              (isPending?
+                '<div style="display:flex;gap:8px;">'+
+                  '<button data-mid="'+m.id+'" data-resp="in" class="ibo-respond-btn" style="flex:1;padding:11px;border-radius:10px;border:none;background:var(--green);color:#fff;font-weight:700;font-size:13px;cursor:pointer;">'+
+                    '&#10003; I&#39;m In!'+
+                  '</button>'+
+                  '<button data-mid="'+m.id+'" data-resp="out" class="ibo-respond-btn" style="flex:1;padding:11px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;">'+
+                    '&#10007; Can&#39;t Make It'+
+                  '</button>'+
+                '</div>'
+              : isIn?
+                '<div style="padding:8px 12px;background:rgba(76,175,125,0.08);border-radius:8px;font-size:12px;color:var(--green);font-weight:600;">'+
+                  '&#10003; You&#39;re confirmed! This match will appear in your Confirmed Matches once full.'+
+                '</div>'
+              : '')+
+            '</div>'
+          : '');
+      }
+
+      card._toggle = function(){
+        expanded = !expanded;
+        render();
+      };
+
+      render();
       container.appendChild(card);
     });
-  }catch(e){ container.innerHTML='<div style="color:#f87171;font-size:13px;">Error loading invites.</div>'; console.warn(e); }
+  }catch(e){
+    container.innerHTML='<div style="color:#f87171;font-size:13px;">Error loading invites: '+e.message+'</div>';
+  }
 }
+
+// Delegated handler for Invited by Others respond buttons
+document.addEventListener('click', function(e){
+  const btn = e.target.closest('.ibo-respond-btn');
+  if(!btn) return;
+  e.stopPropagation();
+  const matchId = btn.dataset.mid;
+  const resp = btn.dataset.resp;
+  if(matchId && resp) respondToMatch(matchId, resp);
+});
 
 // ── Init match page ────────────────────────────────────
 function initSetupMatch(){
