@@ -227,6 +227,17 @@
     </div>
     <div class="field"><label>Email Address</label><input type="email" id="email" placeholder="jane@example.com" autocomplete="off" oninput="chk1()"/></div>
     <div class="grid2">
+      <div class="field"><label>First Name</label><input type="text" id="firstName" placeholder="Jane" autocomplete="off" oninput="chk1()"/></div>
+      <div class="field">
+        <label>Last Name <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— optional · only initial stored</span></label>
+        <input type="text" id="lastName" placeholder="S." autocomplete="off"/>
+      </div>
+    </div>
+    <div class="field">
+      <label>Pickleball Nickname <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— optional</span></label>
+      <input type="text" id="nickname" placeholder="e.g. The Dink King, Smash Queen…"/>
+    </div>
+    <div class="grid2">
       <div class="field">
         <label>Phone Number <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— optional</span></label>
         <input type="tel" id="phone" placeholder="(555) 000-0000" autocomplete="off" oninput="formatPhone(this)" maxlength="14"/>
