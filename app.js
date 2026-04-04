@@ -4774,7 +4774,9 @@ function lockProfileForm(){
   if(_editModeActive)return;
   ['step1','step2','step3'].forEach(id=>{
     const step=document.getElementById(id);if(!step)return;
-    step.querySelectorAll('input:not([type="hidden"]),select,textarea').forEach(el=>{el.disabled=true;el.style.opacity='0.6';el.style.cursor='not-allowed';});
+    // Use readOnly+style instead of disabled — disabled can clear values in Chrome
+    step.querySelectorAll('input:not([type="hidden"]),textarea').forEach(el=>{el.readOnly=true;el.style.opacity='0.6';el.style.cursor='not-allowed';el.style.pointerEvents='none';});
+    step.querySelectorAll('select').forEach(el=>{el.disabled=true;el.style.opacity='0.6';el.style.cursor='not-allowed';});
     step.querySelectorAll('.chip,.chip-rect,.sched-cell,.anytime-btn,.day-btn').forEach(el=>{el.style.pointerEvents='none';el.style.opacity='0.6';});
     const ep=document.getElementById('emojiPreview');if(ep){ep.style.pointerEvents='none';ep.style.cursor='default';}
     step.querySelectorAll('input[type="range"]').forEach(el=>{el.disabled=true;});
@@ -4792,7 +4794,8 @@ function lockProfileForm(){
 function unlockProfileForm(){
   ['step1','step2','step3'].forEach(id=>{
     const step=document.getElementById(id);if(!step)return;
-    step.querySelectorAll('input:not([type="hidden"]),select,textarea').forEach(el=>{el.disabled=false;el.style.opacity='';el.style.cursor='';});
+    step.querySelectorAll('input:not([type="hidden"]),textarea').forEach(el=>{el.readOnly=false;el.style.opacity='';el.style.cursor='';el.style.pointerEvents='';});
+    step.querySelectorAll('select').forEach(el=>{el.disabled=false;el.style.opacity='';el.style.cursor='';});
     step.querySelectorAll('.chip,.chip-rect,.sched-cell,.anytime-btn,.day-btn').forEach(el=>{el.style.pointerEvents='';el.style.opacity='';});
     const ep=document.getElementById('emojiPreview');if(ep){ep.style.pointerEvents='';ep.style.cursor='pointer';}
     step.querySelectorAll('input[type="range"]').forEach(el=>{el.disabled=false;});
