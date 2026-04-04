@@ -3192,6 +3192,14 @@ async function submitMatch(){
     if(allGroups.has('specific')){
       IC_MEMBERS.forEach(({player})=>{ if(!seenEmails.has(player.email)&&MS.specificPlayers.has(player.email)){ seenEmails.add(player.email); invitees.push(player); } });
     }
+    // Auto-add organizer as "in" — they created the match, they're playing
+    if(matchId){
+      await fetch(`${SUPABASE_URL}/rest/v1/match_responses`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+        body:JSON.stringify({match_id:matchId,player_email:myEmail,player_name:myName,response:'in'})
+      }).catch(()=>{});
+    }
     status.textContent='Sending to '+invitees.length+' players…';
     const dateStr=date?new Date(date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}):'';
     const timeStr=timeStart?fmt12(timeStart)+(timeEnd?' – '+fmt12(timeEnd):''):'';
@@ -3423,6 +3431,14 @@ async function loadConfirmedMatches(){
       const daysUntil = m.match_date ? Math.ceil((new Date(m.match_date+'T12:00')-new Date())/(1000*60*60*24)) : null;
       const urgency = daysUntil===0?'TODAY 🔥':daysUntil===1?'TOMORROW ⚡':daysUntil!=null?`In ${daysUntil} days`:'';
 
+      // Build player name chips
+      const playerChips = players.map(p=>{
+        const firstName = (p.player_name||p.player_email||'').split(' ')[0];
+        return '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;'+
+          'background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.25);'+
+          'font-size:12px;color:#fff;margin:2px;">'+firstName+'</span>';
+      }).join('');
+
       const card = document.createElement('div');
       card.style.cssText='background:rgba(76,175,125,0.06);border:1px solid rgba(76,175,125,0.25);border-radius:16px;padding:16px;margin-bottom:14px;';
       card.innerHTML=
@@ -3434,8 +3450,9 @@ async function loadConfirmedMatches(){
           '</div>'+
           (urgency?'<div style="padding:3px 10px;border-radius:999px;background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.3);color:var(--green);font-size:10px;font-weight:700;">'+urgency+'</div>':'')+
         '</div>'+
-        '<div style="font-size:12px;color:var(--dim);border-top:1px solid rgba(255,255,255,0.06);padding-top:8px;">'+
-          '✅ Confirmed: '+players.map(p=>p.player_name||p.player_email).join(', ')+
+        '<div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:10px;">'+
+          '<div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Players ('+players.length+')</div>'+
+          '<div style="display:flex;flex-wrap:wrap;gap:4px;">'+playerChips+'</div>'+
         '</div>';
       container.appendChild(card);
     });
@@ -3650,12 +3667,26 @@ async function loadMyInvitesPage(){
           '<button onclick="openRecordResults(\''+m.id+'\',\''+m.match_type+'\')" style="padding:8px 16px;border-radius:8px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;flex-shrink:0;">🏓 Record Score</button>'+
           '</div>';
       } else {
-        bottom='<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-top:10px;">'+
-          makeResponsePill('In',inP,'var(--green)')+makeResponsePill('Pending',pend,'#94a3b8')+
-          makeResponsePill('Waitlist',wait,'#f59e0b')+makeResponsePill('Out',out,'#f87171')+
+        const remaining = Math.max(0, maxNeeded - inP.length);
+        bottom=
+          // 5-column grid: In | Pending | Waitlist | Out | Remaining
+          '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:5px;margin-top:10px;">'+
+            makeResponsePill('In',inP,'var(--green)')+
+            makeResponsePill('Pending',pend,'#94a3b8')+
+            makeResponsePill('Waitlist',wait,'#f59e0b')+
+            makeResponsePill('Out',out,'#f87171')+
+            makeRemainingPill(remaining, maxNeeded)+
           '</div>'+
-          (inP.length?'<div style="font-size:11px;color:var(--green);margin-top:6px;">In: '+inP.map(p=>p.player_name||p.player_email).join(' · ')+'</div>':'')+
-          (pend.length?'<div style="font-size:11px;color:#94a3b8;margin-top:2px;">Awaiting: '+pend.map(p=>p.player_name||p.player_email).join(' · ')+'</div>':'');
+          // Player name lists
+          (inP.length?'<div style="font-size:11px;color:var(--green);margin-top:8px;">'+
+            '✅ '+inP.map(p=>{const n=p.player_name||p.player_email;return n.split(' ')[0];}).join(' · ')+
+          '</div>':'')+
+          (pend.length?'<div style="font-size:11px;color:#94a3b8;margin-top:3px;">'+
+            '⏳ Awaiting: '+pend.map(p=>{const n=p.player_name||p.player_email;return n.split(' ')[0];}).join(' · ')+
+          '</div>':'')+
+          (wait.length?'<div style="font-size:11px;color:#f59e0b;margin-top:3px;">'+
+            '⌛ Waitlist: '+wait.map(p=>{const n=p.player_name||p.player_email;return n.split(' ')[0];}).join(' · ')+
+          '</div>':'');
       }
       card.innerHTML=
         '<div style="display:flex;align-items:flex-start;gap:10px;">'+
@@ -3691,6 +3722,15 @@ async function loadMyInvitesPage(){
 function makeResponsePill(label, players, color){
   return '<div style="text-align:center;padding:8px 4px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);">'+
     '<div style="font-size:16px;font-weight:800;color:'+color+';">'+players.length+'</div>'+
+    '<div style="font-size:9px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">'+label+'</div>'+
+  '</div>';
+}
+
+function makeRemainingPill(remaining, maxNeeded){
+  const color = remaining === 0 ? 'var(--green)' : remaining === 1 ? '#fbbf24' : '#f87171';
+  const label = remaining === 0 ? 'Full! 🎉' : 'Needed';
+  return '<div style="text-align:center;padding:8px 4px;border-radius:8px;background:'+(remaining===0?'rgba(76,175,125,0.1)':'rgba(255,255,255,0.03)')+';border:1px solid '+(remaining===0?'rgba(76,175,125,0.3)':'var(--border)')+';">'+
+    '<div style="font-size:16px;font-weight:800;color:'+color+';">'+remaining+'</div>'+
     '<div style="font-size:9px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">'+label+'</div>'+
   '</div>';
 }
