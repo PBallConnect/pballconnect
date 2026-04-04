@@ -1320,7 +1320,7 @@
     </div>
     <div class="grid2">
       <div class="field"><label>City</label><input type="text" id="addrCity" oninput="onManualAddress();chk1()" placeholder="City" autocomplete="off"/></div>
-      <div class="field"><label>State</label><input type="text" id="addrState" oninput="onManualAddress();chk1()" placeholder="NH" autocomplete="off"/></div>
+      <div class="field"><label>State</label><input type="text" id="addrState" oninput="this.value=this.value.toUpperCase().substring(0,2);onManualAddress();chk1()" placeholder="NH" autocomplete="off"/></div>
     </div>
     <div class="field" style="max-width:160px;">
       <label>Zip Code</label>
@@ -3672,8 +3672,9 @@ function toggleConsent(type){
   if(type==='privacy'){S._privacyConsent=!S._privacyConsent;document.getElementById('checkBoxPrivacy')?.classList.toggle('on',S._privacyConsent);}
   else{S._riskConsent=!S._riskConsent;document.getElementById('checkBoxRisk')?.classList.toggle('on',S._riskConsent);}
   const btn=document.getElementById('btnSubmit');
-  if(btn)btn.disabled=!(S._privacyConsent&&S._riskConsent);
-  chk1();
+  // Gate the submit button on consent, not the step 1 continue button
+  const submitBtn=document.getElementById('btnSubmit');
+  if(submitBtn&&!SESSION_PLAYER) submitBtn.disabled=!(S._privacyConsent&&S._riskConsent);
 }
 function toggleWaiver(){toggleConsent('risk');}
 
@@ -3681,8 +3682,9 @@ function v(id){const el=document.getElementById(id);return el?el.value.trim():''
 function chk1(){
   const btn=document.getElementById('next1');if(!btn)return;
   // Zip is optional — city+state is enough to find nearby players
+  // Consent is checked in step 3 before final submit, not here
   const ok=v('firstName')&&v('email')&&v('addrCity')&&v('addrState')&&S.gender
-    &&document.getElementById('playerAge')?.value&&S._privacyConsent&&S._riskConsent;
+    &&document.getElementById('playerAge')?.value;
   btn.disabled=!ok;
 }
 function chk2(){
