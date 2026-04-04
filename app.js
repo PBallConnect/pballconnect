@@ -3433,7 +3433,10 @@ async function loadConfirmedMatches(){
 
       // Build player name chips
       const playerChips = players.map(p=>{
-        const firstName = (p.player_name||p.player_email||'').split(' ')[0];
+        // Show first name from player_name, or capitalize first part of email
+        const rawName = p.player_name || '';
+        const firstName = rawName.split(' ')[0] || 
+          (p.player_email||'').split('@')[0].replace(/[+_\.]/g,' ').split(' ')[0];
         return '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;'+
           'background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.25);'+
           'font-size:12px;color:#fff;margin:2px;">'+firstName+'</span>';
@@ -4478,7 +4481,7 @@ function restoreProfileForm(player){
 
   const textFields={
     firstName:player.first_name,lastName:player.last_name,
-    nickname:S.nickname||player.nickname,email:player.email,
+    nickname:player.nickname||S.nickname||"",email:player.email,
     phone:player.phone?formatPhoneDisplay(player.phone):'',
     dob:player.dob,addressSearch:player.address,
     addrCity:player.city,
@@ -4486,7 +4489,8 @@ function restoreProfileForm(player){
     addrZip:player.zip_code,addrCounty:player.county,
   };
   Object.entries(textFields).forEach(([id,val])=>{
-    const el=document.getElementById(id); if(el&&val) el.value=val;
+    const el=document.getElementById(id);
+    if(el && (val || val==='')) el.value = val||''; // always restore, even empty string clears the field
   });
 
   if(player.playing_since){const el=document.getElementById('playingSince');if(el)el.value=player.playing_since;}
