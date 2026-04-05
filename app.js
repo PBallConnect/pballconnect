@@ -1254,6 +1254,7 @@ function showPage(page){
   if(page==='playerStats')   { loadCommunitySnapshot(); }
   if(page==='setupMatch')     { initSetupMatch(); loadMatchSquareCounts(); }
   if(page==='confirmedMatches') { loadConfirmedMatches(); }
+  if(page==='outerCircle')     { loadOuterCircle(); }
   if(page==='recordScores')  { loadRecordScores(); }
   if(page==='myInvites')      { loadMyInvitesPage(); }
   if(page==='invitedByOthers'){ loadInvitedByOthersPage(); }
@@ -1620,11 +1621,14 @@ function srBackToTeams(){
 }
 
 function srFinish(){
+  const matchId = SR.matchId;
   closeScoreRecorder();
   showToast('✅ '+SR.gamesPlayed.length+' game'+(SR.gamesPlayed.length!==1?'s':'')+' recorded!','#4CAF7D');
   // Refresh the page the user was on
   if(document.getElementById('page-myInvites').classList.contains('active')) loadMyInvitesPage();
   if(document.getElementById('page-invitedByOthers').classList.contains('active')) loadInvitedByOthersPage();
+  // Trigger post-match feedback prompt
+  if(matchId) maybeShowPostMatchFeedback(matchId);
 }
 
 function refreshCurrentPage(){
@@ -3369,6 +3373,342 @@ async function loadMatchSquareCounts(){
 // CONFIRMED MATCHES + RECORD/VIEW SCORES
 // ══════════════════════════════════════════════════════
 
+// ══════════════════════════════════════════════════════
+// OUTER CIRCLE
+// ══════════════════════════════════════════════════════
+
+async function loadOuterCircleBadge(email){
+  // Quick count of outer circle members for nav badge
+  if(!email) return;
+  try{
+    const icRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/connections?or=(requester_email.eq.${encodeURIComponent(email)},recipient_email.eq.${encodeURIComponent(email)})&status=eq.approved&select=requester_email,recipient_email`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const icConns = icRes.ok ? await icRes.json() : [];
+    const icEmails = new Set(icConns.map(c=>c.requester_email===email?c.recipient_email:c.requester_email));
+    const [orgRes, respRes] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(email)}&select=id`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}),
+      fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(email)}&response=eq.in&select=match_id`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}})
+    ]);
+    const orgMatches = orgRes.ok ? await orgRes.json() : [];
+    const myResps = respRes.ok ? await respRes.json() : [];
+    const allMatchIds = [...new Set([...orgMatches.map(m=>m.id),...myResps.map(r=>r.match_id)])];
+    if(!allMatchIds.length) return;
+    const mrRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${allMatchIds.join(',')})&response=eq.in&select=player_email`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const matchPlayers = mrRes.ok ? await mrRes.json() : [];
+    const outerEmails = new Set(matchPlayers
+      .map(r=>r.player_email)
+      .filter(e=>e!==email && !icEmails.has(e)));
+    const count = outerEmails.size;
+    const badge = document.getElementById('outerCircleBadge');
+    if(badge){
+      badge.textContent = count;
+      if(count>0){ badge.style.display='inline-flex'; badge.style.background='rgba(59,130,246,0.85)'; badge.style.color='#fff'; }
+      else { badge.style.display='none'; }
+    }
+  }catch(e){}
+}
+
+async function loadOuterCircle(){
+  const myEmail = getMyEmail();
+  const container = document.getElementById('outerCircleContent');
+  if(!container) return;
+  if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in.</div>'; return; }
+  container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;">Loading your Outer Circle...</div>';
+
+  try{
+    // Outer Circle = players you have played matches with but who are NOT in your Inner Circle
+    // Step 1: Get my IC emails
+    const icRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/connections?or=(requester_email.eq.${encodeURIComponent(myEmail)},recipient_email.eq.${encodeURIComponent(myEmail)})&status=eq.approved&select=requester_email,recipient_email`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const icConns = icRes.ok ? await icRes.json() : [];
+    const icEmails = new Set(icConns.map(c=>c.requester_email===myEmail?c.recipient_email:c.requester_email));
+
+    // Step 2: Get match IDs I've been part of
+    const [orgRes, respRes] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&select=id`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}),
+      fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.in&select=match_id`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}})
+    ]);
+    const orgMatches = orgRes.ok ? await orgRes.json() : [];
+    const myResps = respRes.ok ? await respRes.json() : [];
+    const allMatchIds = [...new Set([
+      ...orgMatches.map(m=>m.id),
+      ...myResps.map(r=>r.match_id)
+    ])];
+
+    if(!allMatchIds.length){
+      container.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--dim);">'+
+        '<div style="font-size:48px;margin-bottom:12px;">🌐</div>'+
+        '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:8px;">Your Outer Circle is empty</div>'+
+        '<div style="font-size:13px;line-height:1.6;">Play more matches and the players you\'ve shared courts with will appear here. Once you\'ve played together, you can invite them to your Inner Circle.</div>'+
+      '</div>';
+      return;
+    }
+
+    // Step 3: Get all players who played in those matches (excluding me and IC members)
+    const mrRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${allMatchIds.join(',')})&response=eq.in&select=player_email,player_name,match_id`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const matchPlayers = mrRes.ok ? await mrRes.json() : [];
+
+    // Build map of email -> matches played together
+    const playerMatchCount = {};
+    matchPlayers.forEach(r=>{
+      if(r.player_email===myEmail) return;
+      if(icEmails.has(r.player_email)) return; // already in IC
+      if(!playerMatchCount[r.player_email]) playerMatchCount[r.player_email]={count:0,name:r.player_name,matches:new Set()};
+      playerMatchCount[r.player_email].count++;
+      playerMatchCount[r.player_email].matches.add(r.match_id);
+    });
+
+    const outerEmails = Object.keys(playerMatchCount);
+    // Update badge
+    const badge = document.getElementById('outerCircleBadge');
+    if(badge){
+      badge.textContent = outerEmails.length;
+      badge.style.display = outerEmails.length>0?'inline-flex':'none';
+      if(outerEmails.length>0){ badge.style.background='rgba(59,130,246,0.85)'; badge.style.color='#fff'; }
+    }
+
+    if(!outerEmails.length){
+      container.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--dim);">'+
+        '<div style="font-size:48px;margin-bottom:12px;">🌐</div>'+
+        '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:8px;">No Outer Circle members yet</div>'+
+        '<div style="font-size:13px;line-height:1.6;">Players you share matches with (outside your Inner Circle) will appear here.</div>'+
+      '</div>';
+      return;
+    }
+
+    // Step 4: Fetch player profiles
+    const profRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/registrations?email=in.(${outerEmails.map(e=>encodeURIComponent(e)).join(',')})&select=email,first_name,last_name,nickname,skill_level,city,state,avatar_emoji,photo_url,handedness`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const profiles = profRes.ok ? await profRes.json() : [];
+
+    // Step 5: Get reliability + conduct stats
+    const statsMap = await fetchPlayerStats(outerEmails);
+
+    container.innerHTML='';
+
+    // Header stats
+    const header = document.createElement('div');
+    header.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;';
+    header.innerHTML=
+      '<div style="font-size:13px;color:var(--dim);">'+outerEmails.length+' player'+(outerEmails.length!==1?'s':'')+' you\'ve shared courts with</div>'+
+      '<div style="font-size:11px;color:var(--dim);">Not in your Inner Circle</div>';
+    container.appendChild(header);
+
+    // Sort by matches played together (most first)
+    profiles.sort((a,b)=>{
+      const aCount = playerMatchCount[a.email]?.count||0;
+      const bCount = playerMatchCount[b.email]?.count||0;
+      return bCount - aCount;
+    });
+
+    profiles.forEach(player=>{
+      const matchInfo = playerMatchCount[player.email];
+      const stats = statsMap[player.email]||{reliability:null,conduct:null,matchCount:0};
+      const name = ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim() || matchInfo?.name || player.email;
+      const initials = name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
+      const togetherCount = matchInfo?.count||0;
+
+      const reliabilityHtml = stats.reliability!==null
+        ? '<span style="font-size:11px;color:'+(stats.reliability>=90?'var(--green)':stats.reliability>=75?'#fbbf24':'#f87171')+';">'+
+            '&#10003; '+stats.reliability+'% reliable</span>'
+        : '<span style="font-size:11px;color:var(--dim);">No data yet</span>';
+
+      const conductHtml = stats.conduct!==null
+        ? '<span style="font-size:11px;margin-left:8px;color:var(--dim);">'+
+            (stats.conduct>=90?'&#128522; Great attitude':stats.conduct>=70?'&#128528; Mixed reviews':'&#9888;&#65039; Play with caution')+
+          '</span>'
+        : '';
+
+      const card = document.createElement('div');
+      card.style.cssText='background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;';
+      card.innerHTML=
+        // Avatar
+        (player.photo_url
+          ? '<div style="width:46px;height:46px;border-radius:50%;overflow:hidden;flex-shrink:0;"><img src="'+player.photo_url+'" style="width:100%;height:100%;object-fit:cover;"/></div>'
+          : '<div style="width:46px;height:46px;border-radius:50%;background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.25);display:flex;align-items:center;justify-content:center;font-size:'+(player.avatar_emoji?'22':'16')+'px;flex-shrink:0;color:#fff;">'+
+              (player.avatar_emoji||initials)+'</div>')+
+        // Info
+        '<div style="flex:1;min-width:0;">'+
+          '<div style="color:#fff;font-size:14px;font-weight:700;">'+name+(player.nickname?' <span style="color:var(--dim);font-size:12px;font-weight:400;">"'+player.nickname+'"</span>':'')+' </div>'+
+          '<div style="display:flex;align-items:center;gap:8px;margin-top:3px;flex-wrap:wrap;">'+
+            (player.skill_level?'<span style="font-size:11px;color:#fbbf24;">&#11088; '+player.skill_level+'</span>':'')+
+            (player.city?'<span style="font-size:11px;color:var(--dim);">'+player.city+(player.state?', '+player.state:'')+'</span>':'')+
+            '<span style="font-size:11px;color:rgba(59,130,246,0.8);">'+togetherCount+' match'+(togetherCount!==1?'es':'')+' together</span>'+
+          '</div>'+
+          '<div style="display:flex;align-items:center;margin-top:4px;">'+
+            reliabilityHtml+conductHtml+
+          '</div>'+
+        '</div>'+
+        // Actions
+        '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">'+
+          '<button onclick="sendIcInviteToOuterCircle(\''+player.email+'\',\''+name+'\')" '+
+            'style="padding:6px 12px;border-radius:8px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">'+
+            '+ Inner Circle'+
+          '</button>'+
+          '<button onclick="showOuterCircleMatchInvite(\''+player.email+'\',\''+name+'\')" '+
+            'style="padding:6px 12px;border-radius:8px;border:1px solid rgba(59,130,246,0.4);background:transparent;color:#60a5fa;font-size:11px;cursor:pointer;white-space:nowrap;">'+
+            '&#127955; Invite to Match'+
+          '</button>'+
+        '</div>';
+      container.appendChild(card);
+    });
+
+  }catch(e){
+    container.innerHTML='<div style="color:#f87171;font-size:13px;">Error: '+e.message+'</div>';
+    console.warn(e);
+  }
+}
+
+async function fetchPlayerStats(emails){
+  // Returns reliability % and conduct % per player
+  if(!emails.length) return {};
+  try{
+    // Reliability: matches they committed to vs actually played
+    const mrRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/match_responses?player_email=in.(${emails.map(e=>encodeURIComponent(e)).join(',')})&select=player_email,response,actually_played,cancelled_at`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const responses = mrRes.ok ? await mrRes.json() : [];
+
+    // Conduct: feedback from matches
+    const fbRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/player_feedback?reviewed_email=in.(${emails.map(e=>encodeURIComponent(e)).join(',')})&select=reviewed_email,would_play_again`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const feedback = fbRes.ok ? await fbRes.json() : [];
+
+    const stats = {};
+    emails.forEach(email=>{
+      const myResps = responses.filter(r=>r.player_email===email);
+      const committed = myResps.filter(r=>r.response==='in').length;
+      const played = myResps.filter(r=>r.actually_played===true).length;
+      const cancelled = myResps.filter(r=>r.cancelled_at).length;
+
+      const myFeedback = feedback.filter(f=>f.reviewed_email===email);
+      const positive = myFeedback.filter(f=>f.would_play_again).length;
+
+      stats[email] = {
+        reliability: committed>=3 ? Math.round((committed-cancelled)/committed*100) : null,
+        conduct: myFeedback.length>=3 ? Math.round(positive/myFeedback.length*100) : null,
+        matchCount: committed
+      };
+    });
+    return stats;
+  }catch(e){ return {}; }
+}
+
+async function sendIcInviteToOuterCircle(email, name){
+  const myEmail = getMyEmail();
+  const myName = getMyName();
+  if(!myEmail) return;
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+      body:JSON.stringify({requester_email:myEmail,requester_name:myName,recipient_email:email,recipient_name:name,status:'pending'})
+    });
+    showToast('Inner Circle invite sent to '+name.split(' ')[0]+'!','#4CAF7D');
+    loadOuterCircle();
+  }catch(e){ showToast('Could not send invite','#f87171'); }
+}
+
+function showOuterCircleMatchInvite(email, name){
+  showToast('Setting up match with '+name.split(' ')[0]+'...','#4CAF7D');
+  showPage('setupMatch');
+}
+
+// ── Post-Match Feedback Prompt ─────────────────────────
+async function showPostMatchFeedback(matchId, players){
+  // Called after a match is marked complete
+  // Ask for quick thumbs up/down on each co-player
+  const myEmail = getMyEmail();
+  if(!myEmail || !players.length) return;
+  const others = players.filter(p=>p.player_email!==myEmail);
+  if(!others.length) return;
+
+  // Check if already reviewed this match
+  const checkRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/player_feedback?match_id=eq.${matchId}&reviewer_email=eq.${encodeURIComponent(myEmail)}&select=id&limit=1`,
+    {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+  const existing = checkRes.ok ? await checkRes.json() : [];
+  if(existing.length) return; // Already reviewed
+
+  const overlay = document.createElement('div');
+  overlay.id = 'postMatchFeedbackOverlay';
+  overlay.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:800;background:#0a1a0d;border-top:2px solid rgba(76,175,125,0.4);padding:20px 20px 40px;box-shadow:0 -8px 32px rgba(0,0,0,0.7);';
+
+  let currentIdx = 0;
+
+  function renderFeedback(){
+    if(currentIdx >= others.length){ overlay.remove(); return; }
+    const player = others[currentIdx];
+    const firstName = (player.player_name||player.player_email||'').split(' ')[0];
+
+    overlay.innerHTML=
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">'+
+        '<div style="font-size:15px;font-weight:800;color:#fff;">How was playing with '+firstName+'?</div>'+
+        '<button onclick="document.getElementById(\'postMatchFeedbackOverlay\').remove()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:20px;">&#10005;</button>'+
+      '</div>'+
+      '<div style="font-size:12px;color:var(--dim);margin-bottom:16px;">Your feedback is private — it helps others know what to expect. '+(currentIdx+1)+' of '+others.length+'</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">'+
+        '<button onclick="submitFeedback(\''+matchId+'\',\''+player.player_email+'\',true)" '+
+          'style="padding:14px;border-radius:12px;border:none;background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.4);color:var(--green);font-size:22px;cursor:pointer;">'+
+          '&#128522;<div style="font-size:12px;font-weight:700;margin-top:4px;">Great — would play again</div>'+
+        '</button>'+
+        '<button onclick="submitFeedback(\''+matchId+'\',\''+player.player_email+'\',false)" '+
+          'style="padding:14px;border-radius:12px;border:none;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#f87171;font-size:22px;cursor:pointer;">'+
+          '&#128528;<div style="font-size:12px;font-weight:700;margin-top:4px;">Had some concerns</div>'+
+        '</button>'+
+      '</div>'+
+      '<button onclick="skipFeedback()" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:12px;cursor:pointer;">Skip for now</button>';
+  }
+
+  window.submitFeedback = async(matchId, reviewedEmail, wouldPlayAgain)=>{
+    try{
+      await fetch(`${SUPABASE_URL}/rest/v1/player_feedback`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+        body:JSON.stringify({match_id:matchId,reviewer_email:myEmail,reviewed_email:reviewedEmail,would_play_again:wouldPlayAgain})
+      });
+    }catch(e){}
+    currentIdx++;
+    if(currentIdx >= others.length){
+      overlay.remove();
+      showToast('Thanks for your feedback!','#4CAF7D');
+    } else {
+      renderFeedback();
+    }
+  };
+
+  window.skipFeedback = ()=>{
+    currentIdx++;
+    if(currentIdx >= others.length){ overlay.remove(); return; }
+    renderFeedback();
+  };
+
+  document.body.appendChild(overlay);
+  renderFeedback();
+}
+
+// Trigger post-match feedback when recording scores
+function maybeShowPostMatchFeedback(matchId){
+  // Fetch confirmed players for this match and show feedback prompt
+  fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.in&select=player_email,player_name`,
+    {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}})
+    .then(r=>r.json())
+    .then(players=>{ setTimeout(()=>showPostMatchFeedback(matchId, players), 1500); })
+    .catch(()=>{});
+}
+
 async function loadConfirmedMatches(){
   const myEmail = getMyEmail();
   const container = document.getElementById('confirmedMatchesList');
@@ -4536,6 +4876,8 @@ async function restoreSession(email, playerData){
   setTimeout(loadAllMatchBadges, 1000);
   // Start real-time polling for new invites
   startInvitePolling(player.email);
+  // Load outer circle badge async
+  setTimeout(()=>loadOuterCircleBadge(player.email), 1500);
 
   if(!S.addrLat && player.city && player.state) geocodeCityForSession(player.city, player.state);
   showPage('innerCircle');
