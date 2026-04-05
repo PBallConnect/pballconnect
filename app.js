@@ -3230,6 +3230,8 @@ async function submitMatch(){
     document.getElementById('matchSentSection').style.display='block';
     loadSentMatches();
     loadMatchSquareCounts();
+    // Update nav badges immediately
+    setTimeout(()=>loadAllMatchBadges(), 500);
     setTimeout(()=>{ MS.format='doubles';MS.group=null;MS.specificPlayers.clear();MS.selectedGroups=new Set();MS.extraGroups=new Set();MS.isFeeler=false;MS.date=null;MS.courtId=null;MS.courtName=null;MS.duration=2; matchGoTo(1); btn.textContent='🎾 Send Match Invite';btn.disabled=false; },3000);
   }catch(e){ status.textContent='⚠️ Error: '+e.message; btn.disabled=false; btn.textContent='🎾 Send Match Invite'; }
 }
@@ -3656,13 +3658,45 @@ async function sendIcInviteToOuterCircle(email, name){
       body:JSON.stringify({requester_email:myEmail,requester_name:myName,recipient_email:email,recipient_name:name,status:'pending'})
     });
     showToast('Inner Circle invite sent to '+name.split(' ')[0]+'!','#4CAF7D');
+    // Immediately increment the yellow IC badge
+    const yb = document.getElementById('icNavYellowBadge');
+    if(yb){
+      const current = parseInt(yb.textContent||'0');
+      const newCount = current + 1;
+      yb.textContent = newCount;
+      yb.style.opacity = '1';
+      yb.classList.remove('placeholder');
+      // Also update the outbound count box
+      const outEl = document.getElementById('icOutboundCount');
+      if(outEl) outEl.textContent = newCount;
+    }
     loadOuterCircle();
   }catch(e){ showToast('Could not send invite','#f87171'); }
 }
 
 function showOuterCircleMatchInvite(email, name){
-  showToast('Setting up match with '+name.split(' ')[0]+'...','#4CAF7D');
+  // Pre-select this player as a specific invitee in the match setup
   showPage('setupMatch');
+  // Wait for setup to initialize, then inject the player
+  setTimeout(()=>{
+    // Set format to specific players and add this player
+    MS.group = 'specific';
+    MS.selectedGroups = new Set(['specific']);
+    MS.specificPlayers = MS.specificPlayers || new Set();
+    MS.specificPlayers.add(email);
+    // Update the UI to reflect specific selection
+    const specificBtn = document.querySelector('[data-group="specific"],.matchGroupBtn');
+    // Show a toast telling them who is pre-selected
+    showToast('🎾 '+name.split(' ')[0]+' pre-selected — choose match details and send!','#4CAF7D');
+    // Find and highlight the specific player in the UI if visible
+    const playerCards = document.querySelectorAll('.ic-mini-card,.match-player-card');
+    playerCards.forEach(card=>{
+      if(card.dataset?.email===email || card.dataset?.playerEmail===email){
+        card.style.outline='2px solid var(--green)';
+        card.scrollIntoView({behavior:'smooth',block:'nearest'});
+      }
+    });
+  }, 400);
 }
 
 // ── Post-Match Feedback Prompt ─────────────────────────
