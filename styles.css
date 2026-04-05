@@ -1,4 +1,7 @@
 @keyframes slideUp{from{transform:translateX(-50%) translateY(20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+@keyframes iboGlow{0%,100%{box-shadow:0 0 0 0 rgba(76,175,125,0.4)}50%{box-shadow:0 0 0 8px rgba(76,175,125,0)}}
+.ibo-pulse{animation:iboGlow 1.8s ease-in-out infinite;}
+.ibo-pulse:hover,.ibo-pulse:active{animation:none;background:var(--green)!important;color:#fff!important;}
 
 /* Generated from single-file build */
 

@@ -4246,7 +4246,7 @@ async function loadInvitedByOthersPage(){
               // Respond buttons (only if pending)
               (isPending?
                 '<div style="display:flex;gap:8px;">'+
-                  '<button data-mid="'+m.id+'" data-resp="in" class="ibo-respond-btn" style="flex:1;padding:11px;border-radius:10px;border:none;background:var(--green);color:#fff;font-weight:700;font-size:13px;cursor:pointer;">'+
+                  '<button data-mid="'+m.id+'" data-resp="in" class="ibo-respond-btn ibo-pulse" style="flex:1;padding:11px;border-radius:10px;border:2px solid var(--green);background:rgba(76,175,125,0.1);color:var(--green);font-weight:700;font-size:13px;cursor:pointer;">'+
                     '&#10003; I&#39;m In!'+
                   '</button>'+
                   '<button data-mid="'+m.id+'" data-resp="out" class="ibo-respond-btn" style="flex:1;padding:11px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;">'+
@@ -4282,7 +4282,20 @@ document.addEventListener('click', function(e){
   e.stopPropagation();
   const matchId = btn.dataset.mid;
   const resp = btn.dataset.resp;
-  if(matchId && resp) respondToMatch(matchId, resp);
+  if(!matchId || !resp) return;
+  // Instant visual feedback
+  if(resp==='in'){
+    btn.style.background='var(--green)';
+    btn.style.color='#fff';
+    btn.style.border='2px solid var(--green)';
+    btn.classList.remove('ibo-pulse');
+    btn.textContent='Saving...';
+  } else {
+    btn.style.opacity='0.5';
+    btn.textContent='Saving...';
+  }
+  btn.disabled=true;
+  respondToMatch(matchId, resp);
 });
 
 // ── Init match page ────────────────────────────────────
@@ -4453,26 +4466,51 @@ async function respondToMatch(matchId, response){
     // If spots full and not already in, go to waitlist
     let actualResponse = response;
     if(response==='in' && spotsLeft <= 0 && !alreadyIn) actualResponse = 'waitlist';
-    // UPSERT the response
+    // UPSERT the response — use PATCH to update existing row (avoids duplicate key error)
     const myName = getMyName() || myEmail.split('@')[0];
-    const upsertRes = await fetch(`${SUPABASE_URL}/rest/v1/match_responses`,{
-      method:'POST',
+    // First try PATCH (update existing pending row)
+    const patchRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&player_email=eq.${encodeURIComponent(myEmail)}`,{
+      method:'PATCH',
       headers:{
         'Content-Type':'application/json',
         'apikey':SUPABASE_ANON_KEY,
         'Authorization':'Bearer '+SUPABASE_ANON_KEY,
-        'Prefer':'resolution=merge-duplicates,return=minimal',
-        'on_conflict':'match_id,player_email'
+        'Prefer':'return=minimal'
       },
       body:JSON.stringify({
-        match_id:matchId,
-        player_email:myEmail,
-        player_name:myName,
         response:actualResponse,
+        player_name:myName,
         responded_at:new Date().toISOString()
       })
     });
-    if(!upsertRes.ok){ throw new Error('Save failed: '+await upsertRes.text()); }
+    // If no row existed to PATCH, INSERT instead
+    if(patchRes.ok){
+      // Check if patch actually updated something
+      const count = patchRes.headers.get('content-range');
+      if(count === '*/0' || count === null){
+        // No row found, do INSERT
+        const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/match_responses`,{
+          method:'POST',
+          headers:{
+            'Content-Type':'application/json',
+            'apikey':SUPABASE_ANON_KEY,
+            'Authorization':'Bearer '+SUPABASE_ANON_KEY,
+            'Prefer':'return=minimal'
+          },
+          body:JSON.stringify({
+            match_id:matchId,
+            player_email:myEmail,
+            player_name:myName,
+            response:actualResponse,
+            responded_at:new Date().toISOString()
+          })
+        });
+        if(!insertRes.ok){ throw new Error('Save failed: '+await insertRes.text()); }
+      }
+    } else {
+      throw new Error('Save failed: '+await patchRes.text());
+    }
     const banner = document.getElementById('matchResponseBanner');
     if(banner) banner.remove();
     if(actualResponse==='in'){
