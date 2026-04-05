@@ -3194,7 +3194,28 @@ async function submitMatch(){
       }
     });
     if(allGroups.has('specific')){
+      // First: specific players who ARE in IC_MEMBERS
       IC_MEMBERS.forEach(({player})=>{ if(!seenEmails.has(player.email)&&MS.specificPlayers.has(player.email)){ seenEmails.add(player.email); invitees.push(player); } });
+      // Second: specific players NOT in IC_MEMBERS (e.g. Outer Circle players)
+      // Fetch their profiles so we have name + email for the invite
+      const outerEmails = [...MS.specificPlayers].filter(e=>!seenEmails.has(e));
+      if(outerEmails.length && matchId){
+        try{
+          const outerRes = await fetch(
+            `${SUPABASE_URL}/rest/v1/registrations?email=in.(${outerEmails.map(e=>encodeURIComponent(e)).join(',')})&select=email,first_name,last_name`,
+            {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+          );
+          const outerProfiles = outerRes.ok ? await outerRes.json() : [];
+          const profileMap = {};
+          outerProfiles.forEach(p=>{ profileMap[p.email]=p; });
+          outerEmails.forEach(email=>{
+            const p = profileMap[email];
+            const playerName = p ? ((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim() : email.split('@')[0];
+            seenEmails.add(email);
+            invitees.push({ email, first_name: p?.first_name||playerName, last_name: p?.last_name||'' });
+          });
+        }catch(e){ console.warn('Could not fetch outer circle profiles:', e); }
+      }
     }
     // Auto-add organizer as "in" — they created the match, they're playing
     if(matchId){
