@@ -5646,9 +5646,15 @@ function updateIcStats(pendingMembers){
     }
   });
   set('gMaleMember',mMale); set('gFemaleMember',mFemale); set('gOtherMember',mOther); set('gTotalMember',IC_MEMBERS.length);
+  // Old IDs kept for compatibility but these rows are removed from HTML
   set('gMaleInvited',pMale); set('gFemaleInvited',pFemale); set('gOtherInvited',pOther); set('gTotalInvited',pending.length);
   set('lBelowMember',mBelow); set('lMyMember',mMy); set('lAboveMember',mAbove); set('lTotalMember',IC_MEMBERS.length);
   set('lBelowInvited',pBelow); set('lMyInvited',pMy); set('lAboveInvited',pAbove); set('lTotalInvited',pending.length);
+  // New: populate the Pending Invites summary boxes
+  set('icOutboundCount', pending.length);
+  // Inbound count comes from IC_INCOMING_COUNT set elsewhere
+  const inboundEl = document.getElementById('icInboundCount');
+  if(inboundEl) inboundEl.textContent = IC_INCOMING_COUNT||0;
 }
 
 function updateNavCircleBadges(memberCount,pendingCount,incomingCount){
@@ -5658,6 +5664,11 @@ function updateNavCircleBadges(memberCount,pendingCount,incomingCount){
   if(gb){gb.textContent=memberCount;gb.classList.toggle('placeholder',memberCount===0);gb.style.opacity=memberCount>0?'1':'0.4';gb.style.display='inline-flex';}
   if(yb){yb.textContent=pendingCount;yb.classList.toggle('placeholder',pendingCount===0);yb.style.opacity=pendingCount>0?'1':'0.4';yb.style.display='inline-flex';}
   if(pb){const inc=incomingCount||0;pb.textContent=inc;pb.classList.toggle('placeholder',inc===0);pb.style.opacity=inc>0?'1':'0.5';pb.style.display='inline-flex';}
+  // Sync the new summary boxes too
+  const outEl=document.getElementById('icOutboundCount');
+  if(outEl) outEl.textContent=pendingCount;
+  const inEl=document.getElementById('icInboundCount');
+  if(inEl) inEl.textContent=incomingCount||0;
 }
 
 function updateNavCourtBadges(publicCount, privateCount){
