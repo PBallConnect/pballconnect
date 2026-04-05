@@ -3937,7 +3937,7 @@ async function loadRecordScores(){
           '<span style="font-size:22px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span>'+
           '<div style="flex:1;">'+
             '<div style="color:'+(hasScores?'var(--green)':'#fff')+';font-size:14px;font-weight:700;">'+dateStr+(timeStr?' · '+timeStr:'')+'</div>'+
-            '<div style="color:var(--dim);font-size:12px;">'+(m.court_name||'Court TBD')+'</div>'+
+            '<div style="color:var(--dim);font-size:12px;">'+(m.court_name&&m.court_name!=='TBD'?m.court_name:(m.court_address||'Location TBD'))+'</div>'+
           '</div>'+
           '<button onclick="openRecordResults(\''+m.id+'\',\''+m.match_type+'\')" '+
             'style="padding:7px 14px;border-radius:8px;border:none;background:var(--green);color:var(--dark);'+
@@ -4516,7 +4516,11 @@ async function respondToMatch(matchId, response){
     if(actualResponse==='in'){
       showToast("You're in! See you on the court!",'#4CAF7D');
       setTimeout(()=>checkAndUpdateMatchStatus(matchId), 500);
-      setTimeout(()=>loadAllMatchBadges(), 800);
+      setTimeout(()=>{
+        loadAllMatchBadges();
+        // Also refresh the top blue badge
+        refreshTopInviteBadge();
+      }, 800);
     } else if(actualResponse==='waitlist'){
       const wRes = await fetch(
         `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.waitlist&select=player_email&order=responded_at.asc`,
@@ -4653,6 +4657,30 @@ function startInvitePolling(email){
   _pollInterval = setInterval(()=>checkForNewInvites(email), 30000);
 }
 
+async function refreshTopInviteBadge(){
+  const myEmail = getMyEmail();
+  if(!myEmail) return;
+  try{
+    const rRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.pending&select=match_id`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const pending = rRes.ok ? await rRes.json() : [];
+    let count = 0;
+    if(pending.length){
+      const ids = pending.map(r=>r.match_id);
+      const mRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/matches?id=in.(${ids.join(',')})&status=neq.full&status=neq.cancelled&select=id,match_date,time_start,time_end`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      const openMatches = mRes.ok ? await mRes.json() : [];
+      count = openMatches.filter(m=>!isMatchPast(m)).length;
+    }
+    const topBadge = document.getElementById('topMatchInvitesBadge');
+    const topLabel = document.getElementById('topMatchInvitesLabel');
+    if(topBadge){ topBadge.textContent=count; topBadge.style.display=count>0?'inline-block':'none'; }
+    if(topLabel) topLabel.textContent = count>0 ? 'Invited to Play ('+count+')' : 'Invited to Play';
+  }catch(e){}
+}
+
 async function checkForNewInvites(email){
   if(!email) return;
   try{
@@ -4663,8 +4691,9 @@ async function checkForNewInvites(email){
     if(!res.ok) return;
     const rows = await res.json();
     const count = rows.length;
-    // Update badge
+    // Update both nav badge and top button badge
     updateMatchBadge('invitedByOthersBadge', count, 'rgba(59,130,246,0.85)');
+    refreshTopInviteBadge();
     // Show popup if count increased since last check
     if(count > _lastSeenInviteCount && _lastSeenInviteCount >= 0){
       const newCount = count - _lastSeenInviteCount;
@@ -6559,16 +6588,72 @@ async function shareInviteLink(){
   }
 }
 
-async function copyInviteLink(){
-  if(!_qrInviteUrl) return;
+async 
+async function getMyInviteUrl(){
+  // Generate a personal invite token/URL
+  const myEmail = getMyEmail();
+  const myName = getMyName();
+  if(!myEmail) return window.location.origin+window.location.pathname;
+  // Create an invite token
+  let token;
   try{
-    await navigator.clipboard.writeText(_qrInviteUrl);
-    const btn = document.getElementById('qrCopyBtn');
-    if(btn){ btn.textContent = '✓ Copied!'; btn.style.color = 'var(--green)'; btn.style.borderColor = 'rgba(76,175,125,0.4)'; }
-    setTimeout(()=>{
-      if(btn){ btn.textContent = '📋 Copy Link'; btn.style.color = ''; btn.style.borderColor = ''; }
-    }, 2000);
-  }catch(e){ showToast('📋 ' + _qrInviteUrl,'#4CAF7D'); }
+    const crypto = window.crypto || window.msCrypto;
+    const arr = new Uint8Array(12);
+    crypto.getRandomValues(arr);
+    token = Array.from(arr).map(b=>b.toString(36)).join('').substring(0,16);
+  }catch(e){ token=Math.random().toString(36).slice(2); }
+  // Save invite to DB
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/invites`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+      body:JSON.stringify({inviter_email:myEmail,inviter_name:myName,invite_token:token,invite_method:'link'})
+    });
+  }catch(e){}
+  return window.location.origin+window.location.pathname+'?invite='+token;
+}
+
+async function openQuickInvite(method){
+  const myName = getMyName()||'A fellow pickleball player';
+  const firstName = myName.split(' ')[0];
+  const url = await getMyInviteUrl();
+
+  if(method==='sms'){
+    const body = encodeURIComponent(
+      firstName+' wants you in their Inner Circle on PBallConnect! '+
+      'Set up your player profile and connect: '+url+
+      ' (takes 2 min)'
+    );
+    window.open('sms:?body='+body);
+    showToast('Messages app opened! 💬','#60a5fa');
+  } else if(method==='email'){
+    const subject = encodeURIComponent(firstName+' invited you to join PBallConnect! 🎾');
+    const body = encodeURIComponent(
+      'Hey!\n\n'+
+      myName+' wants to add you to their Inner Circle on PBallConnect — '+
+      'the best way to organize pickleball matches with people you actually want to play with.\n\n'+
+      'Join '+firstName+'\'s network here:\n'+url+'\n\n'+
+      'Takes about 2 minutes to set up your profile.\n\n'+
+      'See you on the court! 🏓'
+    );
+    window.open('mailto:?subject='+subject+'&body='+body);
+    showToast('Email app opened! ✉️','#4CAF7D');
+  }
+}
+
+async function copyInviteLink(){
+  const url = await getMyInviteUrl();
+  try{
+    await navigator.clipboard.writeText(url);
+    showToast('🔗 Invite link copied! Share it anywhere.','#fbbf24');
+  }catch(e){
+    // Fallback for browsers that don't support clipboard API
+    const el = document.createElement('textarea');
+    el.value = url; el.style.position='fixed'; el.style.opacity='0';
+    document.body.appendChild(el); el.select();
+    document.execCommand('copy'); document.body.removeChild(el);
+    showToast('🔗 Link copied!','#fbbf24');
+  }
 }
 
 async function sendInvite(method){
