@@ -3592,7 +3592,7 @@ async function loadOuterCircle(){
           '</div>'+
         '</div>'+
         // Actions
-        '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">'+
+        '<div id="oc-actions-'+player.email.replace(/[^a-z0-9]/gi,'_')+'" style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">'+
           '<button onclick="sendIcInviteToOuterCircle(\''+player.email+'\',\''+name+'\')" '+
             'style="padding:6px 12px;border-radius:8px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">'+
             '+ Inner Circle'+
@@ -3602,6 +3602,20 @@ async function loadOuterCircle(){
             '&#127955; Invite to Match'+
           '</button>'+
         '</div>';
+
+      // Append "Invite to App" button for unregistered players as a DOM node
+      // so we can disable it after sending without inline-onclick limitations
+      if(!isRegistered){
+        const actionsEl = card.querySelector('[id^="oc-actions-"]');
+        if(actionsEl){
+          const invBtn = document.createElement('button');
+          invBtn.textContent = '✉️ Invite to App';
+          invBtn.style.cssText = 'padding:6px 12px;border-radius:8px;border:1px solid rgba(245,158,11,0.4);background:transparent;color:#f59e0b;font-size:11px;cursor:pointer;white-space:nowrap;';
+          invBtn.onclick = ()=>sendAppInviteToOuterCircle(player.email, name, invBtn);
+          actionsEl.appendChild(invBtn);
+        }
+      }
+
       container.appendChild(card);
     });
 
@@ -3672,6 +3686,30 @@ async function sendIcInviteToOuterCircle(email, name){
     }
     loadOuterCircle();
   }catch(e){ showToast('Could not send invite','#f87171'); }
+}
+
+async function sendAppInviteToOuterCircle(email, name, btn){
+  const myName = getMyName() || 'A fellow pickleball player';
+  if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
+  try{
+    const pubKey = window.EMAILJS_PUBLIC_KEY;
+    if(!pubKey || pubKey==='YOUR_PUBLIC_KEY') throw new Error('EmailJS not configured');
+    emailjs.init(pubKey);
+    await emailjs.send(window.EMAILJS_SERVICE_ID, window.EMAILJS_TEMPLATE_ID, {
+      to_email:      email,
+      from_name:     'PBallConnect',
+      from_email:    'noreply@pickleballregistry.app',
+      invite_url:    window.location.origin + window.location.pathname,
+      personal_note: myName+' played pickleball with you and thinks you\'d love PBallConnect! '+
+                     'Create your free profile to get match invites, track scores, and connect with players near you.',
+      site_url:      window.location.origin,
+    });
+    if(btn){ btn.textContent='✅ Invite Sent!'; btn.style.color='var(--green)'; btn.style.borderColor='rgba(76,175,125,0.4)'; }
+    showToast('✉️ App invite sent to '+(name.split(' ')[0]||email)+'!','#4CAF7D');
+  }catch(e){
+    if(btn){ btn.disabled=false; btn.textContent='✉️ Invite to App'; }
+    showToast('Could not send invite: '+e.message,'#f87171');
+  }
 }
 
 function showOuterCircleMatchInvite(email, name){
