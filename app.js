@@ -3513,13 +3513,34 @@ async function loadOuterCircle(){
 
     container.innerHTML='';
 
-    // Header stats
-    const header = document.createElement('div');
-    header.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;';
-    header.innerHTML=
-      '<div style="font-size:13px;color:var(--dim);">'+outerEmails.length+' player'+(outerEmails.length!==1?'s':'')+' you\'ve shared courts with</div>'+
-      '<div style="font-size:11px;color:var(--dim);">Not in your Inner Circle</div>';
-    container.appendChild(header);
+    // Populate the stats dashboard
+    const mySkill = parseFloat(S.skill||SESSION_PLAYER?.skill_level||0);
+    const skills = mySkill ? getAdjacentSkills(String(mySkill)) : null;
+    let ocMale=0,ocFemale=0,ocOther=0,ocBelow=0,ocMy=0,ocAbove=0,ocUnreg=0;
+    profiles.forEach(p=>{
+      if(!p.registered){ ocUnreg++; return; }
+      if(p.gender==='Male') ocMale++;
+      else if(p.gender==='Female') ocFemale++;
+      else ocOther++;
+      if(p.skill_level && skills){
+        const ps=parseFloat(p.skill_level||0);
+        if(skills.below!==null&&Math.abs(ps-skills.below)<0.13) ocBelow++;
+        else if(Math.abs(ps-skills.my)<0.13) ocMy++;
+        else if(skills.above!==null&&Math.abs(ps-skills.above)<0.13) ocAbove++;
+        else ocMy++;
+      }
+    });
+    const setOc=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
+    setOc('ocTotalCount',  outerEmails.length);
+    setOc('ocGMale',       ocMale);
+    setOc('ocGFemale',     ocFemale);
+    setOc('ocGOther',      ocOther);
+    setOc('ocGTotal',      profiles.filter(p=>p.registered).length);
+    setOc('ocLBelow',      ocBelow);
+    setOc('ocLMy',         ocMy);
+    setOc('ocLAbove',      ocAbove);
+    setOc('ocLTotal',      profiles.filter(p=>p.registered&&p.skill_level).length);
+    setOc('ocUnregisteredCount', ocUnreg);
 
     // Sort by matches played together (most first)
     profiles.sort((a,b)=>{
@@ -4180,12 +4201,17 @@ async function loadInvitedByOthersPage(){
       return;
     }
     const matchIds=myResponses.map(r=>r.match_id);
-    // Fetch open matches — EXCLUDE matches I organized (those are in My Match Invites)
+    // Fetch open matches — filter out my own organized matches in JS (more reliable than neq)
     const mr=await fetch(
-      `${SUPABASE_URL}/rest/v1/matches?id=in.(${matchIds.join(',')})&organizer_email=neq.${encodeURIComponent(myEmail)}&status=neq.full&status=neq.cancelled&select=*&order=match_date.asc`,
+      `${SUPABASE_URL}/rest/v1/matches?id=in.(${matchIds.join(',')})&status=neq.full&status=neq.cancelled&select=*&order=match_date.asc`,
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     const allMatches=mr.ok?await mr.json():[];
-    const matches=allMatches.filter(m=>!isMatchPast(m));
+    // Filter out: past matches AND matches I organized (case-insensitive email compare)
+    const myEmailLower = myEmail.toLowerCase();
+    const matches=allMatches.filter(m=>
+      !isMatchPast(m) &&
+      (m.organizer_email||'').toLowerCase() !== myEmailLower
+    );
     container.innerHTML='';
     if(!matches.length){
       container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">No open match invites from others.<br><span style="font-size:12px;">Confirmed matches appear under Confirmed Matches.</span></div>';
@@ -4289,6 +4315,30 @@ async function loadInvitedByOthersPage(){
 }
 
 // ── Init match page ────────────────────────────────────
+// Delegated handler for Invited by Others respond buttons
+// Must be at document level to catch dynamically rendered buttons
+document.addEventListener('click', function(e){
+  const btn = e.target.closest('.ibo-respond-btn');
+  if(!btn) return;
+  e.stopPropagation();
+  const matchId = btn.dataset.mid;
+  const resp = btn.dataset.resp;
+  if(!matchId || !resp) return;
+  // Instant visual feedback before async save
+  if(resp==='in'){
+    btn.style.background='var(--green)';
+    btn.style.color='#fff';
+    btn.style.border='2px solid var(--green)';
+    btn.classList.remove('ibo-pulse');
+    btn.textContent='Saving...';
+  } else {
+    btn.style.opacity='0.5';
+    btn.textContent='Saving...';
+  }
+  btn.disabled=true;
+  respondToMatch(matchId, resp);
+});
+
 function initSetupMatch(){
   // Reset MS state
   MS.format='doubles'; MS.group=null; MS.specificPlayers.clear(); MS.extraGroups=new Set(); MS.selectedGroups=new Set(); MS.deselectedPlayers=new Set();
