@@ -3451,7 +3451,7 @@ async function loadOuterCircle(){
         '<input id="ocAddEmail" placeholder="Email address" type="email" style="flex:2;min-width:160px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px 12px;color:#fff;font-size:13px;font-family:inherit;outline:none;"/>'+
         '<button onclick="ocManualAdd()" style="padding:8px 16px;border-radius:8px;border:none;background:rgba(59,130,246,0.2);color:#60a5fa;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;border:1px solid rgba(59,130,246,0.35);">+ Add</button>'+
       '</div>'+
-      '<div style="font-size:11px;color:var(--dim);margin-top:6px;">They don't need to be on PBallConnect yet — you can invite them later.</div>'+
+      '<div style="font-size:11px;color:var(--dim);margin-top:6px;">They don\'t need to be on PBallConnect yet — you can invite them later.</div>'+
     '</div>';
   container.innerHTML = addForm + '<div id="ocDynamic" style="color:var(--dim);font-size:13px;padding:12px 0;">Loading…</div>';
 
@@ -3644,10 +3644,10 @@ async function loadOuterCircleDynamic(){
             '</div>'+
           '</div>'+
           '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;" id="oc-manual-acts-'+email.replace(/[^a-z0-9]/gi,'_')+'">'+
-            '<button onclick="promoteToInnerCircle(''+email+'',''+name+'',this)" '+
+            '<button onclick="promoteToInnerCircle(\''+email+'\',\''+name+'\',this)" '+
               'style="padding:6px 12px;border-radius:8px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">'+
               '→ Inner Circle</button>'+
-            '<button onclick="showOuterCircleMatchInvite(''+email+'',''+name+'')" '+
+            '<button onclick="showOuterCircleMatchInvite(\''+email+'\',\''+name+'\')" '+
               'style="padding:6px 12px;border-radius:8px;border:1px solid rgba(59,130,246,0.4);background:transparent;color:#60a5fa;font-size:11px;cursor:pointer;white-space:nowrap;">'+
               '🎾 Invite to Match</button>'+
           '</div>';
@@ -3701,10 +3701,10 @@ async function loadOuterCircleDynamic(){
             '<div style="display:flex;align-items:center;margin-top:4px;">'+reliabilityHtml+conductHtml+'</div>'+
           '</div>'+
           '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;" id="oc-acts-'+player.email.replace(/[^a-z0-9]/gi,'_')+'">'+
-            '<button onclick="sendIcInviteToOuterCircle(''+player.email+'',''+name+'')" '+
+            '<button onclick="sendIcInviteToOuterCircle(\''+player.email+'\',\''+name+'\')" '+
               'style="padding:6px 12px;border-radius:8px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">'+
               '+ Inner Circle</button>'+
-            '<button onclick="showOuterCircleMatchInvite(''+player.email+'',''+name+'')" '+
+            '<button onclick="showOuterCircleMatchInvite(\''+player.email+'\',\''+name+'\')" '+
               'style="padding:6px 12px;border-radius:8px;border:1px solid rgba(59,130,246,0.4);background:transparent;color:#60a5fa;font-size:11px;cursor:pointer;white-space:nowrap;">'+
               '🎾 Invite to Match</button>'+
           '</div>';
