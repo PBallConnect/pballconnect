@@ -3724,29 +3724,14 @@ function _appInviteCopyFallback(siteUrl, name, btn){
   }
 }
 
+// Holds a pre-selected player to inject after initSetupMatch resets MS
+let _pendingMatchInvitee = null;
+
 function showOuterCircleMatchInvite(email, name){
-  // Pre-select this player as a specific invitee in the match setup
+  // initSetupMatch() resets MS entirely, so we store the invitee first
+  // and apply it at the end of initSetupMatch via applyPendingMatchInvitee().
+  _pendingMatchInvitee = { email, name };
   showPage('setupMatch');
-  // Wait for setup to initialize, then inject the player
-  setTimeout(()=>{
-    // Set format to specific players and add this player
-    MS.group = 'specific';
-    MS.selectedGroups = new Set(['specific']);
-    MS.specificPlayers = MS.specificPlayers || new Set();
-    MS.specificPlayers.add(email);
-    // Update the UI to reflect specific selection
-    const specificBtn = document.querySelector('[data-group="specific"],.matchGroupBtn');
-    // Show a toast telling them who is pre-selected
-    showToast('🎾 '+name.split(' ')[0]+' pre-selected — choose match details and send!','#4CAF7D');
-    // Find and highlight the specific player in the UI if visible
-    const playerCards = document.querySelectorAll('.ic-mini-card,.match-player-card');
-    playerCards.forEach(card=>{
-      if(card.dataset?.email===email || card.dataset?.playerEmail===email){
-        card.style.outline='2px solid var(--green)';
-        card.scrollIntoView({behavior:'smooth',block:'nearest'});
-      }
-    });
-  }, 400);
 }
 
 // ── Post-Match Feedback Prompt ─────────────────────────
@@ -4455,6 +4440,33 @@ function initSetupMatch(){
   // Step 1 Continue always enabled (Doubles pre-selected)
   const next1 = document.getElementById('matchNext1');
   if(next1) next1.disabled = false;
+
+  // Apply any pre-selected player from Outer Circle / player card
+  applyPendingMatchInvitee();
+}
+
+function applyPendingMatchInvitee(){
+  if(!_pendingMatchInvitee) return;
+  const { email, name } = _pendingMatchInvitee;
+  _pendingMatchInvitee = null;
+
+  // Inject into MS state
+  MS.group = 'specific';
+  MS.selectedGroups = new Set(['specific']);
+  MS.specificPlayers.add(email);
+
+  // Visually mark the 'specific' group button as selected
+  const specificBtn = document.querySelector('#matchGroupOptions .match-option[data-group="specific"]');
+  if(specificBtn) specificBtn.classList.add('on');
+
+  // Show a banner on step 1 so the user knows who is pre-selected
+  const banner = document.getElementById('matchPreselectedBanner');
+  if(banner){
+    banner.textContent = '🎾 '+name+' pre-selected — pick format, date & time, then Continue to confirm.';
+    banner.style.display = 'block';
+  }
+
+  checkMatchStep1();
 }
 
 // ══════════════════════════════════════════════════════
