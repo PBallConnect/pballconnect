@@ -4171,6 +4171,7 @@ async function loadInvitedByOthersPage(){
   if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in to view your invites.</div>'; return; }
   container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:12px 0;">Loading...</div>';
   try{
+    // Get my match responses — but EXCLUDE matches I organized
     const rr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&select=match_id,response,responded_at&order=responded_at.desc`,
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     const myResponses=rr.ok?await rr.json():[];
@@ -4179,17 +4180,18 @@ async function loadInvitedByOthersPage(){
       return;
     }
     const matchIds=myResponses.map(r=>r.match_id);
-    // Fetch open matches only
-    const mr=await fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${matchIds.join(',')})&status=neq.full&status=neq.cancelled&select=*&order=match_date.asc`,
+    // Fetch open matches — EXCLUDE matches I organized (those are in My Match Invites)
+    const mr=await fetch(
+      `${SUPABASE_URL}/rest/v1/matches?id=in.(${matchIds.join(',')})&organizer_email=neq.${encodeURIComponent(myEmail)}&status=neq.full&status=neq.cancelled&select=*&order=match_date.asc`,
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     const allMatches=mr.ok?await mr.json():[];
     const matches=allMatches.filter(m=>!isMatchPast(m));
     container.innerHTML='';
     if(!matches.length){
-      container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">No open match invites.<br><span style="font-size:12px;">Confirmed matches appear under Confirmed Matches.</span></div>';
+      container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">No open match invites from others.<br><span style="font-size:12px;">Confirmed matches appear under Confirmed Matches.</span></div>';
       return;
     }
-    // Fetch all responses for these matches to show confirmed players
+    // Fetch all IN responses for these matches
     const rRes=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${matches.map(m=>m.id).join(',')})&response=eq.in&select=match_id,player_name,player_email`,
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     const allResponses=rRes.ok?await rRes.json():[];
@@ -4199,122 +4201,92 @@ async function loadInvitedByOthersPage(){
       const myResponse=myResp?.response||'pending';
       const inPlayers=allResponses.filter(r=>r.match_id===m.id);
       const maxNeeded=m.max_players||(m.match_type==='doubles'?4:2);
-      const spotsLeft=Math.max(0,maxNeeded-inPlayers.length);
+      // Spots left: don't count myself if I'm on waitlist
+      const confirmedCount=inPlayers.length;
+      const spotsLeft=Math.max(0,maxNeeded-confirmedCount);
       const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'long',day:'numeric'}):'TBD';
       const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' - '+fmt12(m.time_end):''):'TBD';
       const daysUntil=m.match_date?Math.ceil((new Date(m.match_date+'T12:00')-new Date())/(1000*60*60*24)):null;
       const urgency=daysUntil===0?'TODAY':daysUntil===1?'TOMORROW':daysUntil!=null?'In '+daysUntil+' days':'';
+      const courtDisplay=m.court_name&&m.court_name!=='TBD'?m.court_name:(m.court_address||'Location TBD');
 
-      // Player chips — confirmed players including organizer
-      // Always show organizer first
-      const organizerChip = '<span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.25);font-size:11px;color:var(--green);margin:2px;">'+
+      // Player chips — organizer always first with star
+      const organizerChip='<span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.25);font-size:11px;color:var(--green);margin:2px;">'+
         (m.organizer_name||'Organizer').split(' ')[0]+' &#9733;</span>';
-      const playerChips = inPlayers
-        .filter(p=>p.player_email!==m.organizer_email) // organizer shown separately
+      const playerChips=inPlayers
+        .filter(p=>p.player_email!==m.organizer_email)
         .map(p=>{
           const firstName=(p.player_name||p.player_email||'').split(' ')[0];
           return '<span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,0.06);border:1px solid var(--border);font-size:11px;color:#fff;margin:2px;">'+firstName+'</span>';
         }).join('');
 
-      // Response state
-      const isPending = myResponse==='pending';
-      const isIn = myResponse==='in';
-      const isOut = myResponse==='out';
-      const isWaitlist = myResponse==='waitlist';
+      const isPending=myResponse==='pending';
+      const isIn=myResponse==='in';
+      const isOut=myResponse==='out';
+      const isWaitlist=myResponse==='waitlist';
+
+      // Fix: if on waitlist but spots available, allow upgrading to in
+      const canUpgrade=isWaitlist&&spotsLeft>0;
 
       const card=document.createElement('div');
       card.style.cssText='background:rgba(255,255,255,0.03);border:1px solid '+(isPending?'rgba(59,130,246,0.4)':'var(--border)')+';border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;';
 
-      // Expand/collapse state
-      let expanded = isPending; // auto-expand if pending response needed
+      let expanded=isPending||canUpgrade;
 
       function render(){
-        card.innerHTML =
-          // Header — always visible, tappable
+        card.innerHTML=
           '<div onclick="this.parentElement._toggle()" style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;cursor:pointer;">'+
             '<span style="font-size:22px;flex-shrink:0;">'+(m.match_type==='doubles'?'&#127955;&#127955;':'&#127955;')+'</span>'+
             '<div style="flex:1;min-width:0;">'+
               '<div style="color:#fff;font-size:14px;font-weight:700;">'+dateStr+'</div>'+
-              '<div style="color:var(--dim);font-size:12px;">'+timeStr+' &middot; '+(m.court_name||'Court TBD')+'</div>'+
+              '<div style="color:var(--dim);font-size:12px;">'+timeStr+' &middot; '+courtDisplay+'</div>'+
               '<div style="color:var(--dim);font-size:11px;margin-top:2px;">'+
                 'By <strong style="color:#fff;">'+(m.organizer_name||'Unknown')+'</strong>'+
-                (m.match_type==='singles'?' &middot; Singles':'')+(m.match_type==='doubles'?' &middot; Doubles':'')+
+                ' &middot; '+(m.match_type==='singles'?'Singles':'Doubles')+
               '</div>'+
             '</div>'+
             '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">'+
               (urgency?'<div style="padding:2px 8px;border-radius:999px;background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.3);color:var(--green);font-size:9px;font-weight:700;">'+urgency+'</div>':'')+
-              '<div style="font-size:11px;font-weight:700;color:'+(isPending?'#60a5fa':isIn?'var(--green)':isWaitlist?'#f59e0b':'#f87171')+';">'+
-                (isPending?'Awaiting your response':isIn?'You are in!':isWaitlist?'On waitlist':'Declined')+
+              '<div style="font-size:11px;font-weight:700;color:'+(isPending?'#60a5fa':isIn?'var(--green)':canUpgrade?'#f59e0b':isWaitlist?'#f59e0b':'#f87171')+';">'+
+                (isPending?'Awaiting response':isIn?'You are in!':canUpgrade?'Waitlist - spot open!':isWaitlist?'On waitlist':'Declined')+
               '</div>'+
-              '<div style="font-size:10px;color:var(--dim);">'+(expanded?'&#9650; less':'&#9660; more')+'</div>'+
+              '<div style="font-size:10px;color:var(--dim);">'+(expanded?'&#9650; less':'&#9660; details')+'</div>'+
             '</div>'+
           '</div>'+
-          // Expandable detail section
-          (expanded ?
+          (expanded?
             '<div style="padding:0 16px 14px;border-top:1px solid rgba(255,255,255,0.06);">'+
-              // Players confirmed
               '<div style="margin-top:10px;">'+
                 '<div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">'+
-                  'Players ('+inPlayers.length+'/'+maxNeeded+') &middot; '+spotsLeft+' spot'+(spotsLeft!==1?'s':'')+' left'+
+                  'Players ('+confirmedCount+'/'+maxNeeded+') &middot; '+
+                  (spotsLeft>0?spotsLeft+' spot'+(spotsLeft!==1?'s':'')+' left':'Full!')+
                 '</div>'+
-                '<div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:12px;">'+
-                  organizerChip+playerChips+
-                '</div>'+
+                '<div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:12px;">'+organizerChip+playerChips+'</div>'+
               '</div>'+
-              // Respond buttons (only if pending)
               (isPending?
                 '<div style="display:flex;gap:8px;">'+
-                  '<button data-mid="'+m.id+'" data-resp="in" class="ibo-respond-btn ibo-pulse" style="flex:1;padding:11px;border-radius:10px;border:2px solid var(--green);background:rgba(76,175,125,0.1);color:var(--green);font-weight:700;font-size:13px;cursor:pointer;">'+
-                    '&#10003; I&#39;m In!'+
-                  '</button>'+
-                  '<button data-mid="'+m.id+'" data-resp="out" class="ibo-respond-btn" style="flex:1;padding:11px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;">'+
-                    '&#10007; Can&#39;t Make It'+
-                  '</button>'+
+                  '<button data-mid="'+m.id+'" data-resp="in" class="ibo-respond-btn ibo-pulse" style="flex:1;padding:11px;border-radius:10px;border:2px solid var(--green);background:rgba(76,175,125,0.1);color:var(--green);font-weight:700;font-size:13px;cursor:pointer;">&#10003; I&#39;m In!</button>'+
+                  '<button data-mid="'+m.id+'" data-resp="out" class="ibo-respond-btn" style="flex:1;padding:11px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;">&#10007; Can&#39;t Make It</button>'+
                 '</div>'
-              : isIn?
-                '<div style="padding:8px 12px;background:rgba(76,175,125,0.08);border-radius:8px;font-size:12px;color:var(--green);font-weight:600;">'+
-                  '&#10003; You&#39;re confirmed! This match will appear in your Confirmed Matches once full.'+
+              :canUpgrade?
+                '<div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:10px 12px;margin-bottom:10px;">'+
+                  '<div style="font-size:12px;color:#fbbf24;font-weight:600;margin-bottom:8px;">&#9889; A spot opened up — want to join?</div>'+
+                  '<button data-mid="'+m.id+'" data-resp="in" class="ibo-respond-btn" style="width:100%;padding:10px;border-radius:8px;border:none;background:var(--green);color:#fff;font-weight:700;font-size:13px;cursor:pointer;">&#10003; Yes, I&#39;m In!</button>'+
                 '</div>'
-              : '')+
+              :isIn?
+                '<div style="padding:8px 12px;background:rgba(76,175,125,0.08);border-radius:8px;font-size:12px;color:var(--green);font-weight:600;">&#10003; You are confirmed!</div>'
+              :'')+
             '</div>'
-          : '');
+          :'');
       }
 
-      card._toggle = function(){
-        expanded = !expanded;
-        render();
-      };
-
+      card._toggle=function(){ expanded=!expanded; render(); };
       render();
       container.appendChild(card);
     });
   }catch(e){
-    container.innerHTML='<div style="color:#f87171;font-size:13px;">Error loading invites: '+e.message+'</div>';
+    container.innerHTML='<div style="color:#f87171;font-size:13px;">Error: '+e.message+'</div>';
   }
 }
-
-// Delegated handler for Invited by Others respond buttons
-document.addEventListener('click', function(e){
-  const btn = e.target.closest('.ibo-respond-btn');
-  if(!btn) return;
-  e.stopPropagation();
-  const matchId = btn.dataset.mid;
-  const resp = btn.dataset.resp;
-  if(!matchId || !resp) return;
-  // Instant visual feedback
-  if(resp==='in'){
-    btn.style.background='var(--green)';
-    btn.style.color='#fff';
-    btn.style.border='2px solid var(--green)';
-    btn.classList.remove('ibo-pulse');
-    btn.textContent='Saving...';
-  } else {
-    btn.style.opacity='0.5';
-    btn.textContent='Saving...';
-  }
-  btn.disabled=true;
-  respondToMatch(matchId, resp);
-});
 
 // ── Init match page ────────────────────────────────────
 function initSetupMatch(){
@@ -6428,7 +6400,23 @@ function renderCircleSkillColumns(){
   });
 }
 
-function showFilteredList(type,value,status){ showToast('Filter: '+type+' '+value,'#4CAF7D'); }
+function showFilteredList(type, value, status){
+  // Navigate to IC page and filter to the relevant section
+  if(!document.getElementById('page-innerCircle')?.classList.contains('active')){
+    showPage('innerCircle');
+    setTimeout(()=>showFilteredList(type, value, status), 500);
+    return;
+  }
+
+  // Map status to IC view mode
+  const mode = status==='invited' ? 'invited' : status==='pending' ? 'incoming' : 'members';
+  showIcView(mode);
+
+  // Show a descriptive toast
+  const statusLabel = status==='invited'?'invited':status==='pending'?'requesting':status==='approved'?'members':'players';
+  const valueLabel = value==='All'?'all':value;
+  showToast('Showing '+valueLabel+' '+statusLabel,'#4CAF7D');
+}
 
 function sortInnerCircle(by){
   if(by==='name') IC_MEMBERS.sort((a,b)=>((a.player.first_name||'')+(a.player.last_name||'')).localeCompare((b.player.first_name||'')+(b.player.last_name||'')));
