@@ -3690,25 +3690,37 @@ async function sendIcInviteToOuterCircle(email, name){
 
 async function sendAppInviteToOuterCircle(email, name, btn){
   const myName = getMyName() || 'A fellow pickleball player';
+  const siteUrl = window.location.origin + window.location.pathname;
   if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
-  try{
-    const pubKey = window.EMAILJS_PUBLIC_KEY;
-    if(!pubKey || pubKey==='YOUR_PUBLIC_KEY') throw new Error('EmailJS not configured');
+
+  const pubKey = window.EMAILJS_PUBLIC_KEY;
+  if(pubKey && pubKey !== 'YOUR_PUBLIC_KEY'){
     emailjs.init(pubKey);
-    await emailjs.send(window.EMAILJS_SERVICE_ID, window.EMAILJS_TEMPLATE_ID, {
+    emailjs.send(window.EMAILJS_SERVICE_ID, window.EMAILJS_TEMPLATE_ID, {
       to_email:      email,
       from_name:     'PBallConnect',
       from_email:    'noreply@pickleballregistry.app',
-      invite_url:    window.location.origin + window.location.pathname,
+      invite_url:    siteUrl,
       personal_note: myName+' played pickleball with you and thinks you\'d love PBallConnect! '+
                      'Create your free profile to get match invites, track scores, and connect with players near you.',
-      site_url:      window.location.origin,
-    });
-    if(btn){ btn.textContent='✅ Invite Sent!'; btn.style.color='var(--green)'; btn.style.borderColor='rgba(76,175,125,0.4)'; }
-    showToast('✉️ App invite sent to '+(name.split(' ')[0]||email)+'!','#4CAF7D');
+      site_url:      siteUrl,
+    }).then(()=>{
+      if(btn){ btn.textContent='✅ Invite Sent!'; btn.style.color='var(--green)'; btn.style.borderColor='rgba(76,175,125,0.4)'; }
+      showToast('✉️ App invite sent to '+(name.split(' ')[0]||email)+'!','#4CAF7D');
+    }).catch(()=>{ _appInviteCopyFallback(siteUrl, name, btn); });
+  } else {
+    _appInviteCopyFallback(siteUrl, name, btn);
+  }
+}
+
+function _appInviteCopyFallback(siteUrl, name, btn){
+  try{
+    navigator.clipboard.writeText(siteUrl);
+    if(btn){ btn.textContent='📋 Link Copied!'; btn.style.color='#fbbf24'; btn.style.borderColor='rgba(251,191,36,0.4)'; }
+    showToast('📋 Invite link copied — paste it to '+(name.split(' ')[0]||'them')+'!','#fbbf24');
   }catch(e){
     if(btn){ btn.disabled=false; btn.textContent='✉️ Invite to App'; }
-    showToast('Could not send invite: '+e.message,'#f87171');
+    showToast('Invite link: '+siteUrl,'#60a5fa');
   }
 }
 
