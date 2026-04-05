@@ -168,26 +168,31 @@
     <div class="page-section active" id="page-playerProfile">
       <div class="reg-wrapper">
 
-        <!-- Edit Profile + Share buttons — shown when signed in -->
-        <div id="editProfileBtnInPage" style="display:none;text-align:right;margin-bottom:12px;">
-          <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
-            <button onclick="openQrModal()" title="Share your profile QR code"
-              style="padding:8px 14px;border-radius:20px;border:1px solid rgba(76,175,125,0.3);background:rgba(76,175,125,0.08);color:var(--green);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
-              📱 Share
-            </button>
-            <button id="editProfileBtnEl" class="edit-profile-btn" onclick="openEditProfile()">
-              ✏️ Edit Profile
-            </button>
+        <!-- STICKY HEADER — Edit Profile + Share + Step dots -->
+        <div id="profileStickyHeader" style="position:sticky;top:0;z-index:50;background:rgba(10,18,11,0.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);margin:0 -4px;padding:10px 4px 8px;border-bottom:1px solid rgba(255,255,255,0.06);">
+
+          <!-- Edit + Share buttons (shown when signed in) -->
+          <div id="editProfileBtnInPage" style="display:none;margin-bottom:8px;">
+            <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
+              <button onclick="openQrModal()" title="Share your profile QR code"
+                style="padding:7px 14px;border-radius:20px;border:1px solid rgba(76,175,125,0.3);background:rgba(76,175,125,0.08);color:var(--green);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
+                📱 Share
+              </button>
+              <button id="editProfileBtnEl" class="edit-profile-btn" onclick="openEditProfile()">
+                ✏️ Edit Profile
+              </button>
+            </div>
+          </div>
+
+          <!-- Step dots -->
+          <div class="steps">
+            <div class="step-item"><div class="step-dot active" id="dot1">1</div><span class="step-label active" id="lbl1">Personal Info</span></div>
+            <div class="step-line" id="line1"></div>
+            <div class="step-item"><div class="step-dot" id="dot2">2</div><span class="step-label" id="lbl2">Player Profile</span></div>
+            <div class="step-line" id="line2"></div>
+            <div class="step-item"><div class="step-dot" id="dot3">3</div><span class="step-label" id="lbl3\">Waiver</span></div>
           </div>
         </div>
-        <div class="steps">
-          <div class="step-item"><div class="step-dot active" id="dot1">1</div><span class="step-label active" id="lbl1">Personal Info</span></div>
-          <div class="step-line" id="line1"></div>
-          <div class="step-item"><div class="step-dot" id="dot2">2</div><span class="step-label" id="lbl2">Player Profile</span></div>
-          <div class="step-line" id="line2"></div>
-          <div class="step-item"><div class="step-dot" id="dot3">3</div><span class="step-label" id="lbl3">Waiver</span></div>
-        </div>
-
   <!-- STEP 1 -->
   <div class="card" id="step1" autocomplete="off">
     <h2>Personal Information</h2>

@@ -3486,11 +3486,27 @@ async function loadOuterCircle(){
       return;
     }
 
-    // Step 4: Fetch player profiles
+    // Step 4: Fetch player profiles — some may not have registered yet
     const profRes = await fetch(
       `${SUPABASE_URL}/rest/v1/registrations?email=in.(${outerEmails.map(e=>encodeURIComponent(e)).join(',')})&select=email,first_name,last_name,nickname,skill_level,city,state,avatar_emoji,photo_url,handedness`,
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
-    const profiles = profRes.ok ? await profRes.json() : [];
+    const registeredProfiles = profRes.ok ? await profRes.json() : [];
+    const profileMap = {};
+    registeredProfiles.forEach(p=>{ profileMap[p.email]=p; });
+
+    // Build full player list — use registration data if available, fallback to match_responses name
+    const profiles = outerEmails.map(email=>({
+      email,
+      first_name: profileMap[email]?.first_name || (playerMatchCount[email]?.name||'').split(' ')[0] || '',
+      last_name:  profileMap[email]?.last_name  || (playerMatchCount[email]?.name||'').split(' ').slice(1).join(' ') || '',
+      nickname:   profileMap[email]?.nickname   || null,
+      skill_level:profileMap[email]?.skill_level|| null,
+      city:       profileMap[email]?.city       || null,
+      state:      profileMap[email]?.state      || null,
+      avatar_emoji:profileMap[email]?.avatar_emoji|| null,
+      photo_url:  profileMap[email]?.photo_url  || null,
+      registered: !!profileMap[email]
+    }));
 
     // Step 5: Get reliability + conduct stats
     const statsMap = await fetchPlayerStats(outerEmails);
@@ -3515,7 +3531,8 @@ async function loadOuterCircle(){
     profiles.forEach(player=>{
       const matchInfo = playerMatchCount[player.email];
       const stats = statsMap[player.email]||{reliability:null,conduct:null,matchCount:0};
-      const name = ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim() || matchInfo?.name || player.email;
+      const name = ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim() || matchInfo?.name || player.email.split('@')[0];
+      const isRegistered = player.registered !== false;
       const initials = name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
       const togetherCount = matchInfo?.count||0;
 
@@ -3545,6 +3562,7 @@ async function loadOuterCircle(){
             (player.skill_level?'<span style="font-size:11px;color:#fbbf24;">&#11088; '+player.skill_level+'</span>':'')+
             (player.city?'<span style="font-size:11px;color:var(--dim);">'+player.city+(player.state?', '+player.state:'')+'</span>':'')+
             '<span style="font-size:11px;color:rgba(59,130,246,0.8);">'+togetherCount+' match'+(togetherCount!==1?'es':'')+' together</span>'+
+            (!isRegistered?'<span style="font-size:10px;color:#f59e0b;padding:1px 6px;border-radius:4px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);">Not yet on PBallConnect</span>':'')+
           '</div>'+
           '<div style="display:flex;align-items:center;margin-top:4px;">'+
             reliabilityHtml+conductHtml+
