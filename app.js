@@ -3922,17 +3922,22 @@ async function loadMyInvitesPage(){
             '⌛ Waitlist: '+wait.map(p=>{const n=p.player_name||p.player_email;return n.split(' ')[0];}).join(' · ')+
           '</div>':'');
       }
+      const courtDisplay = m.court_name && m.court_name!=='TBD' ? '📍 '+m.court_name : (m.court_address ? '📍 '+m.court_address : '📍 Court TBD');
+      const weatherId = 'mi-weather-'+m.id;
       card.innerHTML=
         '<div style="display:flex;align-items:flex-start;gap:10px;">'+
         '<span style="font-size:22px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span>'+
         '<div style="flex:1;">'+
           '<div style="color:'+(isPast?'#94a3b8':'#fff')+';font-size:14px;font-weight:700;">'+(isPast?'<s>':'')+dateStr+' · '+timeStr+(isPast?'</s>':'')+'</div>'+
-          '<div style="color:var(--dim);font-size:12px;">'+(m.court_name||'TBD')+'</div>'+
+          '<div style="color:var(--dim);font-size:12px;margin-top:2px;">'+courtDisplay+'</div>'+
+          (!isPast&&m.match_date?'<div id="'+weatherId+'" style="font-size:11px;color:var(--dim);margin-top:3px;">⛅ Loading weather…</div>':'')+
         '</div>'+
         '<div style="text-align:right;flex-shrink:0;">'+
           '<div style="font-size:12px;font-weight:700;color:'+sd.color+';">'+sd.label+'</div>'+
           (!isPast?'<div style="font-size:10px;color:var(--dim);">'+inP.length+'/'+maxNeeded+' confirmed</div>':'')+
         '</div></div>'+bottom;
+      // Load weather inline for upcoming matches
+      if(!isPast && m.match_date) loadMyInviteWeather(m, weatherId);
       return card;
     };
 
@@ -3953,10 +3958,54 @@ async function loadMyInvitesPage(){
   }catch(e){ container.innerHTML='<div style="color:#f87171;font-size:13px;">Error loading invites.</div>'; }
 }
 
+async function loadMyInviteWeather(m, elId){
+  const el = document.getElementById(elId);
+  if(!el) return;
+  // Need lat/lon — try from SESSION_PLAYER location as proxy if no court lat/lon
+  try{
+    let lat = null, lon = null;
+    // Try to get court coordinates if court_id exists
+    if(m.court_id){
+      const cr = await fetch(
+        `${SUPABASE_URL}/rest/v1/courts?id=eq.${encodeURIComponent(m.court_id)}&select=lat,lon&limit=1`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      const courts = cr.ok ? await cr.json() : [];
+      if(courts[0]?.lat){ lat=courts[0].lat; lon=courts[0].lon; }
+    }
+    // Fall back to player's stored lat/lon
+    if(!lat && SESSION_PLAYER?.lat){ lat=SESSION_PLAYER.lat; lon=SESSION_PLAYER.lon; }
+    if(!lat){ el.textContent=''; return; }
+
+    const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`+
+      `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,windspeed_10m_max,weathercode`+
+      `&temperature_unit=fahrenheit&windspeed_unit=mph&forecast_days=14&timezone=auto`;
+    const res = await fetch(url);
+    if(!res.ok){ el.textContent=''; return; }
+    const data = await res.json();
+    const idx = data.daily.time.indexOf(m.match_date);
+    if(idx<0){ el.textContent=''; return; }
+    const code=data.daily.weathercode[idx];
+    const high=Math.round(data.daily.temperature_2m_max[idx]);
+    const low=Math.round(data.daily.temperature_2m_min[idx]);
+    const precip=data.daily.precipitation_probability_max[idx];
+    const wind=Math.round(data.daily.windspeed_10m_max[idx]);
+    const emoji=getWeatherEmoji(code);
+    const precipColor=precip<20?'var(--green)':precip<50?'#fbbf24':'#f87171';
+    const windColor=wind<15?'var(--green)':wind<25?'#fbbf24':'#f87171';
+    el.innerHTML=emoji+' '+getWeatherDesc(code)+' · '+high+'°/'+low+'°F'+
+      ' · <span style="color:'+precipColor+';">Rain '+precip+'%</span>'+
+      ' · <span style="color:'+windColor+';">Wind '+wind+' mph</span>';
+  }catch(e){ if(el) el.textContent=''; }
+}
+
 function makeResponsePill(label, players, color){
-  return '<div style="text-align:center;padding:8px 4px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);">'+
+  const names = players.map(p=>(p.player_name||p.player_email||'').split(' ')[0]).filter(Boolean).join(', ');
+  const clickable = players.length > 0 && names;
+  const title = clickable ? 'title="'+names.replace(/"/g,'&quot;')+'"' : '';
+  return '<div '+title+' style="text-align:center;padding:8px 4px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);'+(clickable?'cursor:pointer;':'')+'">'+
     '<div style="font-size:16px;font-weight:800;color:'+color+';">'+players.length+'</div>'+
     '<div style="font-size:9px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">'+label+'</div>'+
+    (clickable&&players.length<=4?'<div style="font-size:8px;color:'+color+';margin-top:2px;line-height:1.3;opacity:0.8;">'+names+'</div>':'')+
   '</div>';
 }
 
