@@ -3611,6 +3611,7 @@ async function loadConfirmedMatches(){
       const court = courtData[m.court_id];
       const showWeather = isOutdoor && m.match_date && court && court.lat;
 
+      const isOrganizer = (m.organizer_email||'').toLowerCase() === myEmail.toLowerCase();
       const card = document.createElement('div');
       card.style.cssText='background:rgba(76,175,125,0.06);border:1px solid rgba(76,175,125,0.25);border-radius:16px;padding:16px;margin-bottom:14px;';
       card.innerHTML=
@@ -3620,6 +3621,8 @@ async function loadConfirmedMatches(){
           '<div style="flex:1;">'+
             '<div style="color:#fff;font-size:15px;font-weight:700;">'+dateStr+'</div>'+
             '<div style="color:var(--dim);font-size:12px;">'+timeStr+'</div>'+
+            (isOrganizer?'<div style="font-size:10px;color:var(--green);font-weight:700;margin-top:2px;">&#128081; You organized this</div>':
+              '<div style="font-size:10px;color:var(--dim);margin-top:2px;">Organized by '+((m.organizer_name||'').split(' ')[0]||'Unknown')+'</div>')+
           '</div>'+
           (urgency?'<div style="padding:3px 10px;border-radius:999px;background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.3);color:var(--green);font-size:10px;font-weight:700;white-space:nowrap;">'+urgency+'</div>':'')+
         '</div>'+
@@ -3652,12 +3655,182 @@ async function loadConfirmedMatches(){
             '<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;">'+waitChips+'</div>'
           : '')+
         '</div>';
+      // Organizer-only actions
+      if(isOrganizer){
+        const actRow = document.createElement('div');
+        actRow.style.cssText='display:flex;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);flex-wrap:wrap;';
+        actRow.innerHTML=
+          '<button onclick="openEditMatchModal(this.dataset.id)" data-id="'+m.id+'" '+
+            'style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid rgba(76,175,125,0.4);background:rgba(76,175,125,0.08);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">'+
+            '&#9998; Edit Match</button>'+
+          '<button onclick="openUninviteModal(this.dataset.id,this.dataset.type)" data-id="'+m.id+'" data-type="'+m.match_type+'" '+
+            'style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.06);color:#f87171;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">'+
+            '&#10005; Remove Player</button>';
+        card.appendChild(actRow);
+      }
       container.appendChild(card);
       if(showWeather) loadConfirmedMatchWeather(m.id, m.match_date, court.lat, court.lon);
     }
   }catch(e){
     container.innerHTML='<div style="color:#f87171;font-size:13px;">Error: '+e.message+'</div>';
   }
+}
+
+async function openEditMatchModal(matchId){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}&select=*&limit=1`,
+    {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+  const rows = res.ok ? await res.json() : [];
+  const m = rows[0]; if(!m) return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'editMatchOverlay';
+  overlay.style.cssText='position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.7);display:flex;align-items:flex-end;justify-content:center;';
+
+  const courtVal = m.court_name&&m.court_name!=='TBD' ? m.court_name : '';
+  const noteVal  = m.notes||'';
+
+  overlay.innerHTML=
+    '<div style="background:#0f1f12;border:1px solid rgba(76,175,125,0.3);border-radius:20px 20px 0 0;padding:24px 20px 40px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">'+
+        '<div style="font-size:16px;font-weight:800;color:#fff;">&#9998; Edit Match</div>'+
+        '<button onclick="document.getElementById(&quot;editMatchOverlay&quot;).remove()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer;">&#10005;</button>'+
+      '</div>'+
+      '<div style="display:grid;gap:12px;">'+
+        '<div>'+
+          '<label style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;">Date</label>'+
+          '<input id="emDate" type="date" value="'+(m.match_date||'')+'" style="width:100%;margin-top:4px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px 12px;color:#fff;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;color-scheme:dark;"/>'+
+        '</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
+          '<div>'+
+            '<label style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;">Start Time</label>'+
+            '<input id="emTimeStart" type="time" value="'+(m.time_start||'')+'" style="width:100%;margin-top:4px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px 12px;color:#fff;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;color-scheme:dark;"/>'+
+          '</div>'+
+          '<div>'+
+            '<label style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;">End Time</label>'+
+            '<input id="emTimeEnd" type="time" value="'+(m.time_end||'')+'" style="width:100%;margin-top:4px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px 12px;color:#fff;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;color-scheme:dark;"/>'+
+          '</div>'+
+        '</div>'+
+        '<div>'+
+          '<label style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;">Court / Venue</label>'+
+          '<input id="emCourt" type="text" value="'+courtVal.replace(/"/g,'&quot;')+'" placeholder="Court name or address" style="width:100%;margin-top:4px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px 12px;color:#fff;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;"/>'+
+        '</div>'+
+        '<div>'+
+          '<label style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;">Note to Players</label>'+
+          '<textarea id="emNote" rows="2" placeholder="Court changed due to weather — meet on Court 3!" style="width:100%;margin-top:4px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px 12px;color:#fff;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;resize:vertical;">'+noteVal+'</textarea>'+
+        '</div>'+
+        '<div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:10px;padding:10px 12px;">'+
+          '<div style="font-size:12px;color:#fbbf24;font-weight:700;margin-bottom:3px;">&#9888;&#65039; Changes notify all confirmed players</div>'+
+          '<div style="font-size:11px;color:var(--dim);line-height:1.5;">Players will receive updated details and be asked to re-confirm.</div>'+
+        '</div>'+
+        '<button onclick="saveMatchEdits(this.dataset.id)" data-id="'+matchId+'" style="width:100%;padding:14px;border-radius:12px;border:none;background:var(--green);color:var(--dark);font-weight:800;font-size:14px;cursor:pointer;">Save &amp; Notify Players</button>'+
+      '</div>'+
+    '</div>';
+
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+}
+
+async function saveMatchEdits(matchId){
+  const date      = document.getElementById('emDate')?.value||'';
+  const timeStart = document.getElementById('emTimeStart')?.value||'';
+  const timeEnd   = document.getElementById('emTimeEnd')?.value||'';
+  const courtName = (document.getElementById('emCourt')?.value||'').trim();
+  const note      = (document.getElementById('emNote')?.value||'').trim();
+  const saveBtn   = document.querySelector('#editMatchOverlay button[data-id]');
+  if(saveBtn){ saveBtn.disabled=true; saveBtn.textContent='Saving...'; }
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}`,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+      body:JSON.stringify(Object.fromEntries(Object.entries({
+        match_date:date, time_start:timeStart, time_end:timeEnd,
+        court_name:courtName||'TBD', notes:note||null
+      }).filter(([,v])=>v!=='')))
+    });
+    // Notify confirmed players
+    const rRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.in&select=player_email,player_name`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const players = rRes.ok ? await rRes.json() : [];
+    const myEmail = getMyEmail(); const myName = getMyName();
+    const dateStr = date?new Date(date+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}):'';
+    const timeStr = timeStart?fmt12(timeStart)+(timeEnd?' – '+fmt12(timeEnd):''):'';
+    const matchUrl= window.location.origin+window.location.pathname+'?match='+matchId;
+    const pubKey  = window.EMAILJS_PUBLIC_KEY;
+    for(const p of players){
+      if((p.player_email||'').toLowerCase()===myEmail.toLowerCase()) continue;
+      if(pubKey&&pubKey!=='YOUR_PUBLIC_KEY'){
+        emailjs.init(pubKey);
+        emailjs.send(window.EMAILJS_SERVICE_ID,window.EMAILJS_TEMPLATE_ID,{
+          to_email:p.player_email,from_name:'PBallConnect',from_email:'noreply@pickleballregistry.app',
+          invite_url:matchUrl,
+          personal_note:myName+' updated your match: '+dateStr+(timeStr?' at '+timeStr:'')+
+            (courtName?' @ '+courtName:'')+(note?' — '+note:'')+'. Please re-confirm your availability.',
+          site_url:window.location.origin
+        }).catch(()=>{});
+      }
+    }
+    document.getElementById('editMatchOverlay')?.remove();
+    showToast('Match updated! Players notified.','#4CAF7D');
+    loadConfirmedMatches();
+  }catch(e){
+    showToast('Could not save: '+e.message,'#f87171');
+    if(saveBtn){ saveBtn.disabled=false; saveBtn.textContent='Save & Notify Players'; }
+  }
+}
+
+async function openUninviteModal(matchId, matchType){
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.in&select=player_email,player_name`,
+    {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+  const players = res.ok ? await res.json() : [];
+  const myEmail = getMyEmail();
+  const others  = players.filter(p=>(p.player_email||'').toLowerCase()!==myEmail.toLowerCase());
+  if(!others.length){ showToast('No other players to remove','#f59e0b'); return; }
+
+  const overlay = document.createElement('div');
+  overlay.id = 'uninviteOverlay';
+  overlay.style.cssText='position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.7);display:flex;align-items:flex-end;justify-content:center;';
+  const rows = others.map(p=>{
+    const safeEmail = (p.player_email||'').replace(/'/g,"\'");
+    const safeName  = (p.player_name||p.player_email||'').split(' ')[0].replace(/'/g,"\'");
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">'+
+      '<span style="color:#fff;font-size:14px;font-weight:600;">'+(p.player_name||p.player_email)+'</span>'+
+      '<button onclick="confirmUninvite(this.dataset.mid,this.dataset.email,this.dataset.name)" '+
+        'data-mid="'+matchId+'" data-email="'+p.player_email.replace(/"/g,'&quot;')+'" data-name="'+safeName.replace(/"/g,'&quot;')+'" '+
+        'style="padding:6px 14px;border-radius:8px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.08);color:#f87171;font-size:12px;font-weight:700;cursor:pointer;">'+
+        'Remove</button>'+
+    '</div>';
+  }).join('');
+  overlay.innerHTML=
+    '<div style="background:#0f1f12;border:1px solid rgba(239,68,68,0.3);border-radius:20px 20px 0 0;padding:24px 20px 40px;width:100%;max-width:520px;">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">'+
+        '<div style="font-size:16px;font-weight:800;color:#fff;">Remove a Player</div>'+
+        '<button onclick="document.getElementById(&quot;uninviteOverlay&quot;).remove()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer;">&#10005;</button>'+
+      '</div>'+rows+
+    '</div>';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+}
+
+async function confirmUninvite(matchId, playerEmail, playerName){
+  try{
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&player_email=eq.${encodeURIComponent(playerEmail)}`,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+      body:JSON.stringify({response:'out'})
+    });
+    await fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}`,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+      body:JSON.stringify({status:'open'})
+    });
+    document.getElementById('uninviteOverlay')?.remove();
+    showToast(playerName+' removed from the match','#f59e0b');
+    loadConfirmedMatches();
+    loadAllMatchBadges();
+  }catch(e){ showToast('Could not remove: '+e.message,'#f87171'); }
 }
 
 async function loadConfirmedMatchWeather(matchId, date, lat, lon){
@@ -5238,6 +5411,20 @@ function startChangeDetection(){
   },400);
 }
 function stopChangeDetection(){if(_changeTimer){clearInterval(_changeTimer);_changeTimer=null;}}
+
+function _profileIsLocked(){
+  return !!SESSION_PLAYER && !document.getElementById('editProfileBtnEl')?.classList.contains('active');
+}
+
+function openEmojiPickerIfUnlocked(){
+  if(_profileIsLocked()){
+    showToast('Click ✏️ Edit Profile first to make changes','#f59e0b');
+    const btn=document.getElementById('editProfileBtnEl');
+    if(btn){ btn.style.transform='scale(1.08)'; setTimeout(()=>btn.style.transform='',600); }
+    return;
+  }
+  document.getElementById('emojiPickerRow').style.display='flex';
+}
 
 function lockProfileForm(){
   if(_editModeActive)return;
