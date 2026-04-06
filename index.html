@@ -101,10 +101,7 @@
         <span id="icNavYellowBadge" class="nav-circle-badge nav-circle-yellow placeholder" style="cursor:pointer;opacity:0.4;" onclick="showIcView('invited')" title="Pending invites">0</span>
         <span id="icNavPurpleBadge" class="nav-circle-badge nav-circle-purple placeholder" style="cursor:pointer;" onclick="showIcView('incoming')" title="Requests to you">0</span>
       </div>
-      <div class="nav-item" onclick="showPage('outerCircle')" id="nav-outerCircle" title="Outer Circle — verified players in your broader network">
-        <span class="nav-icon">🌐</span><span class="nav-label">Outer Circle</span>
-        <span id="outerCircleBadge" style="display:none;min-width:18px;height:18px;border-radius:999px;background:rgba(59,130,246,0.3);color:rgba(255,255,255,0.5);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;">0</span>
-      </div>
+
       <div class="nav-item" onclick="showPage('myCourts')" id="nav-myCourts" title="My Courts">
         <span class="nav-icon">🏟️</span><span class="nav-label">My Courts</span>
         <span id="navCourtPrivate" title="Private Courts" style="display:none;margin-left:2px;min-width:20px;height:20px;border-radius:4px;background:rgba(140,100,255,0.2);border:1px solid rgba(140,100,255,0.4);color:#a78bfa;font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 5px;cursor:default;"></span>
@@ -1535,8 +1532,6 @@
       <!-- STEP 1: FORMAT + WHO -->
       <div class="match-card" id="matchStep1">
 
-        <div id="matchPreselectedBanner" style="display:none;margin-bottom:14px;padding:10px 14px;border-radius:10px;background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.35);color:var(--green);font-size:12px;font-weight:600;line-height:1.4;"></div>
-
         <div class="match-q">What kind of match?</div>
         <div class="match-options" id="matchFormatOptions">
           <div class="match-option on" id="matchOptDoubles" onclick="selectMatchFormat('doubles',this)">
@@ -1829,93 +1824,6 @@
     </div>
     <!-- MY INVITES PAGE -->
     <!-- OUTER CIRCLE PAGE -->
-    <div class="page-section" id="page-outerCircle">
-      <div class="page-header">
-        <h1>🌐 Outer <span>Circle</span></h1>
-        <p>Verified players you've shared courts with — not yet in your Inner Circle</p>
-      </div>
-
-      <!-- Outer Circle Stats Dashboard -->
-      <div id="outerCircleStats" style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:16px;">
-
-        <!-- Summary row -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-          <div>
-            <div style="font-size:18px;font-weight:800;color:#fff;">Outer <span style="color:#60a5fa;">Circle</span></div>
-            <div style="font-size:11px;color:var(--dim);">Overview</div>
-          </div>
-          <div style="font-size:28px;font-weight:800;color:#60a5fa;" id="ocTotalCount">0</div>
-        </div>
-
-        <!-- ── Players section separator ── -->
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-          <div style="flex:1;height:1px;background:rgba(59,130,246,0.3);"></div>
-          <div style="font-size:10px;font-weight:800;color:#60a5fa;text-transform:uppercase;letter-spacing:.12em;white-space:nowrap;">🌐 Players</div>
-          <div style="flex:1;height:1px;background:rgba(59,130,246,0.3);"></div>
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-
-          <!-- By Gender -->
-          <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:12px;">
-            <div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">By Gender</div>
-            <table style="width:100%;border-collapse:collapse;font-size:12px;">
-              <thead>
-                <tr>
-                  <th style="color:#60a5fa;padding:2px 4px;text-align:center;font-weight:700;">♂ Male</th>
-                  <th style="color:#f472b6;padding:2px 4px;text-align:center;font-weight:700;">♀ Female</th>
-                  <th style="color:var(--dim);padding:2px 4px;text-align:center;font-weight:700;">⚪ Private</th>
-                  <th style="color:#fff;padding:2px 4px;text-align:center;font-weight:700;">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td id="ocGMale" style="text-align:center;font-size:16px;font-weight:800;color:#60a5fa;padding:4px;">0</td>
-                  <td id="ocGFemale" style="text-align:center;font-size:16px;font-weight:800;color:#f472b6;padding:4px;">0</td>
-                  <td id="ocGOther" style="text-align:center;font-size:16px;font-weight:800;color:var(--dim);padding:4px;">0</td>
-                  <td id="ocGTotal" style="text-align:center;font-size:16px;font-weight:800;color:#fff;padding:4px;">0</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- By Skill Level -->
-          <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:12px;">
-            <div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">By Skill</div>
-            <table style="width:100%;border-collapse:collapse;font-size:12px;">
-              <thead>
-                <tr>
-                  <th style="color:#fbbf24;padding:2px 4px;text-align:center;font-weight:700;">🟡 Below</th>
-                  <th style="color:var(--green);padding:2px 4px;text-align:center;font-weight:700;">🟢 My Level</th>
-                  <th style="color:#a78bfa;padding:2px 4px;text-align:center;font-weight:700;">🟣 Above</th>
-                  <th style="color:#fff;padding:2px 4px;text-align:center;font-weight:700;">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td id="ocLBelow" style="text-align:center;font-size:16px;font-weight:800;color:#fbbf24;padding:4px;">0</td>
-                  <td id="ocLMy" style="text-align:center;font-size:16px;font-weight:800;color:var(--green);padding:4px;">0</td>
-                  <td id="ocLAbove" style="text-align:center;font-size:16px;font-weight:800;color:#a78bfa;padding:4px;">0</td>
-                  <td id="ocLTotal" style="text-align:center;font-size:16px;font-weight:800;color:#fff;padding:4px;">0</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Not yet registered note -->
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);border-radius:10px;">
-          <div>
-            <div style="font-size:12px;font-weight:700;color:#fbbf24;">Not yet on PBallConnect</div>
-            <div style="font-size:11px;color:var(--dim);">Tap to invite them to join</div>
-          </div>
-          <div style="font-size:22px;font-weight:800;color:#fbbf24;" id="ocUnregisteredCount">0</div>
-        </div>
-      </div>
-
-      <!-- Player cards -->
-      <div id="outerCircleContent"></div>
-    </div>
 
     <!-- CONFIRMED MATCHES PAGE -->
     <div class="page-section" id="page-confirmedMatches">

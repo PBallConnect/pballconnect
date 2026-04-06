@@ -1254,7 +1254,6 @@ function showPage(page){
   if(page==='playerStats')   { loadCommunitySnapshot(); }
   if(page==='setupMatch')     { initSetupMatch(); loadMatchSquareCounts(); }
   if(page==='confirmedMatches') { loadConfirmedMatches(); }
-  if(page==='outerCircle')     { loadOuterCircle(); }
   if(page==='recordScores')  { loadRecordScores(); }
   if(page==='myInvites')      { loadMyInvitesPage(); }
   if(page==='invitedByOthers'){ loadInvitedByOthersPage(); }
@@ -3196,7 +3195,7 @@ async function submitMatch(){
     });
     if(allGroups.has('specific')){
       IC_MEMBERS.forEach(({player})=>{ if(!seenEmails.has(player.email)&&MS.specificPlayers.has(player.email)){ seenEmails.add(player.email); invitees.push(player); } });
-      // Also handle Outer Circle / non-IC specific players
+      // Also handle non-IC specific players (e.g. invited from Find Players)
       const outerSpecific = [...MS.specificPlayers].filter(e=>!seenEmails.has(e));
       if(outerSpecific.length && matchId){
         try{
@@ -3397,275 +3396,6 @@ async function loadMatchSquareCounts(){
 // OUTER CIRCLE
 // ══════════════════════════════════════════════════════
 
-async function loadOuterCircleBadge(email){
-  // Quick count of outer circle members for nav badge
-  if(!email) return;
-  try{
-    const icRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/connections?or=(requester_email.eq.${encodeURIComponent(email)},recipient_email.eq.${encodeURIComponent(email)})&status=eq.approved&select=requester_email,recipient_email`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
-    const icConns = icRes.ok ? await icRes.json() : [];
-    const icEmails = new Set(icConns.map(c=>c.requester_email===email?c.recipient_email:c.requester_email));
-    const [orgRes, respRes] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(email)}&select=id`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}),
-      fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(email)}&response=eq.in&select=match_id`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}})
-    ]);
-    const orgMatches = orgRes.ok ? await orgRes.json() : [];
-    const myResps = respRes.ok ? await respRes.json() : [];
-    const allMatchIds = [...new Set([...orgMatches.map(m=>m.id),...myResps.map(r=>r.match_id)])];
-    if(!allMatchIds.length) return;
-    const mrRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${allMatchIds.join(',')})&response=eq.in&select=player_email`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
-    const matchPlayers = mrRes.ok ? await mrRes.json() : [];
-    const outerEmails = new Set(matchPlayers
-      .map(r=>r.player_email)
-      .filter(e=>e!==email && !icEmails.has(e)));
-    const count = outerEmails.size;
-    const badge = document.getElementById('outerCircleBadge');
-    if(badge){
-      badge.textContent = count;
-      if(count>0){ badge.style.display='inline-flex'; badge.style.background='rgba(59,130,246,0.85)'; badge.style.color='#fff'; }
-      else { badge.style.display='none'; }
-    }
-  }catch(e){}
-}
-
-async function loadOuterCircle(){
-  const myEmail = getMyEmail();
-  const container = document.getElementById('outerCircleContent');
-  if(!container) return;
-  if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in.</div>'; return; }
-  container.innerHTML =
-    '<div id="ocManualAddForm" style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);border-radius:14px;padding:14px 16px;margin-bottom:16px;">'+
-      '<div style="font-size:12px;font-weight:700;color:#60a5fa;margin-bottom:10px;">&#10133; Add someone to your Outer Circle</div>'+
-      '<div style="display:flex;gap:8px;flex-wrap:wrap;">'+
-        '<input id="ocAddName" placeholder="Name" style="flex:1;min-width:110px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px 12px;color:#fff;font-size:13px;font-family:inherit;outline:none;"/>'+
-        '<input id="ocAddEmail" placeholder="Email address" type="email" style="flex:2;min-width:160px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px 12px;color:#fff;font-size:13px;font-family:inherit;outline:none;"/>'+
-        '<button onclick="ocManualAdd()" style="padding:8px 16px;border-radius:8px;border:none;background:rgba(59,130,246,0.2);color:#60a5fa;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;border:1px solid rgba(59,130,246,0.35);">+ Add</button>'+
-      '</div>'+
-      '<div style="font-size:11px;color:var(--dim);margin-top:6px;">No app account needed &#8212; invite them later.</div>'+
-    '</div>'+
-    '<div id="ocDynamic" style="color:var(--dim);font-size:13px;padding:12px 0;">Loading&#8230;</div>';
-  loadOuterCircleDynamic();
-}
-
-function ocManualAdd(){
-  const name  = (document.getElementById('ocAddName')?.value||'').trim();
-  const email = (document.getElementById('ocAddEmail')?.value||'').trim().toLowerCase();
-  if(!email){ showToast('Please enter an email address','#f59e0b'); return; }
-  const btn = document.querySelector('#ocManualAddForm button');
-  addToOuterCircle(email, name, btn);
-}
-
-async function addToOuterCircle(email, name, btn){
-  const myEmail = getMyEmail();
-  if(!myEmail){ showToast('Please sign in first','#f59e0b'); return; }
-  if(!email){ showToast('Please enter a valid email','#f59e0b'); return; }
-  if(email === myEmail){ showToast("That's your own email!","#f59e0b"); return; }
-  if(btn){ btn.disabled=true; btn.textContent='Adding...'; }
-  try{
-    const chk = await fetch(
-      `${SUPABASE_URL}/rest/v1/connections?or=(and(requester_email.eq.${encodeURIComponent(myEmail)},recipient_email.eq.${encodeURIComponent(email)}),and(requester_email.eq.${encodeURIComponent(email)},recipient_email.eq.${encodeURIComponent(myEmail)}))&select=id,status&limit=1`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
-    const existing = chk.ok ? await chk.json() : [];
-    if(existing.length){
-      const s = existing[0].status;
-      showToast(s==='approved'?'Already in your Inner Circle':s==='outer'?'Already in Outer Circle':'Connection exists','#fbbf24');
-      if(btn){ btn.disabled=false; btn.textContent='+ Add'; }
-      return;
-    }
-    await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
-      method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
-      body:JSON.stringify({requester_email:myEmail,requester_name:getMyName(),recipient_email:email,recipient_name:name||email.split('@')[0],status:'outer'})
-    });
-    if(btn){ btn.textContent='Added!'; btn.style.color='#60a5fa'; setTimeout(()=>{ btn.disabled=false; btn.textContent='+ Add'; },2000); }
-    const ni=document.getElementById('ocAddName'); if(ni) ni.value='';
-    const ei=document.getElementById('ocAddEmail'); if(ei) ei.value='';
-    showToast('Added to Outer Circle!','#60a5fa');
-    loadOuterCircleDynamic();
-  }catch(e){
-    if(btn){ btn.disabled=false; btn.textContent='+ Add'; }
-    showToast('Could not add: '+e.message,'#f87171');
-  }
-}
-
-async function promoteToInnerCircle(email, name, btn){
-  const myEmail = getMyEmail();
-  if(!myEmail) return;
-  if(btn){ btn.disabled=true; btn.textContent='Sending...'; }
-  try{
-    await fetch(
-      `${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(myEmail)}&recipient_email=eq.${encodeURIComponent(email)}&status=eq.outer`,
-      {method:'PATCH',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
-       body:JSON.stringify({status:'pending'})});
-    if(btn){ btn.textContent='IC Invite Sent!'; btn.style.color='var(--green)'; }
-    showToast('Inner Circle invite sent to '+name.split(' ')[0]+'!','#4CAF7D');
-    setTimeout(()=>loadOuterCircle(),800);
-    loadInnerCircle();
-  }catch(e){
-    if(btn){ btn.disabled=false; btn.textContent='Inner Circle'; }
-  }
-}
-
-async function loadOuterCircleDynamic(){
-  const myEmail = getMyEmail();
-  const dynEl = document.getElementById('ocDynamic');
-  if(!myEmail||!dynEl) return;
-  try{
-    // Manually-added OC members
-    const ocRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(myEmail)}&status=eq.outer&select=recipient_email,recipient_name,created_at`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
-    const outerConns = ocRes.ok ? await ocRes.json() : [];
-    const manualEmails = new Set(outerConns.map(c=>c.recipient_email));
-
-    // IC emails (exclude from match-derived)
-    const icRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/connections?or=(requester_email.eq.${encodeURIComponent(myEmail)},recipient_email.eq.${encodeURIComponent(myEmail)})&status=eq.approved&select=requester_email,recipient_email`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
-    const icConns = icRes.ok ? await icRes.json() : [];
-    const icEmails = new Set(icConns.map(c=>c.requester_email===myEmail?c.recipient_email:c.requester_email));
-
-    // Match-derived co-players
-    const [orgRes,respRes] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&select=id`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}),
-      fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.in&select=match_id`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}})
-    ]);
-    const orgMs = orgRes.ok?await orgRes.json():[];
-    const myRs  = respRes.ok?await respRes.json():[];
-    const allIds = [...new Set([...orgMs.map(m=>m.id),...myRs.map(r=>r.match_id)])];
-
-    let matchProfiles = [];
-    if(allIds.length){
-      const mrRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${allIds.join(',')})&response=eq.in&select=player_email,player_name,match_id`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
-      const mps = mrRes.ok?await mrRes.json():[];
-      const cnt = {};
-      mps.forEach(r=>{
-        if(r.player_email===myEmail||icEmails.has(r.player_email)||manualEmails.has(r.player_email)) return;
-        if(!cnt[r.player_email]) cnt[r.player_email]={count:0,name:r.player_name};
-        cnt[r.player_email].count++;
-      });
-      const outerEmails = Object.keys(cnt);
-      if(outerEmails.length){
-        const prRes = await fetch(
-          `${SUPABASE_URL}/rest/v1/registrations?email=in.(${outerEmails.map(e=>encodeURIComponent(e)).join(',')})&select=email,first_name,last_name,skill_level,city,state,avatar_emoji,photo_url`,
-          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
-        const regs = prRes.ok?await prRes.json():[];
-        const pm = {}; regs.forEach(p=>{pm[p.email]=p;});
-        const statsMap = await fetchPlayerStats(outerEmails);
-        matchProfiles = outerEmails.map(email=>({
-          email, registered:!!pm[email],
-          first_name:pm[email]?.first_name||(cnt[email]?.name||'').split(' ')[0]||'',
-          last_name:pm[email]?.last_name||(cnt[email]?.name||'').split(' ').slice(1).join(' ')||'',
-          skill_level:pm[email]?.skill_level||null, city:pm[email]?.city||null,
-          state:pm[email]?.state||null, avatar_emoji:pm[email]?.avatar_emoji||null,
-          photo_url:pm[email]?.photo_url||null,
-          matchCount:cnt[email]?.count||0, stats:statsMap[email]||{reliability:null,conduct:null}
-        })).sort((a,b)=>b.matchCount-a.matchCount);
-      }
-    }
-
-    // Update badge
-    const total = manualEmails.size + matchProfiles.length;
-    const badge = document.getElementById('outerCircleBadge');
-    if(badge){ badge.textContent=total; badge.style.display=total>0?'inline-flex':'none'; if(total>0){badge.style.background='rgba(59,130,246,0.85)';badge.style.color='#fff';} }
-
-    dynEl.innerHTML = '';
-
-    // Section A: Manual OC
-    if(outerConns.length){
-      const h1 = document.createElement('div');
-      h1.style.cssText='font-size:10px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:.06em;padding:4px 0 10px;';
-      h1.textContent = 'Your Outer Circle ('+outerConns.length+')';
-      dynEl.appendChild(h1);
-
-      // Fetch profiles for manual members
-      const mpRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/registrations?email=in.(${[...manualEmails].map(e=>encodeURIComponent(e)).join(',')})&select=email,first_name,last_name,skill_level,city,state,avatar_emoji,photo_url`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
-      const mpData = mpRes.ok?await mpRes.json():[];
-      const mpMap = {}; mpData.forEach(p=>{mpMap[p.email]=p;});
-
-      outerConns.forEach(conn=>{
-        const email = conn.recipient_email;
-        const prof  = mpMap[email];
-        const name  = prof?((prof.first_name||'')+(prof.last_name?' '+prof.last_name:'')).trim():conn.recipient_name||email.split('@')[0];
-        const isReg = !!prof;
-        const initials = name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
-        const card = document.createElement('div');
-        card.style.cssText='background:rgba(59,130,246,0.04);border:1px solid rgba(59,130,246,0.2);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;';
-        card.innerHTML=
-          (prof&&prof.photo_url?'<div style="width:46px;height:46px;border-radius:50%;overflow:hidden;flex-shrink:0;"><img src="'+prof.photo_url+'" style="width:100%;height:100%;object-fit:cover;"/></div>'
-            :'<div style="width:46px;height:46px;border-radius:50%;background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.25);display:flex;align-items:center;justify-content:center;font-size:'+(prof&&prof.avatar_emoji?'22':'15')+'px;flex-shrink:0;color:#fff;">'+(prof&&prof.avatar_emoji?prof.avatar_emoji:initials)+'</div>')+
-          '<div style="flex:1;min-width:0;">'+
-            '<div style="color:#fff;font-size:14px;font-weight:700;">'+name+'</div>'+
-            '<div style="display:flex;gap:8px;margin-top:3px;flex-wrap:wrap;">'+
-              (prof&&prof.skill_level?'<span style="font-size:11px;color:#fbbf24;">&#11088; '+prof.skill_level+'</span>':'')+
-              (prof&&prof.city?'<span style="font-size:11px;color:var(--dim);">'+prof.city+(prof.state?', '+prof.state:'')+'</span>':'')+
-              (!isReg?'<span style="font-size:10px;color:#f59e0b;padding:1px 6px;border-radius:4px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);">Not yet on PBallConnect</span>':'')+
-            '</div>'+
-          '</div>'+
-          '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">'+
-            '<button onclick="promoteToInnerCircle(this.dataset.email,this.dataset.name,this)" data-email="'+email.replace(/"/g,'&quot;')+'" data-name="'+name.replace(/"/g,'&quot;')+'" style="padding:6px 12px;border-radius:8px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">&#8594; Inner Circle</button>'+
-            '<button onclick="showOuterCircleMatchInvite(this.dataset.email,this.dataset.name)" data-email="'+email.replace(/"/g,'&quot;')+'" data-name="'+name.replace(/"/g,'&quot;')+'" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(59,130,246,0.4);background:transparent;color:#60a5fa;font-size:11px;cursor:pointer;white-space:nowrap;">&#127955; Invite to Match</button>'+
-            (!isReg?'<button onclick="sendAppInviteToOuterCircle(this.dataset.email,this.dataset.name,this)" data-email="'+email.replace(/"/g,'&quot;')+'" data-name="'+name.replace(/"/g,'&quot;')+'" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(245,158,11,0.4);background:transparent;color:#f59e0b;font-size:11px;cursor:pointer;white-space:nowrap;">&#9993;&#65039; Invite to App</button>':'')+
-          '</div>';
-        dynEl.appendChild(card);
-      });
-    }
-
-    // Section B: Match-derived
-    if(matchProfiles.length){
-      const h2 = document.createElement('div');
-      h2.style.cssText='font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;padding:12px 0 10px;'+(outerConns.length?'border-top:1px solid var(--border);margin-top:8px;':'');
-      h2.textContent = 'Played Together ('+matchProfiles.length+')';
-      dynEl.appendChild(h2);
-
-      matchProfiles.forEach(player=>{
-        const name = ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim()||player.email.split('@')[0];
-        const initials = name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
-        const reliabilityHtml = player.stats.reliability!==null
-          ? '<span style="font-size:11px;color:'+(player.stats.reliability>=90?'var(--green)':player.stats.reliability>=75?'#fbbf24':'#f87171')+';">&#10003; '+player.stats.reliability+'% reliable</span>'
-          : '<span style="font-size:11px;color:var(--dim);">No data yet</span>';
-        const card = document.createElement('div');
-        card.style.cssText='background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;';
-        card.innerHTML=
-          (player.photo_url?'<div style="width:46px;height:46px;border-radius:50%;overflow:hidden;flex-shrink:0;"><img src="'+player.photo_url+'" style="width:100%;height:100%;object-fit:cover;"/></div>'
-            :'<div style="width:46px;height:46px;border-radius:50%;background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.25);display:flex;align-items:center;justify-content:center;font-size:'+(player.avatar_emoji?'22':'16')+'px;flex-shrink:0;color:#fff;">'+(player.avatar_emoji||initials)+'</div>')+
-          '<div style="flex:1;min-width:0;">'+
-            '<div style="color:#fff;font-size:14px;font-weight:700;">'+name+'</div>'+
-            '<div style="display:flex;gap:8px;margin-top:3px;flex-wrap:wrap;">'+
-              (player.skill_level?'<span style="font-size:11px;color:#fbbf24;">&#11088; '+player.skill_level+'</span>':'')+
-              (player.city?'<span style="font-size:11px;color:var(--dim);">'+player.city+(player.state?', '+player.state:'')+'</span>':'')+
-              '<span style="font-size:11px;color:rgba(59,130,246,0.8);">'+player.matchCount+' match'+(player.matchCount!==1?'es':'')+' together</span>'+
-              (!player.registered?'<span style="font-size:10px;color:#f59e0b;padding:1px 6px;border-radius:4px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);">Not yet on PBallConnect</span>':'')+
-            '</div>'+
-            '<div style="margin-top:4px;">'+reliabilityHtml+'</div>'+
-          '</div>'+
-          '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">'+
-            '<button onclick="sendIcInviteToOuterCircle(this.dataset.email,this.dataset.name)" data-email="'+player.email.replace(/"/g,'&quot;')+'" data-name="'+name.replace(/"/g,'&quot;')+'" style="padding:6px 12px;border-radius:8px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">+ Inner Circle</button>'+
-            '<button onclick="showOuterCircleMatchInvite(this.dataset.email,this.dataset.name)" data-email="'+player.email.replace(/"/g,'&quot;')+'" data-name="'+name.replace(/"/g,'&quot;')+'" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(59,130,246,0.4);background:transparent;color:#60a5fa;font-size:11px;cursor:pointer;white-space:nowrap;">&#127955; Invite to Match</button>'+
-            (!player.registered?'<button onclick="sendAppInviteToOuterCircle(this.dataset.email,this.dataset.name,this)" data-email="'+player.email.replace(/"/g,'&quot;')+'" data-name="'+name.replace(/"/g,'&quot;')+'" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(245,158,11,0.4);background:transparent;color:#f59e0b;font-size:11px;cursor:pointer;white-space:nowrap;">&#9993;&#65039; Invite to App</button>':'')+
-          '</div>';
-        dynEl.appendChild(card);
-      });
-    }
-
-    if(!outerConns.length && !matchProfiles.length){
-      dynEl.innerHTML='<div style="text-align:center;padding:30px 20px;color:var(--dim);"><div style="font-size:40px;margin-bottom:12px;">&#127760;</div><div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:8px;">Your Outer Circle is empty</div><div style="font-size:13px;line-height:1.6;">Add friends above, or play matches and co-players appear here automatically.</div></div>';
-    }
-  }catch(e){
-    if(dynEl) dynEl.innerHTML='<div style="color:#f87171;font-size:13px;">Error: '+e.message+'</div>';
-    console.warn('loadOuterCircleDynamic error:',e);
-  }
-}
-
 async function fetchPlayerStats(emails){
   // Returns reliability % and conduct % per player
   if(!emails.length) return {};
@@ -3702,72 +3432,11 @@ async function fetchPlayerStats(emails){
   }catch(e){ return {}; }
 }
 
-async function sendIcInviteToOuterCircle(email, name){
-  const myEmail = getMyEmail();
-  const myName = getMyName();
-  if(!myEmail) return;
-  try{
-    await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
-      method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
-      body:JSON.stringify({requester_email:myEmail,requester_name:myName,recipient_email:email,recipient_name:name,status:'pending'})
-    });
-    showToast('Inner Circle invite sent to '+name.split(' ')[0]+'!','#4CAF7D');
-    // Immediately increment the yellow IC badge
-    const yb = document.getElementById('icNavYellowBadge');
-    if(yb){
-      const current = parseInt(yb.textContent||'0');
-      const newCount = current + 1;
-      yb.textContent = newCount;
-      yb.style.opacity = '1';
-      yb.classList.remove('placeholder');
-      // Also update the outbound count box
-      const outEl = document.getElementById('icOutboundCount');
-      if(outEl) outEl.textContent = newCount;
-    }
-    loadOuterCircle();
-  }catch(e){ showToast('Could not send invite','#f87171'); }
-}
 
 // Holds a pre-selected player to inject after initSetupMatch resets MS
 let _pendingMatchInvitee = null;
 
-async function sendAppInviteToOuterCircle(email, name, btn){
-  const myName = getMyName() || 'A fellow pickleball player';
-  const siteUrl = window.location.origin + window.location.pathname;
-  if(btn){ btn.disabled=true; btn.textContent='Sending...'; }
-  const pubKey = window.EMAILJS_PUBLIC_KEY;
-  if(pubKey && pubKey !== 'YOUR_PUBLIC_KEY'){
-    emailjs.init(pubKey);
-    emailjs.send(window.EMAILJS_SERVICE_ID, window.EMAILJS_TEMPLATE_ID, {
-      to_email:email, from_name:'PBallConnect', from_email:'noreply@pickleballregistry.app',
-      invite_url:siteUrl,
-      personal_note:myName+' played pickleball with you and thinks you would love PBallConnect! Create a free profile to get match invites, track scores, and connect with players near you.',
-      site_url:siteUrl
-    }).then(()=>{
-      if(btn){ btn.textContent='Invite Sent!'; btn.style.color='var(--green)'; btn.style.borderColor='rgba(76,175,125,0.4)'; }
-      showToast('App invite sent to '+(name.split(' ')[0]||email)+'!','#4CAF7D');
-    }).catch(()=>{ _appInviteCopyFallback(siteUrl,name,btn); });
-  } else {
-    _appInviteCopyFallback(siteUrl,name,btn);
-  }
-}
 
-function _appInviteCopyFallback(siteUrl,name,btn){
-  try{
-    navigator.clipboard.writeText(siteUrl);
-    if(btn){ btn.textContent='Link Copied!'; btn.style.color='#fbbf24'; }
-    showToast('Invite link copied for '+(name.split(' ')[0]||'them')+'!','#fbbf24');
-  }catch(e){
-    if(btn){ btn.disabled=false; btn.textContent='Invite to App'; }
-    showToast('Invite link: '+siteUrl,'#60a5fa');
-  }
-}
-
-function showOuterCircleMatchInvite(email, name){
-  _pendingMatchInvitee = { email, name };
-  showPage('setupMatch');
-}
 
 // ── Post-Match Feedback Prompt ─────────────────────────
 async function showPostMatchFeedback(matchId, players){
@@ -5119,7 +4788,6 @@ async function restoreSession(email, playerData){
   // Start real-time polling for new invites
   startInvitePolling(player.email);
   // Load outer circle badge async
-  setTimeout(()=>loadOuterCircleBadge(player.email), 1500);
 
   if(!S.addrLat && player.city && player.state) geocodeCityForSession(player.city, player.state);
   showPage('innerCircle');
@@ -5782,7 +5450,7 @@ async function icRespond(connId, status, btn){
   }catch(e){ btn.disabled=false; btn.textContent=status==='approved'?'Accept':'Decline'; }
 }
 
-async function icSendRequest(recipientEmail, recipientName, btn){
+async function icSendRequest(recipientEmail, recipientName, btn, asFavorite=false){
   const myEmail=getMyEmail();
   if(!myEmail){ showToast('Please sign in first','#f59e0b'); return; }
   if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
@@ -5790,9 +5458,9 @@ async function icSendRequest(recipientEmail, recipientName, btn){
     await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
-      body:JSON.stringify({requester_email:myEmail,requester_name:getMyName(),recipient_email:recipientEmail,recipient_name:recipientName,status:'pending'})
+      body:JSON.stringify({requester_email:myEmail,requester_name:getMyName(),recipient_email:recipientEmail,recipient_name:recipientName,status:'pending',is_favorite:asFavorite})
     });
-    showToast('✅ Inner Circle invite sent to '+recipientName,'#4CAF7D');
+    showToast(asFavorite?'⭐ Favorite invite sent to '+recipientName.split(' ')[0]+'!':'✅ Inner Circle invite sent to '+recipientName,'#4CAF7D');
     loadInnerCircle();
     loadIcInvites();
   }catch(e){
@@ -6031,10 +5699,45 @@ function openIcConfirmModal(player){
     {label:'Home court',value:player.court_name||'—',highlight:!!player.court_name},
   ];
   const gridHtml=identifiers.map(id=>'<div class="ic-identifier-item"><div class="ic-identifier-label">'+id.label+'</div><div class="ic-identifier-value'+(id.highlight?' highlight':'')+'">'+(id.value||'—')+'</div></div>').join('');
-  content.innerHTML='<div class="ic-modal-player-header"><div class="ic-modal-avatar">'+initials+'</div><div><div class="ic-modal-name">'+name+'</div>'+(player.nickname?'<div class="ic-modal-nickname">"'+player.nickname+'"</div>':'')+'</div></div><div class="ic-identifier-grid">'+gridHtml+'</div>';
+  content.innerHTML=
+    '<div class="ic-modal-player-header"><div class="ic-modal-avatar">'+initials+'</div>'+
+    '<div><div class="ic-modal-name">'+name+'</div>'+(player.nickname?'<div class="ic-modal-nickname">"'+player.nickname+'"</div>':'')+'</div></div>'+
+    '<div class="ic-identifier-grid">'+gridHtml+'</div>'+
+    '<div id="icFavToggleWrap" style="margin-top:14px;padding:12px 14px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.2);border-radius:10px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="toggleIcFavOption()">'+
+      '<div>'+
+        '<div style="font-size:13px;font-weight:700;color:#fff;">&#11088; Add as Favorite?</div>'+
+        '<div style="font-size:11px;color:var(--dim);margin-top:2px;">Favorites appear first when setting up matches</div>'+
+      '</div>'+
+      '<div id="icFavToggleBtn" style="width:36px;height:20px;border-radius:999px;background:rgba(255,255,255,0.12);border:2px solid rgba(255,255,255,0.2);position:relative;transition:all .2s;">'+
+        '<div id="icFavToggleThumb" style="width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:1px;left:1px;transition:all .2s;opacity:0.4;"></div>'+
+      '</div>'+
+    '</div>';
+  let _icAddAsFav = false;
+  window.toggleIcFavOption = function(){
+    _icAddAsFav = !_icAddAsFav;
+    const wrap  = document.getElementById('icFavToggleWrap');
+    const btn   = document.getElementById('icFavToggleBtn');
+    const thumb = document.getElementById('icFavToggleThumb');
+    if(_icAddAsFav){
+      if(wrap)  wrap.style.background  = 'rgba(251,191,36,0.12)';
+      if(wrap)  wrap.style.borderColor = 'rgba(251,191,36,0.4)';
+      if(btn)   btn.style.background   = '#fbbf24';
+      if(btn)   btn.style.borderColor  = '#fbbf24';
+      if(thumb) thumb.style.left       = '17px';
+      if(thumb) thumb.style.opacity    = '1';
+    } else {
+      if(wrap)  wrap.style.background  = 'rgba(251,191,36,0.06)';
+      if(wrap)  wrap.style.borderColor = 'rgba(251,191,36,0.2)';
+      if(btn)   btn.style.background   = 'rgba(255,255,255,0.12)';
+      if(btn)   btn.style.borderColor  = 'rgba(255,255,255,0.2)';
+      if(thumb) thumb.style.left       = '1px';
+      if(thumb) thumb.style.opacity    = '0.4';
+    }
+  };
   confirmBtn.onclick=function(){
+    const asFav = _icAddAsFav;
     closeIcModal();
-    icSendRequest((player.email||'').toLowerCase(),name,document.createElement('button'));
+    icSendRequest((player.email||'').toLowerCase(), name, document.createElement('button'), asFav);
     setTimeout(()=>icSearchPlayers(document.getElementById('icSearchInput')?.value||''),1500);
   };
   modal.style.display='flex';
@@ -6108,12 +5811,6 @@ function openPlayerCard(player,connection,myEmail){
   else if(connection&&connection.status==='pending'){ addBtn.textContent='Request Pending'; addBtn.disabled=true; addBtn.style.opacity='.6'; }
   else {
     addBtn.textContent='+ Add to Inner Circle'; addBtn.onclick=()=>{ closePlayerCard(); openIcConfirmModal(player); };
-    const outerBtn2=document.createElement('button');
-    outerBtn2.className='pc-btn-play';
-    outerBtn2.style.cssText='background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.3);color:#60a5fa;';
-    outerBtn2.textContent='+ Outer Circle';
-    outerBtn2.onclick=()=>{ closePlayerCard(); addToOuterCircle((player.email||'').toLowerCase(),((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim(),outerBtn2); };
-    actionDiv.appendChild(outerBtn2);
   }
   const playBtn=document.createElement('button');
   playBtn.className='pc-btn-play'; playBtn.textContent='🎾 Play';
@@ -6272,14 +5969,8 @@ function buildMiniPlayerCard(player,myConns,myEmail,colClass){
     else if(conn.status==='pending'){addBtn.textContent='🔔 Approve';addBtn.style.color='var(--green)';addBtn.onclick=function(e){e.stopPropagation();icRespond(conn.id,'approved',addBtn);};}
     addBtn.disabled=conn.status==='approved'||(conn.status==='pending'&&conn.requester_email===myEmail);
   } else {
-    addBtn.textContent='+ Inner Circle';
+    addBtn.textContent='+ Add to Circle';
     addBtn.onclick=function(e){e.stopPropagation();openIcConfirmModal(player);};
-    const outerBtn=document.createElement('button');
-    outerBtn.className='ic-mini-add';
-    outerBtn.textContent='+ Outer Circle';
-    outerBtn.style.cssText='background:rgba(59,130,246,0.1);border-color:rgba(59,130,246,0.3);color:#60a5fa;margin-top:4px;';
-    outerBtn.onclick=function(e){e.stopPropagation();addToOuterCircle(pEmail,((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim(),outerBtn);};
-    addWrap.appendChild(outerBtn);
   }
   // Star button on mini card — only for existing IC members
   if(conn && conn.status==='approved'){
