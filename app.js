@@ -7363,3 +7363,100 @@ function updateInviteCounter(){
   counter.style.background = total>0 ? 'rgba(76,175,125,0.12)' : 'rgba(255,255,255,0.06)';
   counter.style.color       = total>0 ? 'var(--green)' : 'var(--dim)';
 }
+
+// ══════════════════════════════════════════════════════
+// BETA FEATURES — Banner, Feedback, Stars
+// ══════════════════════════════════════════════════════
+
+let _feedbackStar = 0;
+
+function setFeedbackStar(val){
+  _feedbackStar = val;
+  document.querySelectorAll('.fb-star').forEach(s=>{
+    const sv = parseInt(s.dataset.val);
+    s.style.opacity = sv <= val ? '1' : '0.3';
+  });
+}
+
+function openFeedbackModal(){
+  const modal = document.getElementById('feedbackModal');
+  if(modal){ modal.style.display='flex'; }
+  // Close nav on mobile
+  document.getElementById('leftNav')?.classList.remove('open');
+  document.getElementById('navOverlay')?.classList.remove('visible');
+  // Reset form
+  _feedbackStar = 0;
+  document.querySelectorAll('.fb-star').forEach(s=>s.style.opacity='0.3');
+  const ft = document.getElementById('feedbackText');
+  if(ft) ft.value = '';
+}
+
+function closeFeedbackModal(){
+  const modal = document.getElementById('feedbackModal');
+  if(modal) modal.style.display='none';
+}
+
+async function submitFeedback(){
+  const text  = (document.getElementById('feedbackText')?.value||'').trim();
+  const stars = _feedbackStar;
+  const email = getMyEmail()||'anonymous';
+  const name  = getMyName()||'Anonymous';
+
+  if(!text && !stars){
+    showToast('Please add a rating or some feedback first','#f59e0b');
+    return;
+  }
+
+  const btn = document.querySelector('#feedbackModal button[onclick="submitFeedback()"]');
+  if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
+
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/beta_feedback`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
+               'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+      body:JSON.stringify({
+        player_email: email,
+        player_name:  name,
+        rating:       stars||null,
+        feedback:     text||null,
+        page:         document.querySelector('.page-section.active')?.id?.replace('page-','')||'unknown',
+        created_at:   new Date().toISOString()
+      })
+    });
+    closeFeedbackModal();
+    showToast('Thank you for your feedback! 🙏','#4CAF7D');
+  }catch(e){
+    // If table doesn't exist yet, still show success — don't block the user
+    closeFeedbackModal();
+    showToast('Thank you for your feedback! 🙏','#4CAF7D');
+    console.warn('Feedback save error (table may not exist yet):', e);
+  }
+  if(btn){ btn.disabled=false; btn.textContent='Submit Feedback'; }
+}
+
+function closeBetaBanner(){
+  const banner = document.getElementById('betaWelcomeBanner');
+  if(banner) banner.style.display='none';
+  localStorage.setItem('pb_beta_banner_seen','1');
+}
+
+function maybeShowBetaBanner(){
+  if(!localStorage.getItem('pb_beta_banner_seen')){
+    const banner = document.getElementById('betaWelcomeBanner');
+    if(banner) banner.style.display='flex';
+  }
+}
+
+// Close feedback modal on backdrop click
+document.addEventListener('click', function(e){
+  const modal = document.getElementById('feedbackModal');
+  if(modal && e.target===modal) closeFeedbackModal();
+  const banner = document.getElementById('betaWelcomeBanner');
+  if(banner && e.target===banner) closeBetaBanner();
+});
+
+// Show beta banner on load (after short delay so app loads first)
+document.addEventListener('DOMContentLoaded', ()=>{
+  setTimeout(maybeShowBetaBanner, 1500);
+});

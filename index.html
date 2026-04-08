@@ -41,6 +41,7 @@
     <button class="nav-toggle" onclick="toggleNav()">☰</button>
     <div class="top-logo-icon">🏓</div>
     <div class="top-logo-text">PBall<span>Connect</span></div>
+    <div style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-left:6px;flex-shrink:0;">BETA</div>
     <div id="memberCountBadge" style="display:none;margin-left:8px;padding:3px 10px;border-radius:999px;background:rgba(76,175,125,0.12);border:1px solid rgba(76,175,125,0.25);font-size:11px;font-weight:700;color:#4CAF7D;letter-spacing:.03em;"></div>
   </div>
   <div class="top-header-right">
@@ -155,6 +156,13 @@
     </div>
     <div class="nav-footer">
       <div class="nav-footer-text">PBallConnect v1.0<br>Powered by Supabase</div>
+    </div>
+    <!-- Beta Feedback Button -->
+    <div style="padding:12px 16px;margin-top:auto;border-top:1px solid rgba(255,255,255,0.06);">
+      <button onclick="openFeedbackModal()" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid rgba(245,158,11,0.35);background:rgba(245,158,11,0.08);color:#fbbf24;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;">
+        &#128172; Send Feedback
+      </button>
+      <div style="font-size:10px;color:var(--dim);text-align:center;margin-top:6px;">Beta v0.1 — pballconnect.com</div>
     </div>
   </nav>
 
@@ -2334,5 +2342,89 @@
 
 <!-- App JavaScript -->
 <script src="app.js"></script>
+<!-- Floating Beta Feedback Button -->
+<button id="floatingFeedbackBtn" onclick="openFeedbackModal()" title="Send Beta Feedback"
+  style="position:fixed;bottom:24px;right:20px;z-index:500;width:52px;height:52px;border-radius:50%;
+    border:none;background:rgba(245,158,11,0.9);color:#000;font-size:22px;cursor:pointer;
+    box-shadow:0 4px 20px rgba(245,158,11,0.4);display:flex;align-items:center;justify-content:center;
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:transform .15s;">
+  &#128172;
+</button>
+
+<!-- Beta Welcome Banner -->
+<div id="betaWelcomeBanner" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.8);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:center;justify-content:center;">
+  <div style="background:#0f1f12;border:1px solid rgba(245,158,11,0.4);border-radius:20px;
+    padding:32px 28px;max-width:440px;width:92%;text-align:center;position:relative;">
+    <div style="font-size:48px;margin-bottom:12px;">🏓</div>
+    <div style="display:inline-flex;align-items:center;padding:3px 12px;border-radius:999px;
+      background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);
+      color:#fbbf24;font-size:11px;font-weight:800;letter-spacing:.1em;margin-bottom:16px;">
+      BETA
+    </div>
+    <h2 style="color:#fff;font-size:20px;font-weight:800;margin:0 0 12px;">Welcome to PBallConnect Beta!</h2>
+    <p style="color:rgba(255,255,255,0.7);font-size:13px;line-height:1.7;margin:0 0 16px;">
+      You're one of our first testers — thank you for your support!
+    </p>
+    <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);
+      border-radius:12px;padding:14px 16px;margin-bottom:20px;text-align:left;">
+      <div style="font-size:12px;color:#fbbf24;font-weight:700;margin-bottom:8px;">&#9888;&#65039; Please note</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.7);line-height:1.7;">
+        This is a <strong style="color:#fff;">test environment</strong>. Data entered during Beta 
+        will be cleared before launch. Features and design may change based on your feedback.<br><br>
+        Thank you for your support in making PBallConnect better for everyone! &#127955;
+      </div>
+    </div>
+    <button onclick="closeBetaBanner()" style="width:100%;padding:14px;border-radius:12px;border:none;
+      background:var(--green);color:var(--dark);font-weight:800;font-size:14px;cursor:pointer;
+      font-family:'DM Sans',sans-serif;">
+      Let's Play! &#127955;
+    </button>
+    <div style="font-size:10px;color:var(--dim);margin-top:12px;">
+      Use the &#128172; button anytime to share feedback
+    </div>
+  </div>
+</div>
+
+<!-- Feedback Modal -->
+<div id="feedbackModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.7);
+  align-items:flex-end;justify-content:center;">
+  <div style="background:#0f1f12;border:1px solid rgba(245,158,11,0.3);border-radius:20px 20px 0 0;
+    padding:24px 20px 40px;width:100%;max-width:520px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div style="font-size:16px;font-weight:800;color:#fff;">&#128172; Beta Feedback</div>
+      <button onclick="closeFeedbackModal()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer;">&#10005;</button>
+    </div>
+    <div style="font-size:12px;color:var(--dim);margin-bottom:16px;">Your feedback shapes PBallConnect. Thank you!</div>
+
+    <!-- Star Rating -->
+    <div style="margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Overall Experience</div>
+      <div id="starRating" style="display:flex;gap:8px;">
+        <span class="fb-star" data-val="1" onclick="setFeedbackStar(1)" style="font-size:28px;cursor:pointer;opacity:0.3;transition:opacity .15s;">&#11088;</span>
+        <span class="fb-star" data-val="2" onclick="setFeedbackStar(2)" style="font-size:28px;cursor:pointer;opacity:0.3;transition:opacity .15s;">&#11088;</span>
+        <span class="fb-star" data-val="3" onclick="setFeedbackStar(3)" style="font-size:28px;cursor:pointer;opacity:0.3;transition:opacity .15s;">&#11088;</span>
+        <span class="fb-star" data-val="4" onclick="setFeedbackStar(4)" style="font-size:28px;cursor:pointer;opacity:0.3;transition:opacity .15s;">&#11088;</span>
+        <span class="fb-star" data-val="5" onclick="setFeedbackStar(5)" style="font-size:28px;cursor:pointer;opacity:0.3;transition:opacity .15s;">&#11088;</span>
+      </div>
+    </div>
+
+    <!-- Text Feedback -->
+    <div style="margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Your Feedback</div>
+      <textarea id="feedbackText" rows="4" placeholder="What's working well? What could be better? Any bugs to report?"
+        style="width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);
+          border-radius:10px;padding:12px;color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;
+          outline:none;resize:vertical;box-sizing:border-box;line-height:1.5;"></textarea>
+    </div>
+
+    <button onclick="submitFeedback()" style="width:100%;padding:14px;border-radius:12px;border:none;
+      background:#fbbf24;color:#000;font-weight:800;font-size:14px;cursor:pointer;
+      font-family:'DM Sans',sans-serif;">
+      Submit Feedback
+    </button>
+  </div>
+</div>
+
 </body>
 </html>
