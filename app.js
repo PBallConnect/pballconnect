@@ -4181,14 +4181,21 @@ async function loadMyInviteWeather(m, elId){
   }catch(e){ if(el) el.textContent=''; }
 }
 
+function togglePill(el){
+  const n = el.querySelector('.pill-names');
+  if(n) n.style.display = n.style.display==='none' ? 'block' : 'none';
+}
+
 function makeResponsePill(label, players, color){
   const names = players.map(p=>(p.player_name||p.player_email||'').split(' ')[0]).filter(Boolean).join(', ');
   const clickable = players.length > 0 && names;
-  const title = clickable ? 'title="'+names.replace(/"/g,'&quot;')+'"' : '';
-  return '<div '+title+' style="text-align:center;padding:8px 4px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);'+(clickable?'cursor:pointer;':'')+'">'+
+  const nameList = clickable
+    ? '<div class="pill-names" style="display:none;font-size:9px;color:'+color+';margin-top:4px;line-height:1.5;border-top:1px solid rgba(255,255,255,0.1);padding-top:4px;">'+names.split(', ').join('<br>')+'</div>'
+    : '';
+  return '<div '+(clickable?'onclick="togglePill(this)" ':'')+'style="text-align:center;padding:8px 4px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);'+(clickable?'cursor:pointer;':'')+'">'+
     '<div style="font-size:16px;font-weight:800;color:'+color+';">'+players.length+'</div>'+
-    '<div style="font-size:9px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">'+label+'</div>'+
-    (clickable&&players.length<=4?'<div style="font-size:8px;color:'+color+';margin-top:2px;line-height:1.3;opacity:0.8;">'+names+'</div>':'')+
+    '<div style="font-size:9px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">'+label+(clickable?' &#9660;':'')+'</div>'+
+    nameList+
   '</div>';
 }
 
