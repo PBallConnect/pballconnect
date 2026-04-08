@@ -7437,7 +7437,7 @@ async function loadDashNextMatch(myEmail){
         const playerChips = responses.map(p=>{
           const n=(p.player_name||p.player_email||'').split(' ')[0];
           const isMe = (p.player_email||'').toLowerCase()===myEmail.toLowerCase();
-          return '<span style="padding:3px 10px;border-radius:999px;background:'+(isMe?'#d1fae5':'rgba(255,255,255,0.08)')+';border:1px solid '+(isMe?'#1a7a3a':'rgba(255,255,255,0.12)')+';font-size:12px;color:'+(isMe?'#1a7a3a':'#fff')+';margin:2px 2px;">'+(isMe?'You':n)+'</span>';
+          return '<span style="padding:3px 10px;border-radius:999px;background:'+(isMe?'#d1fae5':'#f3f4f6')+';border:1px solid '+(isMe?'#1a7a3a':'#d1d5db')+';font-size:12px;color:'+(isMe?'#1a7a3a':'#111')+';font-weight:'+(isMe?'700':'500')+';margin:2px 2px;">'+(isMe?'You':n)+'</span>';
         }).join('');
 
         el.innerHTML=
