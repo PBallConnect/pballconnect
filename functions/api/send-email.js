@@ -1,0 +1,153 @@
+// Cloudflare Pages Function — /api/send-email
+// Handles all outbound email for PBallConnect via Resend
+// RESEND_API_KEY is set in Cloudflare Pages environment variables — never exposed to browser
+
+export async function onRequestPost(context) {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+
+  try {
+    const body = await context.request.json();
+    const { to_email, from_name, subject, personal_note, invite_url, site_url, type } = body;
+
+    // Basic validation
+    if (!to_email || !to_email.includes('@')) {
+      return new Response(JSON.stringify({ error: 'Invalid email address' }), {
+        status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    const RESEND_API_KEY = context.env.RESEND_API_KEY;
+    if (!RESEND_API_KEY) {
+      return new Response(JSON.stringify({ error: 'Email service not configured' }), {
+        status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    // Build email subject based on type
+    const emailSubject = subject || (
+      type === 'match_invite'   ? '🎾 You\'ve been invited to a PBallConnect match!' :
+      type === 'match_update'   ? '🎾 Your PBallConnect match has been updated' :
+      type === 'match_decline'  ? '🎾 A player declined your match invite' :
+      type === 'ic_invite'      ? '🎾 Someone wants to join your Inner Circle!' :
+      type === 'app_invite'     ? '🎾 You\'ve been invited to PBallConnect!' :
+      '🎾 PBallConnect Notification'
+    );
+
+    // Build HTML email body
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>${emailSubject}</title>
+</head>
+<body style="margin:0;padding:0;background:#0a120b;font-family:'DM Sans',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a120b;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+
+          <!-- Header -->
+          <tr>
+            <td style="text-align:center;padding-bottom:24px;">
+              <div style="font-size:32px;margin-bottom:8px;">🏓</div>
+              <div style="color:#4CAF7D;font-size:22px;font-weight:800;letter-spacing:-0.5px;">PBall<span style="color:#fff;">Connect</span></div>
+              <div style="display:inline-block;margin-top:6px;padding:2px 10px;border-radius:999px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;font-size:10px;font-weight:800;letter-spacing:.1em;">BETA</div>
+            </td>
+          </tr>
+
+          <!-- Card -->
+          <tr>
+            <td style="background:#0f1f12;border:1px solid rgba(76,175,125,0.25);border-radius:16px;padding:28px 24px;">
+              
+              <!-- Message -->
+              <p style="color:rgba(255,255,255,0.85);font-size:15px;line-height:1.7;margin:0 0 24px;">
+                ${personal_note || ''}
+              </p>
+
+              <!-- CTA Button -->
+              ${invite_url ? `
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding-bottom:24px;">
+                    <a href="${invite_url}" 
+                       style="display:inline-block;padding:14px 32px;background:#4CAF7D;color:#0a120b;
+                              font-size:15px;font-weight:800;text-decoration:none;border-radius:12px;
+                              letter-spacing:0.3px;">
+                      Open in PBallConnect →
+                    </a>
+                  </td>
+                </tr>
+              </table>` : ''}
+
+              <!-- Divider -->
+              <hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:0 0 20px;"/>
+
+              <!-- Footer note -->
+              <p style="color:rgba(255,255,255,0.35);font-size:11px;line-height:1.6;margin:0;text-align:center;">
+                You're receiving this because someone on PBallConnect sent you this message.<br/>
+                <a href="${site_url || 'https://pballconnect.com'}" style="color:#4CAF7D;text-decoration:none;">pballconnect.com</a>
+                &nbsp;·&nbsp; Beta v0.1
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+    // Send via Resend
+    const resendRes = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: `PBallConnect <noreply@pballconnect.com>`,
+        to: [to_email],
+        subject: emailSubject,
+        html: html,
+      }),
+    });
+
+    const resendData = await resendRes.json();
+
+    if (!resendRes.ok) {
+      console.error('Resend error:', resendData);
+      return new Response(JSON.stringify({ error: resendData.message || 'Send failed' }), {
+        status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    return new Response(JSON.stringify({ success: true, id: resendData.id }), {
+      status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+
+  } catch (e) {
+    console.error('send-email error:', e);
+    return new Response(JSON.stringify({ error: e.message }), {
+      status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+}
+
+// Handle CORS preflight
+export async function onRequestOptions() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    }
+  });
+}
