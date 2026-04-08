@@ -4112,7 +4112,7 @@ async function loadMyInvitesPage(){
         '<div style="flex:1;">'+
           '<div style="color:'+(isPast?'#94a3b8':'#fff')+';font-size:14px;font-weight:700;">'+(isPast?'<s>':'')+dateStr+' · '+timeStr+(isPast?'</s>':'')+'</div>'+
           '<div style="color:var(--dim);font-size:12px;margin-top:2px;">'+courtDisplay+'</div>'+
-          (!isPast?'<div style="font-size:11px;font-weight:700;color:#fbbf24;margin-top:3px;">'+getMatchCountdown(m)+'</div>':'')+
+          (!isPast?'<div style="font-size:11px;font-weight:700;color:#fbbf24;margin-top:3px;">'+getCountdown(m.match_date,m.time_start)+'</div>':'')+
           (!isPast&&m.match_date?'<div id="'+weatherId+'" style="font-size:11px;color:var(--dim);margin-top:3px;">⛅ Loading weather…</div>':'')+
         '</div>'+
         '<div style="text-align:right;flex-shrink:0;">'+
@@ -4283,7 +4283,7 @@ async function loadInvitedByOthersPage(){
             '<div style="flex:1;min-width:0;">'+
               '<div style="color:#fff;font-size:14px;font-weight:700;">'+dateStr+'</div>'+
               '<div style="color:var(--dim);font-size:12px;">'+timeStr+' &middot; '+courtDisplay+'</div>'+
-              '<div style="font-size:11px;font-weight:700;color:#60a5fa;margin-top:2px;">'+getMatchCountdown(m)+'</div>'+
+              '<div style="font-size:11px;font-weight:700;color:#60a5fa;margin-top:2px;">'+getCountdown(m.match_date,m.time_start)+'</div>'+
               '<div style="color:var(--dim);font-size:11px;margin-top:2px;">'+
                 'By <strong style="color:#fff;">'+(m.organizer_name||'Unknown')+'</strong>'+
                 ' &middot; '+(m.match_type==='singles'?'Singles':'Doubles')+
@@ -7311,14 +7311,24 @@ function updateInviteCounter(){
 // DASHBOARD
 // ══════════════════════════════════════════════════════
 
+function getCountdown(matchDate, timeStart){
+  if(!matchDate) return null;
+  const matchDt = new Date(matchDate+'T'+(timeStart||'12:00'));
+  const diff = matchDt - new Date();
+  if(diff <= 0) return null;
+  const days  = Math.floor(diff/(1000*60*60*24));
+  const hours = Math.floor((diff%(1000*60*60*24))/(1000*60*60));
+  const mins  = Math.floor((diff%(1000*60*60))/(1000*60));
+  if(days>1)  return days+'d '+hours+'h away';
+  if(days===1) return '1d '+hours+'h away';
+  if(hours>0) return hours+'h '+mins+'m away';
+  return mins+'m away';
+}
+
 async function loadDashboard(){
   const myEmail = getMyEmail();
-  if(!myEmail){
-    showPage('playerProfile');
-    return;
-  }
+  if(!myEmail){ showPage('playerProfile'); return; }
 
-  // Update welcome header
   const nameEl  = document.getElementById('dashName');
   const emojiEl = document.getElementById('dashEmoji');
   if(SESSION_PLAYER){
@@ -7326,10 +7336,53 @@ async function loadDashboard(){
     if(emojiEl) emojiEl.textContent = SESSION_PLAYER.avatar_emoji || '🎾';
   }
 
-  // Load all three sections in parallel
+  // Load everything in parallel
+  loadDashTileCounts(myEmail);
   loadDashNextMatch(myEmail);
   loadDashPendingInvites(myEmail);
   loadDashInvitedToPlay(myEmail);
+}
+
+async function loadDashTileCounts(myEmail){
+  const setTile = (id,txt)=>{ const el=document.getElementById(id); if(el) el.textContent=txt; };
+  try{
+    // Confirmed matches
+    const [cfOrgRes,cfRespRes] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=eq.full&or=(is_walk_on.is.null,is_walk_on.eq.false)&select=id,match_date,time_start,time_end,match_type,max_players`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}),
+      fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.in&select=match_id`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}})
+    ]);
+    const cfOrg  = cfOrgRes.ok  ? await cfOrgRes.json()  : [];
+    const cfResp = cfRespRes.ok ? await cfRespRes.json() : [];
+    let cfInvited = [];
+    if(cfResp.length){
+      const ids = cfResp.map(r=>r.match_id);
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${ids.join(',')})&status=eq.full&or=(is_walk_on.is.null,is_walk_on.eq.false)&select=id,match_date,time_start,time_end,match_type,max_players`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      cfInvited = r.ok ? await r.json() : [];
+    }
+    const seen = new Set();
+    const confirmed = [...cfOrg,...cfInvited].filter(m=>{ if(seen.has(m.id)) return false; seen.add(m.id); return !isMatchPast(m); });
+    setTile('dashTileConfirmed', confirmed.length>0 ? confirmed.length+' upcoming' : 'None yet');
+
+    // My invites — open matches I organized
+    const miRes = await fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=neq.full&status=neq.cancelled&select=id,match_date,time_start,time_end`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const myInvites = miRes.ok ? await miRes.json() : [];
+    const openInvites = myInvites.filter(m=>!isMatchPast(m));
+    setTile('dashTileMyInvites', openInvites.length>0 ? openInvites.length+' awaiting response' : 'None pending');
+
+    // Invited to play
+    const pendRes = await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.pending&select=match_id`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const pendRows = pendRes.ok ? await pendRes.json() : [];
+    setTile('dashTileInvited', pendRows.length>0 ? pendRows.length+' invite'+(pendRows.length>1?'s':'')+' waiting' : 'No invites');
+
+    // IC requests — use live count from restoreSession
+    setTile('dashTileIC', IC_INCOMING_COUNT>0 ? IC_INCOMING_COUNT+' request'+(IC_INCOMING_COUNT>1?'s':'')+' pending' : 'None pending');
+
+  }catch(e){ console.warn('loadDashTileCounts error:',e); }
 }
 
 async function loadDashNextMatch(myEmail){
@@ -7392,7 +7445,7 @@ async function loadDashNextMatch(myEmail){
             (urgency?'<div style="display:inline-block;margin-bottom:10px;padding:3px 10px;border-radius:999px;background:#d1fae5;border:1px solid #1a7a3a;color:#1a7a3a;font-size:10px;font-weight:800;">'+urgency+'</div>':'')+
             '<div style="font-size:16px;font-weight:800;color:#111;margin-bottom:4px;">'+dateStr+'</div>'+
             '<div style="font-size:13px;color:#555;margin-bottom:4px;">⏰ '+timeStr+'</div>'+
-            (getMatchCountdown(m)?'<div style="display:inline-block;margin-bottom:8px;padding:3px 10px;border-radius:999px;background:#fef3c7;border:1px solid #b45309;color:#b45309;font-size:11px;font-weight:700;">⏳ '+getMatchCountdown(m)+'</div>':'') +
+            (getCountdown(m.match_date,m.time_start)?'<div style="display:inline-block;margin-bottom:8px;padding:3px 10px;border-radius:999px;background:#fef3c7;border:1px solid #b45309;color:#b45309;font-size:11px;font-weight:700;">⏳ '+getCountdown(m.match_date,m.time_start)+'</div>':'') +
             '<div style="font-size:13px;color:#555;margin-bottom:10px;">📍 '+(m.court_name&&m.court_name!=='TBD'?m.court_name:'Court TBD')+'</div>'+
             '<div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:12px;">'+playerChips+'</div>'+
             (isOrg?'<div style="font-size:10px;color:#1a7a3a;font-weight:700;margin-bottom:10px;">👑 You organized this</div>':'')+
@@ -7463,7 +7516,7 @@ async function loadDashPendingInvites(myEmail){
             '<div style="font-size:9px;color:var(--dim);text-transform:uppercase;font-weight:700;">'+(remaining===0?'Full! 🎉':'Spot'+(remaining>1?'s':'')+' needed')+'</div>'+
           '</div>'+
         '</div>'+
-        (getMatchCountdown(m)?'<div style="display:inline-block;margin-bottom:10px;padding:3px 10px;border-radius:999px;background:#fef3c7;border:1px solid #b45309;color:#b45309;font-size:11px;font-weight:700;">⏳ '+getMatchCountdown(m)+'</div><br>':'')+
+        (getCountdown(m.match_date,m.time_start)?'<div style="display:inline-block;margin-bottom:10px;padding:3px 10px;border-radius:999px;background:#fef3c7;border:1px solid #b45309;color:#b45309;font-size:11px;font-weight:700;">⏳ '+getCountdown(m.match_date,m.time_start)+'</div><br>':'')+
         '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">'+
           '<div style="text-align:center;padding:8px 4px;border-radius:8px;background:#d1fae5;border:1px solid #1a7a3a;">'+
             '<div style="font-size:18px;font-weight:800;color:#1a7a3a;">'+inP.length+'</div>'+
@@ -7530,7 +7583,7 @@ async function loadDashInvitedToPlay(myEmail){
             '<div style="color:#111;font-size:14px;font-weight:700;">'+dateStr+' · '+timeStr+'</div>'+
             '<div style="color:#555;font-size:12px;">'+(m.match_type==='doubles'?'🏓🏓 Doubles':'🏓 Singles')+'</div>'+
             '<div style="color:#555;font-size:12px;">From: <span style="color:#1d4ed8;font-weight:700;">'+(m.organizer_name||'').split(' ')[0]+'</span></div>'+
-            (getMatchCountdown(m)?'<div style="font-size:11px;color:#b45309;font-weight:700;margin-top:3px;">⏳ '+getMatchCountdown(m)+'</div>':'')+
+            (getCountdown(m.match_date,m.time_start)?'<div style="font-size:11px;color:#b45309;font-weight:700;margin-top:3px;">⏳ '+getCountdown(m.match_date,m.time_start)+'</div>':'')+
           '</div>'+
           '<div style="font-size:22px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</div>'+
         '</div>'+
