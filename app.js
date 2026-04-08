@@ -1257,6 +1257,7 @@ function showPage(page){
   document.getElementById('leftNav').classList.remove('open');
   document.getElementById('navOverlay').classList.remove('visible');
   // Page-specific loaders
+  if(page==='dashboard')    loadDashboard();
   if(page==='myCourts')    loadMyCourts();
   if(page==='lessons')     renderLessonsPage();
   if(page==='myLessons')   { /* static page */ }
@@ -5007,7 +5008,7 @@ async function restoreSession(email, playerData){
   // Load outer circle badge async
 
   if(!S.addrLat && player.city && player.state) geocodeCityForSession(player.city, player.state);
-  showPage('innerCircle');
+  showPage('dashboard');
 }
 
 async function geocodeCityForSession(city, state){
@@ -7300,6 +7301,284 @@ function updateInviteCounter(){
   counter.textContent   = total+' player'+(total!==1?'s':'')+' invited';
   counter.style.background = total>0 ? 'rgba(76,175,125,0.12)' : 'rgba(255,255,255,0.06)';
   counter.style.color       = total>0 ? 'var(--green)' : 'var(--dim)';
+}
+
+
+// ══════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════
+
+async function loadDashboard(){
+  const myEmail = getMyEmail();
+  if(!myEmail){
+    showPage('playerProfile');
+    return;
+  }
+
+  // Update welcome header
+  const nameEl  = document.getElementById('dashName');
+  const emojiEl = document.getElementById('dashEmoji');
+  if(SESSION_PLAYER){
+    if(nameEl)  nameEl.textContent  = SESSION_PLAYER.first_name ? 'Welcome back, '+SESSION_PLAYER.first_name+'!' : '';
+    if(emojiEl) emojiEl.textContent = SESSION_PLAYER.avatar_emoji || '🎾';
+  }
+
+  // Load all three sections in parallel
+  loadDashNextMatch(myEmail);
+  loadDashPendingInvites(myEmail);
+  loadDashInvitedToPlay(myEmail);
+}
+
+async function loadDashNextMatch(myEmail){
+  const el = document.getElementById('dashNextMatch');
+  if(!el) return;
+  try{
+    // Get confirmed matches (organized or playing in)
+    const [orgRes, respRes] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=eq.full&or=(is_walk_on.is.null,is_walk_on.eq.false)&order=match_date.asc,time_start.asc`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}),
+      fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.in&select=match_id`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}})
+    ]);
+    const orgMatches = orgRes.ok ? await orgRes.json() : [];
+    const myResps    = respRes.ok ? await respRes.json() : [];
+    let invitedMatches = [];
+    if(myResps.length){
+      const ids = myResps.map(r=>r.match_id);
+      const imRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/matches?id=in.(${ids.join(',')})&status=eq.full&or=(is_walk_on.is.null,is_walk_on.eq.false)&order=match_date.asc`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      invitedMatches = imRes.ok ? await imRes.json() : [];
+    }
+    const seen = new Set();
+    const allMatches = [...orgMatches,...invitedMatches].filter(m=>{
+      if(seen.has(m.id)) return false; seen.add(m.id); return !isMatchPast(m);
+    });
+
+    // Verify confirmed player counts
+    if(allMatches.length){
+      const ids = allMatches.map(m=>m.id);
+      const vrRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${ids.join(',')})&response=eq.in&select=match_id,player_name,player_email`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      const allResps = vrRes.ok ? await vrRes.json() : [];
+      const countMap = {};
+      allResps.forEach(r=>{ if(!countMap[r.match_id]) countMap[r.match_id]=[]; countMap[r.match_id].push(r); });
+
+      const verified = allMatches.filter(m=>{
+        const needed = m.max_players||(m.match_type==='doubles'?4:2);
+        return (countMap[m.id]||[]).length >= needed;
+      });
+
+      if(verified.length){
+        const m = verified[0]; // next upcoming
+        const responses = countMap[m.id]||[];
+        const dateStr = m.match_date ? new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}) : '—';
+        const timeStr = m.time_start ? fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):'') : '—';
+        const daysUntil = m.match_date ? Math.ceil((new Date(m.match_date+'T12:00')-new Date())/(1000*60*60*24)) : null;
+        const urgency = daysUntil===0?'TODAY 🔥':daysUntil===1?'TOMORROW':null;
+        const isOrg = (m.organizer_email||'').toLowerCase()===myEmail.toLowerCase();
+        const playerChips = responses.map(p=>{
+          const n=(p.player_name||p.player_email||'').split(' ')[0];
+          const isMe = (p.player_email||'').toLowerCase()===myEmail.toLowerCase();
+          return '<span style="padding:3px 10px;border-radius:999px;background:'+(isMe?'rgba(76,175,125,0.2)':'rgba(255,255,255,0.08)')+';border:1px solid '+(isMe?'rgba(76,175,125,0.4)':'rgba(255,255,255,0.12)')+';font-size:12px;color:'+(isMe?'var(--green)':'#fff')+';margin:2px 2px;">'+(isMe?'You':n)+'</span>';
+        }).join('');
+
+        el.innerHTML=
+          '<div style="background:rgba(76,175,125,0.06);border:1px solid rgba(76,175,125,0.25);border-radius:14px;padding:16px;">'+
+            (urgency?'<div style="display:inline-block;margin-bottom:10px;padding:3px 10px;border-radius:999px;background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.3);color:var(--green);font-size:10px;font-weight:800;">'+urgency+'</div>':'')+
+            '<div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:4px;">'+dateStr+'</div>'+
+            '<div style="font-size:13px;color:var(--dim);margin-bottom:4px;">⏰ '+timeStr+'</div>'+
+            '<div style="font-size:13px;color:var(--dim);margin-bottom:10px;">📍 '+(m.court_name&&m.court_name!=='TBD'?m.court_name:'Court TBD')+'</div>'+
+            '<div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:12px;">'+playerChips+'</div>'+
+            (isOrg?'<div style="font-size:10px;color:var(--green);margin-bottom:10px;">👑 You organized this</div>':'')+
+            '<button onclick="showPage(&quot;confirmedMatches&quot;)" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(76,175,125,0.4);background:transparent;color:var(--green);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">View All Confirmed Matches →</button>'+
+          '</div>'+
+          (verified.length>1?'<div style="font-size:11px;color:var(--dim);text-align:center;margin-top:8px;">+' +(verified.length-1)+' more confirmed match'+(verified.length>2?'es':'')+'</div>':'');
+        return;
+      }
+    }
+
+    // No confirmed matches
+    el.innerHTML=
+      '<div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:20px;text-align:center;">'+
+        '<div style="font-size:32px;margin-bottom:8px;">🏓</div>'+
+        '<div style="color:#fff;font-size:14px;font-weight:700;margin-bottom:6px;">No confirmed matches yet</div>'+
+        '<div style="color:var(--dim);font-size:12px;margin-bottom:14px;">Set up a match and invite your Inner Circle!</div>'+
+        '<button onclick="showPage(&quot;setupMatch&quot;)" style="padding:10px 20px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">🎾 Set Up A Match</button>'+
+      '</div>';
+  }catch(e){
+    if(el) el.innerHTML='<div style="color:var(--dim);font-size:13px;padding:16px;text-align:center;">Could not load match data.</div>';
+  }
+}
+
+async function loadDashPendingInvites(myEmail){
+  const el = document.getElementById('dashPendingInvites');
+  if(!el) return;
+  try{
+    // Matches I organized that are still open
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=neq.full&status=neq.cancelled&order=match_date.asc`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const matches = res.ok ? await res.json() : [];
+    const upcoming = matches.filter(m=>!isMatchPast(m));
+
+    if(!upcoming.length){
+      el.innerHTML='<div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:16px;text-align:center;color:var(--dim);font-size:13px;">No pending invites — all matches confirmed or none sent yet.</div>';
+      return;
+    }
+
+    // Get responses for these matches
+    const ids = upcoming.map(m=>m.id);
+    const rRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${ids.join(',')})&select=match_id,player_name,player_email,response`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const responses = rRes.ok ? await rRes.json() : [];
+
+    el.innerHTML='';
+    upcoming.forEach(m=>{
+      const mRes   = responses.filter(r=>r.match_id===m.id);
+      const inP    = mRes.filter(r=>r.response==='in');
+      const pend   = mRes.filter(r=>r.response==='pending');
+      const maxNeeded = m.max_players||(m.match_type==='doubles'?4:2);
+      const remaining = Math.max(0, maxNeeded - inP.length);
+      const dateStr = m.match_date ? new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) : '—';
+      const timeStr = m.time_start ? fmt12(m.time_start) : '—';
+      const remainColor = remaining===0?'var(--green)':remaining===1?'#fbbf24':'#f87171';
+
+      const card = document.createElement('div');
+      card.style.cssText='background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;';
+      card.innerHTML=
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'+
+          '<div>'+
+            '<div style="color:#fff;font-size:14px;font-weight:700;">'+dateStr+' · '+timeStr+'</div>'+
+            '<div style="color:var(--dim);font-size:12px;">'+(m.match_type==='doubles'?'🏓🏓 Doubles':'🏓 Singles')+' · '+(m.court_name&&m.court_name!=='TBD'?m.court_name:'Court TBD')+'</div>'+
+          '</div>'+
+          '<div style="text-align:right;">'+
+            '<div style="font-size:20px;font-weight:900;color:'+remainColor+';">'+remaining+'</div>'+
+            '<div style="font-size:9px;color:var(--dim);text-transform:uppercase;font-weight:700;">'+(remaining===0?'Full! 🎉':'Spot'+(remaining>1?'s':'')+' needed')+'</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">'+
+          '<div style="text-align:center;padding:8px 4px;border-radius:8px;background:rgba(76,175,125,0.08);border:1px solid rgba(76,175,125,0.2);">'+
+            '<div style="font-size:18px;font-weight:800;color:var(--green);">'+inP.length+'</div>'+
+            '<div style="font-size:9px;color:var(--dim);text-transform:uppercase;font-weight:700;">Confirmed</div>'+
+            (inP.length?'<div style="font-size:9px;color:var(--green);margin-top:2px;">'+inP.map(p=>(p.player_name||'').split(' ')[0]).filter(Boolean).join(', ')+'</div>':'')+
+          '</div>'+
+          '<div style="text-align:center;padding:8px 4px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);">'+
+            '<div style="font-size:18px;font-weight:800;color:#94a3b8;">'+pend.length+'</div>'+
+            '<div style="font-size:9px;color:var(--dim);text-transform:uppercase;font-weight:700;">Pending</div>'+
+            (pend.length?'<div style="font-size:9px;color:#94a3b8;margin-top:2px;">'+pend.map(p=>(p.player_name||'').split(' ')[0]).filter(Boolean).join(', ')+'</div>':'')+
+          '</div>'+
+          '<div style="text-align:center;padding:8px 4px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);">'+
+            '<div style="font-size:18px;font-weight:800;color:'+remainColor+';">'+remaining+'</div>'+
+            '<div style="font-size:9px;color:var(--dim);text-transform:uppercase;font-weight:700;">Needed</div>'+
+          '</div>'+
+        '</div>'+
+        (pend.length?
+          '<button onclick="nudgePendingPlayers(this.dataset.mid)" data-mid="'+m.id+'" '+
+            'style="width:100%;padding:9px;border-radius:9px;border:1px solid rgba(251,191,36,0.35);background:rgba(251,191,36,0.08);color:#fbbf24;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">'+
+            '📣 Nudge '+pend.length+' Pending Player'+(pend.length>1?'s':'')+
+          '</button>':'');
+      el.appendChild(card);
+    });
+  }catch(e){
+    if(el) el.innerHTML='<div style="color:var(--dim);font-size:13px;padding:16px;text-align:center;">Could not load invites.</div>';
+  }
+}
+
+async function loadDashInvitedToPlay(myEmail){
+  const el = document.getElementById('dashInvitedToPlay');
+  if(!el) return;
+  try{
+    const rRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.pending&select=match_id`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const pending = rRes.ok ? await rRes.json() : [];
+
+    if(!pending.length){
+      el.innerHTML='<div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:16px;text-align:center;color:var(--dim);font-size:13px;">No pending invites from other players right now.</div>';
+      return;
+    }
+
+    const ids = pending.map(r=>r.match_id);
+    const mRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/matches?id=in.(${ids.join(',')})&status=neq.cancelled&select=*&order=match_date.asc`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const matches = mRes.ok ? await mRes.json() : [];
+    const upcoming = matches.filter(m=>!isMatchPast(m)&&(m.organizer_email||'').toLowerCase()!==myEmail.toLowerCase());
+
+    if(!upcoming.length){
+      el.innerHTML='<div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:16px;text-align:center;color:var(--dim);font-size:13px;">No pending invites from other players right now.</div>';
+      return;
+    }
+
+    el.innerHTML='';
+    upcoming.forEach(m=>{
+      const dateStr = m.match_date ? new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) : '—';
+      const timeStr = m.time_start ? fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):'') : '—';
+      const card = document.createElement('div');
+      card.style.cssText='background:rgba(59,130,246,0.04);border:1px solid rgba(59,130,246,0.2);border-radius:14px;padding:14px 16px;margin-bottom:10px;';
+      card.innerHTML=
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'+
+          '<div>'+
+            '<div style="color:#fff;font-size:14px;font-weight:700;">'+dateStr+' · '+timeStr+'</div>'+
+            '<div style="color:var(--dim);font-size:12px;">'+(m.match_type==='doubles'?'🏓🏓 Doubles':'🏓 Singles')+'</div>'+
+            '<div style="color:var(--dim);font-size:12px;">From: <span style="color:#60a5fa;">'+(m.organizer_name||'').split(' ')[0]+'</span></div>'+
+          '</div>'+
+          '<div style="font-size:22px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</div>'+
+        '</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'+
+          '<button onclick="respondToMatch(this.dataset.id,\'in\')" data-id="'+m.id+'" '+
+            'style="padding:10px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;">'+
+            '&#x2705; I\'m In!</button>'+
+          '<button onclick="respondToMatch(this.dataset.id,\'out\')" data-id="'+m.id+'" '+
+            'style="padding:10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;font-family:inherit;">'+
+            '&#x274C; Can\'t Make It</button>'+
+        '</div>';
+      el.appendChild(card);
+    });
+  }catch(e){
+    if(el) el.innerHTML='<div style="color:var(--dim);font-size:13px;padding:16px;text-align:center;">Could not load invites.</div>';
+  }
+}
+
+async function nudgePendingPlayers(matchId){
+  const btn = document.querySelector('[data-mid="'+matchId+'"]') || event?.target;
+  if(btn){ btn.disabled=true; btn.textContent='Sending nudges…'; }
+  try{
+    // Get pending players for this match
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.pending&select=player_email,player_name`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const players = res.ok ? await res.json() : [];
+
+    // Get match details
+    const mRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}&select=match_date,time_start,match_type,court_name&limit=1`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const matches = mRes.ok ? await mRes.json() : [];
+    const m = matches[0];
+    const dateStr = m?.match_date ? new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}) : '';
+    const timeStr = m?.time_start ? fmt12(m.time_start) : '';
+    const matchUrl = window.location.origin+window.location.pathname+'?match='+matchId;
+    const myName = getMyName();
+
+    for(const p of players){
+      await sendEmail({
+        to_email:      p.player_email,
+        type:          'match_invite',
+        personal_note: myName+' is following up on their '+( m?.match_type==='doubles'?'Doubles':'Singles')+' match invite for '+dateStr+(timeStr?' at '+timeStr:'')+(m?.court_name&&m?.court_name!=='TBD'?' @ '+m.court_name:'')+'. Are you in? Please respond!',
+        invite_url:    matchUrl,
+      });
+    }
+
+    showToast('📣 Nudge sent to '+players.length+' player'+(players.length>1?'s':'')+'!','#fbbf24');
+    if(btn){ btn.textContent='✅ Nudged!'; btn.style.color='var(--green)'; }
+  }catch(e){
+    showToast('Could not send nudge: '+e.message,'#f87171');
+    if(btn){ btn.disabled=false; btn.textContent='📣 Nudge Players'; }
+  }
 }
 
 // ══════════════════════════════════════════════════════
