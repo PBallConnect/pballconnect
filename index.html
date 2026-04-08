@@ -29,51 +29,25 @@
 
 <title>PBallConnect — Find Pickleball Players Near You</title>
 <style>
-  /* ── Top Header — white ── */
-  .top-header, div.top-header {
-    background: #ffffff !important;
-    border-bottom: 1px solid #e5e7eb !important;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08) !important;
-  }
-  .top-logo-text { color: #111 !important; }
-  .top-logo-text span { color: #1a7a3a !important; }
-  .top-logo-icon { color: #1a7a3a !important; }
-  button.nav-toggle { color: #111 !important; background: none !important; }
-  .top-btn-label { color: #111 !important; }
-  .top-signin-btn, #navLoginBtn { color: #111 !important; border-color: #d1d5db !important; }
-  #memberCountBadge { background: rgba(26,122,58,0.1) !important; color: #1a7a3a !important; }
+  /* Top header — white */
+  .top-header { background:#ffffff !important; border-bottom:1px solid #e5e7eb !important; box-shadow:0 1px 4px rgba(0,0,0,0.06) !important; }
+  .top-logo-text { color:#111 !important; }
+  .top-logo-text span { color:#1a7a3a !important; }
+  .top-btn-label { color:#111 !important; }
+  .top-signin-btn { color:#111 !important; }
 
-  /* ── Left Nav — light grey ── */
-  nav.left-nav, .left-nav { background: #f3f4f6 !important; border-right: 1px solid #d1d5db !important; }
-  .nav-logo, .nav-logo-title { color: #1a5c32 !important; background: #f3f4f6 !important; }
-  .nav-section-label { color: #1a5c32 !important; font-weight: 800 !important; opacity: 1 !important; }
-  .nav-items { background: #f3f4f6 !important; }
-  .nav-item { color: #1a5c32 !important; background: transparent !important; }
-  .nav-item span.nav-label { color: #1a5c32 !important; }
-  .nav-item span.nav-icon { color: #1a5c32 !important; }
-  .nav-item:hover { background: #e2ede6 !important; }
-  .nav-item.active { background: #d1fae5 !important; border-left: 3px solid #1a7a3a !important; color: #1a7a3a !important; }
-  .nav-item.active .nav-label, .nav-item.active .nav-icon { color: #1a7a3a !important; }
-  .nav-lessons-dim { opacity: 0.6 !important; }
+  /* Nav separator lines */
+  .left-nav [style*="height:1px"] { background:#c9d0d8 !important; opacity:1 !important; }
 
-  /* ── Nav separator lines — visible on grey bg ── */
-  .left-nav hr,
-  .left-nav [style*="height:1px"] { background: #c9d0d8 !important; opacity: 1 !important; }
+  /* Invited by Others badge — ensure text visible */
+  #invitedByOthersBadge { color:#fff !important; }
 
-  /* ── White background site-wide ── */
-  .right-column { background: #ffffff !important; }
-  .page-section { background: #ffffff !important; }
-  .app-shell { background: #ffffff !important; }
-  .reg-wrapper { background: #ffffff !important; }
+  /* Match cards — white */
+  .match-card { background:#ffffff !important; border-color:#e5e7eb !important; }
+  .ic-member-card { background:#ffffff !important; border-color:#e5e7eb !important; }
 
-  /* ── Cards — use light borders instead of dark ── */
-  .card { background: #ffffff !important; border-color: #e5e7eb !important; }
-  .match-card { background: #ffffff !important; border-color: #e5e7eb !important; }
-  .ic-member-card { background: #ffffff !important; border-color: #e5e7eb !important; }
-
-  /* ── Text colors — dark on white ── */
-  .page-section h1, .page-section h2, .page-section h3 { color: #111 !important; }
-  .page-section p { color: #444 !important; }
+  /* Lessons dim */
+  .nav-lessons-dim { opacity:0.5 !important; }
 </style>
 </head>
 <body>
