@@ -4261,13 +4261,13 @@ async function loadInvitedByOthersPage(){
       const courtDisplay=m.court_name&&m.court_name!=='TBD'?m.court_name:(m.court_address||'Location TBD');
 
       // Player chips — organizer always first with star
-      const organizerChip='<span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.25);font-size:11px;color:var(--green);margin:2px;">'+
+      const organizerChip='<span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:#d1fae5;border:2px solid #1a7a3a;font-size:11px;color:#1a7a3a;font-weight:700;margin:2px;">'+
         (m.organizer_name||'Organizer').split(' ')[0]+' &#9733;</span>';
       const playerChips=inPlayers
         .filter(p=>p.player_email!==m.organizer_email)
         .map(p=>{
           const firstName=(p.player_name||p.player_email||'').split(' ')[0];
-          return '<span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,0.06);border:1px solid var(--border);font-size:11px;color:#fff;margin:2px;">'+firstName+'</span>';
+          return '<span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:#f0fdf4;border:2px solid #1a7a3a;font-size:11px;color:#1a7a3a;font-weight:600;margin:2px;">'+firstName+'</span>';
         }).join('');
 
       const isPending=myResponse==='pending';
@@ -4279,7 +4279,7 @@ async function loadInvitedByOthersPage(){
       const canUpgrade=isWaitlist&&spotsLeft>0;
 
       const card=document.createElement('div');
-      card.style.cssText='background:rgba(255,255,255,0.03);border:1px solid '+(isPending?'rgba(59,130,246,0.4)':'var(--border)')+';border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;';
+      card.style.cssText='background:#ffffff;border:2px solid '+(isPending?'#3b82f6':'#d1d5db')+';border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);';
 
       let expanded=isPending||canUpgrade;
 
@@ -4288,11 +4288,11 @@ async function loadInvitedByOthersPage(){
           '<div onclick="this.parentElement._toggle()" style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;cursor:pointer;">'+
             '<span style="font-size:22px;flex-shrink:0;">'+(m.match_type==='doubles'?'&#127955;&#127955;':'&#127955;')+'</span>'+
             '<div style="flex:1;min-width:0;">'+
-              '<div style="color:#fff;font-size:14px;font-weight:700;">'+dateStr+'</div>'+
-              '<div style="color:var(--dim);font-size:12px;">'+timeStr+' &middot; '+courtDisplay+'</div>'+
+              '<div style="color:#1a7a3a;font-size:14px;font-weight:700;">'+dateStr+'</div>'+
+              '<div style="color:#555;font-size:12px;">'+timeStr+' &middot; '+courtDisplay+'</div>'+
               '<div style="font-size:11px;font-weight:700;color:#60a5fa;margin-top:2px;">'+getCountdown(m.match_date,m.time_start)+'</div>'+
-              '<div style="color:var(--dim);font-size:11px;margin-top:2px;">'+
-                'By <strong style="color:#fff;">'+(m.organizer_name||'Unknown')+'</strong>'+
+              '<div style="color:#555;font-size:11px;margin-top:2px;">'+
+                'By <strong style="color:#111;">'+(m.organizer_name||'Unknown')+'</strong>'+
                 ' &middot; '+(m.match_type==='singles'?'Singles':'Doubles')+
               '</div>'+
             '</div>'+
@@ -4301,13 +4301,13 @@ async function loadInvitedByOthersPage(){
               '<div style="font-size:11px;font-weight:700;color:'+(isPending?'#60a5fa':isIn?'var(--green)':canUpgrade?'#f59e0b':isWaitlist?'#f59e0b':'#f87171')+';">'+
                 (isPending?'Awaiting response':isIn?'You are in!':canUpgrade?'Waitlist - spot open!':isWaitlist?'On waitlist':'Declined')+
               '</div>'+
-              '<div style="font-size:10px;color:var(--dim);">'+(expanded?'&#9650; less':'&#9660; details')+'</div>'+
+              '<div style="font-size:10px;color:#6b7280;">'+(expanded?'&#9650; less':'&#9660; details')+'</div>'+
             '</div>'+
           '</div>'+
           (expanded?
-            '<div style="padding:0 16px 14px;border-top:1px solid rgba(255,255,255,0.06);">'+
+            '<div style="padding:0 16px 14px;border-top:1px solid #e5e7eb;">'+
               '<div style="margin-top:10px;">'+
-                '<div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">'+
+                '<div style="font-size:10px;font-weight:700;color:#1a5c32;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">'+
                   'Players ('+confirmedCount+'/'+maxNeeded+') &middot; '+
                   (spotsLeft>0?spotsLeft+' spot'+(spotsLeft!==1?'s':'')+' left':'Full!')+
                 '</div>'+
