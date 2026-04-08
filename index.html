@@ -90,24 +90,6 @@
 
       <!-- ── Matches ── -->
       <div class="nav-section-label">Matches</div>
-
-      <div class="nav-item" onclick="showPage('innerCircle')" id="nav-innerCircle" title="Inner Circle">
-        <span class="nav-icon">👥</span><span class="nav-label">Inner Circle</span>
-        <span id="icNavGreenBadge" class="nav-circle-badge nav-circle-green placeholder" style="cursor:pointer;opacity:0.4;" onclick="showIcView('members')" title="Approved members">0</span>
-        <span id="icNavYellowBadge" class="nav-circle-badge nav-circle-yellow placeholder" style="cursor:pointer;opacity:0.4;" onclick="showIcView('invited')" title="Pending invites">0</span>
-        <span id="icNavPurpleBadge" class="nav-circle-badge nav-circle-purple placeholder" style="cursor:pointer;" onclick="showIcView('incoming')" title="Requests to you">0</span>
-      </div>
-
-      <div class="nav-item" onclick="showPage('myCourts')" id="nav-myCourts" title="My Courts">
-        <span class="nav-icon">🏟️</span><span class="nav-label">My Courts</span>
-        <span id="navCourtPrivate" title="Private Courts" style="display:none;margin-left:2px;min-width:20px;height:20px;border-radius:4px;background:rgba(140,100,255,0.2);border:1px solid rgba(140,100,255,0.4);color:#a78bfa;font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 5px;cursor:default;"></span>
-        <span id="navCourtPublic" title="Public Courts" style="display:none;margin-left:3px;min-width:20px;height:20px;border-radius:4px;background:rgba(76,175,125,0.2);border:1px solid rgba(76,175,125,0.4);color:var(--green);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 5px;cursor:default;"></span>
-      </div>
-
-      <!-- Separator -->
-      <div style="height:1px;background:var(--border);margin:6px 20px;opacity:0.5;"></div>
-
-      <!-- ── Matches ── -->
       <div class="nav-item" onclick="showPage('confirmedMatches')" id="nav-confirmedMatches" title="Confirmed Matches — upcoming confirmed games">
         <span class="nav-icon">✅</span><span class="nav-label">Confirmed Matches</span>
         <span id="confirmedMatchesBadge" style="display:inline-flex;min-width:20px;height:20px;border-radius:50%;background:rgba(76,175,125,0.2);color:rgba(76,175,125,0.5);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;">0></span>
@@ -142,11 +124,16 @@
       <div class="nav-item" onclick="showPage('playerProfile')" id="nav-playerProfile" title="Player Profile">
         <span class="nav-icon">👤</span><span class="nav-label">Player Profile</span>
       </div>
-      <div class="nav-item" onclick="showPage('innerCircle')" id="nav-innerCircle-2" title="Inner Circle">
+      <div class="nav-item" onclick="showPage('innerCircle')" id="nav-innerCircle" title="Inner Circle">
         <span class="nav-icon">👥</span><span class="nav-label">Inner Circle</span>
+        <span id="icNavGreenBadge" class="nav-circle-badge nav-circle-green placeholder" style="cursor:pointer;opacity:0.4;" onclick="showIcView('members')" title="Approved members">0</span>
+        <span id="icNavYellowBadge" class="nav-circle-badge nav-circle-yellow placeholder" style="cursor:pointer;opacity:0.4;" onclick="showIcView('invited')" title="Pending invites">0</span>
+        <span id="icNavPurpleBadge" class="nav-circle-badge nav-circle-purple placeholder" style="cursor:pointer;" onclick="showIcView('incoming')" title="Requests to you">0</span>
       </div>
-      <div class="nav-item" onclick="showPage('myCourts')" id="nav-myCourts-2" title="My Courts">
-        <span class="nav-icon">🏟</span><span class="nav-label">My Courts</span>
+      <div class="nav-item" onclick="showPage('myCourts')" id="nav-myCourts" title="My Courts">
+        <span class="nav-icon">🏟️</span><span class="nav-label">My Courts</span>
+        <span id="navCourtPrivate" title="Private Courts" style="display:none;margin-left:2px;min-width:20px;height:20px;border-radius:4px;background:rgba(140,100,255,0.2);border:1px solid rgba(140,100,255,0.4);color:#a78bfa;font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 5px;cursor:default;"></span>
+        <span id="navCourtPublic" title="Public Courts" style="display:none;margin-left:3px;min-width:20px;height:20px;border-radius:4px;background:rgba(76,175,125,0.2);border:1px solid rgba(76,175,125,0.4);color:var(--green);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 5px;cursor:default;"></span>
       </div>
 
       <div style="height:1px;background:var(--border);margin:6px 20px;opacity:0.5;"></div>

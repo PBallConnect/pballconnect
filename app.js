@@ -4112,6 +4112,7 @@ async function loadMyInvitesPage(){
         '<div style="flex:1;">'+
           '<div style="color:'+(isPast?'#94a3b8':'#fff')+';font-size:14px;font-weight:700;">'+(isPast?'<s>':'')+dateStr+' · '+timeStr+(isPast?'</s>':'')+'</div>'+
           '<div style="color:var(--dim);font-size:12px;margin-top:2px;">'+courtDisplay+'</div>'+
+          (!isPast?'<div style="font-size:11px;font-weight:700;color:#fbbf24;margin-top:3px;">'+getMatchCountdown(m)+'</div>':'')+
           (!isPast&&m.match_date?'<div id="'+weatherId+'" style="font-size:11px;color:var(--dim);margin-top:3px;">⛅ Loading weather…</div>':'')+
         '</div>'+
         '<div style="text-align:right;flex-shrink:0;">'+
@@ -4282,6 +4283,7 @@ async function loadInvitedByOthersPage(){
             '<div style="flex:1;min-width:0;">'+
               '<div style="color:#fff;font-size:14px;font-weight:700;">'+dateStr+'</div>'+
               '<div style="color:var(--dim);font-size:12px;">'+timeStr+' &middot; '+courtDisplay+'</div>'+
+              '<div style="font-size:11px;font-weight:700;color:#60a5fa;margin-top:2px;">'+getMatchCountdown(m)+'</div>'+
               '<div style="color:var(--dim);font-size:11px;margin-top:2px;">'+
                 'By <strong style="color:#fff;">'+(m.organizer_name||'Unknown')+'</strong>'+
                 ' &middot; '+(m.match_type==='singles'?'Singles':'Doubles')+
@@ -7388,11 +7390,12 @@ async function loadDashNextMatch(myEmail){
         el.innerHTML=
           '<div style="background:#fff;border-radius:16px;padding:16px;box-shadow:0 2px 12px rgba(26,122,58,0.12);border-left:4px solid #1a7a3a;">'+
             (urgency?'<div style="display:inline-block;margin-bottom:10px;padding:3px 10px;border-radius:999px;background:#d1fae5;border:1px solid #1a7a3a;color:#1a7a3a;font-size:10px;font-weight:800;">'+urgency+'</div>':'')+
-            '<div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:4px;">'+dateStr+'</div>'+
-            '<div style="font-size:13px;color:var(--dim);margin-bottom:4px;">⏰ '+timeStr+'</div>'+
-            '<div style="font-size:13px;color:var(--dim);margin-bottom:10px;">📍 '+(m.court_name&&m.court_name!=='TBD'?m.court_name:'Court TBD')+'</div>'+
+            '<div style="font-size:16px;font-weight:800;color:#111;margin-bottom:4px;">'+dateStr+'</div>'+
+            '<div style="font-size:13px;color:#555;margin-bottom:4px;">⏰ '+timeStr+'</div>'+
+            (getMatchCountdown(m)?'<div style="display:inline-block;margin-bottom:8px;padding:3px 10px;border-radius:999px;background:#fef3c7;border:1px solid #b45309;color:#b45309;font-size:11px;font-weight:700;">⏳ '+getMatchCountdown(m)+'</div>':'') +
+            '<div style="font-size:13px;color:#555;margin-bottom:10px;">📍 '+(m.court_name&&m.court_name!=='TBD'?m.court_name:'Court TBD')+'</div>'+
             '<div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:12px;">'+playerChips+'</div>'+
-            (isOrg?'<div style="font-size:10px;color:var(--green);margin-bottom:10px;">👑 You organized this</div>':'')+
+            (isOrg?'<div style="font-size:10px;color:#1a7a3a;font-weight:700;margin-bottom:10px;">👑 You organized this</div>':'')+
             '<button onclick="showPage(&quot;confirmedMatches&quot;)" style="width:100%;padding:10px;border-radius:10px;border:1px solid #1a7a3a;background:transparent;color:#1a7a3a;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">View All Confirmed Matches →</button>'+
           '</div>'+
           (verified.length>1?'<div style="font-size:11px;color:var(--dim);text-align:center;margin-top:8px;">+' +(verified.length-1)+' more confirmed match'+(verified.length>2?'es':'')+'</div>':'');
@@ -7460,20 +7463,21 @@ async function loadDashPendingInvites(myEmail){
             '<div style="font-size:9px;color:var(--dim);text-transform:uppercase;font-weight:700;">'+(remaining===0?'Full! 🎉':'Spot'+(remaining>1?'s':'')+' needed')+'</div>'+
           '</div>'+
         '</div>'+
+        (getMatchCountdown(m)?'<div style="display:inline-block;margin-bottom:10px;padding:3px 10px;border-radius:999px;background:#fef3c7;border:1px solid #b45309;color:#b45309;font-size:11px;font-weight:700;">⏳ '+getMatchCountdown(m)+'</div><br>':'')+
         '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">'+
           '<div style="text-align:center;padding:8px 4px;border-radius:8px;background:#d1fae5;border:1px solid #1a7a3a;">'+
-            '<div style="font-size:18px;font-weight:800;color:var(--green);">'+inP.length+'</div>'+
-            '<div style="font-size:9px;color:var(--dim);text-transform:uppercase;font-weight:700;">Confirmed</div>'+
-            (inP.length?'<div style="font-size:9px;color:var(--green);margin-top:2px;">'+inP.map(p=>(p.player_name||'').split(' ')[0]).filter(Boolean).join(', ')+'</div>':'')+
+            '<div style="font-size:18px;font-weight:800;color:#1a7a3a;">'+inP.length+'</div>'+
+            '<div style="font-size:9px;color:#1a7a3a;text-transform:uppercase;font-weight:700;">Confirmed</div>'+
+            (inP.length?'<div style="font-size:9px;color:#1a7a3a;margin-top:2px;">'+inP.map(p=>(p.player_name||'').split(' ')[0]).filter(Boolean).join(', ')+'</div>':'')+
           '</div>'+
-          '<div style="text-align:center;padding:8px 4px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);">'+
-            '<div style="font-size:18px;font-weight:800;color:#94a3b8;">'+pend.length+'</div>'+
-            '<div style="font-size:9px;color:var(--dim);text-transform:uppercase;font-weight:700;">Pending</div>'+
-            (pend.length?'<div style="font-size:9px;color:#94a3b8;margin-top:2px;">'+pend.map(p=>(p.player_name||'').split(' ')[0]).filter(Boolean).join(', ')+'</div>':'')+
+          '<div onclick="var n=this.querySelector(&quot;.pn&quot;);n.style.display=n.style.display===&quot;none&quot;?&quot;block&quot;:&quot;none&quot;" style="text-align:center;padding:8px 4px;border-radius:8px;background:#fff7ed;border:1px solid #b45309;cursor:pointer;" title="Tap to see who is pending">'+
+            '<div style="font-size:18px;font-weight:800;color:#b45309;">'+pend.length+'</div>'+
+            '<div style="font-size:9px;color:#b45309;text-transform:uppercase;font-weight:700;">Pending ▾</div>'+
+            '<div class="pn" style="display:none;font-size:9px;color:#b45309;margin-top:4px;line-height:1.6;text-align:left;">'+pend.map(p=>(p.player_name||p.player_email||'').split(' ')[0]).filter(Boolean).join('<br>')+'</div>'+
           '</div>'+
-          '<div style="text-align:center;padding:8px 4px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);">'+
-            '<div style="font-size:18px;font-weight:800;color:'+remainColor+';">'+remaining+'</div>'+
-            '<div style="font-size:9px;color:var(--dim);text-transform:uppercase;font-weight:700;">Needed</div>'+
+          '<div style="text-align:center;padding:8px 4px;border-radius:8px;background:'+(remaining===0?'#d1fae5':'#fff1f2')+';border:1px solid '+(remaining===0?'#1a7a3a':'#e11d48')+';">'+
+            '<div style="font-size:18px;font-weight:800;color:'+(remaining===0?'#1a7a3a':'#e11d48')+';">'+remaining+'</div>'+
+            '<div style="font-size:9px;color:'+(remaining===0?'#1a7a3a':'#e11d48')+';text-transform:uppercase;font-weight:700;">'+(remaining===0?'Full! 🎉':'Needed')+'</div>'+
           '</div>'+
         '</div>'+
         (pend.length?
@@ -7519,22 +7523,23 @@ async function loadDashInvitedToPlay(myEmail){
       const dateStr = m.match_date ? new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) : '—';
       const timeStr = m.time_start ? fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):'') : '—';
       const card = document.createElement('div');
-      card.style.cssText='background:rgba(59,130,246,0.04);border:1px solid rgba(59,130,246,0.2);border-radius:14px;padding:14px 16px;margin-bottom:10px;';
+      card.style.cssText='background:#eff6ff;border:1px solid rgba(29,78,216,0.2);border-radius:14px;padding:14px 16px;margin-bottom:10px;border-left:4px solid #1d4ed8;';
       card.innerHTML=
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'+
           '<div>'+
             '<div style="color:#111;font-size:14px;font-weight:700;">'+dateStr+' · '+timeStr+'</div>'+
-            '<div style="color:var(--dim);font-size:12px;">'+(m.match_type==='doubles'?'🏓🏓 Doubles':'🏓 Singles')+'</div>'+
-            '<div style="color:var(--dim);font-size:12px;">From: <span style="color:#60a5fa;">'+(m.organizer_name||'').split(' ')[0]+'</span></div>'+
+            '<div style="color:#555;font-size:12px;">'+(m.match_type==='doubles'?'🏓🏓 Doubles':'🏓 Singles')+'</div>'+
+            '<div style="color:#555;font-size:12px;">From: <span style="color:#1d4ed8;font-weight:700;">'+(m.organizer_name||'').split(' ')[0]+'</span></div>'+
+            (getMatchCountdown(m)?'<div style="font-size:11px;color:#b45309;font-weight:700;margin-top:3px;">⏳ '+getMatchCountdown(m)+'</div>':'')+
           '</div>'+
           '<div style="font-size:22px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</div>'+
         '</div>'+
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'+
           '<button onclick="respondToMatch(this.dataset.id,\'in\')" data-id="'+m.id+'" '+
-            'style="padding:10px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;">'+
+            'style="padding:10px;border-radius:10px;border:none;background:#1a7a3a;color:#fff;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;">'+
             '&#x2705; I\'m In!</button>'+
           '<button onclick="respondToMatch(this.dataset.id,\'out\')" data-id="'+m.id+'" '+
-            'style="padding:10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;font-family:inherit;">'+
+            'style="padding:10px;border-radius:10px;border:1px solid #ccc;background:transparent;color:#555;font-size:13px;cursor:pointer;font-family:inherit;">'+
             '&#x274C; Can\'t Make It</button>'+
         '</div>';
       el.appendChild(card);
@@ -7542,6 +7547,12 @@ async function loadDashInvitedToPlay(myEmail){
   }catch(e){
     if(el) el.innerHTML='<div style="color:#888;font-size:13px;padding:16px;text-align:center;">Could not load invites.</div>';
   }
+}
+
+function showPendingPlayersList(el, names){
+  if(!names || !names.trim()) return;
+  const decoded = decodeURIComponent(names);
+  showToast('⏳ Pending: '+decoded, '#b45309');
 }
 
 async function nudgePendingPlayers(matchId){
