@@ -6726,7 +6726,6 @@ async function shareInviteLink(){
   }
 }
 
-async 
 async function getMyInviteUrl(){
   // Generate a personal invite token/URL
   const myEmail = getMyEmail();
