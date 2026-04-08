@@ -797,6 +797,26 @@ function showToast(msg, color='#ef4444'){
   document.body.appendChild(t);
   setTimeout(()=>t.remove(), 6000);
 }
+// ── Secure email sender — Cloudflare Pages Function ──────────────────
+async function sendEmail({ to_email, type, personal_note, invite_url, subject }){
+  if(!to_email || !to_email.includes('@')) return;
+  try{
+    const res = await fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to_email, type: type||'notification',
+        personal_note: personal_note||'',
+        invite_url: invite_url||window.location.origin,
+        site_url: window.location.origin,
+        subject: subject||null,
+      })
+    });
+    if(!res.ok) console.warn('sendEmail failed:', res.status);
+  }catch(e){ console.warn('sendEmail error:', e.message); }
+}
+
+
 
 async function submitForm(){
   // If editing existing profile, show diff overlay first
@@ -3234,11 +3254,9 @@ async function submitMatch(){
     }catch(e){}
     for(const player of invitees){
       if(matchId) await fetch(`${SUPABASE_URL}/rest/v1/match_responses`,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},body:JSON.stringify({match_id:matchId,player_email:player.email,player_name:((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim(),response:'pending'})}).catch(()=>{});
-      const pubKey=window.EMAILJS_PUBLIC_KEY;
-      if(pubKey&&pubKey!=='YOUR_PUBLIC_KEY'&&player.email){
+      if(player.email){
         const matchUrl=window.location.origin+window.location.pathname+'?match='+matchId;
-        emailjs.init(pubKey);
-        emailjs.send(window.EMAILJS_SERVICE_ID,window.EMAILJS_TEMPLATE_ID,{to_email:player.email,from_name:myName||'A fellow player',from_email:myEmail,invite_url:matchUrl,personal_note:(MS.format==='doubles'?'Doubles':'Singles')+' · '+dateStr+' '+timeStr+(MS.courtName?' @ '+MS.courtName:'')+(note?' · '+note:'')+weatherNote,site_url:window.location.origin}).catch(()=>{});
+        sendEmail({ to_email:player.email, type:'match_invite', personal_note:(MS.format==='doubles'?'Doubles':'Singles')+' · '+dateStr+' '+timeStr+(MS.courtName?' @ '+MS.courtName:'')+(note?' · Note: '+note:'')+weatherNote, invite_url:matchUrl });
       }
     }
     showToast('🎾 Match invite sent to '+invitees.length+' players!','#4CAF7D');
@@ -3756,19 +3774,9 @@ async function saveMatchEdits(matchId){
     const dateStr = date?new Date(date+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}):'';
     const timeStr = timeStart?fmt12(timeStart)+(timeEnd?' – '+fmt12(timeEnd):''):'';
     const matchUrl= window.location.origin+window.location.pathname+'?match='+matchId;
-    const pubKey  = window.EMAILJS_PUBLIC_KEY;
     for(const p of players){
       if((p.player_email||'').toLowerCase()===myEmail.toLowerCase()) continue;
-      if(pubKey&&pubKey!=='YOUR_PUBLIC_KEY'){
-        emailjs.init(pubKey);
-        emailjs.send(window.EMAILJS_SERVICE_ID,window.EMAILJS_TEMPLATE_ID,{
-          to_email:p.player_email,from_name:'PBallConnect',from_email:'noreply@pickleballregistry.app',
-          invite_url:matchUrl,
-          personal_note:myName+' updated your match: '+dateStr+(timeStr?' at '+timeStr:'')+
-            (courtName?' @ '+courtName:'')+(note?' — '+note:'')+'. Please re-confirm your availability.',
-          site_url:window.location.origin
-        }).catch(()=>{});
-      }
+      sendEmail({ to_email:p.player_email, type:'match_update', personal_note:myName+' updated your match: '+dateStr+(timeStr?' at '+timeStr:'')+(courtName?' @ '+courtName:'')+(note?' — '+note:'')+'. Please re-confirm your availability.', invite_url:matchUrl });
     }
     document.getElementById('editMatchOverlay')?.remove();
     showToast('Match updated! Players notified.','#4CAF7D');
@@ -4649,20 +4657,7 @@ async function notifyOrganizerOfDecline(matchId, declinerEmail){
     const dateStr = match.match_date
       ? new Date(match.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) : '';
 
-    // Send decline notification via EmailJS
-    const pubKey = window.EMAILJS_PUBLIC_KEY;
-    if(pubKey && pubKey !== 'YOUR_PUBLIC_KEY'){
-      emailjs.init(pubKey);
-      emailjs.send(window.EMAILJS_SERVICE_ID, window.EMAILJS_TEMPLATE_ID, {
-        to_email:      match.organizer_email,
-        from_name:     'PBallConnect',
-        from_email:    'noreply@pickleballregistry.app',
-        invite_url:    window.location.origin + window.location.pathname + '?setupmatch=1',
-        personal_note: declinerEmail+' declined your '+match.match_type+' match invite for '+dateStr+
-                       '. You have an open spot — invite someone from your Inner Circle to fill it!',
-        site_url:      window.location.origin,
-      }).catch(()=>{});
-    }
+    sendEmail({ to_email:match.organizer_email, type:'match_decline', personal_note:declinerEmail+' declined your '+match.match_type+' match invite for '+dateStr+'. You have an open spot — invite someone from your Inner Circle to fill it!', invite_url:window.location.origin+window.location.pathname+'?setupmatch=1' });
   }catch(e){}
 }
 
@@ -6770,65 +6765,9 @@ async function openQuickInvite(method){
     window.open('sms:?body='+body);
     showToast('Messages app opened! 💬','#60a5fa');
   } else if(method==='email'){
-    const subject = encodeURIComponent(firstName+' invited you to join PBallConnect! 🎾');
-    const body = encodeURIComponent(
-      'Hey!\n\n'+
-      myName+' wants to add you to their Inner Circle on PBallConnect — '+
-      'the best way to organize pickleball matches with people you actually want to play with.\n\n'+
-      'Join '+firstName+'\'s network here:\n'+url+'\n\n'+
-      'Takes about 2 minutes to set up your profile.\n\n'+
-      'See you on the court! 🏓'
-    );
-    window.open('mailto:?subject='+subject+'&body='+body);
-    showToast('Email app opened! ✉️','#4CAF7D');
-  }
-}
-
-async function copyInviteLink(){
-  const url = await getMyInviteUrl();
-  try{
-    await navigator.clipboard.writeText(url);
-    showToast('🔗 Invite link copied! Share it anywhere.','#fbbf24');
-  }catch(e){
-    // Fallback for browsers that don't support clipboard API
-    const el = document.createElement('textarea');
-    el.value = url; el.style.position='fixed'; el.style.opacity='0';
-    document.body.appendChild(el); el.select();
-    document.execCommand('copy'); document.body.removeChild(el);
-    showToast('🔗 Link copied!','#fbbf24');
-  }
-}
-
-async function sendInvite(method){
-  const myEmail=getMyEmail();
-  const myName=((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim()||'A fellow player';
-  const inviteeEmail=document.getElementById('inviteEmail')?.value?.trim();
-  const inviteePhone=document.getElementById('invitePhone')?.value?.replace(/\D/g,'');
-  const note=document.getElementById('inviteNote')?.value?.trim();
-  const statusEl=document.getElementById('inviteStatus');
-  if(!myEmail){showToast('Please sign in first','#f59e0b');return;}
-  if(statusEl) statusEl.textContent='Saving…';
-  let token='';
-  try{
-    const inviteRes=await fetch(`${SUPABASE_URL}/rest/v1/invites`,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=representation'},body:JSON.stringify({inviter_email:myEmail,inviter_name:myName,invitee_email:inviteeEmail||null,invitee_phone:inviteePhone||null,invite_method:method,personal_note:note||null})});
-    const rows=inviteRes.ok?await inviteRes.json():[];
-    token=rows[0]?.invite_token||Math.random().toString(36).slice(2);
-  }catch(e){token=Math.random().toString(36).slice(2);}
-  const inviteUrl=window.location.origin+window.location.pathname+'?invite='+token;
-  if(method==='email'){
-    const pubKey=window.EMAILJS_PUBLIC_KEY;
-    if(!pubKey||pubKey==='YOUR_PUBLIC_KEY'){
-      const subject=encodeURIComponent(myName+' invited you to PBallConnect! 🎾');
-      const body=encodeURIComponent('Hi!\n\n'+myName+' personally invited you to join PBallConnect.\n\n'+(note?'"'+note+'"\n\n':'')+'Set up your player profile here:\n'+inviteUrl+'\n\nSee you on the court! 🏓');
-      window.open('mailto:'+inviteeEmail+'?subject='+subject+'&body='+body);
-      if(statusEl) statusEl.textContent='';
-      showToast('📧 Email app opened!','#4CAF7D');
-      loadSentInvites(); return;
-    }
     if(statusEl) statusEl.textContent='Sending email…';
     try{
-      emailjs.init(pubKey);
-      await emailjs.send(window.EMAILJS_SERVICE_ID,window.EMAILJS_TEMPLATE_ID,{to_email:inviteeEmail,from_name:myName,from_email:myEmail,invite_url:inviteUrl,personal_note:note||'',site_url:window.location.origin});
+      await sendEmail({ to_email:inviteeEmail, type:'app_invite', personal_note:note||myName+' personally invited you to join PBallConnect!', invite_url:inviteUrl });
       if(statusEl) statusEl.textContent='';
       showToast('✅ Email invite sent to '+inviteeEmail,'#4CAF7D');
       const emailEl=document.getElementById('inviteEmail');if(emailEl)emailEl.value='';
