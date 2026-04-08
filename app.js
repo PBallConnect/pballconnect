@@ -4087,8 +4087,8 @@ async function loadMyInvitesPage(){
         bottom=
           // 5-column grid: In | Pending | Waitlist | Out | Remaining
           '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:5px;margin-top:10px;">'+
-            makeResponsePill('In',inP,'var(--green)')+
-            makeResponsePill('Pending',pend,'#94a3b8')+
+            makeResponsePill('In',inP,'#1a7a3a')+
+            makeResponsePill('Pending',pend,'#b45309')+
             makeResponsePill('Waitlist',wait,'#f59e0b')+
             makeResponsePill('Out',out,'#f87171')+
             makeRemainingPill(remaining, maxNeeded)+
@@ -4110,8 +4110,8 @@ async function loadMyInvitesPage(){
         '<div style="display:flex;align-items:flex-start;gap:10px;">'+
         '<span style="font-size:22px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span>'+
         '<div style="flex:1;">'+
-          '<div style="color:'+(isPast?'#94a3b8':'#fff')+';font-size:14px;font-weight:700;">'+(isPast?'<s>':'')+dateStr+' · '+timeStr+(isPast?'</s>':'')+'</div>'+
-          '<div style="color:var(--dim);font-size:12px;margin-top:2px;">'+courtDisplay+'</div>'+
+          '<div style="color:'+(isPast?'#94a3b8':'#1a7a3a')+';font-size:14px;font-weight:700;">'+(isPast?'<s>':'')+dateStr+' · '+timeStr+(isPast?'</s>':'')+'</div>'+
+          '<div style="color:#555;font-size:12px;margin-top:2px;">'+courtDisplay+'</div>'+
           (!isPast?'<div style="font-size:11px;font-weight:700;color:#fbbf24;margin-top:3px;">'+getCountdown(m.match_date,m.time_start)+'</div>':'')+
           (!isPast&&m.match_date?'<div id="'+weatherId+'" style="font-size:11px;color:var(--dim);margin-top:3px;">⛅ Loading weather…</div>':'')+
         '</div>'+
@@ -4192,9 +4192,9 @@ function makeResponsePill(label, players, color){
   const nameList = clickable
     ? '<div class="pill-names" style="display:none;font-size:9px;color:'+color+';margin-top:4px;line-height:1.5;border-top:1px solid rgba(255,255,255,0.1);padding-top:4px;">'+names.split(', ').join('<br>')+'</div>'
     : '';
-  return '<div '+(clickable?'onclick="togglePill(this)" ':'')+'style="text-align:center;padding:8px 4px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);'+(clickable?'cursor:pointer;':'')+'">'+
+  return '<div '+(clickable?'onclick="togglePill(this)" ':'')+'style="text-align:center;padding:8px 4px;border-radius:8px;background:#f9fafb;border:2px solid '+(clickable?'#6b7280':'#d1d5db')+';'+(clickable?'cursor:pointer;':'')+'">'+
     '<div style="font-size:16px;font-weight:800;color:'+color+';">'+players.length+'</div>'+
-    '<div style="font-size:9px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">'+label+(clickable?' &#9660;':'')+'</div>'+
+    '<div style="font-size:9px;color:#444;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">'+label+(clickable?' &#9660;':'')+'</div>'+
     nameList+
   '</div>';
 }
@@ -4202,9 +4202,9 @@ function makeResponsePill(label, players, color){
 function makeRemainingPill(remaining, maxNeeded){
   const color = remaining === 0 ? 'var(--green)' : remaining === 1 ? '#fbbf24' : '#f87171';
   const label = remaining === 0 ? 'Full! 🎉' : 'Needed';
-  return '<div style="text-align:center;padding:8px 4px;border-radius:8px;background:'+(remaining===0?'rgba(76,175,125,0.1)':'rgba(255,255,255,0.03)')+';border:1px solid '+(remaining===0?'rgba(76,175,125,0.3)':'var(--border)')+';">'+
+  return '<div style="text-align:center;padding:8px 4px;border-radius:8px;background:'+(remaining===0?'#d1fae5':'#fff1f2')+';border:2px solid '+(remaining===0?'#1a7a3a':'#e11d48')+';">'+
     '<div style="font-size:16px;font-weight:800;color:'+color+';">'+remaining+'</div>'+
-    '<div style="font-size:9px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">'+label+'</div>'+
+    '<div style="font-size:9px;color:#444;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">'+label+'</div>'+
   '</div>';
 }
 
@@ -5565,7 +5565,7 @@ function buildIcMemberCard(player, conn, myEmail, lastPlayed){
   const isFav  = IC_FAVORITES.has(pEmail);
   favBtn.textContent = isFav ? '⭐' : '☆';
   favBtn.title = isFav ? 'Remove from favorites' : 'Add to favorites';
-  favBtn.style.cssText = 'background:none;border:none;font-size:18px;cursor:pointer;padding:0 4px;color:'+(isFav?'#fbbf24':'var(--dim)')+';transition:all .15s;';
+  favBtn.style.cssText = 'background:none;border:none;font-size:24px;cursor:pointer;padding:0 6px;color:'+(isFav?'#fbbf24':'#9ca3af')+';transition:all .15s;';
   favBtn.onclick = (e)=>{ e.stopPropagation(); toggleFavorite(pEmail, favBtn); };
 
   const playBtn2 = document.createElement('button');

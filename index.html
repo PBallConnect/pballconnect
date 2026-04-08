@@ -966,7 +966,7 @@
         </div>
         <div id="icCommunitySnapshot">
           <div class="ic-two-grids" title="Inner Circle Overview — click any number to see those players">
-            <div class="ic-grid-card">
+            <div class="ic-grid-card" style="border:2px solid #d1d5db !important;">
               <div class="ic-grid-title">Players near me by level</div>
               <table class="ic-stat-table">
                 <thead><tr><th></th><th class="ic-th-below">🟡 Below</th><th class="ic-th-my">🟢 My level</th><th class="ic-th-above">🟣 Above</th><th class="ic-th-total">Total</th></tr></thead>
@@ -977,7 +977,7 @@
                 </tbody>
               </table>
             </div>
-            <div class="ic-grid-card">
+            <div class="ic-grid-card" style="border:2px solid #d1d5db !important;">
               <div class="ic-grid-title">Players near me by gender</div>
               <table class="ic-stat-table">
                 <thead><tr><th></th><th class="ic-th-male">♂ Male</th><th class="ic-th-female">♀ Female</th><th class="ic-th-other">⚪ Other</th><th class="ic-th-total">Total</th></tr></thead>
@@ -1085,7 +1085,7 @@
         <!-- Title + action bar -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
           <div>
-            <h1 style="font-size:20px;font-weight:800;margin:0 0 2px;color:#fff;">Inner <span style="color:var(--green);">Circle</span></h1>
+            <h1 style="font-size:20px;font-weight:800;margin:0 0 2px;color:#111;">Inner <span style="color:#1a7a3a;">Circle</span></h1>
             <div style="font-size:11px;color:var(--dim);">Overview</div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;">
@@ -1157,7 +1157,7 @@
         <div class="ic-two-grids">
 
           <!-- Grid 1: Gender (Members only) -->
-          <div class="ic-grid-card">
+          <div class="ic-grid-card" style="border:2px solid #d1d5db !important;">
             <div class="ic-grid-title">By Gender</div>
             <table class="ic-stat-table">
               <thead>
@@ -1180,7 +1180,7 @@
           </div>
 
           <!-- Grid 2: Playing Levels (Members only) -->
-          <div class="ic-grid-card">
+          <div class="ic-grid-card" style="border:2px solid #d1d5db !important;">
             <div class="ic-grid-title">By Skill Level</div>
             <table class="ic-stat-table">
               <thead>
@@ -1217,21 +1217,21 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;">
 
           <!-- Players I've Invited → outbound -->
-          <div onclick="showIcView('invited')" style="cursor:pointer;padding:12px 14px;border-radius:12px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.2);display:flex;align-items:center;justify-content:space-between;gap:8px;transition:background 0.2s;">
+          <div onclick="showIcView('invited')" style="cursor:pointer;padding:12px 14px;border-radius:12px;background:#fef9e7;border:2px solid #b45309;display:flex;align-items:center;justify-content:space-between;gap:8px;transition:background 0.2s;">
             <div>
-              <div style="font-size:11px;font-weight:700;color:#fbbf24;margin-bottom:2px;">Players I've Invited →</div>
-              <div style="font-size:10px;color:var(--dim);">Awaiting their acceptance</div>
+              <div style="font-size:11px;font-weight:700;color:#1a5c32;margin-bottom:2px;">Players I've Invited →</div>
+              <div style="font-size:10px;color:#1a5c32;font-weight:600;">Awaiting their acceptance</div>
             </div>
-            <div style="font-size:26px;font-weight:800;color:#fbbf24;" id="icOutboundCount">0</div>
+            <div style="font-size:26px;font-weight:800;color:#1a5c32;" id="icOutboundCount">0</div>
           </div>
 
           <!-- Players Inviting Me ← inbound -->
-          <div onclick="showIcView('incoming')" style="cursor:pointer;padding:12px 14px;border-radius:12px;background:rgba(167,139,250,0.06);border:1px solid rgba(167,139,250,0.2);display:flex;align-items:center;justify-content:space-between;gap:8px;transition:background 0.2s;">
+          <div onclick="showIcView('incoming')" style="cursor:pointer;padding:12px 14px;border-radius:12px;background:rgba(124,58,237,0.12);border:2px solid rgba(124,58,237,0.5);display:flex;align-items:center;justify-content:space-between;gap:8px;transition:background 0.2s;">
             <div>
-              <div style="font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:2px;">← Players Inviting Me</div>
-              <div style="font-size:10px;color:var(--dim);">Requesting to join your IC</div>
+              <div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:2px;">← Players Inviting Me</div>
+              <div style="font-size:10px;color:#7c3aed;font-weight:600;">Requesting to join your IC</div>
             </div>
-            <div style="font-size:26px;font-weight:800;color:#a78bfa;" id="icInboundCount">0</div>
+            <div style="font-size:26px;font-weight:800;color:#7c3aed;" id="icInboundCount">0</div>
           </div>
 
         </div>
@@ -1569,7 +1569,7 @@
     <!-- SET UP A MATCH PAGE -->
     <div class="page-section" id="page-setupMatch">
       <div class="page-header">
-        <h1>Set Up <span>A Match</span></h1>
+        <h1 style="color:#111;">Set Up A <span style="color:#1a7a3a;">Match</span></h1>
         <p id="matchPageSub">Let's find you a game</p>
       </div>
 
@@ -1967,7 +1967,7 @@
       <div id="recordScoresList"></div>
     </div>
 
-    <div class="page-section" id="page-myInvites">
+    <div class="page-section" id="page-myInvites" style="background:#ffffff;">
       <div class="page-header">
         <h1>My Match <span>Invites</span></h1>
         <p>Matches you've organized and their response status</p>
