@@ -1315,11 +1315,11 @@
         <div id="icNearbyPanel">
           <div class="ic-nearby-controls">
             <div class="ic-nearby-slider-row">
-              <span style="font-size:12px;color:var(--dim);">Within</span>
+              <span style="font-size:12px;color:#374151;font-weight:600;">Within</span>
               <input type="range" id="icRadiusSlider" min="5" max="30" step="5" value="15"
                 oninput="document.getElementById('icRadiusLabel').textContent=this.value+' mi';loadNearbyPlayers();"
                 style="flex:1;margin:0 10px;"/>
-              <span id="icRadiusLabel" style="font-size:13px;font-weight:700;color:var(--green);min-width:40px;">15 mi</span>
+              <span id="icRadiusLabel" style="font-size:13px;font-weight:700;color:#1a7a3a;min-width:40px;">15 mi</span>
             </div>
             <!-- Search/filter box -->
             <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
@@ -1327,15 +1327,15 @@
                 placeholder="Filter by name, nickname, court or rating…"
                 oninput="filterNearbyGrid(this.value)"
                 autocomplete="off"
-                style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);
-                background:rgba(255,255,255,0.07);color:#fff;font-size:12px;
+                style="flex:1;padding:8px 12px;border-radius:8px;border:2px solid #9ca3af;
+                background:#f9fafb;color:#111;font-size:12px;
                 font-family:'DM Sans',sans-serif;"/>
               <button onclick="document.getElementById('icNearbySearch').value='';filterNearbyGrid('');"
-                style="padding:7px 10px;border-radius:8px;border:1px solid var(--border);
-                background:transparent;color:var(--dim);font-size:11px;cursor:pointer;
-                font-family:'DM Sans',sans-serif;">Clear</button>
+                style="padding:7px 10px;border-radius:8px;border:2px solid #9ca3af;
+                background:#ffffff;color:#374151;font-size:11px;cursor:pointer;
+                font-family:'DM Sans',sans-serif;font-weight:600;">Clear</button>
             </div>
-            <div style="font-size:11px;color:var(--dim);margin-top:6px;" id="icNearbySubtitle">
+            <div style="font-size:11px;color:#6b7280;margin-top:6px;" id="icNearbySubtitle">
               Showing players near you grouped by skill level
             </div>
           </div>
