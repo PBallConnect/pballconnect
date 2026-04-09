@@ -41,7 +41,7 @@ const DUPR_VALS=['2.0','2.25','2.5','2.75','3.0','3.25','3.5','3.75','4.0','4.25
   DAYS.forEach(d=>{
     const tr=document.createElement('tr');
     const td0=document.createElement('td');
-    td0.style.cssText='padding:8px 10px;color:rgba(255,255,255,0.75);font-size:12px;font-weight:600;background:rgba(76,175,125,0.07);border:1px solid rgba(76,175,125,0.14);white-space:nowrap';
+    td0.style.cssText='padding:8px 10px;color:#1a5c32;font-size:12px;font-weight:700;background:#d1fae5;border:2px solid #1a7a3a;white-space:nowrap';
     td0.textContent=d; tr.appendChild(td0);
     TIMES.forEach(t=>{
       const td=document.createElement('td');
@@ -393,6 +393,20 @@ function updateGoalRating(idx){
     sl.style.setProperty('--pct',pct);
   }
   updateGoalRedBar(minIdx, finalIdx);
+  // Update floating thumb label above slider
+  const thumbLabel = document.getElementById('goalThumbLabel');
+  if(thumbLabel){
+    if(!finalIdx){
+      thumbLabel.style.display='none';
+    } else {
+      const pctNum = finalIdx/21*100;
+      // Adjust for thumb width so label stays centered over thumb
+      const offset = pctNum < 10 ? 0 : pctNum > 90 ? -0 : 0;
+      thumbLabel.style.left = pctNum.toFixed(1)+'%';
+      thumbLabel.textContent = DUPR_VALS[finalIdx];
+      thumbLabel.style.display='block';
+    }
+  }
   if(!finalIdx){
     S.goalRating=null;
     const gd=document.getElementById('goalRatingDisplay');
@@ -3059,7 +3073,7 @@ async function checkMatchOverlap(){
       const list = conflicts.map(m=>{
         const s=fmt12(m.time_start);
         const e=m.time_end?fmt12(m.time_end):'';
-        return (m.match_type==='doubles'?'🏓🏓 Doubles':'🏓 Singles')+' at '+s+(e?' – '+e:'')+(m.court_name?' @ '+m.court_name:'');
+        return (m.match_type==='doubles'?'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Doubles':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Singles')+' at '+s+(e?' – '+e:'')+(m.court_name?' @ '+m.court_name:'');
       }).join('<br>');
       warnText.innerHTML='You already have a match at this time:<br><span style="color:#fff;font-weight:600;">'+list+'</span><br><span style="color:var(--dim);">Back-to-back is fine — only true overlaps are flagged.</span>';
     }
@@ -3119,7 +3133,7 @@ function buildMatchSummary(){
   const invitedLabel = [...allGroups].map(g=>groupLabels[g]||g).join(' + ');
 
   sum.innerHTML =
-    '<div class="match-summary-row"><span>Format</span><span>'+(MS.format==='doubles'?'🏓🏓 Doubles':'🏓 Singles')+'</span></div>'+
+    '<div class="match-summary-row"><span>Format</span><span>'+(MS.format==='doubles'?'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Doubles':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Singles')+'</span></div>'+
     '<div class="match-summary-row"><span>Duration</span><span>'+durStr+'</span></div>'+
     '<div class="match-summary-row"><span>Invited</span><span>'+invitedLabel+' ('+invitees.length+')</span></div>'+
     '<div class="match-summary-row"><span>Spots open</span><span>'+maxNeeded+' needed · first to respond wins</span></div>'+
@@ -3311,7 +3325,7 @@ async function loadSentMatches(){
       const hdr=document.createElement('div');
       hdr.style.cssText='display:flex;align-items:center;gap:12px;margin-bottom:6px;cursor:pointer;';
       hdr.innerHTML=
-        '<span style="font-size:20px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span>'+
+        '<span style="font-size:20px;">'+(m.match_type==='doubles'?'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/>':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/>')+'</span>'+
         '<div style="flex:1;">'+
           '<div style="color:'+(isPast?'#94a3b8':'#fff')+';font-size:13px;font-weight:600;">'+(isPast?'<s>':'')+dateStr+' · '+timeStr+(isPast?'</s>':'')+'</div>'+
           '<div style="color:var(--dim);font-size:11px;">'+(m.court_name||'TBD')+(m.is_feeler?' · Feeler':'')+'</div>'+
@@ -3940,7 +3954,7 @@ async function loadRecordScores(){
 
       card.innerHTML=
         '<div style="display:flex;align-items:flex-start;gap:10px;">'+
-          '<span style="font-size:22px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span>'+
+          '<span style="font-size:22px;">'+(m.match_type==='doubles'?'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/>':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/>')+'</span>'+
           '<div style="flex:1;">'+
             '<div style="color:'+(hasScores?'var(--green)':'#fff')+';font-size:14px;font-weight:700;">'+dateStr+(timeStr?' · '+timeStr:'')+'</div>'+
             '<div style="color:var(--dim);font-size:12px;">'+(m.court_name&&m.court_name!=='TBD'?m.court_name:(m.court_address||'Location TBD'))+'</div>'+
@@ -3948,7 +3962,7 @@ async function loadRecordScores(){
           '<button onclick="openRecordResults(\''+m.id+'\',\''+m.match_type+'\')" '+
             'style="padding:7px 14px;border-radius:8px;border:none;background:var(--green);color:var(--dark);'+
             'font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0;">'+
-            (hasScores?'✏️ Edit Score':'🏓 Record Score')+
+            (hasScores?'✏️ Edit Score':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Record Score')+
           '</button>'+
         '</div>'+scoresHtml;
       container.appendChild(card);
@@ -4108,7 +4122,7 @@ async function loadMyInvitesPage(){
       const weatherId = 'mi-weather-'+m.id;
       card.innerHTML=
         '<div style="display:flex;align-items:flex-start;gap:10px;">'+
-        '<span style="font-size:22px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</span>'+
+        '<span style="font-size:22px;">'+(m.match_type==='doubles'?'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/>':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/>')+'</span>'+
         '<div style="flex:1;">'+
           '<div style="color:'+(isPast?'#94a3b8':'#1a7a3a')+';font-size:14px;font-weight:700;">'+(isPast?'<s>':'')+dateStr+' · '+timeStr+(isPast?'</s>':'')+'</div>'+
           '<div style="color:#555;font-size:12px;margin-top:2px;">'+courtDisplay+'</div>'+
@@ -6999,7 +7013,7 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
             '</div>'+
             '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
               '<button id="mutualYes2" style="padding:12px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:13px;cursor:pointer;">'+
-                '🏓 Yes, invite '+shortName+'!'+
+                '<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Yes, invite '+shortName+'!'+
               '</button>'+
               '<button onclick="document.getElementById(\'inviteMutualOverlay\').remove()" style="padding:12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;">Not now</button>'+
             '</div>'+
@@ -7466,7 +7480,7 @@ async function loadDashNextMatch(myEmail){
     // No confirmed matches
     el.innerHTML=
       '<div style="background:#fff;border-radius:16px;padding:20px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);">'+
-        '<div style="font-size:32px;margin-bottom:8px;">🏓</div>'+
+        '<div style="margin-bottom:8px;"><img src="/pickleball.jpg" style="width:48px;height:48px;object-fit:contain;"/></div>'+
         '<div style="color:#111;font-size:14px;font-weight:700;margin-bottom:6px;">No confirmed matches yet</div>'+
         '<div style="color:#666;font-size:12px;margin-bottom:14px;">Set up a match and invite your Inner Circle!</div>'+
         '<button onclick="showPage(&quot;setupMatch&quot;)" style="padding:10px 20px;border-radius:10px;border:none;background:#1a7a3a;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">🎾 Set Up A Match</button>'+
@@ -7516,7 +7530,7 @@ async function loadDashPendingInvites(myEmail){
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'+
           '<div>'+
             '<div style="color:#111;font-size:14px;font-weight:700;">'+dateStr+' · '+timeStr+'</div>'+
-            '<div style="color:var(--dim);font-size:12px;">'+(m.match_type==='doubles'?'🏓🏓 Doubles':'🏓 Singles')+' · '+(m.court_name&&m.court_name!=='TBD'?m.court_name:'Court TBD')+'</div>'+
+            '<div style="color:var(--dim);font-size:12px;">'+(m.match_type==='doubles'?'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Doubles':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Singles')+' · '+(m.court_name&&m.court_name!=='TBD'?m.court_name:'Court TBD')+'</div>'+
           '</div>'+
           '<div style="text-align:right;">'+
             '<div style="font-size:20px;font-weight:900;color:'+remainColor+';">'+remaining+'</div>'+
@@ -7588,11 +7602,11 @@ async function loadDashInvitedToPlay(myEmail){
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'+
           '<div>'+
             '<div style="color:#111;font-size:14px;font-weight:700;">'+dateStr+' · '+timeStr+'</div>'+
-            '<div style="color:#555;font-size:12px;">'+(m.match_type==='doubles'?'🏓🏓 Doubles':'🏓 Singles')+'</div>'+
+            '<div style="color:#555;font-size:12px;">'+(m.match_type==='doubles'?'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Doubles':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Singles')+'</div>'+
             '<div style="color:#555;font-size:12px;">From: <span style="color:#1d4ed8;font-weight:700;">'+(m.organizer_name||'').split(' ')[0]+'</span></div>'+
             (getCountdown(m.match_date,m.time_start)?'<div style="font-size:11px;color:#b45309;font-weight:700;margin-top:3px;">⏳ '+getCountdown(m.match_date,m.time_start)+'</div>':'')+
           '</div>'+
-          '<div style="font-size:22px;">'+(m.match_type==='doubles'?'🏓🏓':'🏓')+'</div>'+
+          '<div style="font-size:22px;">'+(m.match_type==='doubles'?'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/>':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/>')+'</div>'+
         '</div>'+
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'+
           '<button onclick="respondToMatch(this.dataset.id,\'in\')" data-id="'+m.id+'" '+

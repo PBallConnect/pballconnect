@@ -48,6 +48,11 @@
 
   /* Lessons dim */
   .nav-lessons-dim { opacity:0.5 !important; }
+
+  /* Pickleball custom icon */
+  .pb-icon { width:1.2em; height:1.2em; object-fit:contain; vertical-align:middle; display:inline-block; }
+  .pb-icon-lg { width:1.8em; height:1.8em; object-fit:contain; vertical-align:middle; display:inline-block; }
+  .pb-icon-xl { width:2.5em; height:2.5em; object-fit:contain; vertical-align:middle; display:inline-block; }
 </style>
 </head>
 <body>
@@ -60,10 +65,7 @@
   <div class="top-header-left">
     <!-- Hamburger INSIDE header so it's always visible and tappable -->
     <button class="nav-toggle" onclick="toggleNav()" style="color:#111;">☰</button>
-    <div class="top-logo-icon">🏓</div>
-    <div class="top-logo-text" style="color:#111;"><span style="color:#1a7a3a;">PBall</span><span style="color:#111;">Connect</span></div>
-    <div style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;background:#1a1a1a;border:none;color:#f5f5f5;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-left:6px;flex-shrink:0;">BETA</div>
-    <div id="memberCountBadge" style="display:none;margin-left:8px;padding:3px 10px;border-radius:999px;background:rgba(76,175,125,0.12);border:1px solid rgba(76,175,125,0.25);font-size:11px;font-weight:700;color:#4CAF7D;letter-spacing:.03em;"></div>
+    <div id="memberCountBadge" style="display:none;margin-left:8px;padding:3px 10px;border-radius:999px;background:rgba(76,175,125,0.12);border:1px solid rgba(76,175,125,0.25);font-size:11px;font-weight:700;color:#1a7a3a;letter-spacing:.03em;"></div>
   </div>
   <div class="top-header-right">
     <!-- Refresh button - especially useful on mobile -->
@@ -96,7 +98,16 @@
   <!-- Left Navigation -->
   <nav class="left-nav" id="leftNav" style="background:#f3f4f6;border-right:1px solid #e5e7eb;">
     <div class="nav-logo">
-      <div class="nav-logo-title" style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);padding:16px 16px 8px;">Navigation</div>
+      <div style="padding:16px 16px 12px;border-bottom:1px solid #d1d5db;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <img src="/pickleball.jpg" style="width:36px;height:36px;object-fit:contain;" alt="pickleball"/>
+          <div>
+            <div style="font-size:16px;font-weight:900;color:#111;line-height:1.1;letter-spacing:-0.3px;"><span style="color:#1a7a3a;">PBall</span>Connect</div>
+            <div style="display:inline-block;margin-top:2px;padding:1px 6px;border-radius:3px;background:#1a1a1a;color:#f5f5f5;font-size:8px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;">BETA</div>
+          </div>
+        </div>
+        <div style="font-size:10px;font-weight:700;color:#1a7a3a;letter-spacing:.02em;font-style:italic;margin-top:4px;"><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> For the Love of Pickleball</div>
+      </div>
     </div>
     <div class="nav-items">
 
@@ -252,7 +263,7 @@
         <button onclick="showPage('setupMatch')"
           style="width:100%;padding:18px;border-radius:20px;border:none;background:#8b0000;color:#fff;font-weight:800;font-size:16px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 20px rgba(139,0,0,0.3);margin-bottom:16px;transition:transform .15s;"
           onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform=''">
-          🟡 Set Up a Match
+          <img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Set Up a Match
         </button>
 
         <!-- ── Next Confirmed Match ────────────────────────── -->
@@ -282,7 +293,7 @@
       <div class="reg-wrapper">
 
         <!-- STICKY HEADER — Edit Profile + Share + Step dots -->
-        <div id="profileStickyHeader" style="position:sticky;top:0;z-index:50;background:rgba(10,18,11,0.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);margin:0 -4px;padding:10px 4px 8px;border-bottom:1px solid rgba(255,255,255,0.06);">
+        <div id="profileStickyHeader" style="position:sticky;top:0;z-index:50;background:#ffffff;margin:0 -4px;padding:10px 4px 8px;border-bottom:2px solid #e5e7eb;">
 
           <!-- Edit + Share buttons (shown when signed in) -->
           <div id="editProfileBtnInPage" style="display:none;margin-bottom:8px;">
@@ -519,19 +530,21 @@
       <div style="padding:4px 0 8px">
         <div class="dupr-display" id="goalRatingDisplay">-- <span>slide to set your goal</span></div>
         <!-- Two-tone slider track container -->
-        <div style="position:relative;height:30px;display:flex;align-items:center;">
+        <div style="position:relative;height:52px;display:flex;align-items:center;">
+          <!-- Floating goal number above thumb -->
+          <div id="goalThumbLabel" style="position:absolute;top:0;font-size:12px;font-weight:800;color:#1a7a3a;background:#d1fae5;border:2px solid #1a7a3a;border-radius:8px;padding:1px 6px;transform:translateX(-50%);left:0%;pointer-events:none;display:none;white-space:nowrap;z-index:10;transition:left .1s;"></div>
           <!-- Full track background -->
-          <div style="position:absolute;left:0;right:0;height:6px;background:rgba(255,255,255,0.15);border-radius:3px;"></div>
+          <div style="position:absolute;left:0;right:0;height:6px;background:#e5e7eb;border-radius:3px;top:50%;transform:translateY(-50%);"></div>
           <!-- Red section: 0 to personal rating -->
-          <div id="goalSliderRedBar" style="position:absolute;left:0;height:6px;background:rgba(239,68,68,0.75);border-radius:3px 0 0 3px;pointer-events:none;width:0%;transition:width .2s;"></div>
+          <div id="goalSliderRedBar" style="position:absolute;left:0;height:6px;background:rgba(239,68,68,0.75);border-radius:3px 0 0 3px;pointer-events:none;width:0%;transition:width .2s;top:50%;transform:translateY(-50%);"></div>
           <!-- Red label showing personal rating value -->
-          <div id="goalRedLabel" style="position:absolute;top:-22px;font-size:10px;font-weight:700;color:#ef4444;white-space:nowrap;transform:translateX(-50%);display:none;">←your rating</div>
+          <div id="goalRedLabel" style="position:absolute;top:4px;font-size:10px;font-weight:700;color:#ef4444;white-space:nowrap;transform:translateX(-50%);display:none;">←your rating</div>
           <!-- Green section: personal rating to goal -->
-          <div id="goalSliderGreenBar" style="position:absolute;height:6px;background:var(--green);border-radius:0 3px 3px 0;pointer-events:none;left:0%;width:0%;transition:left .2s,width .2s;"></div>
+          <div id="goalSliderGreenBar" style="position:absolute;height:6px;background:#1a7a3a;border-radius:0 3px 3px 0;pointer-events:none;left:0%;width:0%;transition:left .2s,width .2s;top:50%;transform:translateY(-50%);"></div>
           <!-- Actual range input (transparent track, just shows thumb) -->
           <input type="range" id="goalRatingSlider" min="0" max="21" step="1" value="0"
             oninput="updateGoalRating(this.value)"
-            style="position:absolute;left:0;right:0;width:100%;appearance:none;-webkit-appearance:none;background:transparent;height:6px;cursor:pointer;z-index:3;"/>
+            style="position:absolute;left:0;right:0;width:100%;appearance:none;-webkit-appearance:none;background:transparent;height:6px;cursor:pointer;z-index:3;margin-top:8px;"/>
         </div>
         <div class="dupr-ticks" id="goalTicks" style="margin-top:10px;"></div>
       </div>
@@ -658,7 +671,7 @@
         </table>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;margin-bottom:6px;">
-        <span style="font-size:11px;color:var(--dim);align-self:center;margin-right:4px;">Select day:</span>
+        <span style="font-size:11px;color:#1a5c32;font-weight:700;align-self:center;margin-right:4px;">Select day:</span>
         <button class="day-btn" onclick="toggleDay('Mon',this)">Mon</button>
         <button class="day-btn" onclick="toggleDay('Tue',this)">Tue</button>
         <button class="day-btn" onclick="toggleDay('Wed',this)">Wed</button>
@@ -1315,11 +1328,11 @@
         <div id="icNearbyPanel">
           <div class="ic-nearby-controls">
             <div class="ic-nearby-slider-row">
-              <span style="font-size:12px;color:var(--dim);">Within</span>
+              <span style="font-size:12px;color:#374151;font-weight:600;">Within</span>
               <input type="range" id="icRadiusSlider" min="5" max="30" step="5" value="15"
                 oninput="document.getElementById('icRadiusLabel').textContent=this.value+' mi';loadNearbyPlayers();"
                 style="flex:1;margin:0 10px;"/>
-              <span id="icRadiusLabel" style="font-size:13px;font-weight:700;color:var(--green);min-width:40px;">15 mi</span>
+              <span id="icRadiusLabel" style="font-size:13px;font-weight:700;color:#1a7a3a;min-width:40px;">15 mi</span>
             </div>
             <!-- Search/filter box -->
             <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
@@ -1327,15 +1340,15 @@
                 placeholder="Filter by name, nickname, court or rating…"
                 oninput="filterNearbyGrid(this.value)"
                 autocomplete="off"
-                style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);
-                background:rgba(255,255,255,0.07);color:#fff;font-size:12px;
+                style="flex:1;padding:8px 12px;border-radius:8px;border:2px solid #9ca3af;
+                background:#f9fafb;color:#111;font-size:12px;
                 font-family:'DM Sans',sans-serif;"/>
               <button onclick="document.getElementById('icNearbySearch').value='';filterNearbyGrid('');"
-                style="padding:7px 10px;border-radius:8px;border:1px solid var(--border);
-                background:transparent;color:var(--dim);font-size:11px;cursor:pointer;
-                font-family:'DM Sans',sans-serif;">Clear</button>
+                style="padding:7px 10px;border-radius:8px;border:2px solid #9ca3af;
+                background:#ffffff;color:#374151;font-size:11px;cursor:pointer;
+                font-family:'DM Sans',sans-serif;font-weight:600;">Clear</button>
             </div>
-            <div style="font-size:11px;color:var(--dim);margin-top:6px;" id="icNearbySubtitle">
+            <div style="font-size:11px;color:#6b7280;margin-top:6px;" id="icNearbySubtitle">
               Showing players near you grouped by skill level
             </div>
           </div>
@@ -1651,12 +1664,12 @@
         <div class="match-q">What kind of match?</div>
         <div class="match-options" id="matchFormatOptions">
           <div class="match-option on" id="matchOptDoubles" onclick="selectMatchFormat('doubles',this)">
-            <div class="match-option-icon">🏓🏓</div>
+            <div class="match-option-icon"><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/></div>
             <div class="match-option-title">Doubles</div>
             <div class="match-option-sub">Need 3 others · 4 total</div>
           </div>
           <div class="match-option" id="matchOptSingles" onclick="selectMatchFormat('singles',this)">
-            <div class="match-option-icon">🏓</div>
+            <div class="match-option-icon"><img src="/pickleball.jpg" class="pb-icon-lg" alt="pickleball"/></div>
             <div class="match-option-title">Singles</div>
             <div class="match-option-sub">Need 1 other · 2 total</div>
           </div>
@@ -2212,8 +2225,8 @@
     <div class="field" style="margin-bottom:14px;">
       <label>Match Type</label>
       <div style="display:flex;gap:8px;margin-top:6px;">
-        <button id="walkOnDoubles" onclick="walkOnSetType('doubles')" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(76,175,125,0.4);background:rgba(76,175,125,0.15);color:var(--green);font-weight:700;font-size:13px;cursor:pointer;">🏓🏓 Doubles</button>
-        <button id="walkOnSingles" onclick="walkOnSetType('singles')" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;">🏓 Singles</button>
+        <button id="walkOnDoubles" onclick="walkOnSetType('doubles')" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(76,175,125,0.4);background:rgba(76,175,125,0.15);color:var(--green);font-weight:700;font-size:13px;cursor:pointer;"><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Doubles</button>
+        <button id="walkOnSingles" onclick="walkOnSetType('singles')" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;"><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Singles</button>
       </div>
     </div>
     <div id="walkOnTeamsSection">
@@ -2252,7 +2265,7 @@
 
     <!-- Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-      <div style="font-size:18px;font-weight:800;color:#fff;">🏓 Record Score</div>
+      <div style="font-size:18px;font-weight:800;color:#fff;"><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Record Score</div>
       <button onclick="closeScoreRecorder()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:22px;padding:0;">✕</button>
     </div>
 
@@ -2427,7 +2440,7 @@
 
 <div class="confirm-overlay" id="confirmOverlay" style="display:none">
   <div class="confirm-card">
-    <div class="confirm-icon">🏓</div>
+    <div class="confirm-icon"><img src="/pickleball.jpg" class="pb-icon-xl" alt="pickleball"/></div>
     <h2>You're In!</h2>
     <div class="sub">Welcome to the directory</div>
     <div class="confirm-profile">
