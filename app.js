@@ -4148,9 +4148,12 @@ async function loadMyInvitesPage(){
           (pend.length?'<div style="font-size:11px;color:#374151;font-weight:600;margin-top:3px;">'+
             '⏳ Awaiting: '+pend.map(p=>{const n=p.player_name||p.player_email;return n.split(' ')[0];}).join(' · ')+
           '</div>':'')+
-          (wait.length?'<div style="font-size:11px;color:#f59e0b;margin-top:3px;">'+
+          (wait.length?'<div style="font-size:11px;color:#b45309;font-weight:600;margin-top:3px;">'+
             '⌛ Waitlist: '+wait.map(p=>{const n=p.player_name||p.player_email;return n.split(' ')[0];}).join(' · ')+
-          '</div>':'');
+          '</div>':'')+
+          '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e5e7eb;">'+
+            '<button onclick="openEditMatchModal(\''+m.id+'\')" style="padding:7px 14px;border-radius:8px;border:2px solid #1a7a3a;background:#f0fdf4;color:#1a7a3a;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">&#9998; Edit Match</button>'+
+          '</div>';
       }
       const courtName = (m.court_name||'').trim();
       const courtAddr = (m.court_address||'').trim();
