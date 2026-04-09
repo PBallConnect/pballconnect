@@ -3678,7 +3678,7 @@ async function loadConfirmedMatches(){
             '<div style="color:#1a7a3a;font-size:15px;font-weight:700;">'+dateStr+'</div>'+
             '<div style="color:#555;font-size:12px;font-weight:600;">'+timeStr+'</div>'+
             (getCountdown(m.match_date,m.time_start)?'<div style="font-size:11px;font-weight:800;color:#dc2626;margin-top:3px;">⏱ '+getCountdown(m.match_date,m.time_start)+'</div>':'')+
-            (isOrganizer?'<div style="font-size:11px;color:#1a7a3a;font-weight:700;margin-top:2px;">&#128081; You organized this match</div>':
+            (isOrganizer?'<div style="font-size:11px;color:#1a7a3a;font-weight:700;margin-top:2px;">Organized by '+(((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim()||'You')+'</div>':
               '<div style="font-size:10px;color:#555;font-weight:600;margin-top:2px;">Organized by '+((m.organizer_name||'').split(' ')[0]||'Unknown')+'</div>')+
           '</div>'+
           (urgency==='TODAY'||urgency==='TOMORROW'?'<div style="padding:3px 10px;border-radius:999px;background:#fee2e2;border:2px solid #dc2626;color:#dc2626;font-size:10px;font-weight:800;white-space:nowrap;">'+urgency+'</div>':urgency?'<div style="padding:3px 10px;border-radius:999px;background:#d1fae5;border:2px solid #1a7a3a;color:#1a7a3a;font-size:10px;font-weight:800;white-space:nowrap;">'+urgency+'</div>':'')+
@@ -4275,13 +4275,13 @@ async function loadMyInvitesPage(){
         '<div style="flex:1;">'+
           '<div style="color:'+(isPast?'#94a3b8':'#1a7a3a')+';font-size:14px;font-weight:700;">'+(isPast?'<s>':'')+dateStr+' · '+timeStr+(isPast?'</s>':'')+'</div>'+
           '<div style="color:#555;font-size:12px;margin-top:2px;">'+courtDisplay+'</div>'+
-          '<div style="font-size:11px;color:#1a7a3a;font-weight:700;margin-top:2px;">&#128081; You organized this</div>'+
+          '<div style="font-size:11px;color:#1a7a3a;font-weight:700;margin-top:2px;">Organized by '+(((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim()||getMyEmail().split('@')[0])+'</div>'+
           (!isPast&&getCountdown(m.match_date,m.time_start)?'<div style="font-size:11px;font-weight:800;color:#dc2626;margin-top:3px;">⏱ '+getCountdown(m.match_date,m.time_start)+'</div>':'')+
-          (!isPast&&m.match_date?'<div id="'+weatherId+'" style="font-size:11px;color:#6b7280;margin-top:3px;"></div>':'')+
         '</div>'+
         '<div style="text-align:right;flex-shrink:0;">'+
           '<div style="font-size:12px;font-weight:700;color:'+sd.color+';">'+sd.label+'</div>'+
-          (!isPast?'<div style="font-size:10px;color:var(--dim);">'+inP.length+'/'+maxNeeded+' confirmed</div>':'')+
+          (!isPast?'<div style="font-size:10px;color:#6b7280;">'+inP.length+'/'+maxNeeded+' confirmed</div>':'')+ 
+          (!isPast&&m.match_date?'<div id="'+weatherId+'" style="font-size:10px;color:#6b7280;margin-top:4px;text-align:right;max-width:110px;line-height:1.4;"></div>':'')+
         '</div></div>'+bottom;
       // Load weather inline for upcoming matches
       if(!isPast && m.match_date) loadMyInviteWeather(m, weatherId);
@@ -4372,9 +4372,9 @@ async function loadMyInviteWeather(m, elId){
     const emoji=getWeatherEmoji(code);
     const precipColor=precip<20?'#1a7a3a':precip<50?'#b45309':'#dc2626';
     const windColor=wind<15?'#1a7a3a':wind<25?'#b45309':'#dc2626';
-    el.innerHTML=emoji+' '+getWeatherDesc(code)+' · '+high+'°/'+low+'°F'+
-      ' · <span style="color:'+precipColor+';">Rain '+precip+'%</span>'+
-      ' · <span style="color:'+windColor+';">Wind '+wind+' mph</span>';
+    el.innerHTML=emoji+' '+high+'°/'+low+'°F'+
+      '<br><span style="color:'+precipColor+';">Rain '+precip+'%</span>'+
+      ' · <span style="color:'+windColor+';">'+wind+' mph</span>';
   }catch(e){ if(el) el.textContent=''; }
 }
 
