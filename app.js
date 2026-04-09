@@ -4108,17 +4108,21 @@ async function loadMyInvitesPage(){
             makeRemainingPill(remaining, maxNeeded)+
           '</div>'+
           // Player name lists
-          (inP.length?'<div style="font-size:11px;color:var(--green);margin-top:8px;">'+
+          (inP.length?'<div style="font-size:11px;color:#1a7a3a;font-weight:700;margin-top:8px;">'+
             '✅ '+inP.map(p=>{const n=p.player_name||p.player_email;return n.split(' ')[0];}).join(' · ')+
           '</div>':'')+
-          (pend.length?'<div style="font-size:11px;color:#94a3b8;margin-top:3px;">'+
+          (pend.length?'<div style="font-size:11px;color:#374151;font-weight:600;margin-top:3px;">'+
             '⏳ Awaiting: '+pend.map(p=>{const n=p.player_name||p.player_email;return n.split(' ')[0];}).join(' · ')+
           '</div>':'')+
           (wait.length?'<div style="font-size:11px;color:#f59e0b;margin-top:3px;">'+
             '⌛ Waitlist: '+wait.map(p=>{const n=p.player_name||p.player_email;return n.split(' ')[0];}).join(' · ')+
           '</div>':'');
       }
-      const courtDisplay = m.court_name && m.court_name!=='TBD' ? '📍 '+m.court_name : (m.court_address ? '📍 '+m.court_address : '📍 Court TBD');
+      const courtName = (m.court_name||'').trim();
+      const courtAddr = (m.court_address||'').trim();
+      const courtDisplay = (courtName && courtName!=='TBD') ? '📍 '+courtName :
+                           courtAddr ? '📍 '+courtAddr :
+                           '📍 Court TBD';
       const weatherId = 'mi-weather-'+m.id;
       card.innerHTML=
         '<div style="display:flex;align-items:flex-start;gap:10px;">'+
@@ -4126,7 +4130,7 @@ async function loadMyInvitesPage(){
         '<div style="flex:1;">'+
           '<div style="color:'+(isPast?'#94a3b8':'#1a7a3a')+';font-size:14px;font-weight:700;">'+(isPast?'<s>':'')+dateStr+' · '+timeStr+(isPast?'</s>':'')+'</div>'+
           '<div style="color:#555;font-size:12px;margin-top:2px;">'+courtDisplay+'</div>'+
-          (!isPast?'<div style="font-size:11px;font-weight:700;color:#fbbf24;margin-top:3px;">'+getCountdown(m.match_date,m.time_start)+'</div>':'')+
+          (!isPast&&getCountdown(m.match_date,m.time_start)?'<div style="font-size:11px;font-weight:800;color:#dc2626;margin-top:3px;">⏱ '+getCountdown(m.match_date,m.time_start)+'</div>':'')+
           (!isPast&&m.match_date?'<div id="'+weatherId+'" style="font-size:11px;color:var(--dim);margin-top:3px;">⛅ Loading weather…</div>':'')+
         '</div>'+
         '<div style="text-align:right;flex-shrink:0;">'+
@@ -7340,10 +7344,10 @@ function getCountdown(matchDate, timeStart){
   const days  = Math.floor(diff/(1000*60*60*24));
   const hours = Math.floor((diff%(1000*60*60*24))/(1000*60*60));
   const mins  = Math.floor((diff%(1000*60*60))/(1000*60));
-  if(days>1)  return days+'d '+hours+'h away';
-  if(days===1) return '1d '+hours+'h away';
-  if(hours>0) return hours+'h '+mins+'m away';
-  return mins+'m away';
+  if(days>1)  return days+'d '+hours+'h until match time';
+  if(days===1) return '1d '+hours+'h until match time';
+  if(hours>0) return hours+'h '+mins+'m until match time';
+  return mins+'m until match time';
 }
 
 async function loadDashboard(){
