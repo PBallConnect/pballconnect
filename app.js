@@ -3631,11 +3631,11 @@ async function loadConfirmedMatches(){
         const rawName=p.player_name||'';
         const firstName=rawName.split(' ')[0]||(p.player_email||'').split('@')[0].replace(/[+_.]/g,' ').split(' ')[0];
         return '<span style="display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;'+
-          'background:'+color+';border:1px solid '+borderColor+';font-size:12px;color:#fff;margin:2px;">'+firstName+'</span>';
+          'background:'+color+';border:2px solid '+borderColor+';font-size:12px;color:#fff;font-weight:700;margin:2px;">'+firstName+'</span>';
       }
 
-      const inChips = inPlayers.map(p=>nameChip(p,'rgba(76,175,125,0.12)','rgba(76,175,125,0.3)')).join('');
-      const waitChips = waitlist.map((p,i)=>nameChip(p,'rgba(251,191,36,0.1)','rgba(251,191,36,0.3)')+
+      const inChips = inPlayers.map(p=>nameChip(p,'#1a7a3a','#1a7a3a')).join('');
+      const waitChips = waitlist.map((p,i)=>nameChip(p,'#b45309','#b45309')+
         '<span style="font-size:9px;color:#fbbf24;vertical-align:middle;margin-left:-4px;margin-right:4px;">#'+(i+1)+'</span>').join('');
 
       const mapsBase = 'https://www.google.com/maps/search/?api=1&query=';
@@ -3646,34 +3646,34 @@ async function loadConfirmedMatches(){
 
       const isOrganizer = (m.organizer_email||'').toLowerCase() === myEmail.toLowerCase();
       const card = document.createElement('div');
-      card.style.cssText='background:rgba(76,175,125,0.06);border:1px solid rgba(76,175,125,0.25);border-radius:16px;padding:16px;margin-bottom:14px;';
+      card.style.cssText='background:#ffffff;border:2px solid #1a7a3a;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(26,122,58,0.1);';
       card.innerHTML=
         // Header
         '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">'+
           '<span style="font-size:24px;">'+(m.match_type==='doubles'?'&#127955;&#127955;':'&#127955;')+'</span>'+
           '<div style="flex:1;">'+
-            '<div style="color:#fff;font-size:15px;font-weight:700;">'+dateStr+'</div>'+
-            '<div style="color:var(--dim);font-size:12px;">'+timeStr+'</div>'+
-            (isOrganizer?'<div style="font-size:10px;color:var(--green);font-weight:700;margin-top:2px;">&#128081; You organized this</div>':
-              '<div style="font-size:10px;color:var(--dim);margin-top:2px;">Organized by '+((m.organizer_name||'').split(' ')[0]||'Unknown')+'</div>')+
+            '<div style="color:#1a7a3a;font-size:15px;font-weight:700;">'+dateStr+'</div>'+
+            '<div style="color:#555;font-size:12px;font-weight:600;">'+timeStr+'</div>'+
+            (isOrganizer?'<div style="font-size:10px;color:#1a7a3a;font-weight:700;margin-top:2px;">&#128081; You organized this</div>':
+              '<div style="font-size:10px;color:#555;font-weight:600;margin-top:2px;">Organized by '+((m.organizer_name||'').split(' ')[0]||'Unknown')+'</div>')+
           '</div>'+
-          (urgency?'<div style="padding:3px 10px;border-radius:999px;background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.3);color:var(--green);font-size:10px;font-weight:700;white-space:nowrap;">'+urgency+'</div>':'')+
+          (urgency?'<div style="padding:3px 10px;border-radius:999px;background:#d1fae5;border:2px solid #1a7a3a;color:#1a7a3a;font-size:10px;font-weight:800;white-space:nowrap;">'+urgency+'</div>':'')+
         '</div>'+
         // Court row
-        '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:10px;margin-bottom:10px;">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:#f0fdf4;border:1px solid #d1fae5;border-radius:10px;margin-bottom:10px;">'+
           '<div style="display:flex;align-items:center;gap:8px;">'+
             '<span style="font-size:16px;">'+(isOutdoor?'&#127795;':'&#127970;')+'</span>'+
             '<div>'+
-              '<div style="font-size:13px;color:#fff;font-weight:600;">'+(m.court_name||'Court TBD')+'</div>'+
-              (m.court_address?'<div style="font-size:11px;color:var(--dim);">'+m.court_address+'</div>':'')+
+              '<div style="font-size:13px;color:#111;font-weight:600;">'+(m.court_name||'Court TBD')+'</div>'+
+              (m.court_address?'<div style="font-size:11px;color:#555;">'+m.court_address+'</div>':'')+
             '</div>'+
           '</div>'+
-          (directionsUrl?'<a href="'+directionsUrl+'" target="_blank" style="padding:5px 12px;border-radius:8px;border:1px solid rgba(76,175,125,0.35);color:var(--green);font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;">&#128205; Directions</a>':'')+
+          (directionsUrl?'<a href="'+directionsUrl+'" target="_blank" style="padding:5px 12px;border-radius:8px;border:2px solid #1a7a3a;color:#1a7a3a;background:#f0fdf4;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;">&#128205; Directions</a>':'')+
         '</div>'+
         // Weather placeholder
-        (showWeather?'<div id="weather-'+m.id+'" style="padding:10px 12px;background:rgba(255,255,255,0.02);border-radius:10px;margin-bottom:10px;font-size:12px;color:var(--dim);">Loading forecast...</div>':'')+
+        (showWeather?'<div id="weather-'+m.id+'" style="padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:10px;font-size:12px;color:#555;">Loading forecast...</div>':'')+
         // Players In
-        '<div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:10px;">'+
+        '<div style="border-top:2px solid #e5e7eb;padding-top:10px;">'+
           '<div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">'+
             'In the Match ('+inPlayers.length+'/'+maxNeeded+')'+
           '</div>'+
@@ -3691,13 +3691,13 @@ async function loadConfirmedMatches(){
       // Organizer-only actions
       if(isOrganizer){
         const actRow = document.createElement('div');
-        actRow.style.cssText='display:flex;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);flex-wrap:wrap;';
+        actRow.style.cssText='display:flex;gap:8px;margin-top:12px;padding-top:10px;border-top:2px solid #e5e7eb;flex-wrap:wrap;';
         actRow.innerHTML=
           '<button onclick="openEditMatchModal(this.dataset.id)" data-id="'+m.id+'" '+
-            'style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid rgba(76,175,125,0.4);background:rgba(76,175,125,0.08);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">'+
+            'style="flex:1;padding:8px 12px;border-radius:8px;border:2px solid #1a7a3a;background:#d1fae5;color:#1a7a3a;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">'+
             '&#9998; Edit Match</button>'+
           '<button onclick="openUninviteModal(this.dataset.id,this.dataset.type)" data-id="'+m.id+'" data-type="'+m.match_type+'" '+
-            'style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.06);color:#f87171;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">'+
+            'style="flex:1;padding:8px 12px;border-radius:8px;border:2px solid #dc2626;background:#fff1f2;color:#dc2626;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">'+
             '&#10005; Remove Player</button>';
         card.appendChild(actRow);
       }
