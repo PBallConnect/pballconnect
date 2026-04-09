@@ -3747,39 +3747,39 @@ async function openEditMatchModal(matchId){
   const noteVal  = m.notes||'';
 
   overlay.innerHTML=
-    '<div style="background:#0f1f12;border:1px solid rgba(76,175,125,0.3);border-radius:20px 20px 0 0;padding:24px 20px 40px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;">'+
+    '<div style="background:#ffffff;border:2px solid #1a7a3a;border-radius:20px 20px 0 0;padding:24px 20px 40px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">'+
-        '<div style="font-size:16px;font-weight:800;color:#fff;">&#9998; Edit Match</div>'+
-        '<button onclick="document.getElementById(&quot;editMatchOverlay&quot;).remove()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer;">&#10005;</button>'+
+        '<div style="font-size:16px;font-weight:800;color:#111;">&#9998; Edit Match</div>'+
+        '<button onclick="document.getElementById(&quot;editMatchOverlay&quot;).remove()" style="background:none;border:none;color:#6b7280;font-size:20px;cursor:pointer;">&#10005;</button>'+
       '</div>'+
       '<div style="display:grid;gap:12px;">'+
         '<div>'+
-          '<label style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;">Date</label>'+
-          '<input id="emDate" type="date" value="'+(m.match_date||'')+'" style="width:100%;margin-top:4px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px 12px;color:#fff;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;color-scheme:dark;"/>'+
+          '<label style="font-size:11px;font-weight:700;color:#1a5c32;text-transform:uppercase;letter-spacing:.06em;">Date</label>'+
+          '<input id="emDate" type="date" value="'+(m.match_date||'')+'" style="width:100%;margin-top:4px;background:#f9fafb;border:2px solid #9ca3af;border-radius:8px;padding:10px 12px;color:#111;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;"/>'+
         '</div>'+
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
           '<div>'+
-            '<label style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;">Start Time</label>'+
-            '<input id="emTimeStart" type="time" value="'+(m.time_start||'')+'" style="width:100%;margin-top:4px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px 12px;color:#fff;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;color-scheme:dark;"/>'+
+            '<label style="font-size:11px;font-weight:700;color:#1a5c32;text-transform:uppercase;letter-spacing:.06em;">Start Time</label>'+
+            '<input id="emTimeStart" type="time" value="'+(m.time_start||'')+'" style="width:100%;margin-top:4px;background:#f9fafb;border:2px solid #9ca3af;border-radius:8px;padding:10px 12px;color:#111;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;"/>'+
           '</div>'+
           '<div>'+
-            '<label style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;">End Time</label>'+
-            '<input id="emTimeEnd" type="time" value="'+(m.time_end||'')+'" style="width:100%;margin-top:4px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px 12px;color:#fff;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;color-scheme:dark;"/>'+
+            '<label style="font-size:11px;font-weight:700;color:#1a5c32;text-transform:uppercase;letter-spacing:.06em;">End Time</label>'+
+            '<input id="emTimeEnd" type="time" value="'+(m.time_end||'')+'" style="width:100%;margin-top:4px;background:#f9fafb;border:2px solid #9ca3af;border-radius:8px;padding:10px 12px;color:#111;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;"/>'+
           '</div>'+
         '</div>'+
         '<div>'+
-          '<label style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;">Court / Venue</label>'+
-          '<input id="emCourt" type="text" value="'+courtVal.replace(/"/g,'&quot;')+'" placeholder="Court name or address" style="width:100%;margin-top:4px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px 12px;color:#fff;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;"/>'+
+          '<label style="font-size:11px;font-weight:700;color:#1a5c32;text-transform:uppercase;letter-spacing:.06em;">Court / Venue</label>'+
+          '<input id="emCourt" type="text" value="'+courtVal.replace(/"/g,'&quot;')+'" placeholder="Court name or address" style="width:100%;margin-top:4px;background:#f9fafb;border:2px solid #9ca3af;border-radius:8px;padding:10px 12px;color:#111;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;"/>'+
         '</div>'+
         '<div>'+
-          '<label style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;">Note to Players</label>'+
-          '<textarea id="emNote" rows="2" placeholder="Court changed due to weather — meet on Court 3!" style="width:100%;margin-top:4px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px 12px;color:#fff;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;resize:vertical;">'+noteVal+'</textarea>'+
+          '<label style="font-size:11px;font-weight:700;color:#1a5c32;text-transform:uppercase;letter-spacing:.06em;">Note to Players</label>'+
+          '<textarea id="emNote" rows="2" placeholder="Court changed due to weather — meet on Court 3!" style="width:100%;margin-top:4px;background:#f9fafb;border:2px solid #9ca3af;border-radius:8px;padding:10px 12px;color:#111;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;resize:vertical;">'+noteVal+'</textarea>'+
         '</div>'+
-        '<div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:10px;padding:10px 12px;">'+
-          '<div style="font-size:12px;color:#fbbf24;font-weight:700;margin-bottom:3px;">&#9888;&#65039; Changes notify all confirmed players</div>'+
-          '<div style="font-size:11px;color:var(--dim);line-height:1.5;">Players will receive updated details and be asked to re-confirm.</div>'+
+        '<div style="background:#fef9e7;border:2px solid #b45309;border-radius:10px;padding:10px 12px;">'+
+          '<div style="font-size:12px;color:#b45309;font-weight:700;margin-bottom:3px;">&#9888;&#65039; Changes notify all confirmed players</div>'+
+          '<div style="font-size:11px;color:#555;line-height:1.5;">Players will receive updated details and be asked to re-confirm.</div>'+
         '</div>'+
-        '<button onclick="saveMatchEdits(this.dataset.id)" data-id="'+matchId+'" style="width:100%;padding:14px;border-radius:12px;border:none;background:var(--green);color:var(--dark);font-weight:800;font-size:14px;cursor:pointer;">Save &amp; Notify Players</button>'+
+        '<button onclick="saveMatchEdits(this.dataset.id)" data-id="'+matchId+'" style="width:100%;padding:14px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-weight:800;font-size:14px;cursor:pointer;">Save &amp; Notify Players</button>'+
       '</div>'+
     '</div>';
 
