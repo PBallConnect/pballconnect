@@ -3678,7 +3678,7 @@ async function loadConfirmedMatches(){
             '<div style="color:#1a7a3a;font-size:15px;font-weight:700;">'+dateStr+'</div>'+
             '<div style="color:#555;font-size:12px;font-weight:600;">'+timeStr+'</div>'+
             (getCountdown(m.match_date,m.time_start)?'<div style="font-size:11px;font-weight:800;color:#dc2626;margin-top:3px;">⏱ '+getCountdown(m.match_date,m.time_start)+'</div>':'')+
-            (isOrganizer?'<div style="font-size:10px;color:#1a7a3a;font-weight:700;margin-top:2px;">&#128081; You organized this</div>':
+            (isOrganizer?'<div style="font-size:11px;color:#1a7a3a;font-weight:700;margin-top:2px;">&#128081; You organized this match</div>':
               '<div style="font-size:10px;color:#555;font-weight:600;margin-top:2px;">Organized by '+((m.organizer_name||'').split(' ')[0]||'Unknown')+'</div>')+
           '</div>'+
           (urgency==='TODAY'||urgency==='TOMORROW'?'<div style="padding:3px 10px;border-radius:999px;background:#fee2e2;border:2px solid #dc2626;color:#dc2626;font-size:10px;font-weight:800;white-space:nowrap;">'+urgency+'</div>':urgency?'<div style="padding:3px 10px;border-radius:999px;background:#d1fae5;border:2px solid #1a7a3a;color:#1a7a3a;font-size:10px;font-weight:800;white-space:nowrap;">'+urgency+'</div>':'')+
@@ -3999,7 +3999,7 @@ async function loadConfirmedMatchWeather(matchId, date, lat, lon){
     const wind=Math.round(data.daily.windspeed_10m_max[idx]);
     const emoji=getWeatherEmoji(code),desc=getWeatherDesc(code);
     const windLevel=wind<10?'Calm':wind<20?'Breezy':wind<30?'Windy':'Very Windy';
-    const precipColor=precip<20?'var(--green)':precip<50?'#fbbf24':'#f87171';
+    const precipColor=precip<20?'#1a7a3a':precip<50?'#b45309':'#dc2626';
     const windColor=wind<10?'var(--green)':wind<20?'#fbbf24':'#f87171';
     el.innerHTML=
       '<div style="display:flex;align-items:center;gap:10px;">'+
@@ -4187,8 +4187,8 @@ async function loadMyInvitesPage(){
   if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in.</div>'; return; }
   container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:12px 0;">Loading…</div>';
   try{
-    // Only show open/pending matches — confirmed (full) ones move to Confirmed Matches
-    const res=await fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=neq.full&status=neq.cancelled&order=match_date.desc,time_start.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    // Show open/pending matches + cancelled ones for reference
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=neq.full&order=match_date.desc,time_start.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
     const matches=res.ok?await res.json():[];
     const ids=matches.map(m=>m.id);
     let responses=[];
@@ -4201,8 +4201,10 @@ async function loadMyInvitesPage(){
       container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">No matches yet.<br><br><button onclick="showPage(\'setupMatch\')" style="padding:10px 20px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;cursor:pointer;">+ Set Up A Match</button></div>';
       return;
     }
-    const upcoming=matches.filter(m=>!isMatchPast(m));
-    const past=matches.filter(m=>isMatchPast(m));
+    const cancelled=matches.filter(m=>m.status==='cancelled');
+    const active=matches.filter(m=>m.status!=='cancelled');
+    const upcoming=active.filter(m=>!isMatchPast(m));
+    const past=active.filter(m=>isMatchPast(m));
 
     // Fetch court names for matches that have a court_id but no court_name
     let miCourtData = {};
@@ -4273,8 +4275,9 @@ async function loadMyInvitesPage(){
         '<div style="flex:1;">'+
           '<div style="color:'+(isPast?'#94a3b8':'#1a7a3a')+';font-size:14px;font-weight:700;">'+(isPast?'<s>':'')+dateStr+' · '+timeStr+(isPast?'</s>':'')+'</div>'+
           '<div style="color:#555;font-size:12px;margin-top:2px;">'+courtDisplay+'</div>'+
+          '<div style="font-size:11px;color:#1a7a3a;font-weight:700;margin-top:2px;">&#128081; You organized this</div>'+
           (!isPast&&getCountdown(m.match_date,m.time_start)?'<div style="font-size:11px;font-weight:800;color:#dc2626;margin-top:3px;">⏱ '+getCountdown(m.match_date,m.time_start)+'</div>':'')+
-          (!isPast&&m.match_date?'<div id="'+weatherId+'" style="font-size:11px;color:var(--dim);margin-top:3px;">⛅ Loading weather…</div>':'')+
+          (!isPast&&m.match_date?'<div id="'+weatherId+'" style="font-size:11px;color:#6b7280;margin-top:3px;"></div>':'')+
         '</div>'+
         '<div style="text-align:right;flex-shrink:0;">'+
           '<div style="font-size:12px;font-weight:700;color:'+sd.color+';">'+sd.label+'</div>'+
@@ -4294,10 +4297,42 @@ async function loadMyInvitesPage(){
     }
     if(past.length){
       const h=document.createElement('div');
-      h.style.cssText='font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;padding:16px 0 10px;border-top:1px solid var(--border);margin-top:8px;';
+      h.style.cssText='font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;padding:16px 0 10px;border-top:1px solid #e5e7eb;margin-top:8px;';
       h.textContent='Past Matches ('+past.length+')';
       container.appendChild(h);
       past.forEach(m=>container.appendChild(renderCard(m,true)));
+    }
+    if(cancelled.length){
+      const hdr=document.createElement('div');
+      hdr.style.cssText='font-size:11px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.06em;padding:16px 0 8px;border-top:1px solid #e5e7eb;margin-top:8px;cursor:pointer;display:flex;align-items:center;gap:6px;';
+      hdr.innerHTML='🚫 Cancelled Matches ('+cancelled.length+') <span id="cancelToggle">▾ show</span>';
+      const cancelList=document.createElement('div');
+      cancelList.id='cancelledList';
+      cancelList.style.display='none';
+      hdr.onclick=()=>{
+        const shown=cancelList.style.display!=='none';
+        cancelList.style.display=shown?'none':'block';
+        document.getElementById('cancelToggle').textContent=shown?'▾ show':'▴ hide';
+      };
+      cancelled.forEach(m=>{
+        const card=document.createElement('div');
+        const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}):'—';
+        const timeStr=m.time_start?fmt12(m.time_start):'—';
+        const courtName=(m.court_name&&m.court_name!=='TBD')?m.court_name:'Court TBD';
+        card.style.cssText='background:#fff1f2;border:2px solid #fca5a5;border-radius:12px;padding:12px 16px;margin-bottom:8px;opacity:0.8;';
+        card.innerHTML=
+          '<div style="display:flex;align-items:center;gap:8px;">'+
+            '<span style="font-size:18px;">🚫</span>'+
+            '<div>'+
+              '<div style="font-size:13px;font-weight:700;color:#dc2626;text-decoration:line-through;">'+dateStr+' · '+timeStr+'</div>'+
+              '<div style="font-size:11px;color:#6b7280;">'+courtName+' · '+( m.match_type==='doubles'?'Doubles':'Singles')+'</div>'+
+              '<div style="font-size:10px;color:#dc2626;font-weight:600;margin-top:2px;">Cancelled</div>'+
+            '</div>'+
+          '</div>';
+        cancelList.appendChild(card);
+      });
+      container.appendChild(hdr);
+      container.appendChild(cancelList);
     }
   }catch(e){ container.innerHTML='<div style="color:#f87171;font-size:13px;">Error loading invites.</div>'; }
 }
@@ -4318,7 +4353,8 @@ async function loadMyInviteWeather(m, elId){
     }
     // Fall back to player's stored lat/lon
     if(!lat && SESSION_PLAYER?.lat){ lat=SESSION_PLAYER.lat; lon=SESSION_PLAYER.lon; }
-    if(!lat){ el.textContent=''; return; }
+    if(!lat){ el.style.display='none'; return; }
+    el.textContent='⛅ Loading forecast…';
 
     const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`+
       `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,windspeed_10m_max,weathercode`+
@@ -4334,8 +4370,8 @@ async function loadMyInviteWeather(m, elId){
     const precip=data.daily.precipitation_probability_max[idx];
     const wind=Math.round(data.daily.windspeed_10m_max[idx]);
     const emoji=getWeatherEmoji(code);
-    const precipColor=precip<20?'var(--green)':precip<50?'#fbbf24':'#f87171';
-    const windColor=wind<15?'var(--green)':wind<25?'#fbbf24':'#f87171';
+    const precipColor=precip<20?'#1a7a3a':precip<50?'#b45309':'#dc2626';
+    const windColor=wind<15?'#1a7a3a':wind<25?'#b45309':'#dc2626';
     el.innerHTML=emoji+' '+getWeatherDesc(code)+' · '+high+'°/'+low+'°F'+
       ' · <span style="color:'+precipColor+';">Rain '+precip+'%</span>'+
       ' · <span style="color:'+windColor+';">Wind '+wind+' mph</span>';
