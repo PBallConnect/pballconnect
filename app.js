@@ -3638,18 +3638,18 @@ async function loadConfirmedMatches(){
       const waitChips = waitlist.map((p,i)=>nameChip(p,'#b45309','#b45309')+
         '<span style="font-size:9px;color:#fbbf24;vertical-align:middle;margin-left:-4px;margin-right:4px;">#'+(i+1)+'</span>').join('');
 
-      const mapsBase = 'https://www.google.com/maps/search/?api=1&query=';
-      const directionsUrl = resolvedCourtAddr ? mapsBase+encodeURIComponent(resolvedCourtAddr)
-        : resolvedCourtName ? mapsBase+encodeURIComponent(resolvedCourtName) : null;
-      const court = courtData[m.court_id];
-      const showWeather = isOutdoor && m.match_date && court && court.lat;
-
       // Resolve court name — match field first, then courts table lookup
       const courtLookup = courtData[m.court_id] || {};
-      const resolvedCourtName = (m.court_name && m.court_name.trim() && m.court_name!=='TBD')
+      const resolvedCourtName = (m.court_name && m.court_name.trim() && m.court_name.toLowerCase()!=='tbd')
         ? m.court_name.trim()
         : (courtLookup.name || '').trim() || '';
       const resolvedCourtAddr = (m.court_address || '').trim() || (courtLookup.address || '').trim();
+
+      const court = courtData[m.court_id];
+      const showWeather = isOutdoor && m.match_date && court && court.lat;
+      const mapsBase = 'https://www.google.com/maps/search/?api=1&query=';
+      const directionsUrl = resolvedCourtAddr ? mapsBase+encodeURIComponent(resolvedCourtAddr)
+        : resolvedCourtName ? mapsBase+encodeURIComponent(resolvedCourtName) : null;
 
       const isOrganizer = (m.organizer_email||'').toLowerCase() === myEmail.toLowerCase();
       const card = document.createElement('div');
@@ -4086,6 +4086,17 @@ async function loadMyInvitesPage(){
     const upcoming=matches.filter(m=>!isMatchPast(m));
     const past=matches.filter(m=>isMatchPast(m));
 
+    // Fetch court names for matches that have a court_id but no court_name
+    let miCourtData = {};
+    const miCourtIds = matches.map(m=>m.court_id).filter(id=>id && (!m||!m.court_name||m.court_name==='TBD'));
+    const allCourtIds = [...new Set(matches.map(m=>m.court_id).filter(Boolean))];
+    if(allCourtIds.length){
+      const cr = await fetch(`${SUPABASE_URL}/rest/v1/courts?id=in.(${allCourtIds.join(',')})&select=id,name,address`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      const courts = cr.ok ? await cr.json() : [];
+      courts.forEach(co=>{ miCourtData[co.id]=co; });
+    }
+
     const renderCard=(m,isPast)=>{
       const sd=getMatchStatusDisplay(m);
       const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}):'—';
@@ -4128,8 +4139,12 @@ async function loadMyInvitesPage(){
       }
       const courtName = (m.court_name||'').trim();
       const courtAddr = (m.court_address||'').trim();
-      const courtDisplay = (courtName && courtName!=='TBD' && courtName.toLowerCase()!=='tbd') ? '📍 '+courtName :
-                           courtAddr ? '📍 '+courtAddr :
+      const miCourtLookup = miCourtData[m.court_id] || {};
+      const resolvedName = (courtName && courtName.toLowerCase()!=='tbd') ? courtName
+        : (miCourtLookup.name||'').trim() || '';
+      const resolvedAddr = courtAddr || (miCourtLookup.address||'').trim();
+      const courtDisplay = resolvedName ? '📍 '+resolvedName :
+                           resolvedAddr ? '📍 '+resolvedAddr :
                            '📍 Court TBD';
       const weatherId = 'mi-weather-'+m.id;
       card.innerHTML=
