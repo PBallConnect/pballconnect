@@ -3784,6 +3784,7 @@ async function openEditMatchModal(matchId){
           '<div style="font-size:11px;color:#555;line-height:1.5;">Players will receive updated details and be asked to re-confirm.</div>'+
         '</div>'+
         '<button onclick="saveMatchEdits(this.dataset.id)" data-id="'+matchId+'" style="width:100%;padding:14px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-weight:800;font-size:14px;cursor:pointer;">Save &amp; Notify Players</button>'+
+        '<button onclick="cancelMatch(\''+matchId+'\')" style="width:100%;padding:11px;border-radius:12px;border:2px solid #dc2626;background:#fff1f2;color:#dc2626;font-weight:700;font-size:13px;cursor:pointer;margin-top:4px;">🗑 Cancel This Match</button>'+
       '</div>'+
     '</div>';
 
@@ -3861,12 +3862,71 @@ async function saveMatchEdits(matchId){
     }
     document.getElementById('editMatchOverlay')?.remove();
     showToast('Match updated! Players notified.','#4CAF7D');
+    // Refresh whichever page is active
     loadConfirmedMatches();
+    loadMyInvitesPage();
+    loadDashboard();
   }catch(e){
     showToast('Could not save: '+e.message,'#f87171');
     if(saveBtn){ saveBtn.disabled=false; saveBtn.textContent='Save & Notify Players'; }
   }
 }
+
+async function cancelMatch(matchId){
+  if(!confirm('Cancel this match? All invited players will be notified by email.')) return;
+
+  const overlay = document.getElementById('editMatchOverlay');
+  const btn = overlay?.querySelector('button[onclick*="cancelMatch"]');
+  if(btn){ btn.disabled=true; btn.textContent='Cancelling…'; }
+
+  try{
+    // Get all players who were invited (in + pending)
+    const rRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=in.(in,pending)&select=player_email,player_name`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const players = rRes.ok ? await rRes.json() : [];
+
+    // Get match details for the email
+    const mRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}&select=match_date,time_start,match_type,court_name&limit=1`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const matches = mRes.ok ? await mRes.json() : [];
+    const m = matches[0];
+    const dateStr = m?.match_date ? new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}) : 'upcoming';
+    const timeStr = m?.time_start ? fmt12(m.time_start) : '';
+    const myName = getMyName();
+    const myEmail = getMyEmail();
+
+    // Mark match as cancelled in DB
+    await fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}`,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+      body:JSON.stringify({status:'cancelled'})
+    });
+
+    // Notify all players
+    for(const p of players){
+      if((p.player_email||'').toLowerCase()===myEmail.toLowerCase()) continue;
+      sendEmail({
+        to_email: p.player_email,
+        type: 'match_update',
+        personal_note: myName+' has cancelled the '+( m?.match_type==='doubles'?'Doubles':'Singles')+' match scheduled for '+dateStr+(timeStr?' at '+timeStr:'')+(m?.court_name&&m.court_name!=='TBD'?' @ '+m.court_name:'')+'. We hope to see you on the courts soon! 🏓',
+        invite_url: window.location.origin,
+      });
+    }
+
+    overlay?.remove();
+    showToast('Match cancelled — players notified.','#6b7280');
+    loadConfirmedMatches();
+    loadMyInvitesPage();
+    loadDashboard();
+
+  }catch(e){
+    showToast('Could not cancel: '+e.message,'#f87171');
+    if(btn){ btn.disabled=false; btn.textContent='🗑 Cancel This Match'; }
+  }
+}
+
 
 async function openUninviteModal(matchId, matchType){
   const res = await fetch(
