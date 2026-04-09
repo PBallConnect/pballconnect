@@ -3615,7 +3615,7 @@ async function loadConfirmedMatches(){
       const confirmed = responses.filter(r=>r.match_id===m.id&&r.response==='in').length;
       return confirmed >= needed;
     });
-    updateConfirmedBadge(allMatches.length);
+    updateConfirmedBadge(allMatches.length, allMatches);
     container.innerHTML='';
     if(!allMatches.length){
       container.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--dim);font-size:14px;">No confirmed upcoming matches yet.<br><br>'+
@@ -3680,7 +3680,7 @@ async function loadConfirmedMatches(){
           '<div style="flex:1;">'+
             '<div style="color:#1a7a3a;font-size:15px;font-weight:700;">'+dateStr+'</div>'+
             '<div style="color:#555;font-size:12px;font-weight:600;">'+timeStr+'</div>'+
-            (getCountdown(m.match_date,m.time_start)?'<div style="font-size:11px;font-weight:800;color:#dc2626;margin-top:3px;">⏱ '+getCountdown(m.match_date,m.time_start)+'</div>':'')+
+            renderCountdown(m.match_date,m.time_start)+
             (isOrganizer?'<div style="font-size:11px;color:#1a7a3a;font-weight:700;margin-top:2px;">Organized by '+(((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim()||'You')+'</div>':
               '<div style="font-size:10px;color:#555;font-weight:600;margin-top:2px;">Organized by '+((m.organizer_name||'').split(' ')[0]||'Unknown')+'</div>')+
           '</div>'+
@@ -4101,16 +4101,27 @@ async function loadRecordScores(){
   }
 }
 
-function updateConfirmedBadge(count){
+function updateConfirmedBadge(count, matches){
   const badge = document.getElementById('confirmedMatchesBadge');
   if(!badge) return;
   badge.textContent = count;
   if(count > 0){
-    badge.style.background = 'rgba(76,175,125,0.85)';
-    badge.style.color = '#0a120b';
+    badge.style.background = '#1a7a3a';
+    badge.style.color = '#fff';
+    // Check if any match is within 1 hour — if so, blink the badge
+    const hasUrgent = matches && matches.some(m=>{
+      const cd = getCountdown(m.match_date, m.time_start);
+      return cd && cd.urgent;
+    });
+    if(hasUrgent){
+      badge.classList.add('pb-urgent-badge');
+    } else {
+      badge.classList.remove('pb-urgent-badge');
+    }
   } else {
     badge.style.background = 'rgba(76,175,125,0.2)';
-    badge.style.color = 'rgba(76,175,125,0.5)';
+    badge.style.color = '#1a7a3a';
+    badge.classList.remove('pb-urgent-badge');
   }
 }
 
@@ -4279,7 +4290,7 @@ async function loadMyInvitesPage(){
           '<div style="color:'+(isPast?'#94a3b8':'#1a7a3a')+';font-size:14px;font-weight:700;">'+(isPast?'<s>':'')+dateStr+' · '+timeStr+(isPast?'</s>':'')+'</div>'+
           '<div style="color:#555;font-size:12px;margin-top:2px;">'+courtDisplay+'</div>'+
           '<div style="font-size:11px;color:#1a7a3a;font-weight:700;margin-top:2px;">Organized by '+(((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim()||getMyEmail().split('@')[0])+'</div>'+
-          (!isPast&&getCountdown(m.match_date,m.time_start)?'<div style="font-size:11px;font-weight:800;color:#dc2626;margin-top:3px;">⏱ '+getCountdown(m.match_date,m.time_start)+'</div>':'')+
+          (!isPast?renderCountdown(m.match_date,m.time_start):'')+
         '</div>'+
         '<div style="text-align:right;flex-shrink:0;">'+
           '<div style="font-size:12px;font-weight:700;color:'+sd.color+';">'+sd.label+'</div>'+
@@ -4343,10 +4354,9 @@ async function loadMyInvitesPage(){
 async function loadMyInviteWeather(m, elId){
   const el = document.getElementById(elId);
   if(!el) return;
-  // Need lat/lon — try from SESSION_PLAYER location as proxy if no court lat/lon
   try{
     let lat = null, lon = null;
-    // Try to get court coordinates if court_id exists
+    // 1. Try court coords
     if(m.court_id){
       const cr = await fetch(
         `${SUPABASE_URL}/rest/v1/courts?id=eq.${encodeURIComponent(m.court_id)}&select=lat,lon&limit=1`,
@@ -4354,28 +4364,36 @@ async function loadMyInviteWeather(m, elId){
       const courts = cr.ok ? await cr.json() : [];
       if(courts[0]?.lat){ lat=courts[0].lat; lon=courts[0].lon; }
     }
-    // Fall back to player's stored lat/lon (check both S and SESSION_PLAYER)
+    // 2. Try session lat/lon
     if(!lat && S.addrLat){ lat=S.addrLat; lon=S.addrLon; }
-    if(!lat && SESSION_PLAYER?.lat){ lat=SESSION_PLAYER.lat; lon=SESSION_PLAYER.lon; }
-    // Last resort — geocode from city/state if available
+    if(!lat && SESSION_PLAYER?.lat){ lat=parseFloat(SESSION_PLAYER.lat); lon=parseFloat(SESSION_PLAYER.lon); }
+    // 3. Geocode from city/state
     if(!lat && SESSION_PLAYER?.city && SESSION_PLAYER?.state){
-      try{
-        const q=encodeURIComponent(SESSION_PLAYER.city+', '+SESSION_PLAYER.state+', USA');
-        const gr=await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`,
-          {headers:{'User-Agent':'PBallConnect/1.0'}});
-        if(gr.ok){ const gd=await gr.json(); if(gd.length){ lat=parseFloat(gd[0].lat); lon=parseFloat(gd[0].lon); S.addrLat=lat; S.addrLon=lon; } }
-      }catch(e){}
+      const q=encodeURIComponent(SESSION_PLAYER.city+', '+SESSION_PLAYER.state+', USA');
+      const gr=await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`,
+        {headers:{'User-Agent':'PBallConnect/1.0'}});
+      if(gr.ok){ const gd=await gr.json(); if(gd.length){ lat=parseFloat(gd[0].lat); lon=parseFloat(gd[0].lon); S.addrLat=lat; S.addrLon=lon; if(SESSION_PLAYER) SESSION_PLAYER.lat=lat,SESSION_PLAYER.lon=lon; } }
     }
     if(!lat){ el.style.display='none'; return; }
 
+    // Show loading indicator
+    el.style.display='';
+    el.innerHTML='<span style="opacity:0.5;font-size:10px;">⛅ loading…</span>';
+
     const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`+
       `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,windspeed_10m_max,weathercode`+
-      `&temperature_unit=fahrenheit&windspeed_unit=mph&forecast_days=14&timezone=auto`;
+      `&temperature_unit=fahrenheit&windspeed_unit=mph&forecast_days=16&timezone=auto`;
     const res = await fetch(url);
-    if(!res.ok){ el.textContent=''; return; }
+    if(!res.ok){ el.style.display='none'; return; }
     const data = await res.json();
-    const idx = data.daily.time.indexOf(m.match_date);
-    if(idx<0){ el.textContent=''; return; }
+    // Find match date in forecast — try exact match first, then closest
+    let idx = data.daily.time.indexOf(m.match_date);
+    if(idx<0){
+      // Try to find closest date within 1 day
+      const matchDt = new Date(m.match_date+'T12:00');
+      idx = data.daily.time.findIndex(t=>Math.abs(new Date(t+'T12:00')-matchDt)<86400000*2);
+    }
+    if(idx<0){ el.style.display='none'; return; }
     const code=data.daily.weathercode[idx];
     const high=Math.round(data.daily.temperature_2m_max[idx]);
     const low=Math.round(data.daily.temperature_2m_min[idx]);
@@ -4384,16 +4402,27 @@ async function loadMyInviteWeather(m, elId){
     const emoji=getWeatherEmoji(code);
     const precipColor=precip<20?'#1a7a3a':precip<50?'#b45309':'#dc2626';
     const windColor=wind<15?'#1a7a3a':wind<25?'#b45309':'#dc2626';
-    el.innerHTML=emoji+' '+high+'°/'+low+'°F'+
-      '<br><span style="color:'+precipColor+';">Rain '+precip+'%</span>'+
-      ' · <span style="color:'+windColor+';">'+wind+' mph</span>';
-  }catch(e){ if(el) el.textContent=''; }
+    el.style.display='';
+    el.innerHTML=emoji+' '+high+'°/'+low+'°F · <span style="color:'+precipColor+';">'+precip+'% rain</span> · <span style="color:'+windColor+';">'+wind+'mph</span>';
+  }catch(e){ console.warn('Weather error:',e); if(el) el.style.display='none'; }
 }
 
 function togglePill(el){
   const n = el.querySelector('.pill-names');
   if(n) n.style.display = n.style.display==='none' ? 'block' : 'none';
 }
+
+// Inject blink animation for urgent countdown
+(function(){
+  if(!document.getElementById('pb-blink-style')){
+    const s=document.createElement('style');
+    s.id='pb-blink-style';
+    s.textContent='@keyframes pb-blink{0%,100%{opacity:1}50%{opacity:0.2}}.pb-urgent{animation:pb-blink 1s ease-in-out infinite;}.pb-urgent-badge{animation:pb-blink 1.5s ease-in-out infinite;}';
+    document.head.appendChild(s);
+  }
+})();
+
+
 
 function makeResponsePill(label, players, color){
   const names = players.map(p=>(p.player_name||p.player_email||'').split(' ')[0]).filter(Boolean).join(', ');
@@ -7540,10 +7569,18 @@ function getCountdown(matchDate, timeStart){
   const days  = Math.floor(diff/(1000*60*60*24));
   const hours = Math.floor((diff%(1000*60*60*24))/(1000*60*60));
   const mins  = Math.floor((diff%(1000*60*60))/(1000*60));
-  if(days>1)  return days+'d '+hours+'h until match time';
-  if(days===1) return '1d '+hours+'h until match time';
-  if(hours>0) return hours+'h '+mins+'m until match time';
-  return mins+'m until match time';
+  if(days>1)  return {text:days+'d '+hours+'h until match time', urgent:false};
+  if(days===1) return {text:'1d '+hours+'h until match time', urgent:false};
+  if(hours>0) return {text:hours+'h '+mins+'m until match time', urgent:hours<1};
+  return {text:mins+'m until match time ⚠️', urgent:true};
+}
+
+// Helper to render countdown div
+function renderCountdown(matchDate, timeStart){
+  const cd = getCountdown(matchDate, timeStart);
+  if(!cd) return '';
+  return '<div style="font-size:11px;font-weight:800;color:#dc2626;margin-top:3px;"'+
+    (cd.urgent?' class="pb-urgent"':'')+'>⏱ '+cd.text+'</div>';
 }
 
 async function loadDashboard(){
@@ -7804,7 +7841,7 @@ async function loadDashInvitedToPlay(myEmail){
             '<div style="color:#111;font-size:14px;font-weight:700;">'+dateStr+' · '+timeStr+'</div>'+
             '<div style="color:#555;font-size:12px;">'+(m.match_type==='doubles'?'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Doubles':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Singles')+'</div>'+
             '<div style="color:#555;font-size:12px;">From: <span style="color:#1d4ed8;font-weight:700;">'+(m.organizer_name||'').split(' ')[0]+'</span></div>'+
-            (getCountdown(m.match_date,m.time_start)?'<div style="font-size:11px;color:#b45309;font-weight:700;margin-top:3px;">⏳ '+getCountdown(m.match_date,m.time_start)+'</div>':'')+
+            renderCountdown(m.match_date,m.time_start)+
           '</div>'+
           '<div style="font-size:22px;">'+(m.match_type==='doubles'?'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/>':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/>')+'</div>'+
         '</div>'+
