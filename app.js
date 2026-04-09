@@ -3203,10 +3203,26 @@ async function submitMatch(){
   const note=document.getElementById('matchNote')?.value?.trim();
   const myName=((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim();
   try{
+    // Build court info from selectedCourts if available
+    let saveCourtName = MS.courtName || 'TBD';
+    let saveCourtAddress = MS.courtAddress || '';
+    let saveCourtId = MS.courtId || null;
+    let saveIsPrivate = MS.isPrivate || false;
+    if(MS.selectedCourts && MS.selectedCourts.size > 0){
+      // Use preferred court if set, else first court
+      let preferred = null;
+      MS.selectedCourts.forEach((v,k)=>{ if(v.preferred||!preferred) preferred={id:k,...v}; });
+      if(preferred){
+        saveCourtId = preferred.id;
+        saveCourtName = preferred.name || saveCourtName;
+        saveCourtAddress = preferred.address || saveCourtAddress;
+        saveIsPrivate = preferred.isPrivate || false;
+      }
+    }
     const matchRes=await fetch(`${SUPABASE_URL}/rest/v1/matches`,{
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=representation'},
-      body:JSON.stringify({organizer_email:myEmail,organizer_name:myName,match_type:MS.format,invite_group:MS.group,is_feeler:MS.isFeeler,match_date:date,time_start:timeStart,time_end:timeEnd,court_id:MS.courtId||null,court_name:MS.courtName||'TBD',court_address:MS.courtAddress||'',is_private_court:MS.isPrivate,max_players:MS.format==='doubles'?4:2,notes:note||null})
+      body:JSON.stringify({organizer_email:myEmail,organizer_name:myName,match_type:MS.format,invite_group:MS.group,is_feeler:MS.isFeeler,match_date:date,time_start:timeStart,time_end:timeEnd,court_id:saveCourtId,court_name:saveCourtName,court_address:saveCourtAddress,is_private_court:saveIsPrivate,max_players:MS.format==='doubles'?4:2,notes:note||null})
     });
     const matchRows=matchRes.ok?await matchRes.json():[];
     const matchId=matchRows[0]?.id;
@@ -4088,7 +4104,6 @@ async function loadMyInvitesPage(){
 
     // Fetch court names for matches that have a court_id but no court_name
     let miCourtData = {};
-    const miCourtIds = matches.map(m=>m.court_id).filter(id=>id && (!m||!m.court_name||m.court_name==='TBD'));
     const allCourtIds = [...new Set(matches.map(m=>m.court_id).filter(Boolean))];
     if(allCourtIds.length){
       const cr = await fetch(`${SUPABASE_URL}/rest/v1/courts?id=in.(${allCourtIds.join(',')})&select=id,name,address`,
