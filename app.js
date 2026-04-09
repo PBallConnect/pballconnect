@@ -3769,7 +3769,11 @@ async function openEditMatchModal(matchId){
         '</div>'+
         '<div>'+
           '<label style="font-size:11px;font-weight:700;color:#1a5c32;text-transform:uppercase;letter-spacing:.06em;">Court / Venue</label>'+
-          '<input id="emCourt" type="text" value="'+courtVal.replace(/"/g,'&quot;')+'" placeholder="Court name or address" style="width:100%;margin-top:4px;background:#f9fafb;border:2px solid #9ca3af;border-radius:8px;padding:10px 12px;color:#111;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;"/>'+
+          '<select id="emCourtSelect" style="width:100%;margin-top:4px;background:#f9fafb;border:2px solid #9ca3af;border-radius:8px;padding:10px 12px;color:#111;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;">'+
+            '<option value="">Loading your courts…</option>'+
+          '</select>'+
+          '<input id="emCourt" type="text" value="'+courtVal.replace(/"/g,'&quot;')+'" placeholder="Or type a court name / address manually" style="width:100%;margin-top:6px;background:#f9fafb;border:2px solid #9ca3af;border-radius:8px;padding:10px 12px;color:#111;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;"/>'+
+          '<div style="font-size:10px;color:#6b7280;margin-top:4px;">Select from dropdown OR type manually — whichever you fill in last wins.</div>'+
         '</div>'+
         '<div>'+
           '<label style="font-size:11px;font-weight:700;color:#1a5c32;text-transform:uppercase;letter-spacing:.06em;">Note to Players</label>'+
@@ -3785,13 +3789,51 @@ async function openEditMatchModal(matchId){
 
   document.body.appendChild(overlay);
   overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+
+  // Populate courts dropdown from player's saved courts
+  (async ()=>{
+    const sel = document.getElementById('emCourtSelect');
+    if(!sel) return;
+    try{
+      const myEmail = getMyEmail();
+      const pcRes = await fetch(`${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(myEmail)}&select=court_id`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      const pcRows = pcRes.ok ? await pcRes.json() : [];
+      const courtIds = pcRows.map(r=>r.court_id).filter(Boolean);
+      if(!courtIds.length){ sel.innerHTML='<option value="">No saved courts — type manually below</option>'; return; }
+      const cRes = await fetch(`${SUPABASE_URL}/rest/v1/courts?id=in.(${courtIds.join(',')})&select=id,name,address&order=name.asc`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      const courts = cRes.ok ? await cRes.json() : [];
+      sel.innerHTML = '<option value="">— Select from My Courts —</option>';
+      courts.forEach(co=>{
+        const opt = document.createElement('option');
+        opt.value = co.name;
+        opt.dataset.address = co.address||'';
+        opt.textContent = co.name+(co.address?' · '+co.address:'');
+        if(co.name === courtVal) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      sel.onchange = ()=>{
+        const opt = sel.options[sel.selectedIndex];
+        const txt = document.getElementById('emCourt');
+        if(opt && opt.value && txt){
+          txt.value = opt.value;
+          txt.dataset.address = opt.dataset.address||'';
+        }
+      };
+      // If courtVal matches a saved court, trigger the onchange to sync text field
+      if(courtVal && courts.find(co=>co.name===courtVal)) sel.onchange();
+    }catch(e){ sel.innerHTML='<option value="">Could not load courts — type manually</option>'; }
+  })();
 }
 
 async function saveMatchEdits(matchId){
   const date      = document.getElementById('emDate')?.value||'';
   const timeStart = document.getElementById('emTimeStart')?.value||'';
   const timeEnd   = document.getElementById('emTimeEnd')?.value||'';
-  const courtName = (document.getElementById('emCourt')?.value||'').trim();
+  const courtEl   = document.getElementById('emCourt');
+  const courtName = (courtEl?.value||'').trim();
+  const courtAddr = (courtEl?.dataset?.address||'').trim();
   const note      = (document.getElementById('emNote')?.value||'').trim();
   const saveBtn   = document.querySelector('#editMatchOverlay button[data-id]');
   if(saveBtn){ saveBtn.disabled=true; saveBtn.textContent='Saving...'; }
@@ -3801,8 +3843,8 @@ async function saveMatchEdits(matchId){
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
       body:JSON.stringify(Object.fromEntries(Object.entries({
         match_date:date, time_start:timeStart, time_end:timeEnd,
-        court_name:courtName||'TBD', notes:note||null
-      }).filter(([,v])=>v!=='')))
+        court_name:courtName||'TBD', court_address:courtAddr||null, notes:note||null
+      }).filter(([,v])=>v!==''&&v!==null)))
     });
     // Notify confirmed players
     const rRes = await fetch(
