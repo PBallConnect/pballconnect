@@ -3662,7 +3662,10 @@ async function loadConfirmedMatches(){
       const resolvedCourtAddr = (m.court_address || '').trim() || (courtLookup.address || '').trim();
 
       const court = courtData[m.court_id];
-      const showWeather = isOutdoor && m.match_date && court && court.lat;
+      // Show weather if we have court coords OR player location as fallback
+      const weatherLat = court?.lat || S.addrLat || SESSION_PLAYER?.lat;
+      const weatherLon = court?.lon || S.addrLon || SESSION_PLAYER?.lon;
+      const showWeather = m.match_date && weatherLat;
       const mapsBase = 'https://www.google.com/maps/search/?api=1&query=';
       const directionsUrl = resolvedCourtAddr ? mapsBase+encodeURIComponent(resolvedCourtAddr)
         : resolvedCourtName ? mapsBase+encodeURIComponent(resolvedCourtName) : null;
@@ -3726,7 +3729,7 @@ async function loadConfirmedMatches(){
         card.appendChild(actRow);
       }
       container.appendChild(card);
-      if(showWeather) loadConfirmedMatchWeather(m.id, m.match_date, court.lat, court.lon);
+      if(showWeather) loadConfirmedMatchWeather(m.id, m.match_date, weatherLat, weatherLon);
     }
   }catch(e){
     container.innerHTML='<div style="color:#f87171;font-size:13px;">Error: '+e.message+'</div>';
@@ -4351,10 +4354,19 @@ async function loadMyInviteWeather(m, elId){
       const courts = cr.ok ? await cr.json() : [];
       if(courts[0]?.lat){ lat=courts[0].lat; lon=courts[0].lon; }
     }
-    // Fall back to player's stored lat/lon
+    // Fall back to player's stored lat/lon (check both S and SESSION_PLAYER)
+    if(!lat && S.addrLat){ lat=S.addrLat; lon=S.addrLon; }
     if(!lat && SESSION_PLAYER?.lat){ lat=SESSION_PLAYER.lat; lon=SESSION_PLAYER.lon; }
+    // Last resort — geocode from city/state if available
+    if(!lat && SESSION_PLAYER?.city && SESSION_PLAYER?.state){
+      try{
+        const q=encodeURIComponent(SESSION_PLAYER.city+', '+SESSION_PLAYER.state+', USA');
+        const gr=await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`,
+          {headers:{'User-Agent':'PBallConnect/1.0'}});
+        if(gr.ok){ const gd=await gr.json(); if(gd.length){ lat=parseFloat(gd[0].lat); lon=parseFloat(gd[0].lon); S.addrLat=lat; S.addrLon=lon; } }
+      }catch(e){}
+    }
     if(!lat){ el.style.display='none'; return; }
-    el.textContent='⛅ Loading forecast…';
 
     const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`+
       `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,windspeed_10m_max,weathercode`+
@@ -5225,7 +5237,12 @@ async function geocodeCityForSession(city, state){
       {headers:{'User-Agent':'PickleballRegistry/1.0'}});
     if(res.ok){
       const data = await res.json();
-      if(data.length){ S.addrLat=parseFloat(data[0].lat); S.addrLon=parseFloat(data[0].lon); }
+      if(data.length){
+        S.addrLat=parseFloat(data[0].lat);
+        S.addrLon=parseFloat(data[0].lon);
+        // Also store on SESSION_PLAYER so weather functions can access it
+        if(SESSION_PLAYER){ SESSION_PLAYER.lat=S.addrLat; SESSION_PLAYER.lon=S.addrLon; }
+      }
     }
   }catch(e){}
 }
