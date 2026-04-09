@@ -3611,7 +3611,7 @@ async function loadConfirmedMatches(){
     let courtData = {};
     if(courtIds.length){
       const cRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/courts?id=in.(${courtIds.map(id=>encodeURIComponent(id)).join(',')})&select=id,lat,lon,indoor`,
+        `${SUPABASE_URL}/rest/v1/courts?id=in.(${courtIds.map(id=>encodeURIComponent(id)).join(',')})&select=id,name,address,lat,lon,indoor`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
       const courts = cRes.ok ? await cRes.json() : [];
       courts.forEach(co=>{ courtData[co.id]=co; });
@@ -3639,10 +3639,17 @@ async function loadConfirmedMatches(){
         '<span style="font-size:9px;color:#fbbf24;vertical-align:middle;margin-left:-4px;margin-right:4px;">#'+(i+1)+'</span>').join('');
 
       const mapsBase = 'https://www.google.com/maps/search/?api=1&query=';
-      const directionsUrl = m.court_address ? mapsBase+encodeURIComponent(m.court_address)
-        : m.court_name&&m.court_name!=='TBD' ? mapsBase+encodeURIComponent(m.court_name) : null;
+      const directionsUrl = resolvedCourtAddr ? mapsBase+encodeURIComponent(resolvedCourtAddr)
+        : resolvedCourtName ? mapsBase+encodeURIComponent(resolvedCourtName) : null;
       const court = courtData[m.court_id];
       const showWeather = isOutdoor && m.match_date && court && court.lat;
+
+      // Resolve court name — match field first, then courts table lookup
+      const courtLookup = courtData[m.court_id] || {};
+      const resolvedCourtName = (m.court_name && m.court_name.trim() && m.court_name!=='TBD')
+        ? m.court_name.trim()
+        : (courtLookup.name || '').trim() || '';
+      const resolvedCourtAddr = (m.court_address || '').trim() || (courtLookup.address || '').trim();
 
       const isOrganizer = (m.organizer_email||'').toLowerCase() === myEmail.toLowerCase();
       const card = document.createElement('div');
@@ -3654,18 +3661,19 @@ async function loadConfirmedMatches(){
           '<div style="flex:1;">'+
             '<div style="color:#1a7a3a;font-size:15px;font-weight:700;">'+dateStr+'</div>'+
             '<div style="color:#555;font-size:12px;font-weight:600;">'+timeStr+'</div>'+
+            (getCountdown(m.match_date,m.time_start)?'<div style="font-size:11px;font-weight:800;color:#dc2626;margin-top:3px;">⏱ '+getCountdown(m.match_date,m.time_start)+'</div>':'')+
             (isOrganizer?'<div style="font-size:10px;color:#1a7a3a;font-weight:700;margin-top:2px;">&#128081; You organized this</div>':
               '<div style="font-size:10px;color:#555;font-weight:600;margin-top:2px;">Organized by '+((m.organizer_name||'').split(' ')[0]||'Unknown')+'</div>')+
           '</div>'+
-          (urgency?'<div style="padding:3px 10px;border-radius:999px;background:#d1fae5;border:2px solid #1a7a3a;color:#1a7a3a;font-size:10px;font-weight:800;white-space:nowrap;">'+urgency+'</div>':'')+
+          (urgency==='TODAY'||urgency==='TOMORROW'?'<div style="padding:3px 10px;border-radius:999px;background:#fee2e2;border:2px solid #dc2626;color:#dc2626;font-size:10px;font-weight:800;white-space:nowrap;">'+urgency+'</div>':urgency?'<div style="padding:3px 10px;border-radius:999px;background:#d1fae5;border:2px solid #1a7a3a;color:#1a7a3a;font-size:10px;font-weight:800;white-space:nowrap;">'+urgency+'</div>':'')+
         '</div>'+
         // Court row
         '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:#f0fdf4;border:1px solid #d1fae5;border-radius:10px;margin-bottom:10px;">'+
           '<div style="display:flex;align-items:center;gap:8px;">'+
             '<span style="font-size:16px;">'+(isOutdoor?'&#127795;':'&#127970;')+'</span>'+
             '<div>'+
-              '<div style="font-size:13px;color:#111;font-weight:600;">'+(m.court_name||'Court TBD')+'</div>'+
-              (m.court_address?'<div style="font-size:11px;color:#555;">'+m.court_address+'</div>':'')+
+              '<div style="font-size:13px;color:#111;font-weight:600;">'+(resolvedCourtName||'Court TBD')+'</div>'+
+              (resolvedCourtAddr?'<div style="font-size:11px;color:#555;">'+resolvedCourtAddr+'</div>':'')+
             '</div>'+
           '</div>'+
           (directionsUrl?'<a href="'+directionsUrl+'" target="_blank" style="padding:5px 12px;border-radius:8px;border:2px solid #1a7a3a;color:#1a7a3a;background:#f0fdf4;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0;">&#128205; Directions</a>':'')+
@@ -4120,7 +4128,7 @@ async function loadMyInvitesPage(){
       }
       const courtName = (m.court_name||'').trim();
       const courtAddr = (m.court_address||'').trim();
-      const courtDisplay = (courtName && courtName!=='TBD') ? '📍 '+courtName :
+      const courtDisplay = (courtName && courtName!=='TBD' && courtName.toLowerCase()!=='tbd') ? '📍 '+courtName :
                            courtAddr ? '📍 '+courtAddr :
                            '📍 Court TBD';
       const weatherId = 'mi-weather-'+m.id;
