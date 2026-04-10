@@ -4528,7 +4528,7 @@ async function loadInvitedByOthersPage(){
             '<div style="flex:1;min-width:0;">'+
               '<div style="color:#1a7a3a;font-size:14px;font-weight:700;">'+dateStr+'</div>'+
               '<div style="color:#555;font-size:12px;">'+timeStr+' &middot; '+courtDisplay+'</div>'+
-              '<div style="font-size:11px;font-weight:700;color:#60a5fa;margin-top:2px;">'+getCountdown(m.match_date,m.time_start)+'</div>'+
+              renderCountdown(m.match_date,m.time_start)+
               '<div style="color:#555;font-size:11px;margin-top:2px;">'+
                 'By <strong style="color:#111;">'+(m.organizer_name||'Unknown')+'</strong>'+
                 ' &middot; '+(m.match_type==='singles'?'Singles':'Doubles')+
@@ -7703,8 +7703,8 @@ async function loadDashNextMatch(myEmail){
             (urgency?'<div style="display:inline-block;margin-bottom:10px;padding:3px 10px;border-radius:999px;background:#d1fae5;border:1px solid #1a7a3a;color:#1a7a3a;font-size:10px;font-weight:800;">'+urgency+'</div>':'')+
             '<div style="font-size:16px;font-weight:800;color:#111;margin-bottom:4px;">'+dateStr+'</div>'+
             '<div style="font-size:13px;color:#555;margin-bottom:4px;">⏰ '+timeStr+'</div>'+
-            (getCountdown(m.match_date,m.time_start)?'<div style="display:inline-block;margin-bottom:8px;padding:3px 10px;border-radius:999px;background:#fef3c7;border:1px solid #b45309;color:#b45309;font-size:11px;font-weight:700;">⏳ '+getCountdown(m.match_date,m.time_start)+'</div>':'') +
-            '<div style="font-size:13px;color:#555;margin-bottom:10px;">📍 '+(m.court_name&&m.court_name!=='TBD'?m.court_name:'Court TBD')+'</div>'+
+            renderCountdown(m.match_date,m.time_start)+
+            '<div style="font-size:13px;color:#555;margin-bottom:10px;">📍 '+((m.court_name&&m.court_name.toLowerCase()!=='tbd')?m.court_name:(m.court_address||'Court TBD'))+'</div>'+
             '<div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:12px;">'+playerChips+'</div>'+
             (isOrg?'<div style="font-size:10px;color:#1a7a3a;font-weight:700;margin-bottom:10px;">👑 You organized this</div>':'')+
             '<button onclick="showPage(&quot;confirmedMatches&quot;)" style="width:100%;padding:10px;border-radius:10px;border:1px solid #1a7a3a;background:transparent;color:#1a7a3a;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">View All Confirmed Matches →</button>'+
@@ -7767,14 +7767,14 @@ async function loadDashPendingInvites(myEmail){
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'+
           '<div>'+
             '<div style="color:#111;font-size:14px;font-weight:700;">'+dateStr+' · '+timeStr+'</div>'+
-            '<div style="color:var(--dim);font-size:12px;">'+(m.match_type==='doubles'?'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Doubles':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Singles')+' · '+(m.court_name&&m.court_name!=='TBD'?m.court_name:'Court TBD')+'</div>'+
+            '<div style="color:var(--dim);font-size:12px;">'+(m.match_type==='doubles'?'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Doubles':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Singles')+' · '+((m.court_name&&m.court_name.toLowerCase()!=='tbd')?m.court_name:(m.court_address||'Court TBD'))+'</div>'+
           '</div>'+
           '<div style="text-align:right;">'+
             '<div style="font-size:20px;font-weight:900;color:'+remainColor+';">'+remaining+'</div>'+
             '<div style="font-size:9px;color:var(--dim);text-transform:uppercase;font-weight:700;">'+(remaining===0?'Full! 🎉':'Spot'+(remaining>1?'s':'')+' needed')+'</div>'+
           '</div>'+
         '</div>'+
-        (getCountdown(m.match_date,m.time_start)?'<div style="display:inline-block;margin-bottom:10px;padding:3px 10px;border-radius:999px;background:#fef3c7;border:1px solid #b45309;color:#b45309;font-size:11px;font-weight:700;">⏳ '+getCountdown(m.match_date,m.time_start)+'</div><br>':'')+
+        renderCountdown(m.match_date,m.time_start)+
         '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">'+
           '<div style="text-align:center;padding:8px 4px;border-radius:8px;background:#d1fae5;border:1px solid #1a7a3a;">'+
             '<div style="font-size:18px;font-weight:800;color:#1a7a3a;">'+inP.length+'</div>'+
