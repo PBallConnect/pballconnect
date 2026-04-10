@@ -2888,7 +2888,7 @@ async function loadMatchCourts(){
   const privEl = document.getElementById('matchPrivateCourts');
   const empty  = document.getElementById('matchNoCourts');
   if(!pubEl||!privEl) return;
-  pubEl.innerHTML = privEl.innerHTML = '<div style="font-size:11px;color:var(--green);">Loading…</div>';
+  pubEl.innerHTML = privEl.innerHTML = '<div style="font-size:11px;color:#1a7a3a;">Loading…</div>';
 
   try{
     // Step 1: get court IDs saved by this player
@@ -2927,23 +2927,23 @@ async function loadMatchCourts(){
       // Main court row
       const row = document.createElement('div');
       row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 12px;'+
-        'border-radius:10px;border:2px solid '+(selected?'var(--green)':'var(--border)')+';'+
-        'background:'+(selected?'rgba(76,175,125,0.1)':'rgba(255,255,255,0.02)')+';'+
+        'border-radius:10px;border:2px solid '+(selected?'#1a7a3a':'#d1d5db')+';'+
+        'background:'+(selected?'#d1fae5':'#f3f4f6')+';'+
         'cursor:pointer;transition:all .15s;';
 
       // Checkbox
       const cb = document.createElement('div');
       cb.style.cssText = 'width:18px;height:18px;border-radius:4px;flex-shrink:0;'+
-        'border:2px solid '+(selected?'var(--green)':'var(--border)')+';'+
-        'background:'+(selected?'var(--green)':'transparent')+';'+
+        'border:2px solid '+(selected?'#1a7a3a':'#9ca3af')+';'+
+        'background:'+(selected?'#1a7a3a':'#ffffff')+';'+
         'display:flex;align-items:center;justify-content:center;transition:all .15s;';
       if(selected) cb.innerHTML = '<span style="color:#fff;font-size:11px;font-weight:700;">✓</span>';
 
       const info = document.createElement('div');
       info.style.cssText = 'flex:1;min-width:0;';
       info.innerHTML =
-        '<div style="color:#fff;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+court.name+'</div>'+
-        '<div style="color:var(--dim);font-size:10px;">'+(court.city||'')+
+        '<div style="color:#111;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+court.name+'</div>'+
+        '<div style="color:#555;font-size:10px;">'+(court.city||'')+
           (court.num_courts?' · '+court.num_courts+' courts':'')+
         '</div>';
 
@@ -2983,7 +2983,7 @@ async function loadMatchCourts(){
         };
         const prefLabel = document.createElement('label');
         prefLabel.textContent = '⭐ Prefer this court';
-        prefLabel.style.cssText = 'font-size:11px;color:var(--green);cursor:pointer;';
+        prefLabel.style.cssText = 'font-size:11px;color:#1a7a3a;font-weight:600;cursor:pointer;';
         prefLabel.onclick = ()=>{ prefCb.checked=!prefCb.checked; prefCb.onchange({stopPropagation:()=>{}}); };
         prefRow.appendChild(prefCb);
         prefRow.appendChild(prefLabel);
@@ -2995,13 +2995,13 @@ async function loadMatchCourts(){
     const pub  = courts.filter(c=>!c.is_private);
     const priv = courts.filter(c=>c.is_private);
     if(pub.length)  pub.forEach(c=>renderCourt(c, pubEl));
-    else pubEl.innerHTML  = '<div style="font-size:11px;color:var(--dim);">No public courts saved</div>';
+    else pubEl.innerHTML  = '<div style="font-size:11px;color:#6b7280;">No public courts saved yet</div>';
     if(priv.length) priv.forEach(c=>renderCourt(c, privEl));
-    else privEl.innerHTML = '<div style="font-size:11px;color:var(--dim);">No private courts saved</div>';
+    else privEl.innerHTML = '<div style="font-size:11px;color:#6b7280;">No private courts saved yet</div>';
 
     // Update selected summary
     updateMatchCourtsSummary();
-  }catch(e){ pubEl.innerHTML='<div class="ic-empty">Error loading courts.</div>'; }
+  }catch(e){ console.warn('loadMatchCourts:',e); if(pubEl) pubEl.innerHTML='<div style="font-size:11px;color:#dc2626;">Could not load courts — '+e.message+'</div>'; if(privEl) privEl.innerHTML=''; }
 }
 
 function updateMatchCourtsNext(){

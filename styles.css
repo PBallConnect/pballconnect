@@ -500,7 +500,7 @@
   .match-step-dot.done{background:rgba(76,175,125,0.2);color:var(--green);border-color:var(--green);}
   .match-step-line{flex:1;height:2px;background:var(--border);transition:background .3s;}
   .match-step-line.done{background:var(--green);}
-  .match-card{background:rgba(255,255,255,0.03);border:1px solid var(--border);
+  .match-card{background:#ffffff;border:2px solid #e5e7eb;color:#111;
     border-radius:20px;padding:24px;max-width:600px;margin-bottom:16px;}
   .match-q{font-size:17px;font-weight:600;color:#fff;margin-bottom:18px;}
   .match-options{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;}
