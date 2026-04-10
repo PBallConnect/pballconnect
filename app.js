@@ -2491,7 +2491,7 @@ function buildTimeSelect(selectId, startHH, endHH){
     opt.value = val;
     // Special case for midnight
     opt.textContent = h === 24 ? 'Midnight' : fmt12(val);
-    opt.style.cssText='background:#0f1f12;color:#fff;';
+    opt.style.cssText='background:#ffffff;color:#111;';
     sel.appendChild(opt);
   }
   if(current) sel.value = current;
