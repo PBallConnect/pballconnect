@@ -2772,15 +2772,15 @@ function buildSpecificPicker(){
     const hdr = document.createElement('div');
     hdr.style.cssText='text-align:center;padding:8px 4px 6px;margin-bottom:6px;'+
       'border-radius:8px;font-size:11px;font-weight:700;'+
-      'background:rgba(255,255,255,0.05);border:1px solid var(--border);'+
-      'color:var(--dim);line-height:1.4;';
+      'background:#e5e7eb;border:2px solid #d1d5db;'+
+      'color:#374151;line-height:1.4;';
     hdr.innerHTML = col.label+'<br><span style="font-size:10px;opacity:0.7;">'+
       (col.skill?'Rating '+col.skill:'—')+' · '+players.length+' player'+(players.length!==1?'s':'')+'</span>';
     colEl.appendChild(hdr);
 
     if(!players.length){
       const empty = document.createElement('div');
-      empty.style.cssText='text-align:center;color:var(--dim);font-size:11px;padding:12px 4px;';
+      empty.style.cssText='text-align:center;color:#6b7280;font-size:11px;padding:12px 4px;';
       empty.textContent='None in circle';
       colEl.appendChild(empty);
     }
@@ -2793,8 +2793,8 @@ function buildSpecificPicker(){
       const card = document.createElement('div');
       card.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:3px;'+
         'padding:8px 4px;border-radius:10px;margin-bottom:6px;text-align:center;cursor:'+(atMax?'not-allowed':'pointer')+';'+
-        'border:1.5px solid '+(checked?'var(--green)':'var(--border)')+';'+
-        'background:'+(checked?'rgba(76,175,125,0.12)':'rgba(255,255,255,0.03)')+';'+
+        'border:2px solid '+(checked?'#1a7a3a':'#d1d5db')+';'+
+        'background:'+(checked?'#d1fae5':'#f3f4f6')+';'+
         'opacity:'+(atMax?'0.4':'1')+';transition:all .15s;';
 
       card.innerHTML =
@@ -4428,7 +4428,7 @@ function makeResponsePill(label, players, color){
   const names = players.map(p=>(p.player_name||p.player_email||'').split(' ')[0]).filter(Boolean).join(', ');
   const clickable = players.length > 0 && names;
   const nameList = clickable
-    ? '<div class="pill-names" style="display:none;font-size:9px;color:'+color+';margin-top:4px;line-height:1.5;border-top:1px solid rgba(255,255,255,0.1);padding-top:4px;">'+names.split(', ').join('<br>')+'</div>'
+    ? '<div class="pill-names" style="display:none;font-size:9px;color:'+color+';margin-top:4px;line-height:1.5;border-top:1px solid #e5e7eb;padding-top:4px;">'+names.split(', ').join('<br>')+'</div>'
     : '';
   return '<div '+(clickable?'onclick="togglePill(this)" ':'')+'style="text-align:center;padding:8px 4px;border-radius:8px;background:#f9fafb;border:2px solid '+(clickable?'#6b7280':'#d1d5db')+';'+(clickable?'cursor:pointer;':'')+'">'+
     '<div style="font-size:16px;font-weight:800;color:'+color+';">'+players.length+'</div>'+
