@@ -519,6 +519,18 @@
     </div>
 
     <div class="field">
+      <label>Match Type Preference <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— who do you like to play with?</span></label>
+      <div class="chips" id="matchGenderPrefChips">
+        <button class="chip" onclick="selChip('matchGenderPrefChips',this,'matchGenderPref');onMatchGenderPrefChange(this.textContent)">Mixed</button>
+        <button class="chip" onclick="selChip('matchGenderPrefChips',this,'matchGenderPref');onMatchGenderPrefChange(this.textContent)">Same Gender</button>
+        <button class="chip on" onclick="selChip('matchGenderPrefChips',this,'matchGenderPref');onMatchGenderPrefChange(this.textContent)">Both</button>
+      </div>
+      <div id="matchGenderPrefWarning" style="display:none;margin-top:8px;padding:10px 12px;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;font-size:12px;color:#92400e;line-height:1.5;">
+        ⚠️ Selecting only "<span id="matchGenderPrefWarnType"></span>" will restrict your playing opportunities. Consider selecting <strong>Both</strong> to maximize your matches.
+      </div>
+    </div>
+
+    <div class="field">
       <label>Are you hoping to improve?</label>
       <div class="chips" id="improveChips">
         <button class="chip" onclick="selChip('improveChips',this,'wantsToImprove');toggleGoalRating(this.textContent)">Yes</button>
@@ -1675,6 +1687,25 @@
         </div>
 
 
+        <div class="match-q" style="margin-top:24px;">Gender preference?</div>
+        <div class="match-options" id="matchGenderOptions" style="grid-template-columns:repeat(3,1fr);">
+          <div class="match-option on" id="matchGenderEither" onclick="selectMatchGender('either',this)">
+            <div class="match-option-icon">👥</div>
+            <div class="match-option-title">Either</div>
+            <div class="match-option-sub">No preference</div>
+          </div>
+          <div class="match-option" id="matchGenderMixed" onclick="selectMatchGender('mixed',this)">
+            <div class="match-option-icon">🤝</div>
+            <div class="match-option-title">Mixed</div>
+            <div class="match-option-sub">Men &amp; women</div>
+          </div>
+          <div class="match-option" id="matchGenderSame" onclick="selectMatchGender('same',this)">
+            <div class="match-option-icon">👤</div>
+            <div class="match-option-title">Same Gender</div>
+            <div class="match-option-sub">Men only / women only</div>
+          </div>
+        </div>
+
         <button class="match-next-btn" id="matchNext1" onclick="matchGoTo(2)" style="margin-top:20px;">Continue →</button>
       </div>
 
@@ -1848,6 +1879,27 @@
             <div class="match-option-icon">🎯</div>
             <div class="match-option-title">Specific Players</div>
             <div class="match-option-sub" id="matchSpecificSub">Hand-pick from my circle</div>
+          </div>
+          <div class="match-option" data-group="group_subs" onclick="toggleMatchGroup('group_subs',this)">
+            <div class="match-option-icon">🔁</div>
+            <div class="match-option-title">Set Group + Subs</div>
+            <div class="match-option-sub" id="matchGroupSubsSub">3 primary + substitutes</div>
+          </div>
+        </div>
+
+        <!-- Set Group + Subs picker -->
+        <div id="matchGroupSubsPicker" style="display:none;margin-top:16px;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+          <div style="background:#f0fdf4;border-bottom:1px solid #d1fae5;padding:12px 16px;">
+            <div style="font-size:13px;font-weight:700;color:#1a7a3a;margin-bottom:2px;">Set Group + Subs</div>
+            <div style="font-size:11px;color:#6b7280;">Click once to add as <strong style="color:#1a7a3a;">Primary</strong>, click again for <strong style="color:#d97706;">Sub</strong>, click again to remove. Subs are notified they may be called up.</div>
+          </div>
+          <div style="padding:12px 16px;background:#fff;">
+            <div style="display:flex;gap:16px;margin-bottom:12px;">
+              <div style="font-size:12px;font-weight:700;color:#1a7a3a;">🟢 Primary: <span id="gsPickerPrimaryCount">0</span> / <span id="gsPickerPrimaryMax">3</span></div>
+              <div style="font-size:12px;font-weight:700;color:#d97706;">🟡 Subs: <span id="gsPickerSubCount">0</span></div>
+            </div>
+            <div id="gsPickerList" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:280px;overflow-y:auto;"></div>
+            <div id="gsPickerEmpty" style="color:#6b7280;font-size:12px;font-style:italic;padding:8px 0;display:none;">No Inner Circle members yet — add players to your circle first.</div>
           </div>
         </div>
 

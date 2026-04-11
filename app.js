@@ -29,7 +29,7 @@
 const S={gender:'',skill:'',schedule:new Set(),anytime:false,partner:false,
   waiver:false,photoSrc:null,state:'',stateFips:'',county:'',city:'',email:'',
   court:'',courtName:'',duprVal:null,venues:new Set(),driveDistance:'25 miles',
-  playStyle:'',playFormat:'Both',handedness:'',avatarEmoji:'🎾',venuePref:'',playingSince:'',nickname:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null,_privacyConsent:false,_riskConsent:false,isCoach:'',coachCerts:new Set(),coachLessonTypes:new Set(),coachFormats:new Set()};
+  playStyle:'',playFormat:'Both',matchGenderPref:'Both',handedness:'',avatarEmoji:'🎾',venuePref:'',playingSince:'',nickname:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null,_privacyConsent:false,_riskConsent:false,isCoach:'',coachCerts:new Set(),coachLessonTypes:new Set(),coachFormats:new Set()};
 
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const TIMES=['Early AM','Morning','Afternoon','Evening'];
@@ -1034,6 +1034,7 @@ async function doSaveProfile(){
       coach_rate_min:      (()=>{const el=document.getElementById('coachRateMin');return el?.value?parseInt(el.value)||null:null;})(),
       coach_rate_max:      (()=>{const el=document.getElementById('coachRateMax');return el?.value?parseInt(el.value)||null:null;})(),
       coach_bio:           document.getElementById('coachBio')?.value?.trim()||null,
+      match_gender_pref:   S.matchGenderPref || 'Both',
     });
     console.log('✅ Registration saved');
     showToast('✅ Profile saved!', '#4CAF7D');
@@ -2417,6 +2418,9 @@ const MS = {
   extraGroups:     new Set(), // additional groups added via quick-add
   selectedGroups:  new Set(), // all currently selected groups (multi-select)
   specificPlayers: new Set(),
+  primaryPlayers:  new Set(), // for group_subs mode — primary 3
+  subPlayers:      new Set(), // for group_subs mode — substitutes
+  genderPref:      'either',  // 'either' | 'mixed' | 'same'
   isFeeler:        false,
   date:            null,
   timeStart:       null,
@@ -2474,6 +2478,94 @@ function selectMatchFormat(fmt, el){
   if(MS.group==='specific') buildSpecificPicker();
   const next1 = document.getElementById('matchNext1');
   if(next1) next1.disabled = false;
+}
+
+// ── Match type preference (Profile) ───────────────────
+function onMatchGenderPrefChange(val){
+  S.matchGenderPref = val;
+  const warn = document.getElementById('matchGenderPrefWarning');
+  const warnType = document.getElementById('matchGenderPrefWarnType');
+  if(!warn) return;
+  if(val === 'Both'){
+    warn.style.display = 'none';
+  } else {
+    if(warnType) warnType.textContent = val;
+    warn.style.display = 'block';
+  }
+}
+
+// ── Gender preference (Set Up A Match Step 1) ─────────
+function selectMatchGender(pref, el){
+  MS.genderPref = pref;
+  document.querySelectorAll('#matchGenderOptions .match-option').forEach(o=>{
+    o.classList.remove('on','dim');
+    o.classList.add('dim');
+  });
+  el.classList.remove('dim');
+  el.classList.add('on');
+}
+
+// ── Group + Subs picker ───────────────────────────────
+function buildGroupSubPicker(){
+  const list = document.getElementById('gsPickerList');
+  const empty = document.getElementById('gsPickerEmpty');
+  if(!list) return;
+  const members = IC_MEMBERS.map(x=>x.player);
+  if(!members.length){
+    list.innerHTML='';
+    if(empty) empty.style.display='block';
+    return;
+  }
+  if(empty) empty.style.display='none';
+  list.innerHTML = members.map(p=>{
+    const email = (p.email||'').toLowerCase();
+    const name = ((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim()||email;
+    const emoji = p.avatar_emoji||'🧑';
+    const isPrimary = MS.primaryPlayers.has(email);
+    const isSub = MS.subPlayers.has(email);
+    let bg='#f3f4f6', border='transparent', badge='';
+    if(isPrimary){ bg='#dcfce7'; border='#1a7a3a'; badge='<span style="font-size:9px;background:#1a7a3a;color:#fff;border-radius:4px;padding:1px 5px;margin-left:4px;">Primary</span>'; }
+    else if(isSub){ bg='#fef9c3'; border='#d97706'; badge='<span style="font-size:9px;background:#d97706;color:#fff;border-radius:4px;padding:1px 5px;margin-left:4px;">Sub</span>'; }
+    return '<div onclick="toggleGroupSubPlayer(\''+email+'\')" style="cursor:pointer;display:flex;align-items:center;gap:8px;padding:8px 10px;background:'+bg+';border:1.5px solid '+border+';border-radius:10px;">'+
+      '<span style="font-size:18px;">'+emoji+'</span>'+
+      '<div style="flex:1;min-width:0;">'+
+        '<div style="font-size:12px;font-weight:700;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+name+badge+'</div>'+
+        (p.skill_level?'<div style="font-size:10px;color:#555;">'+p.skill_level+'</div>':'')+
+      '</div>'+
+    '</div>';
+  }).join('');
+  renderGroupSubCounts();
+}
+
+function renderGroupSubCounts(){
+  const primaryCountEl = document.getElementById('gsPickerPrimaryCount');
+  const subCountEl = document.getElementById('gsPickerSubCount');
+  const primaryMax = MS.format==='doubles' ? 3 : 1;
+  const maxEl = document.getElementById('gsPickerPrimaryMax');
+  if(primaryCountEl) primaryCountEl.textContent = MS.primaryPlayers.size;
+  if(subCountEl) subCountEl.textContent = MS.subPlayers.size;
+  if(maxEl) maxEl.textContent = primaryMax;
+}
+
+function toggleGroupSubPlayer(email){
+  const primaryMax = MS.format==='doubles' ? 3 : 1;
+  if(MS.primaryPlayers.has(email)){
+    // Primary → Sub
+    MS.primaryPlayers.delete(email);
+    MS.subPlayers.add(email);
+  } else if(MS.subPlayers.has(email)){
+    // Sub → removed
+    MS.subPlayers.delete(email);
+  } else {
+    // Not selected → Primary (if room), else Sub
+    if(MS.primaryPlayers.size < primaryMax){
+      MS.primaryPlayers.add(email);
+    } else {
+      MS.subPlayers.add(email);
+    }
+  }
+  buildGroupSubPicker();
+  checkMatchStep4();
 }
 
 // ── Duration +/- ───────────────────────────────────────
@@ -2573,9 +2665,12 @@ function checkMatchStep4(){
   const btn = document.getElementById('matchNext4');
   if(!btn) return;
   const groups = MS.selectedGroups || new Set([MS.group].filter(Boolean));
-  const hasNonSpecific = [...groups].some(g=>g!=='specific');
+  const primaryMax = MS.format==='doubles' ? 3 : 1;
+  const hasNonSpecific = [...groups].some(g=>g!=='specific'&&g!=='group_subs');
   const hasSpecific = groups.has('specific');
-  const groupOk = groups.size > 0 && (hasNonSpecific || (hasSpecific && MS.specificPlayers.size > 0));
+  const hasGroupSubs = groups.has('group_subs');
+  const groupSubsOk = hasGroupSubs && MS.primaryPlayers.size >= primaryMax;
+  const groupOk = groups.size > 0 && (hasNonSpecific || (hasSpecific && MS.specificPlayers.size > 0) || groupSubsOk);
   if(groupOk){
     btn.removeAttribute('disabled');
     btn.style.opacity = '1';
@@ -2667,6 +2762,10 @@ function toggleMatchGroup(group, el){
       const picker = document.getElementById('matchSpecificPicker');
       if(picker) picker.style.display='none';
     }
+    if(group==='group_subs'){
+      const picker = document.getElementById('matchGroupSubsPicker');
+      if(picker) picker.style.display='none';
+    }
   } else {
     // Select this group
     MS.selectedGroups.add(group);
@@ -2674,6 +2773,10 @@ function toggleMatchGroup(group, el){
     if(group==='specific'){
       const picker = document.getElementById('matchSpecificPicker');
       if(picker){ picker.style.display='block'; buildSpecificPicker(); }
+    }
+    if(group==='group_subs'){
+      const picker = document.getElementById('matchGroupSubsPicker');
+      if(picker){ picker.style.display='block'; buildGroupSubPicker(); }
     }
   }
 
@@ -2709,7 +2812,7 @@ function checkGroupSize(){
   const seen = new Set();
   const allPlayers = [];
   allGroups.forEach(g=>{
-    if(!g||g==='specific') return;
+    if(!g||g==='specific'||g==='group_subs') return;
     getGroupPlayers(g, skills).forEach(p=>{
       if(!seen.has(p.email)){ seen.add(p.email); allPlayers.push(p); }
     });
@@ -2717,8 +2820,16 @@ function checkGroupSize(){
   if(allGroups.has('specific')){
     MS.specificPlayers.forEach(e=>{ if(!seen.has(e)){ seen.add(e); allPlayers.push({email:e}); } });
   }
+  if(allGroups.has('group_subs')){
+    MS.primaryPlayers.forEach(e=>{ if(!seen.has(e)){ seen.add(e); allPlayers.push({email:e}); } });
+    MS.subPlayers.forEach(e=>{ if(!seen.has(e)){ seen.add(e); allPlayers.push({email:e}); } });
+  }
 
   const count = allPlayers.length;
+
+  // group_subs mode: skip the warning if only group_subs selected (it has its own UI)
+  const onlyGroupSubs = allGroups.size===1 && allGroups.has('group_subs');
+  if(onlyGroupSubs){ warning.style.display='none'; checkMatchStep4(); return; }
 
   if(allGroups.size > 0 && count < maxNeeded){
     warning.style.display='block';
@@ -3177,7 +3288,7 @@ function buildMatchSummary(){
     const pEmailLC=(player.email||'').toLowerCase();
     if(MS.deselectedPlayers?.has(pEmailLC)) return;
     for(const g of allGroups){
-      if(g==='specific'||!g) continue;
+      if(g==='specific'||g==='group_subs'||!g) continue;
       if(g==='favorites' && IC_FAVORITES.has(pEmailLC))  { seen.add(player.email); invitees.push(player); return; }
       if(g==='all')                                        { seen.add(player.email); invitees.push(player); return; }
       if(g==='my_level' && skills && Math.abs(ps-skills.my)<0.13) { seen.add(player.email); invitees.push(player); return; }
@@ -3193,13 +3304,24 @@ function buildMatchSummary(){
       }
     });
   }
+  // Add group+subs players (primary + subs)
+  if(allGroups.has('group_subs')){
+    IC_MEMBERS.forEach(({player})=>{
+      const eLC=(player.email||'').toLowerCase();
+      if(!seen.has(player.email) && (MS.primaryPlayers.has(eLC)||MS.subPlayers.has(eLC))){
+        seen.add(player.email); invitees.push(player);
+      }
+    });
+  }
 
   const maxNeeded = MS.format==='doubles'?3:1;
-  const groupLabels={all:'Entire Inner Circle',my_level:'My Level',below:'Below My Level',above:'Above My Level',specific:'Specific Players',favorites:'My Favorites'};
+  const groupLabels={all:'Entire Inner Circle',my_level:'My Level',below:'Below My Level',above:'Above My Level',specific:'Specific Players',favorites:'My Favorites',group_subs:'Set Group + Subs'};
   const invitedLabel = [...allGroups].map(g=>groupLabels[g]||g).join(' + ');
+  const genderPrefLabel = MS.genderPref==='mixed'?'Mixed':MS.genderPref==='same'?'Same Gender':'Either';
 
   sum.innerHTML =
     '<div class="match-summary-row" style="color:#111;"><span>Format</span><span>'+(MS.format==='doubles'?'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Doubles':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Singles')+'</span></div>'+
+    '<div class="match-summary-row"><span>Gender Pref</span><span>'+genderPrefLabel+'</span></div>'+
     '<div class="match-summary-row"><span>Duration</span><span>'+durStr+'</span></div>'+
     '<div class="match-summary-row"><span>Invited</span><span>'+invitedLabel+' ('+invitees.length+')</span></div>'+
     '<div class="match-summary-row"><span>Spots open</span><span>'+maxNeeded+' needed · first to respond wins</span></div>'+
@@ -3288,7 +3410,7 @@ async function submitMatch(){
     const matchRes=await fetch(`${SUPABASE_URL}/rest/v1/matches`,{
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=representation'},
-      body:JSON.stringify({organizer_email:myEmail,organizer_name:myName,match_type:MS.format,invite_group:MS.group,is_feeler:MS.isFeeler,match_date:date,time_start:timeStart,time_end:timeEnd,court_id:saveCourtId,court_name:saveCourtName,court_address:saveCourtAddress,is_private_court:saveIsPrivate,max_players:MS.format==='doubles'?4:2,notes:note||null})
+      body:JSON.stringify({organizer_email:myEmail,organizer_name:myName,match_type:MS.format,invite_group:MS.group,is_feeler:MS.isFeeler,match_date:date,time_start:timeStart,time_end:timeEnd,court_id:saveCourtId,court_name:saveCourtName,court_address:saveCourtAddress,is_private_court:saveIsPrivate,max_players:MS.format==='doubles'?4:2,notes:note||null,gender_pref:MS.genderPref||'either'})
     });
     const matchRows=matchRes.ok?await matchRes.json():[];
     const matchId=matchRows[0]?.id;
@@ -3302,7 +3424,7 @@ async function submitMatch(){
       const ps=parseFloat(player.skill_level||0);
       const pLC=(player.email||'').toLowerCase();
       for(const g of allGroups){
-        if(!g||g==='specific') continue;
+        if(!g||g==='specific'||g==='group_subs') continue;
         if(g==='favorites'&&IC_FAVORITES.has(pLC)){ seenEmails.add(player.email); invitees.push(player); return; }
         if(g==='all'){ seenEmails.add(player.email); invitees.push(player); return; }
         if(g==='my_level'&&skills&&Math.abs(ps-skills.my)<0.13){ seenEmails.add(player.email); invitees.push(player); return; }
@@ -3310,6 +3432,16 @@ async function submitMatch(){
         if(g==='above'&&skills&&skills.above!==null&&Math.abs(ps-skills.above)<0.13){ seenEmails.add(player.email); invitees.push(player); return; }
       }
     });
+    // Group + Subs — primary and sub players
+    if(allGroups.has('group_subs')){
+      IC_MEMBERS.forEach(({player})=>{
+        const eLC=(player.email||'').toLowerCase();
+        if(!seenEmails.has(player.email)&&(MS.primaryPlayers.has(eLC)||MS.subPlayers.has(eLC))){
+          seenEmails.add(player.email);
+          invitees.push({...player, _isSub: MS.subPlayers.has(eLC)});
+        }
+      });
+    }
     if(allGroups.has('specific')){
       IC_MEMBERS.forEach(({player})=>{ if(!seenEmails.has(player.email)&&MS.specificPlayers.has(player.email)){ seenEmails.add(player.email); invitees.push(player); } });
       // Also handle non-IC specific players (e.g. invited from Find Players)
@@ -3350,10 +3482,13 @@ async function submitMatch(){
       }
     }catch(e){}
     for(const player of invitees){
-      if(matchId) await fetch(`${SUPABASE_URL}/rest/v1/match_responses`,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},body:JSON.stringify({match_id:matchId,player_email:player.email,player_name:((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim(),response:'pending'})}).catch(()=>{});
+      const isSub = !!player._isSub;
+      const playerName = ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim();
+      if(matchId) await fetch(`${SUPABASE_URL}/rest/v1/match_responses`,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},body:JSON.stringify({match_id:matchId,player_email:player.email,player_name:playerName+(isSub?' (Sub)':''),response:'pending'})}).catch(()=>{});
       if(player.email){
         const matchUrl=window.location.origin+window.location.pathname+'?match='+matchId;
-        sendEmail({ to_email:player.email, type:'match_invite', personal_note:(MS.format==='doubles'?'Doubles':'Singles')+' · '+dateStr+' '+timeStr+(MS.courtName?' @ '+MS.courtName:'')+(note?' · Note: '+note:'')+weatherNote, invite_url:matchUrl });
+        const subNote = isSub ? ' · You are listed as a SUBSTITUTE — you may be called up if a primary player cannot make it.' : '';
+        sendEmail({ to_email:player.email, type:'match_invite', personal_note:(MS.format==='doubles'?'Doubles':'Singles')+' · '+dateStr+' '+timeStr+(MS.courtName?' @ '+MS.courtName:'')+(note?' · Note: '+note:'')+weatherNote+subNote, invite_url:matchUrl });
       }
     }
     showToast('🎾 Match invite sent to '+invitees.length+' players!','#4CAF7D');
@@ -3364,7 +3499,15 @@ async function submitMatch(){
     loadMatchSquareCounts();
     // Update nav badges immediately
     setTimeout(()=>loadAllMatchBadges(), 500);
-    setTimeout(()=>{ MS.format='doubles';MS.group=null;MS.specificPlayers.clear();MS.selectedGroups=new Set();MS.extraGroups=new Set();MS.isFeeler=false;MS.date=null;MS.courtId=null;MS.courtName=null;MS.duration=2; matchGoTo(1); btn.textContent='🎾 Send Match Invite';btn.disabled=false; },3000);
+    setTimeout(()=>{
+      MS.format='doubles';MS.group=null;MS.specificPlayers.clear();MS.selectedGroups=new Set();MS.extraGroups=new Set();MS.primaryPlayers=new Set();MS.subPlayers=new Set();MS.genderPref='either';MS.isFeeler=false;MS.date=null;MS.courtId=null;MS.courtName=null;MS.duration=2;
+      // Reset gender pref chips
+      document.querySelectorAll('#matchGenderOptions .match-option').forEach(o=>o.classList.remove('on','dim'));
+      const eitherEl=document.getElementById('matchGenderEither');
+      if(eitherEl) eitherEl.classList.add('on');
+      matchGoTo(1);
+      btn.textContent='🎾 Send Match Invite';btn.disabled=false;
+    },3000);
   }catch(e){ status.textContent='⚠️ Error: '+e.message; btn.disabled=false; btn.textContent='🎾 Send Match Invite'; }
 }
 
@@ -5285,6 +5428,7 @@ async function restoreSession(email, playerData){
   S.playStyle    = player.play_style || '';
   S.wantsToImprove = player.wants_to_improve || '';
   S.goalRating   = player.goal_rating || null;
+  S.matchGenderPref = player.match_gender_pref || 'Both';
   SESSION_PLAYER = player;
 
   const navBtn = document.getElementById('navLoginBtn');
@@ -5549,6 +5693,9 @@ function restoreProfileForm(player){
   restoreChip('playStyleChips',player.play_style);
   S.playFormat=player.play_format||'Both';
   restoreChip('playFormatChips',player.play_format||'Both');
+  S.matchGenderPref=player.match_gender_pref||'Both';
+  restoreChip('matchGenderPrefChips',player.match_gender_pref||'Both');
+  onMatchGenderPrefChange(S.matchGenderPref);
   restoreChip('improveChips',player.wants_to_improve);
   restoreChip('lessonChips',player.has_had_lesson);
   S.gender=player.gender||''; S.handedness=player.handedness||'';
@@ -7668,7 +7815,7 @@ function updateInviteCounter(){
   const seen = new Set();
   let total = 0;
   allGroups.forEach(g=>{
-    if(!g||g==='specific') return;
+    if(!g||g==='specific'||g==='group_subs') return;
     getGroupPlayers(g, skills).forEach(p=>{
       const e=(p.email||'').toLowerCase();
       if(!seen.has(e) && !MS.deselectedPlayers?.has(e)){
@@ -7679,6 +7826,11 @@ function updateInviteCounter(){
   // Add specific picks (deduplicated)
   if(allGroups.has('specific')){
     MS.specificPlayers.forEach(e=>{ if(!seen.has(e)){ seen.add(e); total++; } });
+  }
+  // Add group+subs picks (primary + subs)
+  if(allGroups.has('group_subs')){
+    MS.primaryPlayers.forEach(e=>{ if(!seen.has(e)){ seen.add(e); total++; } });
+    MS.subPlayers.forEach(e=>{ if(!seen.has(e)){ seen.add(e); total++; } });
   }
 
   counter.style.display = allGroups.size > 0 ? 'block' : 'none';
