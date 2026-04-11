@@ -4216,7 +4216,8 @@ async function loadAllMatchBadges(){
     const pendingOrg = orgMatches.filter(m=>!isMatchPast(m)).length;
     updateMatchBadge('myInvitesBadge', pendingOrg, 'rgba(239,68,68,0.85)');
 
-    // Invites to me — pending response AND match is still open (not full)
+    // Invites to me — pending response AND match is still open (not full, not cancelled,
+    // not past, and not a match I organized myself)
     const rRes = await fetch(
       `${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.pending&select=match_id`,
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
@@ -4226,10 +4227,10 @@ async function loadAllMatchBadges(){
     if(pendingResps.length){
       const pendIds = pendingResps.map(r=>r.match_id);
       const openMatchRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/matches?id=in.(${pendIds.join(',')})&status=neq.full&status=neq.cancelled&select=id,match_date,time_start,time_end`,
+        `${SUPABASE_URL}/rest/v1/matches?id=in.(${pendIds.join(',')})&status=neq.full&status=neq.cancelled&select=id,match_date,time_start,time_end,organizer_email`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       const openMatches = openMatchRes.ok ? await openMatchRes.json() : [];
-      iboCount = openMatches.filter(m=>!isMatchPast(m)).length;
+      iboCount = openMatches.filter(m=>!isMatchPast(m) && (m.organizer_email||'').toLowerCase()!==myEmail.toLowerCase()).length;
     }
     updateMatchBadge('invitedByOthersBadge', iboCount, 'rgba(59,130,246,0.85)');
 
@@ -5065,14 +5066,27 @@ async function checkForNewInvites(email){
     );
     if(!res.ok) return;
     const rows = await res.json();
-    const count = rows.length;
+    // Verify matches are still open, not past, and not self-organized
+    let count = 0;
+    let firstMatchId = null;
+    if(rows.length){
+      const ids = rows.map(r=>r.match_id);
+      const mRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/matches?id=in.(${ids.join(',')})&status=neq.full&status=neq.cancelled&select=id,match_date,time_start,time_end,organizer_email`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+      );
+      const openMatches = mRes.ok ? await mRes.json() : [];
+      const valid = openMatches.filter(m=>!isMatchPast(m) && (m.organizer_email||'').toLowerCase()!==email.toLowerCase());
+      count = valid.length;
+      firstMatchId = valid[0]?.id ?? null;
+    }
     // Update both nav badge and top button badge
     updateMatchBadge('invitedByOthersBadge', count, 'rgba(59,130,246,0.85)');
     refreshTopInviteBadge();
     // Show popup if count increased since last check
     if(count > _lastSeenInviteCount && _lastSeenInviteCount >= 0){
       const newCount = count - _lastSeenInviteCount;
-      showNewInvitePopup(newCount, rows[0]?.match_id);
+      showNewInvitePopup(newCount, firstMatchId);
     }
     _lastSeenInviteCount = count;
   }catch(e){}
