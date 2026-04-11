@@ -512,7 +512,7 @@ async function uploadProfilePhoto(email){
         method: 'POST',
         headers:{
           'apikey': SUPABASE_ANON_KEY,
-          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_ACCESS_TOKEN,
           'Content-Type': S.photoFile.type,
           'x-upsert': 'true'
         },
@@ -708,9 +708,16 @@ function populateSummary(){
 
 
 // ── Supabase ───────────────────────────────────────────
-// ── Supabase REST (no library — direct fetch) ──────────
 const SUPABASE_URL = 'https://dltiirdjfbjtydazrmvr.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsdGlpcmRqZmJqdHlkYXpybXZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MDQxNzgsImV4cCI6MjA4OTA4MDE3OH0.oBDtS3RZlGxMkqon-r1wdfYR6jPTSPGWIa8cZh7fLWA';
+
+// Supabase auth client — handles magic link sign-in and session persistence
+const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Current user JWT — set to anon key until magic link auth completes.
+// All REST fetch calls use this for the Authorization header so that
+// authenticated requests satisfy RLS policies on the registrations table.
+let SUPABASE_ACCESS_TOKEN = SUPABASE_ANON_KEY;
 
 async function saveRegistration(payload){
   const url = `${SUPABASE_URL}/rest/v1/registrations`;
@@ -719,7 +726,7 @@ async function saveRegistration(payload){
     // Check if player already exists — use PATCH if so, POST if new
     const checkRes = await fetch(
       `${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(payload.email)}&select=id&limit=1`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
     );
     const existing = checkRes.ok ? await checkRes.json() : [];
     const isUpdate = existing.length > 0;
@@ -733,7 +740,7 @@ async function saveRegistration(payload){
         headers: {
           'Content-Type': 'application/json',
           'apikey': SUPABASE_ANON_KEY,
-          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_ACCESS_TOKEN,
           'Prefer': 'return=minimal'
         },
         body: JSON.stringify(payload)
@@ -1076,7 +1083,7 @@ async function doSaveProfile(){
       try{
         const fr = await fetch(
           `${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(savedEmail)}&select=*&limit=1`,
-          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
         );
         if(fr.ok){
           const rows = await fr.json();
@@ -1352,7 +1359,7 @@ async function loadCoachDirectory(){
   list.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;">🔍 Finding coaches near you…</div>';
   try{
     const res=await fetch(`${SUPABASE_URL}/rest/v1/registrations?is_coach=eq.true&select=first_name,last_name,nickname,avatar_emoji,photo_url,skill_level,city,state,coach_certifications,coach_lesson_types,coach_formats,coach_rate_min,coach_rate_max,coach_bio,email&order=skill_level.desc`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const coaches=res.ok?await res.json():[];
     if(meta)meta.textContent=coaches.length+' coach'+(coaches.length!==1?'es':'')+' registered';
     if(!coaches.length){list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--dim);font-size:14px;">No coaches registered yet. Be the first!</div>';return;}
@@ -1413,9 +1420,9 @@ async function openRecordResults(matchId, matchType){
   try{
     const [mRes, rRes] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}&select=*`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}),
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}),
       fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.in&select=player_email,player_name`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}})
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
     ]);
     const matches = mRes.ok ? await mRes.json() : [];
     const responses = rRes.ok ? await rRes.json() : [];
@@ -1435,7 +1442,7 @@ async function openRecordResults(matchId, matchType){
     if(emails.length){
       const pRes = await fetch(
         `${SUPABASE_URL}/rest/v1/registrations?email=in.(${emails.map(e=>encodeURIComponent(e)).join(',')})&select=email,first_name,last_name,avatar_emoji,photo_url`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       profiles = pRes.ok ? await pRes.json() : [];
     }
 
@@ -1606,7 +1613,7 @@ async function srConfirmGame(){
     };
     const res = await fetch(`${SUPABASE_URL}/rest/v1/match_results`,{
       method: 'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
       body: JSON.stringify(payload)
     });
     if(!res.ok) throw new Error('Save failed');
@@ -1755,7 +1762,7 @@ async function saveWalkOnMatch(){
     // Create a walk-on match record
     const matchRes = await fetch(`${SUPABASE_URL}/rest/v1/matches`,{
       method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=representation'},
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=representation'},
       body:JSON.stringify({
         organizer_email: myEmail,
         organizer_name: (SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:''),
@@ -1773,7 +1780,7 @@ async function saveWalkOnMatch(){
     // Save score
     await fetch(`${SUPABASE_URL}/rest/v1/match_results`,{
       method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
       body:JSON.stringify({
         match_id: matchId,
         game_number: 1,
@@ -1846,7 +1853,7 @@ async function loadMyCourts(){
       const rpcRes = await fetch(
         `${SUPABASE_URL}/rest/v1/rpc/get_courts_within_radius`,
         { method:'POST',
-          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY},
+          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN},
           body: JSON.stringify({t_lat:cityData.lat, t_long:cityData.lon, radius_miles:radiusMiles})
         }
       );
@@ -1871,7 +1878,7 @@ async function loadMyCourts(){
           : Object.values(STATE_INFO).find(v=>v[1].toLowerCase()===addrState.toLowerCase())?.[0]||addrState;
         const res = await fetch(
           `${SUPABASE_URL}/rest/v1/courts?select=*&state=eq.${encodeURIComponent(stateAbbr)}&limit=500`,
-          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
         );
         if(res.ok){
           const all = await res.json();
@@ -1894,7 +1901,7 @@ async function loadMyCourts(){
       try{
         const res = await fetch(
           `${SUPABASE_URL}/rest/v1/courts?select=*&limit=1000`,
-          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
         );
         if(res.ok){
           const all = await res.json();
@@ -2005,7 +2012,7 @@ async function renderCourtsContainers(){
     try{
       const savedRes = await fetch(
         `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(myEmail)}&select=court_id,is_member`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
       );
       if(savedRes.ok){
         const savedRows = await savedRes.json();
@@ -2116,7 +2123,7 @@ async function addCustomCourt(type){
   try{
     await fetch(`${SUPABASE_URL}/rest/v1/courts`,{
       method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
       body:JSON.stringify({
         name, address, city:S.city||address.split(',')[1]?.trim()||'',
         state:S.state||'', is_private:type==='private',
@@ -2160,7 +2167,7 @@ async function saveMyCourts(){
   try{
     await fetch(`${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(playerEmail)}`,{
       method:'DELETE',
-      headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}
+      headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}
     });
   }catch(e){}
 
@@ -2170,7 +2177,7 @@ async function saveMyCourts(){
     const courtId=court?.id&&!court.id.startsWith('osm_')&&!court.id.startsWith('custom_')?court.id:null;
     return fetch(`${SUPABASE_URL}/rest/v1/player_courts`,{
       method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
       body:JSON.stringify({
         player_email: playerEmail,
         court_id: courtId,
@@ -2951,7 +2958,7 @@ async function loadMatchCourts(){
     // Step 1: get court IDs saved by this player
     const pcRes = await fetch(
       `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(myEmail)}&select=court_id`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
     );
     const pcRows = pcRes.ok ? await pcRes.json() : [];
     const courtIds = pcRows.map(r=>r.court_id).filter(Boolean);
@@ -2966,7 +2973,7 @@ async function loadMatchCourts(){
     const inFilter = courtIds.map(id=>`"${id}"`).join(',');
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/courts?id=in.(${courtIds.join(',')})&select=id,name,address,city,state,is_private,is_indoor,num_courts`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
     );
     const courts = res.ok ? await res.json() : [];
 
@@ -3117,7 +3124,7 @@ async function checkMatchOverlap(){
   try{
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&match_date=eq.${date}&status=neq.cancelled&select=time_start,time_end,court_name,match_type`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
     );
     const existing = res.ok ? await res.json() : [];
     const conflicts = existing.filter(m=>{
@@ -3280,7 +3287,7 @@ async function submitMatch(){
     }
     const matchRes=await fetch(`${SUPABASE_URL}/rest/v1/matches`,{
       method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=representation'},
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=representation'},
       body:JSON.stringify({organizer_email:myEmail,organizer_name:myName,match_type:MS.format,invite_group:MS.group,is_feeler:MS.isFeeler,match_date:date,time_start:timeStart,time_end:timeEnd,court_id:saveCourtId,court_name:saveCourtName,court_address:saveCourtAddress,is_private_court:saveIsPrivate,max_players:MS.format==='doubles'?4:2,notes:note||null})
     });
     const matchRows=matchRes.ok?await matchRes.json():[];
@@ -3311,7 +3318,7 @@ async function submitMatch(){
         try{
           const oRes = await fetch(
             `${SUPABASE_URL}/rest/v1/registrations?email=in.(${outerSpecific.map(e=>encodeURIComponent(e)).join(',')})&select=email,first_name,last_name`,
-            {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+            {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
           const oPros = oRes.ok ? await oRes.json() : [];
           const oMap = {}; oPros.forEach(p=>{oMap[p.email]=p;});
           outerSpecific.forEach(email=>{
@@ -3327,7 +3334,7 @@ async function submitMatch(){
     if(matchId){
       await fetch(`${SUPABASE_URL}/rest/v1/match_responses`,{
         method:'POST',
-        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
         body:JSON.stringify({match_id:matchId,player_email:myEmail,player_name:myName,response:'in'})
       }).catch(()=>{});
     }
@@ -3343,7 +3350,7 @@ async function submitMatch(){
       }
     }catch(e){}
     for(const player of invitees){
-      if(matchId) await fetch(`${SUPABASE_URL}/rest/v1/match_responses`,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},body:JSON.stringify({match_id:matchId,player_email:player.email,player_name:((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim(),response:'pending'})}).catch(()=>{});
+      if(matchId) await fetch(`${SUPABASE_URL}/rest/v1/match_responses`,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},body:JSON.stringify({match_id:matchId,player_email:player.email,player_name:((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim(),response:'pending'})}).catch(()=>{});
       if(player.email){
         const matchUrl=window.location.origin+window.location.pathname+'?match='+matchId;
         sendEmail({ to_email:player.email, type:'match_invite', personal_note:(MS.format==='doubles'?'Doubles':'Singles')+' · '+dateStr+' '+timeStr+(MS.courtName?' @ '+MS.courtName:'')+(note?' · Note: '+note:'')+weatherNote, invite_url:matchUrl });
@@ -3366,12 +3373,12 @@ async function loadSentMatches(){
   const list=document.getElementById('matchSentList');
   if(!list||!myEmail) return;
   try{
-    const res=await fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&order=created_at.desc&limit=20`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&order=created_at.desc&limit=20`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const matches=res.ok?await res.json():[];
     const matchIds=matches.map(m=>m.id);
     let allResponses=[];
     if(matchIds.length){
-      const rRes=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${matchIds.join(',')})&select=match_id,player_name,player_email,response`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      const rRes=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${matchIds.join(',')})&select=match_id,player_name,player_email,response`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       allResponses=rRes.ok?await rRes.json():[];
     }
     list.innerHTML='';
@@ -3454,7 +3461,7 @@ async function loadMatchSquareCounts(){
   if(!myEmail) return;
   try{
     // My matches — split confirmed (full) vs pending (open)
-    const myRes=await fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=neq.cancelled&select=id,status,max_players,match_date,time_start,time_end`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const myRes=await fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=neq.cancelled&select=id,status,max_players,match_date,time_start,time_end`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const myMatches=myRes.ok?await myRes.json():[];
     // Only count future matches
     const myFuture    = myMatches.filter(m=>!isMatchPast(m));
@@ -3468,12 +3475,12 @@ async function loadMatchSquareCounts(){
     updateMatchBadge('myInvitesBadge', myPending, 'rgba(239,68,68,0.85)');
 
     // Invited to — fetch my responses and join with match status
-    const invRes=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&select=match_id,response`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const invRes=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&select=match_id,response`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const invRows=invRes.ok?await invRes.json():[];
     const invMatchIds=invRows.map(r=>r.match_id);
     let invConfirmed=0, invOpen=0;
     if(invMatchIds.length){
-      const mRes=await fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${invMatchIds.join(',')})&select=id,status,match_date,time_start,time_end`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      const mRes=await fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${invMatchIds.join(',')})&select=id,status,match_date,time_start,time_end`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       const invMatches=mRes.ok?await mRes.json():[];
       const invFuture = invMatches.filter(m=>!isMatchPast(m));
       invConfirmed=invFuture.filter(m=>m.status==='full').length;
@@ -3511,13 +3518,13 @@ async function fetchPlayerStats(emails){
     // Reliability: matches they committed to vs actually played
     const mrRes = await fetch(
       `${SUPABASE_URL}/rest/v1/match_responses?player_email=in.(${emails.map(e=>encodeURIComponent(e)).join(',')})&select=player_email,response,actually_played,cancelled_at`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const responses = mrRes.ok ? await mrRes.json() : [];
 
     // Conduct: feedback from matches
     const fbRes = await fetch(
       `${SUPABASE_URL}/rest/v1/player_feedback?reviewed_email=in.(${emails.map(e=>encodeURIComponent(e)).join(',')})&select=reviewed_email,would_play_again`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const feedback = fbRes.ok ? await fbRes.json() : [];
 
     const stats = {};
@@ -3558,7 +3565,7 @@ async function showPostMatchFeedback(matchId, players){
   // Check if already reviewed this match
   const checkRes = await fetch(
     `${SUPABASE_URL}/rest/v1/player_feedback?match_id=eq.${matchId}&reviewer_email=eq.${encodeURIComponent(myEmail)}&select=id&limit=1`,
-    {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
   const existing = checkRes.ok ? await checkRes.json() : [];
   if(existing.length) return; // Already reviewed
 
@@ -3596,7 +3603,7 @@ async function showPostMatchFeedback(matchId, players){
     try{
       await fetch(`${SUPABASE_URL}/rest/v1/player_feedback`,{
         method:'POST',
-        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
         body:JSON.stringify({match_id:matchId,reviewer_email:myEmail,reviewed_email:reviewedEmail,would_play_again:wouldPlayAgain})
       });
     }catch(e){}
@@ -3623,7 +3630,7 @@ async function showPostMatchFeedback(matchId, players){
 function maybeShowPostMatchFeedback(matchId){
   // Fetch confirmed players for this match and show feedback prompt
   fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.in&select=player_email,player_name`,
-    {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}})
+    {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
     .then(r=>r.json())
     .then(players=>{ setTimeout(()=>showPostMatchFeedback(matchId, players), 1500); })
     .catch(()=>{});
@@ -3638,9 +3645,9 @@ async function loadConfirmedMatches(){
   try{
     const [orgRes, respRes] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=eq.full&or=(is_walk_on.is.null,is_walk_on.eq.false)&order=match_date.asc,time_start.asc`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}),
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}),
       fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.in&select=match_id`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}})
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
     ]);
     const orgMatches = orgRes.ok ? await orgRes.json() : [];
     const myResponses = respRes.ok ? await respRes.json() : [];
@@ -3649,7 +3656,7 @@ async function loadConfirmedMatches(){
       const ids = myResponses.map(r=>r.match_id);
       const imRes = await fetch(
         `${SUPABASE_URL}/rest/v1/matches?id=in.(${ids.join(',')})&status=eq.full&or=(is_walk_on.is.null,is_walk_on.eq.false)&order=match_date.asc`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       invitedMatches = imRes.ok ? await imRes.json() : [];
     }
     const allIds = new Set();
@@ -3666,7 +3673,7 @@ async function loadConfirmedMatches(){
     // Fetch ALL responses (in + waitlist) so we can split them properly
     const rRes = await fetch(
       `${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${matchIds.join(',')})&response=in.(in,waitlist)&select=match_id,player_name,player_email,response`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const responses = rRes.ok ? await rRes.json() : [];
     // Verify each match actually has enough confirmed players — status=full can be stale
     allMatches = allMatches.filter(m=>{
@@ -3687,7 +3694,7 @@ async function loadConfirmedMatches(){
     if(courtIds.length){
       const cRes = await fetch(
         `${SUPABASE_URL}/rest/v1/courts?id=in.(${courtIds.map(id=>encodeURIComponent(id)).join(',')})&select=id,name,address,lat,lon,indoor`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       const courts = cRes.ok ? await cRes.json() : [];
       courts.forEach(co=>{ courtData[co.id]=co; });
     }
@@ -3797,7 +3804,7 @@ async function loadConfirmedMatches(){
 
 async function openEditMatchModal(matchId){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}&select=*&limit=1`,
-    {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
   const rows = res.ok ? await res.json() : [];
   const m = rows[0]; if(!m) return;
 
@@ -3860,12 +3867,12 @@ async function openEditMatchModal(matchId){
     try{
       const myEmail = getMyEmail();
       const pcRes = await fetch(`${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(myEmail)}&select=court_id`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       const pcRows = pcRes.ok ? await pcRes.json() : [];
       const courtIds = pcRows.map(r=>r.court_id).filter(Boolean);
       if(!courtIds.length){ sel.innerHTML='<option value="">No saved courts — type manually below</option>'; return; }
       const cRes = await fetch(`${SUPABASE_URL}/rest/v1/courts?id=in.(${courtIds.join(',')})&select=id,name,address&order=name.asc`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       const courts = cRes.ok ? await cRes.json() : [];
       sel.innerHTML = '<option value="">— Select from My Courts —</option>';
       courts.forEach(co=>{
@@ -3903,7 +3910,7 @@ async function saveMatchEdits(matchId){
   try{
     await fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}`,{
       method:'PATCH',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
       body:JSON.stringify(Object.fromEntries(Object.entries({
         match_date:date, time_start:timeStart, time_end:timeEnd,
         court_name:courtName||'TBD', court_address:courtAddr||null, notes:note||null
@@ -3912,7 +3919,7 @@ async function saveMatchEdits(matchId){
     // Notify confirmed players
     const rRes = await fetch(
       `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.in&select=player_email,player_name`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const players = rRes.ok ? await rRes.json() : [];
     const myEmail = getMyEmail(); const myName = getMyName();
     const dateStr = date?new Date(date+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}):'';
@@ -3945,13 +3952,13 @@ async function cancelMatch(matchId){
     // Get all players who were invited (in + pending)
     const rRes = await fetch(
       `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=in.(in,pending)&select=player_email,player_name`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const players = rRes.ok ? await rRes.json() : [];
 
     // Get match details for the email
     const mRes = await fetch(
       `${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}&select=match_date,time_start,match_type,court_name&limit=1`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const matches = mRes.ok ? await mRes.json() : [];
     const m = matches[0];
     const dateStr = m?.match_date ? new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}) : 'upcoming';
@@ -3962,7 +3969,7 @@ async function cancelMatch(matchId){
     // Mark match as cancelled in DB
     await fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}`,{
       method:'PATCH',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
       body:JSON.stringify({status:'cancelled'})
     });
 
@@ -3993,7 +4000,7 @@ async function cancelMatch(matchId){
 async function openUninviteModal(matchId, matchType){
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.in&select=player_email,player_name`,
-    {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
   const players = res.ok ? await res.json() : [];
   const myEmail = getMyEmail();
   const others  = players.filter(p=>(p.player_email||'').toLowerCase()!==myEmail.toLowerCase());
@@ -4029,12 +4036,12 @@ async function confirmUninvite(matchId, playerEmail, playerName){
     await fetch(
       `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&player_email=eq.${encodeURIComponent(playerEmail)}`,{
       method:'PATCH',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
       body:JSON.stringify({response:'out'})
     });
     await fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}`,{
       method:'PATCH',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
       body:JSON.stringify({status:'open'})
     });
     document.getElementById('uninviteOverlay')?.remove();
@@ -4089,9 +4096,9 @@ async function loadRecordScores(){
     // Get past matches where I'm organizer or confirmed in
     const [orgRes, respRes] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&order=match_date.desc`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}),
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}),
       fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.in&select=match_id`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}})
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
     ]);
     const orgMatches = orgRes.ok ? await orgRes.json() : [];
     const myResponses = respRes.ok ? await respRes.json() : [];
@@ -4100,7 +4107,7 @@ async function loadRecordScores(){
       const ids = myResponses.map(r=>r.match_id);
       const imRes = await fetch(
         `${SUPABASE_URL}/rest/v1/matches?id=in.(${ids.join(',')})&order=match_date.desc`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       invitedMatches = imRes.ok ? await imRes.json() : [];
     }
     const allIds = new Set();
@@ -4118,7 +4125,7 @@ async function loadRecordScores(){
     const matchIds = pastMatches.map(m=>m.id);
     const srRes = await fetch(
       `${SUPABASE_URL}/rest/v1/match_results?match_id=in.(${matchIds.join(',')})&select=match_id,game_number,team_a_score,team_b_score`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const scores = srRes.ok ? await srRes.json() : [];
 
     pastMatches.forEach(m=>{
@@ -4204,7 +4211,7 @@ async function loadAllMatchBadges(){
     // Pending invites I organized (open=not full, not cancelled, not past)
     const orgRes = await fetch(
       `${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=neq.full&status=neq.cancelled&select=id,match_date,time_end,time_start,match_type`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const orgMatches = orgRes.ok ? await orgRes.json() : [];
     const pendingOrg = orgMatches.filter(m=>!isMatchPast(m)).length;
     updateMatchBadge('myInvitesBadge', pendingOrg, 'rgba(239,68,68,0.85)');
@@ -4212,7 +4219,7 @@ async function loadAllMatchBadges(){
     // Invites to me — pending response AND match is still open (not full)
     const rRes = await fetch(
       `${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.pending&select=match_id`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const pendingResps = rRes.ok ? await rRes.json() : [];
     // Verify the matches are still open and not past
     let iboCount = 0;
@@ -4220,7 +4227,7 @@ async function loadAllMatchBadges(){
       const pendIds = pendingResps.map(r=>r.match_id);
       const openMatchRes = await fetch(
         `${SUPABASE_URL}/rest/v1/matches?id=in.(${pendIds.join(',')})&status=neq.full&status=neq.cancelled&select=id,match_date,time_start,time_end`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       const openMatches = openMatchRes.ok ? await openMatchRes.json() : [];
       iboCount = openMatches.filter(m=>!isMatchPast(m)).length;
     }
@@ -4229,9 +4236,9 @@ async function loadAllMatchBadges(){
     // Confirmed future matches
     const [cfOrgRes, cfRespRes] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=eq.full&select=id,match_date,time_start,time_end`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}),
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}),
       fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.in&select=match_id`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}})
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
     ]);
     const cfOrg = cfOrgRes.ok ? await cfOrgRes.json() : [];
     const cfResp = cfRespRes.ok ? await cfRespRes.json() : [];
@@ -4240,7 +4247,7 @@ async function loadAllMatchBadges(){
       const ids = cfResp.map(r=>r.match_id);
       const cfIRes = await fetch(
         `${SUPABASE_URL}/rest/v1/matches?id=in.(${ids.join(',')})&status=eq.full&select=id,match_date,time_start,time_end`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       cfInvited = cfIRes.ok ? await cfIRes.json() : [];
     }
     const allConfirmedIds = new Set();
@@ -4261,12 +4268,12 @@ async function loadMyInvitesPage(){
   container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:12px 0;">Loading…</div>';
   try{
     // Show open/pending matches + cancelled ones for reference
-    const res=await fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=neq.full&order=match_date.desc,time_start.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=neq.full&order=match_date.desc,time_start.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const matches=res.ok?await res.json():[];
     const ids=matches.map(m=>m.id);
     let responses=[];
     if(ids.length){
-      const rr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${ids.join(',')})&select=match_id,player_name,player_email,response`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      const rr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${ids.join(',')})&select=match_id,player_name,player_email,response`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       responses=rr.ok?await rr.json():[];
     }
     container.innerHTML='';
@@ -4284,7 +4291,7 @@ async function loadMyInvitesPage(){
     const allCourtIds = [...new Set(matches.map(m=>m.court_id).filter(Boolean))];
     if(allCourtIds.length){
       const cr = await fetch(`${SUPABASE_URL}/rest/v1/courts?id=in.(${allCourtIds.join(',')})&select=id,name,address`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       const courts = cr.ok ? await cr.json() : [];
       courts.forEach(co=>{ miCourtData[co.id]=co; });
     }
@@ -4419,7 +4426,7 @@ async function loadMyInviteWeather(m, elId){
     if(m.court_id){
       const cr = await fetch(
         `${SUPABASE_URL}/rest/v1/courts?id=eq.${encodeURIComponent(m.court_id)}&select=lat,lon&limit=1`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       const courts = cr.ok ? await cr.json() : [];
       if(courts[0]?.lat){ lat=courts[0].lat; lon=courts[0].lon; }
     }
@@ -4515,7 +4522,7 @@ async function loadInvitedByOthersPage(){
   try{
     // Get my match responses — but EXCLUDE matches I organized
     const rr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&select=match_id,response,responded_at&order=responded_at.desc`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const myResponses=rr.ok?await rr.json():[];
     if(!myResponses.length){
       container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">You have not been invited to any matches yet.</div>';
@@ -4525,7 +4532,7 @@ async function loadInvitedByOthersPage(){
     // Fetch open matches — filter out my own organized matches in JS (more reliable than neq)
     const mr=await fetch(
       `${SUPABASE_URL}/rest/v1/matches?id=in.(${matchIds.join(',')})&status=neq.full&status=neq.cancelled&select=*&order=match_date.asc`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const allMatches=mr.ok?await mr.json():[];
     // Filter out: past matches AND matches I organized (case-insensitive email compare)
     const myEmailLower = myEmail.toLowerCase();
@@ -4540,7 +4547,7 @@ async function loadInvitedByOthersPage(){
     }
     // Fetch all IN responses for these matches
     const rRes=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${matches.map(m=>m.id).join(',')})&response=eq.in&select=match_id,player_name,player_email`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const allResponses=rRes.ok?await rRes.json():[];
 
     matches.forEach(m=>{
@@ -4728,7 +4735,7 @@ async function checkMatchToken(){
     // Fetch match details
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}&select=*`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
     );
     const matches = res.ok ? await res.json() : [];
     if(!matches.length) return;
@@ -4739,7 +4746,7 @@ async function checkMatchToken(){
     if(myEmail){
       await fetch(
         `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&player_email=eq.${encodeURIComponent(myEmail)}`,
-        {method:'PATCH',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+        {method:'PATCH',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
          body:JSON.stringify({viewed_at:new Date().toISOString()})}
       ).catch(()=>{});
     }
@@ -4833,9 +4840,9 @@ async function respondToMatch(matchId, response){
     // Check current match + confirmed count
     const [matchRes, confirmedRes] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}&select=match_type,status,max_players`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}),
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}),
       fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.in&select=player_email`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}})
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
     ]);
     const matches = matchRes.ok ? await matchRes.json() : [];
     const confirmed = confirmedRes.ok ? await confirmedRes.json() : [];
@@ -4856,7 +4863,7 @@ async function respondToMatch(matchId, response){
       headers:{
         'Content-Type':'application/json',
         'apikey':SUPABASE_ANON_KEY,
-        'Authorization':'Bearer '+SUPABASE_ANON_KEY,
+        'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,
         'Prefer':'return=minimal'
       },
       body:JSON.stringify({
@@ -4876,7 +4883,7 @@ async function respondToMatch(matchId, response){
           headers:{
             'Content-Type':'application/json',
             'apikey':SUPABASE_ANON_KEY,
-            'Authorization':'Bearer '+SUPABASE_ANON_KEY,
+            'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,
             'Prefer':'return=minimal'
           },
           body:JSON.stringify({
@@ -4905,7 +4912,7 @@ async function respondToMatch(matchId, response){
     } else if(actualResponse==='waitlist'){
       const wRes = await fetch(
         `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.waitlist&select=player_email&order=responded_at.asc`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       const waitlist = wRes.ok ? await wRes.json() : [];
       const pos = waitlist.findIndex(r=>r.player_email===myEmail)+1;
       showToast('On the waitlist - position #'+pos,'#f59e0b');
@@ -4928,9 +4935,9 @@ async function checkAndUpdateMatchStatus(matchId){
   try{
     const [matchRes, respRes] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}&select=match_type,status,max_players`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}),
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}),
       fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.in&select=player_email`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}})
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
     ]);
     const matches = matchRes.ok ? await matchRes.json() : [];
     const confirmed = respRes.ok ? await respRes.json() : [];
@@ -4941,7 +4948,7 @@ async function checkAndUpdateMatchStatus(matchId){
       // Mark match as full/confirmed
       await fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}`,{
         method:'PATCH',
-        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
         body:JSON.stringify({status:'full'})
       });
       showToast('✅ Match is now full — moved to Confirmed Matches!','#4CAF7D');
@@ -4956,7 +4963,7 @@ async function notifyOrganizerOfDecline(matchId, declinerEmail){
     // Get match + organizer info
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}&select=organizer_email,organizer_name,match_type,match_date,time_start,court_name`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
     );
     const matches = res.ok ? await res.json() : [];
     if(!matches.length) return;
@@ -4988,7 +4995,7 @@ async function addMatchCourtToMyCourts(courtId, courtName, courtAddress, btn){
     await fetch(`${SUPABASE_URL}/rest/v1/player_courts`,{
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
-               'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+               'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
       body: JSON.stringify({player_email:myEmail, court_id:courtId, is_member:false})
     });
     btn.textContent = '✅ Added!';
@@ -5031,14 +5038,14 @@ async function refreshTopInviteBadge(){
   try{
     const rRes = await fetch(
       `${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.pending&select=match_id`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const pending = rRes.ok ? await rRes.json() : [];
     let count = 0;
     if(pending.length){
       const ids = pending.map(r=>r.match_id);
       const mRes = await fetch(
         `${SUPABASE_URL}/rest/v1/matches?id=in.(${ids.join(',')})&status=neq.full&status=neq.cancelled&select=id,match_date,time_start,time_end`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       const openMatches = mRes.ok ? await mRes.json() : [];
       count = openMatches.filter(m=>!isMatchPast(m)).length;
     }
@@ -5054,7 +5061,7 @@ async function checkForNewInvites(email){
   try{
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(email)}&response=eq.pending&select=match_id`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
     );
     if(!res.ok) return;
     const rows = await res.json();
@@ -5151,7 +5158,7 @@ async function doLogin(){
   const loadingEl  = document.getElementById('loginLoading');
   const formEl     = document.getElementById('loginForm');
   const successEl  = document.getElementById('loginSuccess');
-  const successMsg = document.getElementById('loginSuccessMsg');
+  const detailEl   = document.getElementById('loginSuccessDetail');
 
   const email = (emailInput?.value||'').trim().toLowerCase();
   if(!email || !email.includes('@')){
@@ -5159,55 +5166,60 @@ async function doLogin(){
     return;
   }
   if(errorEl) errorEl.style.display='none';
-  if(submitBtn){ submitBtn.disabled=true; submitBtn.textContent='Signing in…'; }
+  if(submitBtn){ submitBtn.disabled=true; submitBtn.textContent='Sending link…'; }
   if(formEl) formEl.style.display='none';
   if(loadingEl) loadingEl.style.display='block';
 
   try{
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(email)}&select=*&limit=1`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
-    );
-    if(!res.ok) throw new Error('Could not reach server');
-    const players = await res.json();
-    if(!players.length){
-      if(loadingEl) loadingEl.style.display='none';
-      if(formEl) formEl.style.display='block';
-      if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent='Create My Profile →'; }
-      // New user — save email, close modal, take them to registration
-      if(errorEl){
-        errorEl.innerHTML='<div style="padding:10px 12px;background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.25);border-radius:8px;color:var(--green);">'+
-          '👋 Looks like you\'re new! Let\'s build your profile.'+
-          '<br><button onclick="startNewRegistration(\''+email+'\')" style="margin-top:8px;width:100%;padding:10px;border-radius:8px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:13px;cursor:pointer;">'+
-          '🎾 Create My Profile →</button></div>';
-        errorEl.style.display='block';
-      }
-      return;
-    }
-    const player = players[0];
+    const { error } = await _supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin + window.location.pathname }
+    });
+    if(error) throw error;
     if(loadingEl) loadingEl.style.display='none';
     if(successEl) successEl.style.display='block';
-    if(successMsg) successMsg.textContent='Welcome back, '+(player.first_name||'Player')+'! 🎾';
-    localStorage.setItem('pb_email', email);
-    setTimeout(()=>{ closeLoginModal(); restoreSession(email, player); }, 1200);
+    if(detailEl) detailEl.textContent='We sent a magic link to '+email+'. Click it to sign in — no password needed.';
   }catch(e){
     if(loadingEl) loadingEl.style.display='none';
     if(formEl) formEl.style.display='block';
-    if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent='Sign In →'; }
-    if(errorEl){ errorEl.textContent='Sign in failed: '+e.message; errorEl.style.display='block'; }
+    if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent='Continue →'; }
+    if(errorEl){ errorEl.textContent='Could not send link: '+e.message; errorEl.style.display='block'; }
   }
 }
 
 function signOut(){
+  _supabase.auth.signOut().catch(()=>{});
   localStorage.removeItem('pb_email');
+  SUPABASE_ACCESS_TOKEN = SUPABASE_ANON_KEY;
   S.email=''; S.nickname=''; S.avatarEmoji='🎾'; S.skill='';
   SESSION_PLAYER=null;
   location.reload();
 }
 
 function initLogin(){
-  const savedEmail = localStorage.getItem('pb_email');
-  if(savedEmail) restoreSession(savedEmail);
+  // Listen for magic link callback and ongoing auth state changes
+  _supabase.auth.onAuthStateChange(async(event, session)=>{
+    if(event==='SIGNED_IN' && session){
+      SUPABASE_ACCESS_TOKEN = session.access_token;
+      localStorage.setItem('pb_email', session.user.email);
+      closeLoginModal();
+      // Only restore session if not already signed in (avoids double-load on tab focus)
+      if(!SESSION_PLAYER) await restoreSession(session.user.email);
+    } else if(event==='TOKEN_REFRESHED' && session){
+      SUPABASE_ACCESS_TOKEN = session.access_token;
+    } else if(event==='SIGNED_OUT'){
+      SUPABASE_ACCESS_TOKEN = SUPABASE_ANON_KEY;
+    }
+  });
+
+  // Restore from an existing Supabase session (persisted in localStorage by the SDK)
+  _supabase.auth.getSession().then(async({data:{session}})=>{
+    if(session){
+      SUPABASE_ACCESS_TOKEN = session.access_token;
+      localStorage.setItem('pb_email', session.user.email);
+      await restoreSession(session.user.email);
+    }
+  });
 }
 
 document.addEventListener('DOMContentLoaded', initLogin);
@@ -5221,12 +5233,17 @@ async function restoreSession(email, playerData){
     try{
       const res = await fetch(
         `${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(email)}&select=*&limit=1`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
       );
       if(res.ok){ const rows = await res.json(); player = rows[0]; }
     }catch(e){ console.warn('Session restore failed:', e); return; }
   }
-  if(!player) return;
+  // New user — auth succeeded via magic link but no registration exists yet
+  if(!player){
+    S.email = email.toLowerCase();
+    startNewRegistration(email);
+    return;
+  }
 
   S.email        = (player.email||'').toLowerCase();
   S.city         = player.city || '';
@@ -5266,7 +5283,7 @@ async function restoreSession(email, playerData){
   setTimeout(async()=>{
     try{
       const myEm=(player.email||'').toLowerCase();
-      const mir=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEm)}&response=eq.pending&select=match_id`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      const mir=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEm)}&response=eq.pending&select=match_id`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       const mRows=mir.ok?await mir.json():[];
       const mCount=mRows.length;
       const topBadge=document.getElementById('topMatchInvitesBadge');
@@ -5283,7 +5300,7 @@ async function restoreSession(email, playerData){
     try{
       const r = await fetch(
         `${SUPABASE_URL}/rest/v1/connections?recipient_email=eq.${encodeURIComponent(myEmail)}&status=eq.pending&select=id`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
       );
       if(r.ok){
         const reqs = await r.json();
@@ -5342,7 +5359,7 @@ async function loadCourtBadgesForNav(email){
     // Fetch saved courts including is_private flag we now store
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(email)}&select=court_id,is_private`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
     );
     if(!res.ok){ updateNavCourtBadges(0,0); return; }
     const rows = await res.json();
@@ -5443,7 +5460,7 @@ async function loadPlayerCourtsForSummary(email){
   if(!email)return;
   try{
     const res=await fetch(`${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(email)}&is_member=eq.true&select=court_id`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     if(!res.ok)return;
     const rows=await res.json();
     const clubRow=document.getElementById('sumClubRow');
@@ -5452,7 +5469,7 @@ async function loadPlayerCourtsForSummary(email){
       const ids=rows.map(r=>r.court_id).filter(Boolean);
       if(ids.length){
         const cr=await fetch(`${SUPABASE_URL}/rest/v1/courts?id=in.(${ids.join(',')})&select=name`,
-          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
         const courts=cr.ok?await cr.json():[];
         if(courts.length){clubEl.textContent=courts.map(c=>c.name).join(', ');clubRow.style.display='flex';return;}
       }
@@ -5465,7 +5482,7 @@ async function fetchAndRestoreProfile(email){
   try{
     const res=await fetch(
       `${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(email)}&select=*&limit=1`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
     );
     if(res.ok){
       const rows=await res.json();
@@ -5792,7 +5809,7 @@ async function loadInnerCircle(){
   try{
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/connections?or=(requester_email.eq.${encodeURIComponent(myEmail)},recipient_email.eq.${encodeURIComponent(myEmail)})&status=eq.approved&select=*`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
     );
     if(!res.ok) return;
     const conns = await res.json();
@@ -5803,7 +5820,7 @@ async function loadInnerCircle(){
     if(otherEmails.length){
       const pr = await fetch(
         `${SUPABASE_URL}/rest/v1/registrations?email=in.(${otherEmails.map(e=>encodeURIComponent(e)).join(',')})&select=*`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
       );
       if(pr.ok){
         const players = await pr.json();
@@ -5890,7 +5907,7 @@ async function removeFromCircle(connId, btn){
   btn.disabled=true; btn.textContent='Removing…';
   try{
     await fetch(`${SUPABASE_URL}/rest/v1/connections?id=eq.${connId}`,
-      {method:'DELETE',headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      {method:'DELETE',headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     showToast('Removed from Inner Circle','#f59e0b');
     loadInnerCircle();
   }catch(e){ btn.disabled=false; btn.textContent='Remove'; }
@@ -5905,7 +5922,7 @@ async function loadIcPending(){
   try{
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/connections?recipient_email=eq.${encodeURIComponent(myEmail)}&status=eq.pending&select=*`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
     );
     if(!res.ok) return;
     let pending = await res.json();
@@ -5961,14 +5978,14 @@ async function icRespond(connId, status, btn){
     // Get the connection details before patching
     const connRes = await fetch(
       `${SUPABASE_URL}/rest/v1/connections?id=eq.${connId}&select=*`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
     );
     const conns = connRes.ok ? await connRes.json() : [];
     const conn = conns[0];
 
     await fetch(`${SUPABASE_URL}/rest/v1/connections?id=eq.${connId}`,{
       method:'PATCH',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
       body:JSON.stringify({status})
     });
 
@@ -5979,7 +5996,7 @@ async function icRespond(connId, status, btn){
         const myEmail = getMyEmail();
         const reverseRes = await fetch(
           `${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(myEmail)}&recipient_email=eq.${encodeURIComponent(conn.requester_email)}&select=id`,
-          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
         );
         const reverse = reverseRes.ok ? await reverseRes.json() : [];
         if(!reverse.length){
@@ -6002,7 +6019,7 @@ async function icSendRequest(recipientEmail, recipientName, btn, asFavorite=fals
   try{
     await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
       method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
       body:JSON.stringify({requester_email:myEmail,requester_name:getMyName(),recipient_email:recipientEmail,recipient_name:recipientName,status:'pending',is_favorite:asFavorite})
     });
     showToast(asFavorite?'⭐ Favorite invite sent to '+recipientName.split(' ')[0]+'!':'✅ Inner Circle invite sent to '+recipientName,'#4CAF7D');
@@ -6099,7 +6116,7 @@ async function loadFindPlayers(){
     const stateAbbr=(S.state||'NH').length===2?S.state.toUpperCase():'NH';
     const res=await fetch(
       `${SUPABASE_URL}/rest/v1/player_availability?select=player_email,available_until,format,registrations(first_name,last_name,skill_level,city,state,avatar_emoji,gender,handedness,play_venues,court_name,playing_since)&limit=20`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
     );
     if(!res.ok){ results.innerHTML='<div class="ic-empty">No players found.</div>'; return; }
     const rows=await res.json();
@@ -6134,7 +6151,7 @@ async function toggleMyAvailability(on){
   if(!myEmail) return;
   if(!on){
     await fetch(`${SUPABASE_URL}/rest/v1/player_availability?player_email=eq.${encodeURIComponent(myEmail)}`,
-      {method:'DELETE',headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}).catch(()=>{});
+      {method:'DELETE',headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}).catch(()=>{});
   }
 }
 
@@ -6146,7 +6163,7 @@ async function saveMyAvailability(){
   try{
     await fetch(`${SUPABASE_URL}/rest/v1/player_availability`,{
       method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
       body:JSON.stringify({player_email:myEmail,availability:avail,format,available_until:new Date(Date.now()+7*86400000).toISOString()})
     });
     showToast('✅ Availability saved!','#4CAF7D');
@@ -6167,7 +6184,7 @@ async function icSearchPlayers(val){
       const q=val.trim();
       const filter='or=(first_name.ilike.'+encodeURIComponent('*'+q+'*')+',last_name.ilike.'+encodeURIComponent('*'+q+'*')+',nickname.ilike.'+encodeURIComponent('*'+q+'*')+')';
       const res=await fetch(`${SUPABASE_URL}/rest/v1/registrations?${filter}&select=first_name,last_name,email,nickname,skill_level,dupr_rating,gender,city,state,court_name,playing_since&limit=20`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       if(!res.ok){ if(results) results.innerHTML='<div class="ic-empty">Search failed.</div>'; return; }
       const players=await res.json();
       const filtered=myEmail?players.filter(p=>(p.email||'').toLowerCase()!==myEmail):players;
@@ -6176,7 +6193,7 @@ async function icSearchPlayers(val){
       if(myEmail){
         try{
           const cr=await fetch(`${SUPABASE_URL}/rest/v1/connections?or=(requester_email.eq.${encodeURIComponent(myEmail)},recipient_email.eq.${encodeURIComponent(myEmail)})&select=*`,
-            {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+            {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
           if(cr.ok) conns=await cr.json();
         }catch(e){}
       }
@@ -6436,13 +6453,13 @@ async function loadNearbyPlayers(){
       let nearbyPlayers=[];
       if(cityData){
         try{
-          const rpcRes=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_players_within_radius`,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY},body:JSON.stringify({t_lat:cityData.lat,t_long:cityData.lon,radius_miles:radiusMi})});
+          const rpcRes=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_players_within_radius`,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN},body:JSON.stringify({t_lat:cityData.lat,t_long:cityData.lon,radius_miles:radiusMi})});
           if(rpcRes.ok){const data=await rpcRes.json();if(Array.isArray(data)&&data.length>0)nearbyPlayers=data;}
         }catch(e){}
       }
       if(!nearbyPlayers.length){
         const stateAbbr=(S.state||'NH').length===2?S.state.toUpperCase():'NH';
-        const res=await fetch(`${SUPABASE_URL}/rest/v1/registrations?state=eq.${encodeURIComponent(stateAbbr)}&select=first_name,last_name,email,nickname,skill_level,dupr_rating,play_venues,court_name,city,state,avatar_emoji,gender,handedness,playing_since,lat,lon&limit=2000`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+        const res=await fetch(`${SUPABASE_URL}/rest/v1/registrations?state=eq.${encodeURIComponent(stateAbbr)}&select=first_name,last_name,email,nickname,skill_level,dupr_rating,play_venues,court_name,city,state,avatar_emoji,gender,handedness,playing_since,lat,lon&limit=2000`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
         if(res.ok){
           const all=await res.json();
           nearbyPlayers=cityData?all.filter(p=>{if(!p.lat||!p.lon)return false;return haversine(cityData.lat,cityData.lon,parseFloat(p.lat),parseFloat(p.lon))<=radiusMi*1.60934;}):all;
@@ -6452,7 +6469,7 @@ async function loadNearbyPlayers(){
       nearbyAllPlayers=nearbyPlayers; nearbyMyEmail=myEmail;
       let myConns=[];
       if(myEmail){
-        const cr=await fetch(`${SUPABASE_URL}/rest/v1/connections?or=(requester_email.eq.${encodeURIComponent(myEmail)},recipient_email.eq.${encodeURIComponent(myEmail)})&select=*`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+        const cr=await fetch(`${SUPABASE_URL}/rest/v1/connections?or=(requester_email.eq.${encodeURIComponent(myEmail)},recipient_email.eq.${encodeURIComponent(myEmail)})&select=*`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
         if(cr.ok) myConns=await cr.json();
       }
       const buckets={below:[],my:[],above:[]};
@@ -6569,7 +6586,7 @@ async function loadIcInvites(){
   if(!card||!list) return;
   try{
     // Fetch ALL sent invites (pending + approved + declined) for history
-    const res=await fetch(`${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(myEmail)}&select=*&order=created_at.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(myEmail)}&select=*&order=created_at.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     if(!res.ok) return;
     const allSent=await res.json();
     const pending=allSent.filter(c=>c.status==='pending');
@@ -6582,7 +6599,7 @@ async function loadIcInvites(){
       const emails=pending.map(c=>c.recipient_email).filter(Boolean);
       if(emails.length){
         try{
-          const pr=await fetch(`${SUPABASE_URL}/rest/v1/registrations?email=in.(${emails.map(e=>encodeURIComponent(e)).join(',')})&select=email,gender,skill_level`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+          const pr=await fetch(`${SUPABASE_URL}/rest/v1/registrations?email=in.(${emails.map(e=>encodeURIComponent(e)).join(',')})&select=email,gender,skill_level`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
           const registered = pr.ok ? await pr.json() : [];
           // For invitees not yet registered, create placeholder entries so count is correct
           const regEmails = new Set(registered.map(r=>r.email.toLowerCase()));
@@ -6643,7 +6660,7 @@ async function loadIcInvites(){
           cancelBtn.textContent='Cancel';
           cancelBtn.onclick=async function(){
             cancelBtn.disabled=true;cancelBtn.textContent='Cancelling…';
-            await fetch(`${SUPABASE_URL}/rest/v1/connections?id=eq.${conn.id}`,{method:'DELETE',headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+            await fetch(`${SUPABASE_URL}/rest/v1/connections?id=eq.${conn.id}`,{method:'DELETE',headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
             showToast('Invite cancelled','#f59e0b');
             loadIcInvites();
           };
@@ -6898,7 +6915,7 @@ async function loadCommunitySnapshot(){
   const pct=(a,b)=>b>0?Math.round(a/b*100)+'%':'0%';
   try{
     const stateAbbr=(S.state||'NH').length===2?S.state.toUpperCase():'NH';
-    const res=await fetch(`${SUPABASE_URL}/rest/v1/registrations?state=eq.${encodeURIComponent(stateAbbr)}&select=email,skill_level,gender,lat,lon&limit=2000`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/registrations?state=eq.${encodeURIComponent(stateAbbr)}&select=email,skill_level,gender,lat,lon&limit=2000`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     if(!res.ok) throw new Error('Failed');
     const all=await res.json();
     const nearby=all.filter(p=>{if(p.email===myEmail)return false;if(!p.lat||!p.lon)return false;return haversine(cityData.lat,cityData.lon,parseFloat(p.lat),parseFloat(p.lon))<=radiusMi*1.60934;});
@@ -6989,7 +7006,7 @@ async function sendInvite(method){
       // Save as pending connection
       fetch(`${SUPABASE_URL}/rest/v1/connections`,{
         method:'POST',
-        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
         body:JSON.stringify({requester_email:myEmail,requester_name:myName,recipient_email:inviteeEmail,recipient_name:inviteeEmail.split('@')[0],status:'pending'})
       }).then(()=>loadIcInvites()).catch(()=>{});
       validateInviteForm();
@@ -7023,7 +7040,7 @@ async function openQrModal(){
     // Check for existing invite token
     const existing = await fetch(
       `${SUPABASE_URL}/rest/v1/invites?inviter_email=eq.${encodeURIComponent(myEmail)}&order=created_at.desc&limit=1`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
     );
     const rows = existing.ok ? await existing.json() : [];
     if(rows.length && rows[0].invite_token){
@@ -7033,7 +7050,7 @@ async function openQrModal(){
       const myName = ((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim()||'A fellow player';
       const created = await fetch(`${SUPABASE_URL}/rest/v1/invites`,{
         method:'POST',
-        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=representation'},
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=representation'},
         body:JSON.stringify({inviter_email:myEmail,inviter_name:myName,invite_method:'qr'})
       });
       const newRows = created.ok ? await created.json() : [];
@@ -7104,7 +7121,7 @@ async function getMyInviteUrl(){
   try{
     await fetch(`${SUPABASE_URL}/rest/v1/invites`,{
       method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
       body:JSON.stringify({inviter_email:myEmail,inviter_name:myName,invite_token:token,invite_method:'link'})
     });
   }catch(e){}
@@ -7137,7 +7154,7 @@ async function openQuickInvite(method){
         const inviteeName = inviteeEmail.split('@')[0]; // best guess at name until they register
         fetch(`${SUPABASE_URL}/rest/v1/connections`,{
           method:'POST',
-          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
           body:JSON.stringify({requester_email:myEmail,requester_name:myName,recipient_email:inviteeEmail,recipient_name:inviteeName,status:'pending'})
         }).then(()=>{ loadIcInvites(); }).catch(()=>{});
       }
@@ -7158,7 +7175,7 @@ async function loadSentInvites(){
   const listEl=document.getElementById('inviteSentList');
   if(!listEl||!myEmail) return;
   try{
-    const res=await fetch(`${SUPABASE_URL}/rest/v1/invites?inviter_email=eq.${encodeURIComponent(myEmail)}&order=created_at.desc&limit=10`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/invites?inviter_email=eq.${encodeURIComponent(myEmail)}&order=created_at.desc&limit=10`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     if(!res.ok) return;
     const invites=await res.json();
     if(!invites.length){listEl.innerHTML='';return;}
@@ -7181,7 +7198,7 @@ function checkInviteToken(){
   const params=new URLSearchParams(window.location.search);
   const token=params.get('invite');
   if(!token) return;
-  fetch(`${SUPABASE_URL}/rest/v1/invites?invite_token=eq.${token}`,{method:'PATCH',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=representation'},body:JSON.stringify({status:'opened',opened_at:new Date().toISOString()})})
+  fetch(`${SUPABASE_URL}/rest/v1/invites?invite_token=eq.${token}`,{method:'PATCH',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=representation'},body:JSON.stringify({status:'opened',opened_at:new Date().toISOString()})})
   .then(r=>r.json()).then(rows=>{
     if(rows.length){
       const inv=rows[0];
@@ -7292,7 +7309,7 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
   // Mark invite as registered
   fetch(`${SUPABASE_URL}/rest/v1/invites?invite_token=eq.${inv.invite_token}`,{
     method:'PATCH',
-    headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
     body:JSON.stringify({status:'registered'})
   }).catch(()=>{});
 
@@ -7329,7 +7346,7 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
       try{
         await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
           method:'POST',
-          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
           body:JSON.stringify({requester_email:newPlayerEmail,requester_name:newPlayerName,recipient_email:inv.inviter_email,recipient_name:inv.inviter_name||'',status:'pending'})
         });
         showToast('✅ Inner Circle request sent to '+shortName+'!','#4CAF7D');
@@ -7365,7 +7382,7 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
         try{
           await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
             method:'POST',
-            headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+            headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
             body:JSON.stringify({requester_email:inv.inviter_email,requester_name:inv.inviter_name||'',recipient_email:newPlayerEmail,recipient_name:newPlayerName,status:'pending'})
           });
           showToast('🎾 Invite sent! '+shortName+' will be notified.','#4CAF7D');
@@ -7546,14 +7563,14 @@ async function toggleFavorite(playerEmail, btn){
   try{
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/connections?or=(requester_email.eq.${encodeURIComponent(myEmail)},recipient_email.eq.${encodeURIComponent(myEmail)})&select=id,requester_email,recipient_email`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
     );
     const conns = res.ok ? await res.json() : [];
     const conn = conns.find(c=>c.requester_email===playerEmail||c.recipient_email===playerEmail);
     if(!conn) return;
     await fetch(`${SUPABASE_URL}/rest/v1/connections?id=eq.${conn.id}`,{
       method:'PATCH',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
       body: JSON.stringify({is_favorite: newVal})
     });
     showToast(newVal ? '⭐ Added to favorites!' : 'Removed from favorites', newVal?'#fbbf24':'var(--dim)');
@@ -7716,9 +7733,9 @@ async function loadDashTileCounts(myEmail){
     // Confirmed matches
     const [cfOrgRes,cfRespRes] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=eq.full&or=(is_walk_on.is.null,is_walk_on.eq.false)&select=id,match_date,time_start,time_end,match_type,max_players`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}),
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}),
       fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.in&select=match_id`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}})
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
     ]);
     const cfOrg  = cfOrgRes.ok  ? await cfOrgRes.json()  : [];
     const cfResp = cfRespRes.ok ? await cfRespRes.json() : [];
@@ -7726,7 +7743,7 @@ async function loadDashTileCounts(myEmail){
     if(cfResp.length){
       const ids = cfResp.map(r=>r.match_id);
       const r = await fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${ids.join(',')})&status=eq.full&or=(is_walk_on.is.null,is_walk_on.eq.false)&select=id,match_date,time_start,time_end,match_type,max_players`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       cfInvited = r.ok ? await r.json() : [];
     }
     const seen = new Set();
@@ -7735,14 +7752,14 @@ async function loadDashTileCounts(myEmail){
 
     // My invites — open matches I organized
     const miRes = await fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=neq.full&status=neq.cancelled&select=id,match_date,time_start,time_end`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const myInvites = miRes.ok ? await miRes.json() : [];
     const openInvites = myInvites.filter(m=>!isMatchPast(m));
     setTile('dashTileMyInvites', openInvites.length>0 ? openInvites.length+' awaiting response' : 'None pending');
 
     // Invited to play
     const pendRes = await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.pending&select=match_id`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const pendRows = pendRes.ok ? await pendRes.json() : [];
     setTile('dashTileInvited', pendRows.length>0 ? pendRows.length+' invite'+(pendRows.length>1?'s':'')+' waiting' : 'No invites');
 
@@ -7759,9 +7776,9 @@ async function loadDashNextMatch(myEmail){
     // Get confirmed matches (organized or playing in)
     const [orgRes, respRes] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=eq.full&or=(is_walk_on.is.null,is_walk_on.eq.false)&order=match_date.asc,time_start.asc`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}),
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}),
       fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.in&select=match_id`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}})
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
     ]);
     const orgMatches = orgRes.ok ? await orgRes.json() : [];
     const myResps    = respRes.ok ? await respRes.json() : [];
@@ -7770,7 +7787,7 @@ async function loadDashNextMatch(myEmail){
       const ids = myResps.map(r=>r.match_id);
       const imRes = await fetch(
         `${SUPABASE_URL}/rest/v1/matches?id=in.(${ids.join(',')})&status=eq.full&or=(is_walk_on.is.null,is_walk_on.eq.false)&order=match_date.asc`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       invitedMatches = imRes.ok ? await imRes.json() : [];
     }
     const seen = new Set();
@@ -7783,7 +7800,7 @@ async function loadDashNextMatch(myEmail){
       const ids = allMatches.map(m=>m.id);
       const vrRes = await fetch(
         `${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${ids.join(',')})&response=eq.in&select=match_id,player_name,player_email`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       const allResps = vrRes.ok ? await vrRes.json() : [];
       const countMap = {};
       allResps.forEach(r=>{ if(!countMap[r.match_id]) countMap[r.match_id]=[]; countMap[r.match_id].push(r); });
@@ -7843,7 +7860,7 @@ async function loadDashPendingInvites(myEmail){
     // Matches I organized that are still open
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=neq.full&status=neq.cancelled&order=match_date.asc`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const matches = res.ok ? await res.json() : [];
     const upcoming = matches.filter(m=>!isMatchPast(m));
 
@@ -7856,7 +7873,7 @@ async function loadDashPendingInvites(myEmail){
     const ids = upcoming.map(m=>m.id);
     const rRes = await fetch(
       `${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${ids.join(',')})&select=match_id,player_name,player_email,response`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const responses = rRes.ok ? await rRes.json() : [];
 
     el.innerHTML='';
@@ -7918,7 +7935,7 @@ async function loadDashInvitedToPlay(myEmail){
   try{
     const rRes = await fetch(
       `${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.pending&select=match_id`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const pending = rRes.ok ? await rRes.json() : [];
 
     if(!pending.length){
@@ -7929,7 +7946,7 @@ async function loadDashInvitedToPlay(myEmail){
     const ids = pending.map(r=>r.match_id);
     const mRes = await fetch(
       `${SUPABASE_URL}/rest/v1/matches?id=in.(${ids.join(',')})&status=neq.cancelled&select=*&order=match_date.asc`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const matches = mRes.ok ? await mRes.json() : [];
     const upcoming = matches.filter(m=>!isMatchPast(m)&&(m.organizer_email||'').toLowerCase()!==myEmail.toLowerCase());
 
@@ -7982,13 +7999,13 @@ async function nudgePendingPlayers(matchId){
     // Get pending players for this match
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.pending&select=player_email,player_name`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const players = res.ok ? await res.json() : [];
 
     // Get match details
     const mRes = await fetch(
       `${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}&select=match_date,time_start,match_type,court_name&limit=1`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}});
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const matches = mRes.ok ? await mRes.json() : [];
     const m = matches[0];
     const dateStr = m?.match_date ? new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}) : '';
@@ -8063,7 +8080,7 @@ async function submitFeedback(){
     await fetch(`${SUPABASE_URL}/rest/v1/beta_feedback`,{
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,
-               'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+               'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
       body:JSON.stringify({
         player_email: email,
         player_name:  name,

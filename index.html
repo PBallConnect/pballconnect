@@ -25,6 +25,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
 <title>PBallConnect — Find Pickleball Players Near You</title>
@@ -1508,7 +1509,7 @@
         <div style="text-align:center;margin-bottom:24px;">
           <div style="font-size:32px;margin-bottom:8px;">🏓</div>
           <div id="loginModalTitle" style="color:#fff;font-size:20px;font-weight:700;">Welcome to PBallConnect!</div>
-          <div id="loginModalSub" style="color:var(--dim);font-size:13px;margin-top:4px;">Enter your email to sign in or create your profile</div>
+          <div id="loginModalSub" style="color:var(--dim);font-size:13px;margin-top:4px;">Enter your email — we'll send you a magic link to sign in</div>
         </div>
 
         <!-- Login form -->
@@ -1530,21 +1531,21 @@
             Continue →
           </button>
           <div style="text-align:center;margin-top:16px;color:var(--dim);font-size:11px;line-height:1.6;">
-            Already a member? We'll sign you in automatically.<br/>
-            New here? We'll get you set up in 2 minutes.
+            We'll email you a secure magic link — no password needed.<br/>
+            New here? Click the link and we'll get you set up in 2 minutes.
           </div>
         </div>
 
         <!-- Loading state -->
         <div id="loginLoading" style="display:none;text-align:center;padding:20px;">
-          <div style="color:var(--green);font-size:14px;">Finding your profile…</div>
+          <div style="color:var(--green);font-size:14px;">Sending magic link…</div>
         </div>
 
         <!-- Success state -->
         <div id="loginSuccess" style="display:none;text-align:center;padding:12px 0;">
-          <div style="font-size:40px;margin-bottom:8px;">✅</div>
-          <div id="loginSuccessMsg" style="color:#fff;font-size:16px;font-weight:700;"></div>
-          <div style="color:var(--dim);font-size:12px;margin-top:4px;">Loading your profile…</div>
+          <div style="font-size:40px;margin-bottom:8px;">📬</div>
+          <div id="loginSuccessMsg" style="color:#fff;font-size:16px;font-weight:700;">Check your email!</div>
+          <div id="loginSuccessDetail" style="color:var(--dim);font-size:13px;margin-top:8px;line-height:1.5;">We sent a magic link to your inbox.<br/>Click it to sign in — no password needed.</div>
         </div>
       </div>
     </div>
