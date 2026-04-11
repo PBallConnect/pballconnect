@@ -6344,11 +6344,14 @@ function updateIcStats(pendingMembers){
   set('gMaleInvited',pMale); set('gFemaleInvited',pFemale); set('gOtherInvited',pOther); set('gTotalInvited',pending.length);
   set('lBelowMember',mBelow); set('lMyMember',mMy); set('lAboveMember',mAbove); set('lTotalMember',IC_MEMBERS.length);
   set('lBelowInvited',pBelow); set('lMyInvited',pMy); set('lAboveInvited',pAbove); set('lTotalInvited',pending.length);
-  // New: populate the Pending Invites summary boxes
+  // Populate the IC page summary boxes and dashboard IC boxes
   set('icOutboundCount', pending.length);
+  set('dashIcSentCount', pending.length);
   // Inbound count comes from IC_INCOMING_COUNT set elsewhere
   const inboundEl = document.getElementById('icInboundCount');
   if(inboundEl) inboundEl.textContent = IC_INCOMING_COUNT||0;
+  const dashInEl = document.getElementById('dashIcIncomingCount');
+  if(dashInEl) dashInEl.textContent = IC_INCOMING_COUNT||0;
 }
 
 function updateNavCircleBadges(memberCount,pendingCount,incomingCount){
