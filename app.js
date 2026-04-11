@@ -2799,7 +2799,7 @@ function buildSpecificPicker(){
       card.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:3px;'+
         'padding:8px 4px;border-radius:10px;margin-bottom:6px;text-align:center;cursor:'+(atMax?'not-allowed':'pointer')+';'+
         'border:2px solid '+(checked?'#1a7a3a':'#d1d5db')+';'+
-        'background:'+(checked?'#d1fae5':'#f3f4f6')+';'+
+        'background:'+(checked?'#d1fae5':'#f3f4f6')+';color:#111;'+
         'opacity:'+(atMax?'0.4':'1')+';transition:all .15s;';
 
       card.innerHTML =
