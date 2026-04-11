@@ -2459,6 +2459,8 @@ function matchGoTo(step){
       if(optEl) optEl.classList.add('on');
     });
     if(activeGroups.has('specific')){ buildSpecificPicker(); document.getElementById('matchSpecificPicker').style.display='block'; }
+    if(activeGroups.has('group_subs')){ buildGroupSubPicker(); document.getElementById('matchGroupSubsPicker').style.display='block'; }
+    refreshGenderFilterBanner();
     checkMatchStep4();
   }
   if(step===5){ buildMatchSummary(); setTimeout(loadMatchWeather, 300); }
@@ -2503,6 +2505,38 @@ function selectMatchGender(pref, el){
   });
   el.classList.remove('dim');
   el.classList.add('on');
+  refreshGenderFilterBanner();
+}
+
+// ── Gender filter helper ──────────────────────────────
+// Returns true if the player should be included given the match gender preference.
+// myGender = organizer's gender string (e.g. 'Male', 'Female').
+function playerPassesGenderFilter(player, genderPref, myGender){
+  if(!genderPref || genderPref==='either') return true;
+  const pg = (player.gender||'').toLowerCase();
+  const mg = (myGender||'').toLowerCase();
+  if(!mg) return true; // can't filter without knowing organizer gender
+  if(genderPref==='same') return pg === mg;
+  if(genderPref==='mixed') return pg !== '' && pg !== 'prefer not to say' && pg !== mg;
+  return true;
+}
+
+// Show/hide the Step 4 gender filter info banner and update counts.
+function refreshGenderFilterBanner(){
+  const banner = document.getElementById('matchGenderFilterBanner');
+  if(!banner) return;
+  const pref = MS.genderPref || 'either';
+  if(pref === 'either'){
+    banner.style.display = 'none';
+    return;
+  }
+  const myGender = S.gender || SESSION_PLAYER?.gender || '';
+  const total = IC_MEMBERS.length;
+  const matching = IC_MEMBERS.filter(({player})=>playerPassesGenderFilter(player, pref, myGender)).length;
+  const prefLabel = pref==='same' ? 'Same Gender' : 'Mixed';
+  const genderLabel = pref==='same' ? (myGender||'same gender') : 'opposite gender';
+  banner.style.display = 'block';
+  banner.innerHTML = `🔵 Gender preference is set to <strong>${prefLabel}</strong> — ${matching} of ${total} Inner Circle members are ${genderLabel} and will be invited. <span style="color:#1e40af;font-weight:600;">${total-matching} will be excluded.</span>`;
 }
 
 // ── Group + Subs picker ───────────────────────────────
@@ -3277,6 +3311,7 @@ function buildMatchSummary(){
 
   // Build invitee list
   const mySkill = S.skill||SESSION_PLAYER?.skill_level||'';
+  const myGender = S.gender || SESSION_PLAYER?.gender || '';
   const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
   const allGroups = (MS.selectedGroups && MS.selectedGroups.size) ? MS.selectedGroups : new Set([MS.group, ...MS.extraGroups].filter(Boolean));
   let invitees  = [];
@@ -3284,6 +3319,7 @@ function buildMatchSummary(){
   // Non-specific groups
   IC_MEMBERS.forEach(({player})=>{
     if(seen.has(player.email)) return;
+    if(!playerPassesGenderFilter(player, MS.genderPref, myGender)) return;
     const ps = parseFloat(player.skill_level||0);
     const pEmailLC=(player.email||'').toLowerCase();
     if(MS.deselectedPlayers?.has(pEmailLC)) return;
@@ -3299,12 +3335,12 @@ function buildMatchSummary(){
   // Add specifically-picked players (deduped)
   if(allGroups.has('specific')){
     IC_MEMBERS.forEach(({player})=>{
-      if(!seen.has(player.email) && MS.specificPlayers.has(player.email)){
+      if(!seen.has(player.email) && MS.specificPlayers.has(player.email) && playerPassesGenderFilter(player, MS.genderPref, myGender)){
         seen.add(player.email); invitees.push(player);
       }
     });
   }
-  // Add group+subs players (primary + subs)
+  // Add group+subs players (primary + subs) — no gender filter for hand-picked subs
   if(allGroups.has('group_subs')){
     IC_MEMBERS.forEach(({player})=>{
       const eLC=(player.email||'').toLowerCase();
@@ -3418,9 +3454,12 @@ async function submitMatch(){
     const skills=mySkill?getAdjacentSkills(mySkill):null;
     const allGroups=(MS.selectedGroups&&MS.selectedGroups.size)?MS.selectedGroups:new Set([MS.group,...MS.extraGroups].filter(Boolean));
     const seenEmails=new Set();
+    const sendGenderPref=MS.genderPref||'either';
+    const sendMyGender=S.gender||SESSION_PLAYER?.gender||'';
     let invitees=[];
     IC_MEMBERS.forEach(({player})=>{
       if(seenEmails.has(player.email)) return;
+      if(!playerPassesGenderFilter(player, sendGenderPref, sendMyGender)) return;
       const ps=parseFloat(player.skill_level||0);
       const pLC=(player.email||'').toLowerCase();
       for(const g of allGroups){
@@ -3432,7 +3471,7 @@ async function submitMatch(){
         if(g==='above'&&skills&&skills.above!==null&&Math.abs(ps-skills.above)<0.13){ seenEmails.add(player.email); invitees.push(player); return; }
       }
     });
-    // Group + Subs — primary and sub players
+    // Group + Subs — primary and sub players (hand-picked, no gender filter)
     if(allGroups.has('group_subs')){
       IC_MEMBERS.forEach(({player})=>{
         const eLC=(player.email||'').toLowerCase();
@@ -3443,7 +3482,7 @@ async function submitMatch(){
       });
     }
     if(allGroups.has('specific')){
-      IC_MEMBERS.forEach(({player})=>{ if(!seenEmails.has(player.email)&&MS.specificPlayers.has(player.email)){ seenEmails.add(player.email); invitees.push(player); } });
+      IC_MEMBERS.forEach(({player})=>{ if(!seenEmails.has(player.email)&&MS.specificPlayers.has(player.email)&&playerPassesGenderFilter(player,sendGenderPref,sendMyGender)){ seenEmails.add(player.email); invitees.push(player); } });
       // Also handle non-IC specific players (e.g. invited from Find Players)
       const outerSpecific = [...MS.specificPlayers].filter(e=>!seenEmails.has(e));
       if(outerSpecific.length && matchId){
@@ -4976,6 +5015,54 @@ function showMatchResponseBanner(match, myEmail){
   document.body.appendChild(banner);
 }
 
+// Returns the first conflicting match the player is already "in", or null.
+async function checkMatchConflict(playerEmail, newMatch){
+  try{
+    // Fetch all match_responses where player is "in"
+    const rRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(playerEmail)}&response=eq.in&select=match_id`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+    const rows = rRes.ok ? await rRes.json() : [];
+    if(!rows.length) return null;
+    const ids = rows.map(r=>r.match_id).filter(id=>id!==newMatch.id);
+    if(!ids.length) return null;
+    // Fetch those matches for same date
+    const mRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/matches?id=in.(${ids.join(',')})&match_date=eq.${newMatch.match_date}&select=id,time_start,time_end`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+    const existingMatches = mRes.ok ? await mRes.json() : [];
+    // Check time overlap: [s1,e1] overlaps [s2,e2] if s1 < e2 AND s2 < e1
+    const newStart = newMatch.time_start;
+    const newEnd   = newMatch.time_end || '23:59';
+    for(const m of existingMatches){
+      const s = m.time_start;
+      const e = m.time_end || '23:59';
+      if(s && newStart && s < newEnd && newStart < e) return m;
+    }
+    return null;
+  }catch(e){ console.warn('Conflict check failed:', e); return null; }
+}
+
+// Simple confirm dialog — resolves true (proceed) or false (cancel).
+function showConflictConfirm(title, message){
+  return new Promise(resolve=>{
+    const overlay = document.createElement('div');
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.innerHTML=
+      '<div style="background:#fff;border:2px solid #f87171;border-radius:16px;padding:24px;max-width:380px;width:100%;font-family:\'DM Sans\',sans-serif;">'+
+        '<div style="font-size:16px;font-weight:800;color:#111;margin-bottom:12px;">'+title+'</div>'+
+        '<div style="font-size:13px;color:#374151;line-height:1.6;margin-bottom:20px;white-space:pre-line;">'+message+'</div>'+
+        '<div style="display:flex;gap:10px;">'+
+          '<button id="conflictCancel" style="flex:1;padding:10px;border-radius:8px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;font-weight:600;font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">No, go back</button>'+
+          '<button id="conflictProceed" style="flex:1;padding:10px;border-radius:8px;border:none;background:#f87171;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Commit anyway</button>'+
+        '</div>'+
+      '</div>';
+    document.body.appendChild(overlay);
+    overlay.querySelector('#conflictCancel').onclick=()=>{ overlay.remove(); resolve(false); };
+    overlay.querySelector('#conflictProceed').onclick=()=>{ overlay.remove(); resolve(true); };
+  });
+}
+
 async function respondToMatch(matchId, response){
   const myEmail = getMyEmail() || localStorage.getItem('pb_email');
   if(!myEmail){
@@ -4988,7 +5075,7 @@ async function respondToMatch(matchId, response){
   try{
     // Check current match + confirmed count
     const [matchRes, confirmedRes] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}&select=match_type,status,max_players`,
+      fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}&select=match_type,status,max_players,match_date,time_start,time_end`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}),
       fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.in&select=player_email`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
@@ -5003,6 +5090,21 @@ async function respondToMatch(matchId, response){
     // If spots full and not already in, go to waitlist
     let actualResponse = response;
     if(response==='in' && spotsLeft <= 0 && !alreadyIn) actualResponse = 'waitlist';
+
+    // ── Scheduling conflict check ──────────────────────
+    if(actualResponse==='in' && match.match_date && match.time_start){
+      const conflict = await checkMatchConflict(myEmail, match);
+      if(conflict){
+        const conflictTime = fmt12(conflict.time_start)+(conflict.time_end?' – '+fmt12(conflict.time_end):'');
+        const newTime = fmt12(match.time_start)+(match.time_end?' – '+fmt12(match.time_end):'');
+        const proceed = await showConflictConfirm(
+          `⚠️ Scheduling Conflict`,
+          `You're already committed to a match on ${new Date(match.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})} from ${conflictTime}.\n\nThis new match is ${newTime} — the times overlap.\n\nAre you sure you want to commit to both?`
+        );
+        if(!proceed){ if(btn){ btn.disabled=false; btn.textContent='✅ I\'m In!'; } return; }
+      }
+    }
+    // ──────────────────────────────────────────────────
     // UPSERT the response — use PATCH to update existing row (avoids duplicate key error)
     const myName = getMyName() || myEmail.split('@')[0];
     // First try PATCH (update existing pending row)

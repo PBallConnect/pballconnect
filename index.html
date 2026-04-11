@@ -378,7 +378,7 @@
       </div>
       <div class="field">
         <label>Age as of Jan 1 this year</label>
-        <select id="playerAge" oninput="chk1()" onchange="chk1()" style="width:100%;padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:#fff;font-size:14px;font-family:'DM Sans',sans-serif;">
+        <select id="playerAge" oninput="chk1()" onchange="chk1()" style="width:100%;padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:#f9fafb;color:#111;font-size:14px;font-family:'DM Sans',sans-serif;">
           <option value="">Select age…</option>
           <option value="Under 18">Under 18</option>
           <option value="18">18</option>
@@ -1849,6 +1849,8 @@
           </div>
         </div>
         <div style="font-size:11px;color:var(--dim);margin-bottom:8px;">Tap to select one or more groups — selections stack together.</div>
+        <!-- Gender filter notice — shown when organizer has set a non-"either" gender preference -->
+        <div id="matchGenderFilterBanner" style="display:none;margin-bottom:10px;padding:9px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:12px;color:#1e40af;line-height:1.5;"></div>
         <div class="match-options" id="matchGroupOptions">
           <div class="match-option" data-group="favorites" onclick="toggleMatchGroup('favorites',this)" style="position:relative;">
             <div class="match-option-icon">⭐</div>
