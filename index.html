@@ -1446,27 +1446,46 @@
 
         <!-- Skill columns view -->
         <div id="icCircleColumnsView" style="display:none;">
-          <div class="ic-skill-grid-wrap">
+          <div class="ic-skill-grid-wrap ic-skill-grid-5col">
+            <div class="ic-skill-column">
+              <div class="ic-skill-col-head ic-col-farbelow">
+                <div class="ic-col-head-label">.5+ Below</div>
+                <div class="ic-col-head-rating" id="circleColFarBelowLabel">—</div>
+                <div id="circleColFarBelowCount" class="ic-col-count">0</div>
+              </div>
+              <div class="ic-skill-col" id="circleColFarBelow"></div>
+            </div>
             <div class="ic-skill-column">
               <div class="ic-skill-col-head ic-col-below">
-                <div class="ic-col-head-label">One below</div>
+                <div class="ic-col-head-label">One Below</div>
                 <div class="ic-col-head-rating" id="circleColBelowLabel">—</div>
+                <div id="circleColBelowCount" class="ic-col-count">0</div>
               </div>
               <div class="ic-skill-col" id="circleColBelow"></div>
             </div>
             <div class="ic-skill-column">
-              <div class="ic-skill-col-head ic-col-my" style="">
-                <div class="ic-col-head-label">My level</div>
+              <div class="ic-skill-col-head ic-col-my">
+                <div class="ic-col-head-label">My Level</div>
                 <div class="ic-col-head-rating" id="circleColMyLabel">—</div>
+                <div id="circleColMyCount" class="ic-col-count">0</div>
               </div>
               <div class="ic-skill-col" id="circleColMy"></div>
             </div>
             <div class="ic-skill-column">
-              <div class="ic-skill-col-head ic-col-above" style="">
-                <div class="ic-col-head-label">One above</div>
+              <div class="ic-skill-col-head ic-col-above">
+                <div class="ic-col-head-label">One Above</div>
                 <div class="ic-col-head-rating" id="circleColAboveLabel">—</div>
+                <div id="circleColAboveCount" class="ic-col-count">0</div>
               </div>
               <div class="ic-skill-col" id="circleColAbove"></div>
+            </div>
+            <div class="ic-skill-column">
+              <div class="ic-skill-col-head ic-col-farabove">
+                <div class="ic-col-head-label">.5+ Above</div>
+                <div class="ic-col-head-rating" id="circleColFarAboveLabel">—</div>
+                <div id="circleColFarAboveCount" class="ic-col-count">0</div>
+              </div>
+              <div class="ic-skill-col" id="circleColFarAbove"></div>
             </div>
           </div>
         </div>
@@ -1726,6 +1745,11 @@
               oninput="checkMatchStep2()"/>
           </div>
 
+        </div>
+
+        <!-- Past date/time warning -->
+        <div id="matchPastWarning" style="display:none;margin-top:10px;padding:9px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:12px;color:#dc2626;font-weight:600;">
+          ⏰ That date and time has already passed. Please choose a future time.
         </div>
 
         <!-- Specific start time -->

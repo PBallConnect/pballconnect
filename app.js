@@ -602,8 +602,9 @@ function chk1(){
   btn.disabled=!ok;
 }
 function chk2(){
-  // Only require shirt size and playing since — schedule is optional (can set anytime later)
-  const ok = v('shirtSize') && v('playingSince');
+  const ratingSlider = document.getElementById('personalRatingSlider');
+  const hasRating = ratingSlider && parseInt(ratingSlider.value) > 0;
+  const ok = v('playingSince') && hasRating;
   document.getElementById('next2').disabled = !ok;
 }
 
@@ -2682,8 +2683,18 @@ function checkMatchStep2(){
   const btn    = document.getElementById('matchNext2');
   if(!btn) return;
   const date   = (document.getElementById('matchDate')?.value || '').trim();
-  const timeOk = !!(document.getElementById('matchTimeStart')?.value) && validateMatchTimes();
-  const ok     = !!(date && timeOk);
+  const timeVal = document.getElementById('matchTimeStart')?.value;
+  const timeOk = !!timeVal && validateMatchTimes();
+
+  // Check past date/time
+  let inPast = false;
+  if(date && timeVal){
+    inPast = new Date(date+'T'+timeVal) < new Date();
+  }
+  const pastWarn = document.getElementById('matchPastWarning');
+  if(pastWarn) pastWarn.style.display = inPast ? 'block' : 'none';
+
+  const ok = !!(date && timeOk && !inPast);
   if(ok){
     btn.removeAttribute('disabled');
     btn.style.opacity = '1';
@@ -2716,18 +2727,10 @@ function checkMatchStep4(){
   }
 }
 function checkMatchStep1(){
-  const btn  = document.getElementById('matchNext1');
+  const btn = document.getElementById('matchNext1');
   if(!btn) return;
-  const date = document.getElementById('matchDate')?.value;
-  let timeOk = false;
-  if(MS.isFeeler){
-    timeOk = !!document.getElementById('matchTimeRangeStart')?.value &&
-             !!document.getElementById('matchTimeRangeEnd')?.value;
-  } else {
-    timeOk = !!(MS.timeStart || document.getElementById('matchTimeStart')?.value);
-  }
-  const groupOk = (MS.selectedGroups&&MS.selectedGroups.size>0) || (MS.group && (MS.group!=='specific'||MS.specificPlayers.size>0));
-  btn.disabled = !(date && timeOk && groupOk);
+  // Step 1 is format + gender pref — always valid once format is selected (pre-selected as Doubles)
+  btn.disabled = false;
 }
 
 // ── Group selection (multi-select) ─────────────────────
@@ -5015,43 +5018,73 @@ function showMatchResponseBanner(match, myEmail){
   document.body.appendChild(banner);
 }
 
-// Returns the first conflicting match the player is already "in", or null.
+// Returns array of conflicting matches the player is already "in", or empty array.
 async function checkMatchConflict(playerEmail, newMatch){
   try{
-    // Fetch all match_responses where player is "in"
     const rRes = await fetch(
       `${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(playerEmail)}&response=eq.in&select=match_id`,
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const rows = rRes.ok ? await rRes.json() : [];
-    if(!rows.length) return null;
+    if(!rows.length) return [];
     const ids = rows.map(r=>r.match_id).filter(id=>id!==newMatch.id);
-    if(!ids.length) return null;
-    // Fetch those matches for same date
+    if(!ids.length) return [];
     const mRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/matches?id=in.(${ids.join(',')})&match_date=eq.${newMatch.match_date}&select=id,time_start,time_end`,
+      `${SUPABASE_URL}/rest/v1/matches?id=in.(${ids.join(',')})&match_date=eq.${newMatch.match_date}&select=id,time_start,time_end,court_name`,
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const existingMatches = mRes.ok ? await mRes.json() : [];
-    // Check time overlap: [s1,e1] overlaps [s2,e2] if s1 < e2 AND s2 < e1
     const newStart = newMatch.time_start;
     const newEnd   = newMatch.time_end || '23:59';
-    for(const m of existingMatches){
-      const s = m.time_start;
-      const e = m.time_end || '23:59';
-      if(s && newStart && s < newEnd && newStart < e) return m;
-    }
-    return null;
-  }catch(e){ console.warn('Conflict check failed:', e); return null; }
+    return existingMatches.filter(m=>{
+      const s = m.time_start; const e = m.time_end || '23:59';
+      return s && newStart && s < newEnd && newStart < e;
+    });
+  }catch(e){ console.warn('Conflict check failed:', e); return []; }
 }
 
-// Simple confirm dialog — resolves true (proceed) or false (cancel).
-function showConflictConfirm(title, message){
+// Conflict confirm dialog — shows a schedule table of existing committed matches.
+// existingMatches: array of match objects (with time_start, time_end, court_name, match_date)
+// newMatch: the match being accepted
+function showConflictConfirm(existingMatches, newMatch){
   return new Promise(resolve=>{
+    const dateStr = newMatch.match_date
+      ? new Date(newMatch.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})
+      : '';
+    const newTime = fmt12(newMatch.time_start)+(newMatch.time_end?' – '+fmt12(newMatch.time_end):'');
+
+    const rowsHtml = existingMatches.map(m=>{
+      const t = fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):'');
+      return '<tr>'+
+        '<td style="padding:6px 10px;font-size:12px;font-weight:700;color:#111;">'+t+'</td>'+
+        '<td style="padding:6px 10px;font-size:12px;color:#374151;">'+(m.court_name||'TBD')+'</td>'+
+        '<td style="padding:6px 10px;"><span style="font-size:10px;font-weight:700;background:#fee2e2;color:#dc2626;border-radius:4px;padding:2px 6px;">CONFLICT</span></td>'+
+      '</tr>';
+    }).join('');
+
+    const tableHtml =
+      '<div style="margin-bottom:14px;">'+
+        '<div style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Your schedule on '+dateStr+'</div>'+
+        '<table style="width:100%;border-collapse:collapse;background:#f9fafb;border-radius:8px;overflow:hidden;">'+
+          '<thead><tr style="background:#f3f4f6;">'+
+            '<th style="padding:6px 10px;font-size:10px;color:#6b7280;text-align:left;font-weight:700;">Time</th>'+
+            '<th style="padding:6px 10px;font-size:10px;color:#6b7280;text-align:left;font-weight:700;">Court</th>'+
+            '<th style="padding:6px 10px;font-size:10px;color:#6b7280;text-align:left;font-weight:700;">Status</th>'+
+          '</tr></thead>'+
+          '<tbody>'+rowsHtml+'</tbody>'+
+          '<tfoot><tr style="background:#fef9c3;border-top:1px solid #fde68a;">'+
+            '<td style="padding:6px 10px;font-size:12px;font-weight:800;color:#92400e;">'+newTime+'</td>'+
+            '<td style="padding:6px 10px;font-size:12px;color:#92400e;">'+(newMatch.court_name||'TBD')+'</td>'+
+            '<td style="padding:6px 10px;"><span style="font-size:10px;font-weight:700;background:#fef3c7;color:#92400e;border-radius:4px;padding:2px 6px;">NEW INVITE</span></td>'+
+          '</tr></tfoot>'+
+        '</table>'+
+      '</div>';
+
     const overlay = document.createElement('div');
     overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;';
     overlay.innerHTML=
-      '<div style="background:#fff;border:2px solid #f87171;border-radius:16px;padding:24px;max-width:380px;width:100%;font-family:\'DM Sans\',sans-serif;">'+
-        '<div style="font-size:16px;font-weight:800;color:#111;margin-bottom:12px;">'+title+'</div>'+
-        '<div style="font-size:13px;color:#374151;line-height:1.6;margin-bottom:20px;white-space:pre-line;">'+message+'</div>'+
+      '<div style="background:#fff;border:2px solid #f87171;border-radius:16px;padding:24px;max-width:420px;width:100%;font-family:\'DM Sans\',sans-serif;">'+
+        '<div style="font-size:16px;font-weight:800;color:#111;margin-bottom:6px;">⚠️ Scheduling Conflict</div>'+
+        '<div style="font-size:13px;color:#374151;margin-bottom:14px;">You already have a committed match that overlaps with this one.</div>'+
+        tableHtml+
         '<div style="display:flex;gap:10px;">'+
           '<button id="conflictCancel" style="flex:1;padding:10px;border-radius:8px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;font-weight:600;font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">No, go back</button>'+
           '<button id="conflictProceed" style="flex:1;padding:10px;border-radius:8px;border:none;background:#f87171;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Commit anyway</button>'+
@@ -5093,14 +5126,9 @@ async function respondToMatch(matchId, response){
 
     // ── Scheduling conflict check ──────────────────────
     if(actualResponse==='in' && match.match_date && match.time_start){
-      const conflict = await checkMatchConflict(myEmail, match);
-      if(conflict){
-        const conflictTime = fmt12(conflict.time_start)+(conflict.time_end?' – '+fmt12(conflict.time_end):'');
-        const newTime = fmt12(match.time_start)+(match.time_end?' – '+fmt12(match.time_end):'');
-        const proceed = await showConflictConfirm(
-          `⚠️ Scheduling Conflict`,
-          `You're already committed to a match on ${new Date(match.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})} from ${conflictTime}.\n\nThis new match is ${newTime} — the times overlap.\n\nAre you sure you want to commit to both?`
-        );
+      const conflicts = await checkMatchConflict(myEmail, match);
+      if(conflicts.length){
+        const proceed = await showConflictConfirm(conflicts, match);
         if(!proceed){ if(btn){ btn.disabled=false; btn.textContent='✅ I\'m In!'; } return; }
       }
     }
@@ -6123,6 +6151,7 @@ function buildIcMemberCard(player, conn, myEmail, lastPlayed){
 
   const mainEl = document.createElement('div');
   mainEl.className = 'ic-member-main';
+  mainEl.style.cursor = 'pointer';
   mainEl.innerHTML =
     '<div class="ic-member-name">'+name+'</div>'+
     (player.nickname?'<div class="ic-member-nick">"'+player.nickname+'"</div>':'')+
@@ -6130,6 +6159,7 @@ function buildIcMemberCard(player, conn, myEmail, lastPlayed){
       (player.skill_level?'<span class="ic-member-tag ic-tag-skill">⭐ '+player.skill_level+'</span>':'')+
       (player.court_name?'<span class="ic-member-tag ic-tag-court">🏟 '+player.court_name+'</span>':'')+
     '</div>';
+  mainEl.onclick = ()=>openPlayerCard(player,conn,myEmail);
 
   const actEl = document.createElement('div');
   actEl.className = 'ic-member-actions';
@@ -6609,8 +6639,8 @@ function openPlayerCard(player,connection,myEmail){
   const tags=[];
   if(player.skill_level) tags.push({cls:'pc-tag-green',label:'⭐ '+player.skill_level+' Rating'});
   if(player.dupr_rating) tags.push({cls:'pc-tag-green',label:'DUPR '+player.dupr_rating});
-  if(player.gender) tags.push({cls:'pc-tag-dim',label:player.gender});
-  if(player.handedness) tags.push({cls:'pc-tag-dim',label:player.handedness});
+  if(player.gender) tags.push({cls:'pc-tag-green',label:player.gender});
+  if(player.handedness) tags.push({cls:'pc-tag-green',label:player.handedness.replace(/^[🤚🤲]+\s*/,'')});
   const tagsHtml=tags.map(t=>'<span class="pc-card-tag '+t.cls+'">'+t.label+'</span>').join('');
   const stats=[
     {label:'Location',value:player.city?(player.city+(player.state?', '+player.state:'')):'—',green:false},
@@ -7087,34 +7117,49 @@ function switchCircleView(view){
 }
 
 function renderCircleSkillColumns(){
-  const mySkill=S.skill||'';
-  if(!mySkill) return;
+  const mySkill=S.skill||SESSION_PLAYER?.skill_level||'';
+  if(!mySkill){ document.getElementById('icCircleColumnsView').innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;">Set your personal rating in your profile to use the skill view.</div>'; return; }
   const skills=getAdjacentSkills(mySkill);
-  const lb=document.getElementById('circleColBelowLabel');
-  const lm=document.getElementById('circleColMyLabel');
-  const la=document.getElementById('circleColAboveLabel');
-  if(lb) lb.textContent=skills.below!==null?skills.below:'—';
-  if(lm) lm.textContent=skills.my!==null?skills.my:'—';
-  if(la) la.textContent=skills.above!==null?skills.above:'—';
-  const buckets={below:[],my:[],above:[],other:[]};
+  const myVal=parseFloat(mySkill);
+  const setEl=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  setEl('circleColFarBelowLabel', myVal>0?('≤'+(myVal-0.5).toFixed(2)):'—');
+  setEl('circleColBelowLabel',    skills.below!==null?skills.below:'—');
+  setEl('circleColMyLabel',       skills.my!==null?skills.my:'—');
+  setEl('circleColAboveLabel',    skills.above!==null?skills.above:'—');
+  setEl('circleColFarAboveLabel', myVal>0?('≥'+(myVal+0.5).toFixed(2)):'—');
+
+  const buckets={farBelow:[],below:[],my:[],above:[],farAbove:[]};
   IC_MEMBERS.forEach(({player,conn})=>{
     const ps=parseFloat(player.skill_level||0);
-    if(skills.below!==null&&Math.abs(ps-skills.below)<0.13) buckets.below.push({player,conn});
-    else if(Math.abs(ps-skills.my)<0.13) buckets.my.push({player,conn});
+    if(!ps){ buckets.my.push({player,conn}); return; } // no rating → show in My Level
+    if(Math.abs(ps-myVal)<0.13)                          buckets.my.push({player,conn});
+    else if(skills.below!==null&&Math.abs(ps-skills.below)<0.13) buckets.below.push({player,conn});
     else if(skills.above!==null&&Math.abs(ps-skills.above)<0.13) buckets.above.push({player,conn});
-    else buckets.other.push({player,conn});
+    else if(ps<myVal)                                    buckets.farBelow.push({player,conn});
+    else                                                 buckets.farAbove.push({player,conn});
   });
-  ['below','my','above'].forEach(key=>{
-    const colId='circleCol'+key.charAt(0).toUpperCase()+key.slice(1);
+
+  const colMap=[
+    {key:'farBelow',colId:'circleColFarBelow',countId:'circleColFarBelowCount'},
+    {key:'below',   colId:'circleColBelow',   countId:'circleColBelowCount'},
+    {key:'my',      colId:'circleColMy',      countId:'circleColMyCount'},
+    {key:'above',   colId:'circleColAbove',   countId:'circleColAboveCount'},
+    {key:'farAbove',colId:'circleColFarAbove',countId:'circleColFarAboveCount'},
+  ];
+  colMap.forEach(({key,colId,countId})=>{
     const col=document.getElementById(colId);
+    const cnt=document.getElementById(countId);
+    if(cnt) cnt.textContent=buckets[key].length||'0';
     if(!col) return;
     col.innerHTML='';
-    if(!buckets[key].length){col.innerHTML='<div class="ic-col-empty">No members at this level</div>';return;}
+    if(!buckets[key].length){col.innerHTML='<div class="ic-col-empty">None</div>';return;}
+    buckets[key].sort((a,b)=>((a.player.first_name||'')+(a.player.last_name||'')).localeCompare((b.player.first_name||'')+(b.player.last_name||'')));
     buckets[key].forEach(({player,conn})=>{
       const card=buildIcMemberCard(player,conn,getMyEmail(),null);
       col.appendChild(card);
     });
   });
+  updateColStickyTop();
 }
 
 function showFilteredList(type, value, status){
