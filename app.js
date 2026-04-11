@@ -3659,30 +3659,29 @@ async function loadMatchSquareCounts(){
     // Nav badge — only open future matches
     updateMatchBadge('myInvitesBadge', myPending, 'rgba(239,68,68,0.85)');
 
-    // Invited to — fetch my responses and join with match status
-    const invRes=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&select=match_id,response`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+    // Invited to — fetch only PENDING (unanswered) responses from non-self-organized matches
+    const invRes=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.pending&select=match_id`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const invRows=invRes.ok?await invRes.json():[];
-    const invMatchIds=invRows.map(r=>r.match_id);
-    let invConfirmed=0, invOpen=0;
-    if(invMatchIds.length){
-      const mRes=await fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${invMatchIds.join(',')})&select=id,status,match_date,time_start,time_end`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
-      const invMatches=mRes.ok?await mRes.json():[];
-      const invFuture = invMatches.filter(m=>!isMatchPast(m));
-      invConfirmed=invFuture.filter(m=>m.status==='full').length;
-      invOpen     =invFuture.filter(m=>m.status==='open').length;
+    // Also fetch confirmed (response=in) for the "confirmed" square
+    const inRes=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.in&select=match_id`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+    const inRows=inRes.ok?await inRes.json():[];
+    let invOpen=0, invConfirmed=0;
+    if(invRows.length){
+      const pendIds=invRows.map(r=>r.match_id);
+      const mRes=await fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${pendIds.join(',')})&status=neq.cancelled&select=id,status,match_date,time_start,time_end,organizer_email`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+      const pendMatches=mRes.ok?await mRes.json():[];
+      invOpen=pendMatches.filter(m=>!isMatchPast(m)&&(m.organizer_email||'').toLowerCase()!==myEmail.toLowerCase()).length;
+    }
+    if(inRows.length){
+      const inIds=inRows.map(r=>r.match_id);
+      const mRes=await fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${inIds.join(',')})&select=id,status,match_date,time_start,time_end,organizer_email`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+      const inMatches=mRes.ok?await mRes.json():[];
+      invConfirmed=inMatches.filter(m=>!isMatchPast(m)&&(m.organizer_email||'').toLowerCase()!==myEmail.toLowerCase()).length;
     }
     setEl('matchSquareInvitedCount',     invOpen);
     setEl('matchSquareInvitedConfirmed', invConfirmed);
-
-    // Nav badge
-    // Badge = only open (not full) matches I've been invited to
-    const invBadge=document.getElementById('invitedByOthersBadge');
-    if(invBadge){invBadge.textContent=invOpen;invBadge.style.display=invOpen>0?'inline-flex':'none';}
-    // Top blue badge — show pending (open) invites
-    const topBadge=document.getElementById('topMatchInvitesBadge');
-    if(topBadge){topBadge.textContent=invOpen;topBadge.style.display=invOpen>0?'inline-block':'none';}
-    const topLabel=document.getElementById('topMatchInvitesLabel');
-    if(topLabel) topLabel.textContent=invOpen>0?'Invited to Play ('+invOpen+')':'Invited to Play';
+    // NOTE: Nav/top badges are set exclusively by loadAllMatchBadges — do NOT set them here
+    // to avoid a race condition where this slower function overwrites the correct count.
 
   }catch(e){ console.warn('loadMatchSquareCounts error:',e); }
 }
