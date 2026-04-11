@@ -2958,11 +2958,13 @@ async function loadMatchCourts(){
         if(MS.selectedCourts.has(court.id)){
           MS.selectedCourts.delete(court.id);
         } else {
+          // Single court selection — clear any previous selection
+          MS.selectedCourts.clear();
           MS.selectedCourts.set(court.id, {
             name: court.name,
             address: (court.address||'')+(court.city?', '+court.city:''),
             isPrivate: court.is_private||false,
-            preferred: MS.selectedCourts.size === 0 // first selected = preferred by default
+            preferred: true
           });
         }
         updateMatchCourtsNext();
@@ -3033,9 +3035,9 @@ function updateMatchCourtsSummary(){
   list.innerHTML = '';
   MS.selectedCourts.forEach((court, id)=>{
     const div = document.createElement('div');
-    div.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:12px;color:#fff;margin-bottom:4px;';
+    div.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:12px;color:#111;font-weight:600;margin-bottom:4px;';
     div.innerHTML = (court.preferred?'⭐ ':'📍 ') + court.name +
-      (court.isPrivate?' <span style="font-size:9px;color:#fbbf24;margin-left:4px;">PRIVATE</span>':'');
+      (court.isPrivate?' <span style="font-size:9px;color:#b45309;font-weight:700;margin-left:4px;">PRIVATE</span>':'');
     list.appendChild(div);
   });
 }
@@ -3138,7 +3140,7 @@ function buildMatchSummary(){
   const invitedLabel = [...allGroups].map(g=>groupLabels[g]||g).join(' + ');
 
   sum.innerHTML =
-    '<div class="match-summary-row"><span>Format</span><span>'+(MS.format==='doubles'?'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Doubles':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Singles')+'</span></div>'+
+    '<div class="match-summary-row" style="color:#111;"><span>Format</span><span>'+(MS.format==='doubles'?'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Doubles':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Singles')+'</span></div>'+
     '<div class="match-summary-row"><span>Duration</span><span>'+durStr+'</span></div>'+
     '<div class="match-summary-row"><span>Invited</span><span>'+invitedLabel+' ('+invitees.length+')</span></div>'+
     '<div class="match-summary-row"><span>Spots open</span><span>'+maxNeeded+' needed · first to respond wins</span></div>'+

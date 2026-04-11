@@ -548,15 +548,15 @@
     font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;}
   .match-addr-row{margin-bottom:12px;}
   .match-addr-chips{display:flex;gap:8px;flex-wrap:wrap;}
-  .match-summary{background:rgba(76,175,125,0.07);border:1px solid rgba(76,175,125,0.2);
+  .match-summary{background:#f0fdf4;border:2px solid #1a7a3a;
     border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;}
   .match-summary-row{display:flex;justify-content:space-between;align-items:center;}
-  .match-summary-row span:first-child{color:var(--dim);font-size:12px;}
-  .match-summary-row span:last-child{color:#fff;font-size:13px;font-weight:500;}
+  .match-summary-row span:first-child{color:#1a5c32;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
+  .match-summary-row span:last-child{color:#111;font-size:13px;font-weight:600;}
   .match-coming-soon-note{display:flex;align-items:flex-start;gap:12px;
-    background:rgba(255,255,255,0.04);border:1px solid var(--border);
+    background:#f9fafb;border:1px solid #e5e7eb;
     border-radius:12px;padding:14px;margin-top:16px;}
-  .match-found-section-title{font-size:12px;font-weight:600;color:var(--dim);
+  .match-found-section-title{font-size:12px;font-weight:600;color:#1a5c32;
     margin:10px 0 6px;text-transform:uppercase;letter-spacing:.06em;}
   .match-found-court{display:flex;align-items:center;gap:10px;padding:10px 12px;
     border-radius:10px;border:1px solid var(--border);cursor:pointer;
@@ -1000,10 +1000,10 @@
     border-color:var(--green);}
   /* ── Match setup ──────────────────────────────────── */
   .match-summary-row{display:flex;justify-content:space-between;align-items:center;
-    padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
-  .match-summary-row span:first-child{color:var(--dim);font-size:11px;font-weight:700;
+    padding:8px 0;border-bottom:1px solid #d1fae5;font-size:13px;}
+  .match-summary-row span:first-child{color:#1a5c32;font-size:11px;font-weight:700;
     text-transform:uppercase;letter-spacing:.06em;}
-  .match-summary-row span:last-child{color:#fff;font-weight:600;}
+  .match-summary-row span:last-child{color:#111;font-weight:600;}
   /* ── Match time chips ─────────────────────────────── */
   .match-time-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
   .match-next-btn:disabled{opacity:0.35;cursor:not-allowed;}
