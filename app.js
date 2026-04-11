@@ -4233,6 +4233,11 @@ async function loadAllMatchBadges(){
       iboCount = openMatches.filter(m=>!isMatchPast(m) && (m.organizer_email||'').toLowerCase()!==myEmail.toLowerCase()).length;
     }
     updateMatchBadge('invitedByOthersBadge', iboCount, 'rgba(59,130,246,0.85)');
+    // Keep top header badge in sync with the same filtered count
+    const topBadge = document.getElementById('topMatchInvitesBadge');
+    const topLabel = document.getElementById('topMatchInvitesLabel');
+    if(topBadge){ topBadge.textContent=iboCount; topBadge.style.display=iboCount>0?'inline-block':'none'; }
+    if(topLabel) topLabel.textContent = iboCount>0 ? 'Invited to Play ('+iboCount+')' : 'Invited to Play';
 
     // Confirmed future matches
     const [cfOrgRes, cfRespRes] = await Promise.all([
@@ -5045,10 +5050,10 @@ async function refreshTopInviteBadge(){
     if(pending.length){
       const ids = pending.map(r=>r.match_id);
       const mRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/matches?id=in.(${ids.join(',')})&status=neq.full&status=neq.cancelled&select=id,match_date,time_start,time_end`,
+        `${SUPABASE_URL}/rest/v1/matches?id=in.(${ids.join(',')})&status=neq.full&status=neq.cancelled&select=id,match_date,time_start,time_end,organizer_email`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       const openMatches = mRes.ok ? await mRes.json() : [];
-      count = openMatches.filter(m=>!isMatchPast(m)).length;
+      count = openMatches.filter(m=>!isMatchPast(m) && (m.organizer_email||'').toLowerCase()!==myEmail.toLowerCase()).length;
     }
     const topBadge = document.getElementById('topMatchInvitesBadge');
     const topLabel = document.getElementById('topMatchInvitesLabel');
@@ -5293,21 +5298,7 @@ async function restoreSession(email, playerData){
   updateTopBar(player);
   showToast('Welcome back, '+(player.first_name||'Player')+'! 🎾','#4CAF7D');
 
-  // Load blue match invites badge count
-  setTimeout(async()=>{
-    try{
-      const myEm=(player.email||'').toLowerCase();
-      const mir=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEm)}&response=eq.pending&select=match_id`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
-      const mRows=mir.ok?await mir.json():[];
-      const mCount=mRows.length;
-      const topBadge=document.getElementById('topMatchInvitesBadge');
-      if(topBadge){topBadge.textContent=mCount;topBadge.style.display=mCount>0?'inline-block':'none';}
-      const topLabel=document.getElementById('topMatchInvitesLabel');
-      if(topLabel) topLabel.textContent=mCount>0?'Invited to Play ('+mCount+')':'Invited to Play';
-      // Don't set badge here — loadAllMatchBadges handles this with proper open-match filtering
-      // const navBadge=document.getElementById('invitedByOthersBadge');
-    }catch(e){}
-  }, 600);
+  // Top badge is set by loadAllMatchBadges (via refreshTopInviteBadge) with proper filtering
 
   setTimeout(async()=>{
     const myEmail = (player.email||'').toLowerCase();
