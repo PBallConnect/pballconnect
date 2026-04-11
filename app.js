@@ -3447,13 +3447,13 @@ function isMatchPast(match, graceHours=2){
 function getMatchStatusDisplay(match){
   const past = isMatchPast(match);
   if(past){
-    if(match.status==='full') return {label:'✅ Played', color:'var(--green)', bg:'rgba(76,175,125,0.08)', border:'rgba(76,175,125,0.3)'};
-    return {label:'⏰ Needs Score', color:'#fbbf24', bg:'rgba(245,158,11,0.06)', border:'rgba(245,158,11,0.2)'};
+    if(match.status==='full') return {label:'✅ Played',       color:'#16a34a', bg:'#f0fdf4', border:'#16a34a'};
+    return                          {label:'⏰ Needs Score',   color:'#d97706', bg:'#fffbeb', border:'#d97706'};
   }
-  if(match.status==='full')      return {label:'🟢 Confirmed', color:'var(--green)', bg:'rgba(76,175,125,0.08)', border:'rgba(76,175,125,0.3)'};
-  if(match.status==='open')      return {label:'🔴 Open',      color:'#f87171',       bg:'rgba(239,68,68,0.06)',  border:'rgba(239,68,68,0.2)'};
-  if(match.status==='cancelled') return {label:'❌ Cancelled', color:'#f87171',       bg:'rgba(239,68,68,0.06)',  border:'rgba(239,68,68,0.2)'};
-  return {label:match.status, color:'var(--dim)', bg:'rgba(255,255,255,0.03)', border:'var(--border)'};
+  if(match.status==='full')      return {label:'🟢 Confirmed', color:'#16a34a', bg:'#f0fdf4', border:'#16a34a'};
+  if(match.status==='open')      return {label:'🔴 Open',      color:'#dc2626', bg:'#fff1f2', border:'#dc2626'};
+  if(match.status==='cancelled') return {label:'❌ Cancelled', color:'#dc2626', bg:'#fef2f2', border:'#dc2626'};
+  return                               {label:match.status,   color:'#6b7280', bg:'#f9fafb', border:'#d1d5db'};
 }
 
 async function submitMatch(){
@@ -4536,7 +4536,9 @@ async function loadMyInvitesPage(){
       const out=mRes.filter(r=>r.response==='out');
       const maxNeeded=m.match_type==='doubles'?4:2;
       const card=document.createElement('div');
-      card.style.cssText='border:1px solid '+sd.border+';border-radius:16px;padding:16px;margin-bottom:12px;background:'+sd.bg+';'+(isPast?'opacity:0.9;':'');
+      const cdUrgent = !isPast && getCountdown(m.match_date,m.time_start)?.urgent;
+      card.style.cssText='border:3px solid '+sd.border+';border-radius:16px;padding:16px;margin-bottom:12px;background:'+sd.bg+';'+(isPast?'opacity:0.85;':'');
+      if(cdUrgent) card.classList.add('pb-card-urgent');
       let bottom='';
       if(isPast){
         bottom='<div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:rgba(76,175,125,0.08);border:1px solid rgba(76,175,125,0.2);border-radius:10px;">'+
@@ -4582,8 +4584,9 @@ async function loadMyInvitesPage(){
         '<div style="display:flex;align-items:flex-start;gap:10px;">'+
         '<span style="font-size:22px;">'+(m.match_type==='doubles'?'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/>':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/>')+'</span>'+
         '<div style="flex:1;">'+
-          '<div style="color:'+(isPast?'#94a3b8':'#1a7a3a')+';font-size:14px;font-weight:700;">'+(isPast?'<s>':'')+dateStr+' · '+timeStr+(isPast?'</s>':'')+'</div>'+
-          '<div style="color:#555;font-size:12px;margin-top:2px;">'+courtDisplay+'</div>'+
+          '<div style="color:'+(isPast?'#6b7280':'#111')+';font-size:14px;font-weight:700;">'+(isPast?'<s>':'')+dateStr+(isPast?'</s>':'')+'</div>'+
+          '<div style="color:#374151;font-size:12px;margin-top:1px;font-weight:600;">'+timeStr+'</div>'+
+          '<div style="color:#6b7280;font-size:12px;margin-top:2px;">'+courtDisplay+'</div>'+
           '<div style="font-size:11px;color:#1a7a3a;font-weight:700;margin-top:2px;">Organized by '+(((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim()||getMyEmail().split('@')[0])+'</div>'+
           (!isPast?renderCountdown(m.match_date,m.time_start):'')+
         '</div>'+
@@ -4811,8 +4814,11 @@ async function loadInvitedByOthersPage(){
       // Fix: if on waitlist but spots available, allow upgrading to in
       const canUpgrade=isWaitlist&&spotsLeft>0;
 
+      const iboCountdown = getCountdown(m.match_date, m.time_start);
+      const iboUrgent = iboCountdown?.urgent;
       const card=document.createElement('div');
-      card.style.cssText='background:#ffffff;border:2px solid '+(isPending?'#3b82f6':'#d1d5db')+';border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);';
+      card.style.cssText='background:#ffffff;border:3px solid '+(isPending?'#3b82f6':'#d1d5db')+';border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);';
+      if(iboUrgent) card.classList.add('pb-card-urgent');
 
       let expanded=isPending||canUpgrade;
 
@@ -8042,8 +8048,8 @@ function getCountdown(matchDate, timeStart){
   const hours = Math.floor((diff%(1000*60*60*24))/(1000*60*60));
   const mins  = Math.floor((diff%(1000*60*60))/(1000*60));
   if(days>1)  return {text:days+'d '+hours+'h until match time', urgent:false};
-  if(days===1) return {text:'1d '+hours+'h until match time', urgent:false};
-  if(hours>0) return {text:hours+'h '+mins+'m until match time', urgent:hours<1};
+  if(days===1) return {text:'Tomorrow · '+hours+'h '+mins+'m away', urgent:true};
+  if(hours>0) return {text:'Today · '+hours+'h '+mins+'m away', urgent:true};
   return {text:mins+'m until match time ⚠️', urgent:true};
 }
 

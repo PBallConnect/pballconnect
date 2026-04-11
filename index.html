@@ -168,8 +168,8 @@
       <div class="nav-item nav-lessons-dim" onclick="showPage('myLessons')" id="nav-myLessons" title="My Lessons">
         <span class="nav-icon">📚</span><span class="nav-label">My Lessons</span>
       </div>
-      <div class="nav-item nav-lessons-dim" onclick="showPage('lessons')" id="nav-lessons" title="Coaching">
-        <span class="nav-icon">🎓</span><span class="nav-label">Coaching</span>
+      <div class="nav-item nav-lessons-dim" onclick="showPage('lessons')" id="nav-lessons" title="For Coaches">
+        <span class="nav-icon">🎓</span><span class="nav-label">For Coaches</span>
         <span class="nav-lessons-badge" id="lessonsNavBadge" style="display:none;">New</span>
       </div>
       <div class="nav-item" onclick="showPage('privacy')" id="nav-privacy" title="Privacy Policy">
@@ -1574,50 +1574,6 @@
         <p id="matchPageSub">Let's find you a game</p>
       </div>
 
-      <!-- Match status squares -->
-      <div style="display:flex;gap:12px;margin-bottom:20px;max-width:500px;flex-wrap:wrap;">
-        <!-- Green square: fully confirmed matches -->
-        <div onclick="showPage('myInvites')"
-          style="flex:1;min-width:100px;padding:14px 12px;border-radius:14px;border:2px solid rgba(76,175,125,0.5);
-            background:rgba(76,175,125,0.1);cursor:pointer;text-align:center;transition:all .15s;"
-          onmouseover="this.style.background='rgba(76,175,125,0.18)'"
-          onmouseout="this.style.background='rgba(76,175,125,0.1)'">
-          <div id="matchSquareMyConfirmed" style="font-size:32px;font-weight:800;color:var(--green);line-height:1;">0</div>
-          <div style="font-size:11px;color:var(--dim);margin-top:4px;font-weight:600;">✅ Confirmed</div>
-          <div style="font-size:10px;color:rgba(76,175,125,0.7);margin-top:2px;">all slots filled</div>
-        </div>
-        <!-- Red circle: pending matches (not yet full) -->
-        <div onclick="showPage('myInvites')"
-          style="flex:1;min-width:100px;padding:14px 12px;border-radius:999px;border:2px solid rgba(239,68,68,0.4);
-            background:rgba(239,68,68,0.08);cursor:pointer;text-align:center;transition:all .15s;"
-          onmouseover="this.style.background='rgba(239,68,68,0.15)'"
-          onmouseout="this.style.background='rgba(239,68,68,0.08)'">
-          <div id="matchSquareMyCount" style="font-size:32px;font-weight:800;color:#f87171;line-height:1;">0</div>
-          <div style="font-size:11px;color:var(--dim);margin-top:4px;font-weight:600;">🔴 Pending</div>
-          <div style="font-size:10px;color:rgba(248,113,113,0.7);margin-top:2px;">slots not yet full</div>
-        </div>
-        <!-- Blue circle: invited to (pending, not full) -->
-        <div onclick="showPage('invitedByOthers')"
-          style="flex:1;min-width:100px;padding:14px 12px;border-radius:999px;border:2px solid rgba(59,130,246,0.4);
-            background:rgba(59,130,246,0.08);cursor:pointer;text-align:center;transition:all .15s;"
-          onmouseover="this.style.background='rgba(59,130,246,0.15)'"
-          onmouseout="this.style.background='rgba(59,130,246,0.08)'">
-          <div id="matchSquareInvitedCount" style="font-size:32px;font-weight:800;color:#60a5fa;line-height:1;">0</div>
-          <div style="font-size:11px;color:var(--dim);margin-top:4px;font-weight:600;">🔵 Invited (open)</div>
-          <div style="font-size:10px;color:rgba(96,165,250,0.7);margin-top:2px;">not yet full</div>
-        </div>
-        <!-- Green square: invited, confirmed (all full) -->
-        <div onclick="showPage('invitedByOthers')"
-          style="flex:1;min-width:100px;padding:14px 12px;border-radius:14px;border:2px solid rgba(76,175,125,0.5);
-            background:rgba(76,175,125,0.1);cursor:pointer;text-align:center;transition:all .15s;"
-          onmouseover="this.style.background='rgba(76,175,125,0.18)'"
-          onmouseout="this.style.background='rgba(76,175,125,0.1)'">
-          <div id="matchSquareInvitedConfirmed" style="font-size:32px;font-weight:800;color:var(--green);line-height:1;">0</div>
-          <div style="font-size:11px;color:var(--dim);margin-top:4px;font-weight:600;">✅ You're In</div>
-          <div style="font-size:10px;color:rgba(76,175,125,0.7);margin-top:2px;">full &amp; confirmed</div>
-        </div>
-      </div>
-
       <!-- STEP INDICATOR -->
       <div class="match-steps" id="matchSteps" style="margin-bottom:20px;">
         <div style="text-align:center;">
@@ -1694,7 +1650,7 @@
 
 
         <div style="margin-bottom:4px;">
-          <div class="field" style="margin:0;">
+          <div class="field" style="margin:0;max-width:220px;">
             <label>Date</label>
             <input type="date" id="matchDate"
               style="width:100%;padding:10px 14px;border-radius:10px;border:2px solid #9ca3af;
