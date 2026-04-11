@@ -721,73 +721,6 @@
       <button class="anytime-btn" id="anytimeBtn" onclick="toggleAnytime()">⚡ Anytime — I'm flexible!</button>
     </div>
 
-    <div class="divider"></div>
-
-    <!-- COACH SECTION -->
-    <div class="field">
-      <label>Are you a coach or instructor?</label>
-      <div style="font-size:12px;color:var(--dim);margin-bottom:10px;line-height:1.5;">Coaches get a 🎓 badge on their player card and appear in the Find a Coach directory under Get Lessons.</div>
-      <div class="chips" id="isCoachChips">
-        <button class="chip" onclick="selChip('isCoachChips',this,'isCoach');toggleCoachSection('Yes')">Yes — I coach!</button>
-        <button class="chip" onclick="selChip('isCoachChips',this,'isCoach');toggleCoachSection('No')">Not currently</button>
-      </div>
-    </div>
-
-    <div id="coachSection" style="display:none;">
-      <div class="divider"></div>
-      <div style="background:rgba(76,175,125,0.06);border:1px solid rgba(76,175,125,0.2);border-radius:14px;padding:16px;margin-bottom:16px;">
-        <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:14px;">🎓 Coach Profile</div>
-
-        <div class="field">
-          <label>Certifications</label>
-          <div class="chips" id="coachCertChips" style="flex-wrap:wrap;">
-            <button class="chip" onclick="toggleCoachChip('coachCertChips',this,'coachCerts','PPR')">PPR Certified</button>
-            <button class="chip" onclick="toggleCoachChip('coachCertChips',this,'coachCerts','IPTPA')">IPTPA Certified</button>
-            <button class="chip" onclick="toggleCoachChip('coachCertChips',this,'coachCerts','USAPA')">USAPA Ambassador</button>
-            <button class="chip" onclick="toggleCoachChip('coachCertChips',this,'coachCerts','Self-taught')">Self-taught pro</button>
-            <button class="chip" onclick="toggleCoachChip('coachCertChips',this,'coachCerts','Tennis pro')">Tennis pro background</button>
-          </div>
-        </div>
-
-        <div class="field">
-          <label>Lesson types offered</label>
-          <div class="chips" id="coachLessonChips" style="flex-wrap:wrap;">
-            <button class="chip" onclick="toggleCoachChip('coachLessonChips',this,'coachLessonTypes','Beginner')">Beginner</button>
-            <button class="chip" onclick="toggleCoachChip('coachLessonChips',this,'coachLessonTypes','Intermediate')">Intermediate</button>
-            <button class="chip" onclick="toggleCoachChip('coachLessonChips',this,'coachLessonTypes','Advanced')">Advanced</button>
-            <button class="chip" onclick="toggleCoachChip('coachLessonChips',this,'coachLessonTypes','All levels')">All levels</button>
-          </div>
-        </div>
-
-        <div class="field">
-          <label>Lesson format</label>
-          <div class="chips" id="coachFormatChips" style="flex-wrap:wrap;">
-            <button class="chip" onclick="toggleCoachChip('coachFormatChips',this,'coachFormats','Private')">Private (1-on-1)</button>
-            <button class="chip" onclick="toggleCoachChip('coachFormatChips',this,'coachFormats','Semi-private')">Semi-private</button>
-            <button class="chip" onclick="toggleCoachChip('coachFormatChips',this,'coachFormats','Group clinic')">Group clinic</button>
-            <button class="chip" onclick="toggleCoachChip('coachFormatChips',this,'coachFormats','Drills')">Drills session</button>
-          </div>
-        </div>
-
-        <div class="grid2">
-          <div class="field">
-            <label>Rate from ($/hr)</label>
-            <input type="number" id="coachRateMin" placeholder="e.g. 50" min="0" max="500"/>
-          </div>
-          <div class="field">
-            <label>Rate to ($/hr)</label>
-            <input type="number" id="coachRateMax" placeholder="e.g. 80" min="0" max="500"/>
-          </div>
-        </div>
-
-        <div class="field">
-          <label>Coach bio <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— optional · tell players about your coaching style</span></label>
-          <textarea id="coachBio" rows="3" maxlength="500" placeholder="e.g. Former tennis pro with 5 years teaching pickleball. Focus on technique, footwork and the third-shot drop…"
-            style="width:100%;padding:12px 14px;border-radius:10px;border:2px solid #9ca3af;background:#f9fafb;color:#111;font-size:13px;font-family:'DM Sans',sans-serif;resize:vertical;line-height:1.5;outline:none;"></textarea>
-        </div>
-      </div>
-    </div>
-
     <div class="btn-row">
       <button class="btn-back" onclick="goTo(1)">← Back</button>
       <button class="btn-next" id="next2" disabled onclick="goTo(3)">Continue →</button>
@@ -2103,14 +2036,30 @@
     <div class="page-section" id="page-myLessons">
       <div class="page-header">
         <h1>My <span>Lessons</span></h1>
-        <p>Track your lesson bookings and history</p>
+        <p>Find a coach and track your lesson history</p>
       </div>
-      <div class="coming-soon" style="min-height:40vh;">
+
+      <!-- Find a Coach section -->
+      <div style="margin-bottom:28px;">
+        <div style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">🔍 Find a Coach</div>
+        <div id="lessonsLockedMsg" class="lessons-locked" style="display:none;">
+          <div class="lessons-locked-icon">🔒</div>
+          <div class="lessons-locked-text">Sign in and complete your Player Profile to see coaches near you!</div>
+          <button class="lessons-go-profile-btn" onclick="showPage('playerProfile')">Go to Player Profile →</button>
+        </div>
+        <div id="coachDirectory" style="display:none;">
+          <div style="font-size:12px;color:var(--dim);margin-bottom:16px;" id="coachDirectoryMeta"></div>
+          <div id="coachList"></div>
+        </div>
+      </div>
+
+      <!-- Lesson Tracker -->
+      <div style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">📚 Lesson Tracker</div>
+      <div class="coming-soon" style="min-height:30vh;">
         <div class="coming-soon-icon">📚</div>
         <h2>Lesson Tracker</h2>
         <p>Once you book a lesson with a coach, your sessions will appear here — dates, coach, notes, and progress tracking.</p>
         <div class="coming-soon-badge">Coming Soon</div>
-        <button onclick="showPage('lessons')" style="margin-top:20px;padding:10px 24px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;">🎓 Find a Coach →</button>
       </div>
     </div>
 
@@ -2196,68 +2145,103 @@
       </div>
     </div>
 
-    <!-- LESSONS PAGE -->
+    <!-- COACHING PAGE -->
     <div class="page-section" id="page-lessons">
       <div class="page-header">
         <h1>🎓 <span>Coaching</span></h1>
-        <p>Find a coach or register as one</p>
+        <p>Register as a coach and grow your student base</p>
       </div>
 
-      <!-- Tab switcher -->
-      <div style="display:flex;gap:8px;margin-bottom:20px;">
-        <button id="tabFindCoach" onclick="switchCoachTab('find')"
-          style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--green);background:var(--green);color:var(--dark);font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">
-          🔍 Find a Coach
-        </button>
-        <button id="tabBeCoach" onclick="switchCoachTab('be')"
-          style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">
-          🎓 I'm a Coach
-        </button>
-      </div>
+      <!-- Coach status -->
+      <div id="coachStatusMsg" style="margin-bottom:16px;"></div>
 
-      <!-- FIND A COACH tab -->
-      <div id="coachFindTab">
-        <div id="lessonsLockedMsg" class="lessons-locked" style="display:none;">
-          <div class="lessons-locked-icon">🔒</div>
-          <div class="lessons-locked-text">Sign in and complete your Player Profile to see coaches near you!</div>
-          <button class="lessons-go-profile-btn" onclick="showPage('playerProfile')">Go to Player Profile →</button>
-        </div>
-        <div id="coachDirectory" style="display:none;">
-          <div style="font-size:12px;color:var(--dim);margin-bottom:16px;" id="coachDirectoryMeta"></div>
-          <div id="coachList"></div>
+      <!-- Are you a coach? -->
+      <div class="field" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:14px;padding:16px;margin-bottom:16px;">
+        <label style="color:#111;">Are you a coach or instructor?</label>
+        <div style="font-size:12px;color:#6b7280;margin-bottom:10px;line-height:1.5;">Coaches get a 🎓 badge on their player card and appear in the Find a Coach directory on the My Lessons page.</div>
+        <div class="chips" id="isCoachChips">
+          <button class="chip" onclick="selChip('isCoachChips',this,'isCoach');toggleCoachSection('Yes')">Yes — I coach!</button>
+          <button class="chip" onclick="selChip('isCoachChips',this,'isCoach');toggleCoachSection('No')">Not currently</button>
         </div>
       </div>
 
-      <!-- BE A COACH tab -->
-      <div id="coachBeTab" style="display:none;">
-        <div style="background:rgba(76,175,125,0.06);border:1px solid rgba(76,175,125,0.2);border-radius:14px;padding:20px;margin-bottom:16px;">
-          <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:8px;">Register as a coach</div>
-          <div style="font-size:13px;color:var(--dim);line-height:1.6;margin-bottom:16px;">
-            Complete your Coach Profile in your Player Profile to appear in the coach directory. Players searching for lessons will find you based on your location, certifications, and skill level.
-          </div>
-          <div id="coachStatusMsg" style="margin-bottom:16px;"></div>
-          <button onclick="showPage('playerProfile');setTimeout(openEditProfile,400);"
-            style="padding:11px 24px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;">
-            ✏️ Edit My Coach Profile
-          </button>
-        </div>
+      <!-- Coach profile details (shown when Yes) -->
+      <div id="coachSection" style="display:none;">
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:14px;padding:16px;margin-bottom:16px;">
+          <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:14px;">🎓 Coach Profile</div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:20px;">
-          <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
-            <div style="font-size:28px;margin-bottom:8px;">🗺️</div>
-            <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:4px;">Local discovery</div>
-            <div style="font-size:11px;color:var(--dim);">Players near you find your profile</div>
+          <div class="field">
+            <label style="color:#111;">Certifications</label>
+            <div class="chips" id="coachCertChips" style="flex-wrap:wrap;">
+              <button class="chip" onclick="toggleCoachChip('coachCertChips',this,'coachCerts','PPR')">PPR Certified</button>
+              <button class="chip" onclick="toggleCoachChip('coachCertChips',this,'coachCerts','IPTPA')">IPTPA Certified</button>
+              <button class="chip" onclick="toggleCoachChip('coachCertChips',this,'coachCerts','USAPA')">USAPA Ambassador</button>
+              <button class="chip" onclick="toggleCoachChip('coachCertChips',this,'coachCerts','Self-taught')">Self-taught pro</button>
+              <button class="chip" onclick="toggleCoachChip('coachCertChips',this,'coachCerts','Tennis pro')">Tennis pro background</button>
+            </div>
           </div>
-          <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
-            <div style="font-size:28px;margin-bottom:8px;">🎓</div>
-            <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:4px;">Cert badge</div>
-            <div style="font-size:11px;color:var(--dim);">PPR, IPTPA credentials displayed</div>
+
+          <div class="field">
+            <label style="color:#111;">Lesson types offered</label>
+            <div class="chips" id="coachLessonChips" style="flex-wrap:wrap;">
+              <button class="chip" onclick="toggleCoachChip('coachLessonChips',this,'coachLessonTypes','Beginner')">Beginner</button>
+              <button class="chip" onclick="toggleCoachChip('coachLessonChips',this,'coachLessonTypes','Intermediate')">Intermediate</button>
+              <button class="chip" onclick="toggleCoachChip('coachLessonChips',this,'coachLessonTypes','Advanced')">Advanced</button>
+              <button class="chip" onclick="toggleCoachChip('coachLessonChips',this,'coachLessonTypes','All levels')">All levels</button>
+            </div>
           </div>
-          <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
-            <div style="font-size:28px;margin-bottom:8px;">💰</div>
-            <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:4px;">Set your rate</div>
-            <div style="font-size:11px;color:var(--dim);">Show your hourly range</div>
+
+          <div class="field">
+            <label style="color:#111;">Lesson format</label>
+            <div class="chips" id="coachFormatChips" style="flex-wrap:wrap;">
+              <button class="chip" onclick="toggleCoachChip('coachFormatChips',this,'coachFormats','Private')">Private (1-on-1)</button>
+              <button class="chip" onclick="toggleCoachChip('coachFormatChips',this,'coachFormats','Semi-private')">Semi-private</button>
+              <button class="chip" onclick="toggleCoachChip('coachFormatChips',this,'coachFormats','Group clinic')">Group clinic</button>
+              <button class="chip" onclick="toggleCoachChip('coachFormatChips',this,'coachFormats','Drills')">Drills session</button>
+            </div>
           </div>
+
+          <div class="grid2">
+            <div class="field">
+              <label style="color:#111;">Rate from ($/hr)</label>
+              <input type="number" id="coachRateMin" placeholder="e.g. 50" min="0" max="500" style="background:#fff;color:#111;border:2px solid #d1d5db;"/>
+            </div>
+            <div class="field">
+              <label style="color:#111;">Rate to ($/hr)</label>
+              <input type="number" id="coachRateMax" placeholder="e.g. 80" min="0" max="500" style="background:#fff;color:#111;border:2px solid #d1d5db;"/>
+            </div>
+          </div>
+
+          <div class="field">
+            <label style="color:#111;">Coach bio <span style="color:#9ca3af;font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— optional</span></label>
+            <textarea id="coachBio" rows="3" maxlength="500" placeholder="e.g. Former tennis pro with 5 years teaching pickleball. Focus on technique, footwork and the third-shot drop…"
+              style="width:100%;padding:12px 14px;border-radius:10px;border:2px solid #d1d5db;background:#fff;color:#111;font-size:13px;font-family:'DM Sans',sans-serif;resize:vertical;line-height:1.5;outline:none;"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Save button -->
+      <button onclick="saveCoachProfile()"
+        style="width:100%;padding:14px;border-radius:12px;border:none;background:var(--green);color:#fff;font-weight:800;font-size:15px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:24px;">
+        💾 Save Coach Profile
+      </button>
+
+      <!-- Feature tiles -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;text-align:center;">
+          <div style="font-size:28px;margin-bottom:8px;">🗺️</div>
+          <div style="font-size:12px;font-weight:600;color:#111;margin-bottom:4px;">Local discovery</div>
+          <div style="font-size:11px;color:#6b7280;">Players near you find your profile</div>
+        </div>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;text-align:center;">
+          <div style="font-size:28px;margin-bottom:8px;">🎓</div>
+          <div style="font-size:12px;font-weight:600;color:#111;margin-bottom:4px;">Cert badge</div>
+          <div style="font-size:11px;color:#6b7280;">PPR, IPTPA credentials displayed</div>
+        </div>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;text-align:center;">
+          <div style="font-size:28px;margin-bottom:8px;">💰</div>
+          <div style="font-size:12px;font-weight:600;color:#111;margin-bottom:4px;">Set your rate</div>
+          <div style="font-size:11px;color:#6b7280;">Show your hourly range</div>
         </div>
       </div>
     </div>

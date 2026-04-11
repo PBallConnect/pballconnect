@@ -1287,8 +1287,8 @@ function showPage(page){
   // Page-specific loaders
   if(page==='dashboard')    loadDashboard();
   if(page==='myCourts')    loadMyCourts();
-  if(page==='lessons')     renderLessonsPage();
-  if(page==='myLessons')   { /* static page */ }
+  if(page==='lessons')     renderCoachingPage();
+  if(page==='myLessons')   renderLessonsPage();
   if(page==='innerCircle'){ loadInnerCircle(); loadNearbyPlayers(); setTimeout(updateColStickyTop,300); }
   if(page==='playerProfile'){
     if(SESSION_PLAYER){
@@ -1325,25 +1325,64 @@ function dimLessonsNav(){
   if(badge)badge.style.display='none';
 }
 
-function switchCoachTab(tab){
-  const findTab=document.getElementById('coachFindTab');
-  const beTab=document.getElementById('coachBeTab');
-  const findBtn=document.getElementById('tabFindCoach');
-  const beBtn=document.getElementById('tabBeCoach');
-  if(tab==='find'){
-    if(findTab)findTab.style.display='block';if(beTab)beTab.style.display='none';
-    if(findBtn){findBtn.style.background='var(--green)';findBtn.style.color='var(--dark)';findBtn.style.borderColor='var(--green)';}
-    if(beBtn){beBtn.style.background='transparent';beBtn.style.color='var(--dim)';beBtn.style.borderColor='var(--border)';}
-  }else{
-    if(findTab)findTab.style.display='none';if(beTab)beTab.style.display='block';
-    if(beBtn){beBtn.style.background='var(--green)';beBtn.style.color='var(--dark)';beBtn.style.borderColor='var(--green)';}
-    if(findBtn){findBtn.style.background='transparent';findBtn.style.color='var(--dim)';findBtn.style.borderColor='var(--border)';}
-    const statusEl=document.getElementById('coachStatusMsg');
-    if(statusEl){
-      if(SESSION_PLAYER?.is_coach){statusEl.innerHTML='<div style="padding:10px 14px;border-radius:10px;background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.3);color:var(--green);font-size:13px;font-weight:600;">✅ You are registered as a coach!</div>';}
-      else{statusEl.innerHTML='<div style="padding:10px 14px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--dim);font-size:13px;">You haven\'t registered as a coach yet.</div>';}
+function renderCoachingPage(){
+  const p=SESSION_PLAYER;
+  // Restore coach status banner
+  const statusEl=document.getElementById('coachStatusMsg');
+  if(statusEl){
+    if(p?.is_coach){
+      statusEl.innerHTML='<div style="padding:10px 14px;border-radius:10px;background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.3);color:var(--green);font-size:13px;font-weight:600;">✅ You are registered as a coach!</div>';
+    } else {
+      statusEl.innerHTML='';
     }
   }
+  if(!p) return;
+  // Restore form fields from saved profile
+  S.coachCerts=new Set(); S.coachLessonTypes=new Set(); S.coachFormats=new Set();
+  if(p.is_coach){
+    S.isCoach='Yes';
+    const chips=document.getElementById('isCoachChips');
+    if(chips) chips.querySelectorAll('.chip').forEach(ch=>{ ch.classList.toggle('on', ch.textContent.includes('coach')); });
+    toggleCoachSection('Yes');
+    restoreCoachChips('coachCertChips','coachCerts',p.coach_certifications||'');
+    restoreCoachChips('coachLessonChips','coachLessonTypes',p.coach_lesson_types||'');
+    restoreCoachChips('coachFormatChips','coachFormats',p.coach_formats||'');
+    const rMin=document.getElementById('coachRateMin'); if(rMin) rMin.value=p.coach_rate_min||'';
+    const rMax=document.getElementById('coachRateMax'); if(rMax) rMax.value=p.coach_rate_max||'';
+    const bio=document.getElementById('coachBio');     if(bio)  bio.value=p.coach_bio||'';
+  } else {
+    S.isCoach='Not currently';
+    const chips=document.getElementById('isCoachChips');
+    if(chips) chips.querySelectorAll('.chip').forEach(ch=>{ ch.classList.toggle('on', ch.textContent.includes('Not')); });
+    toggleCoachSection('No');
+  }
+}
+async function saveCoachProfile(){
+  const myEmail=getMyEmail();
+  if(!myEmail){ showToast('Sign in to save your coach profile','#f87171'); return; }
+  const payload={
+    is_coach: S.isCoach==='Yes',
+    coach_certifications: S.coachCerts&&S.coachCerts.size>0 ? [...S.coachCerts].join(', ') : null,
+    coach_lesson_types:  S.coachLessonTypes&&S.coachLessonTypes.size>0 ? [...S.coachLessonTypes].join(', ') : null,
+    coach_formats:       S.coachFormats&&S.coachFormats.size>0 ? [...S.coachFormats].join(', ') : null,
+    coach_rate_min:      parseInt(document.getElementById('coachRateMin')?.value)||null,
+    coach_rate_max:      parseInt(document.getElementById('coachRateMax')?.value)||null,
+    coach_bio:           document.getElementById('coachBio')?.value?.trim()||null,
+  };
+  try{
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(myEmail)}`,{
+      method:'PATCH',
+      headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify(payload)
+    });
+    if(res.ok){
+      if(SESSION_PLAYER) Object.assign(SESSION_PLAYER, payload);
+      showToast('Coach profile saved! ✅','#4CAF7D');
+      renderCoachingPage();
+    } else {
+      showToast('Save failed — please try again','#f87171');
+    }
+  }catch(e){ showToast('Save failed — please try again','#f87171'); }
 }
 function renderLessonsPage(){
   const myEmail=getMyEmail();
