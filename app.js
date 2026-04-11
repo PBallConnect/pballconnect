@@ -5564,10 +5564,6 @@ async function restoreSession(email, playerData){
   if(navBtn) navBtn.classList.add('signed-in');
   const editBtn = document.getElementById('editProfileBtnInPage');
   if(editBtn) editBtn.style.display='block';
-  const reqBtn = document.getElementById('viewRequestsBtn');
-  if(reqBtn) reqBtn.style.display='block';
-  const matchInvBtn = document.getElementById('viewMatchInvitesBtn');
-  if(matchInvBtn) matchInvBtn.style.display='block';
   updateTopBar(player);
   showToast('Welcome back, '+(player.first_name||'Player')+'! 🎾','#4CAF7D');
 
