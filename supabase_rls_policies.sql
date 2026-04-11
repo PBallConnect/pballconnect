@@ -254,7 +254,7 @@ drop policy if exists "Authenticated users can insert feedback" on player_feedba
 create policy "Users can read feedback they gave or received"
   on player_feedback for select
   to authenticated
-  using (auth.email() = reviewer_email or auth.email() = reviewee_email);
+  using (auth.email() = reviewer_email or auth.email() = reviewed_email);
 
 create policy "Authenticated users can insert feedback"
   on player_feedback for insert
@@ -278,12 +278,12 @@ create policy "Authenticated users can read availability"
 create policy "Users can manage their own availability"
   on player_availability for insert
   to authenticated
-  with check (auth.email() = email);
+  with check (auth.email() = player_email);
 
 create policy "Users can update their own availability"
   on player_availability for update
   to authenticated
-  using (auth.email() = email);
+  using (auth.email() = player_email);
 
 
 -- ── BETA_FEEDBACK ────────────────────────────────────────────
