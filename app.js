@@ -6362,11 +6362,16 @@ function updateNavCircleBadges(memberCount,pendingCount,incomingCount){
   if(gb){gb.textContent=memberCount;gb.classList.toggle('placeholder',memberCount===0);gb.style.opacity=memberCount>0?'1':'0.4';gb.style.display='inline-flex';}
   if(yb){yb.textContent=pendingCount;yb.classList.toggle('placeholder',pendingCount===0);yb.style.opacity=pendingCount>0?'1':'0.4';yb.style.display='inline-flex';}
   if(pb){const inc=incomingCount||0;pb.textContent=inc;pb.classList.toggle('placeholder',inc===0);pb.style.opacity=inc>0?'1':'0.5';pb.style.display='inline-flex';}
-  // Sync the new summary boxes too
+  // Sync the IC page summary boxes
   const outEl=document.getElementById('icOutboundCount');
   if(outEl) outEl.textContent=pendingCount;
   const inEl=document.getElementById('icInboundCount');
   if(inEl) inEl.textContent=incomingCount||0;
+  // Sync the dashboard IC squares
+  const dashSentEl=document.getElementById('dashIcSentCount');
+  if(dashSentEl) dashSentEl.textContent=pendingCount;
+  const dashIncomingEl=document.getElementById('dashIcIncomingCount');
+  if(dashIncomingEl) dashIncomingEl.textContent=incomingCount||0;
 }
 
 function updateNavCourtBadges(publicCount, privateCount){
@@ -8051,6 +8056,7 @@ async function loadDashTileCounts(myEmail){
     }
     const seen = new Set();
     const confirmed = [...cfOrg,...cfInvited].filter(m=>{ if(seen.has(m.id)) return false; seen.add(m.id); return !isMatchPast(m); });
+    setTile('dashSqConfirmed', confirmed.length);
     setTile('dashTileConfirmed', confirmed.length>0 ? confirmed.length+' upcoming' : 'None yet');
 
     // My invites — open matches I organized
@@ -8058,16 +8064,19 @@ async function loadDashTileCounts(myEmail){
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const myInvites = miRes.ok ? await miRes.json() : [];
     const openInvites = myInvites.filter(m=>!isMatchPast(m));
+    setTile('dashSqMyInvites', openInvites.length);
     setTile('dashTileMyInvites', openInvites.length>0 ? openInvites.length+' awaiting response' : 'None pending');
 
     // Invited to play
     const pendRes = await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.pending&select=match_id`,
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const pendRows = pendRes.ok ? await pendRes.json() : [];
+    setTile('dashSqInvited', pendRows.length);
     setTile('dashTileInvited', pendRows.length>0 ? pendRows.length+' invite'+(pendRows.length>1?'s':'')+' waiting' : 'No invites');
 
     // IC requests — use live count from restoreSession
     setTile('dashTileIC', IC_INCOMING_COUNT>0 ? IC_INCOMING_COUNT+' request'+(IC_INCOMING_COUNT>1?'s':'')+' pending' : 'None pending');
+    setTile('dashIcIncomingCount', IC_INCOMING_COUNT||0);
 
   }catch(e){ console.warn('loadDashTileCounts error:',e); }
 }
