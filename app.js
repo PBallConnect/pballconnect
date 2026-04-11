@@ -2595,6 +2595,57 @@ function checkMatchStep1(){
 }
 
 // ── Group selection (multi-select) ─────────────────────
+
+function showGroupPlayerList(group, groupLabel){
+  // Get players for this group
+  const mySkill = parseFloat(S.skill || SESSION_PLAYER?.skill_level || 0);
+  const skills = mySkill ? getAdjacentSkills(String(mySkill)) : null;
+
+  let players = [];
+  if(group === 'favorites'){
+    players = IC_MEMBERS.filter(({player})=>IC_FAVORITES.has((player.email||'').toLowerCase())).map(x=>x.player);
+  } else if(group === 'all'){
+    players = IC_MEMBERS.map(x=>x.player);
+  } else if(group === 'my_level'){
+    players = IC_MEMBERS.filter(({player})=>skills&&Math.abs(parseFloat(player.skill_level||0)-skills.my)<0.13).map(x=>x.player);
+  } else if(group === 'below'){
+    players = IC_MEMBERS.filter(({player})=>skills&&skills.below!==null&&Math.abs(parseFloat(player.skill_level||0)-skills.below)<0.13).map(x=>x.player);
+  } else if(group === 'above'){
+    players = IC_MEMBERS.filter(({player})=>skills&&skills.above!==null&&Math.abs(parseFloat(player.skill_level||0)-skills.above)<0.13).map(x=>x.player);
+  }
+
+  const existing = document.getElementById('groupPlayerPopup');
+  if(existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'groupPlayerPopup';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;padding:20px;';
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'background:#ffffff;border:2px solid #1a7a3a;border-radius:16px;padding:20px;width:100%;max-width:420px;max-height:80vh;overflow-y:auto;';
+
+  const header = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">'+
+    '<div style="font-size:15px;font-weight:800;color:#111;">'+groupLabel+' <span style="font-size:12px;color:#6b7280;font-weight:600;">('+players.length+' players)</span></div>'+
+    '<button onclick="document.getElementById(`groupPlayerPopup`).remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280;">✕</button>'+
+  '</div>';
+
+  const playerRows = players.length ? players.map(p=>{
+    const name = ((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim() || p.email;
+    const emoji = p.avatar_emoji || '🧑';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:#f3f4f6;border-radius:8px;margin-bottom:6px;">'+
+      '<span style="font-size:20px;">'+emoji+'</span>'+
+      '<div>'+
+        '<div style="font-size:13px;font-weight:700;color:#111;">'+name+'</div>'+
+        (p.skill_level?'<div style="font-size:11px;color:#555;">Rating '+p.skill_level+'</div>':'')+
+      '</div>'+
+    '</div>';
+  }).join('') : '<div style="text-align:center;color:#6b7280;padding:20px;">No players in this group yet.</div>';
+
+  modal.innerHTML = header + playerRows;
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
 function toggleMatchGroup(group, el){
   // Initialize selectedGroups if needed
   if(!MS.selectedGroups) MS.selectedGroups = new Set();
@@ -2804,9 +2855,9 @@ function buildSpecificPicker(){
 
       card.innerHTML =
         '<span style="font-size:22px;line-height:1;">'+(player.avatar_emoji||'\ud83e\uddd1')+'</span>'+
-        '<div style="color:#fff;font-size:11px;font-weight:600;line-height:1.3;word-break:break-word;">'+name+'</div>'+
-        '<div style="color:var(--dim);font-size:10px;">'+( player.skill_level||'?')+'</div>'+
-        (checked?'<div style="color:var(--green);font-size:10px;font-weight:700;">\u2713 Selected</div>':'');
+        '<div style="color:#111;font-size:11px;font-weight:700;line-height:1.3;word-break:break-word;">'+name+'</div>'+
+        '<div style="color:#555;font-size:10px;">'+( player.skill_level||'?')+'</div>'+
+        (checked?'<div style="color:#1a7a3a;font-size:10px;font-weight:700;">\u2713 Selected</div>':'');
 
       if(!atMax || checked){
         card.onclick = ()=>{

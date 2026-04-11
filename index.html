@@ -1820,30 +1820,30 @@
         </div>
         <div style="font-size:11px;color:var(--dim);margin-bottom:8px;">Tap to select one or more groups — selections stack together.</div>
         <div class="match-options" id="matchGroupOptions">
-          <div class="match-option" data-group="favorites" onclick="toggleMatchGroup('favorites',this)">
+          <div class="match-option" data-group="favorites" onclick="toggleMatchGroup('favorites',this)" style="position:relative;">
             <div class="match-option-icon">⭐</div>
             <div class="match-option-title">My Favorites</div>
-            <div class="match-option-sub" id="matchFavoritesSub">Your starred players</div>
+            <div class="match-option-sub" id="matchFavoritesSub">Your starred players <span onclick="event.stopPropagation();showGroupPlayerList('favorites','My Favorites')" style="font-size:10px;color:#1a7a3a;font-weight:700;cursor:pointer;text-decoration:underline;">see list</span></div>
           </div>
-          <div class="match-option" data-group="all" onclick="toggleMatchGroup('all',this)">
+          <div class="match-option" data-group="all" onclick="toggleMatchGroup('all',this)" style="position:relative;">
             <div class="match-option-icon">👥</div>
             <div class="match-option-title">Entire Inner Circle</div>
-            <div class="match-option-sub" id="matchAllSub">All approved members</div>
+            <div class="match-option-sub" id="matchAllSub">All approved members <span onclick="event.stopPropagation();showGroupPlayerList('all','Entire Inner Circle')" style="font-size:10px;color:#1a7a3a;font-weight:700;cursor:pointer;text-decoration:underline;">see list</span></div>
           </div>
-          <div class="match-option" data-group="my_level" onclick="toggleMatchGroup('my_level',this)">
+          <div class="match-option" data-group="my_level" onclick="toggleMatchGroup('my_level',this)" style="position:relative;">
             <div class="match-option-icon">🟢</div>
             <div class="match-option-title">My Level</div>
-            <div class="match-option-sub" id="matchMyLevelSub">Players at my rating</div>
+            <div class="match-option-sub" id="matchMyLevelSub">Players at my rating <span onclick="event.stopPropagation();showGroupPlayerList('my_level','My Level')" style="font-size:10px;color:#1a7a3a;font-weight:700;cursor:pointer;text-decoration:underline;">see list</span></div>
           </div>
-          <div class="match-option" data-group="below" onclick="toggleMatchGroup('below',this)">
+          <div class="match-option" data-group="below" onclick="toggleMatchGroup('below',this)" style="position:relative;">
             <div class="match-option-icon">🟡</div>
             <div class="match-option-title">Below My Level</div>
-            <div class="match-option-sub" id="matchBelowSub">One level below</div>
+            <div class="match-option-sub" id="matchBelowSub">One level below <span onclick="event.stopPropagation();showGroupPlayerList('below','Below My Level')" style="font-size:10px;color:#1a7a3a;font-weight:700;cursor:pointer;text-decoration:underline;">see list</span></div>
           </div>
-          <div class="match-option" data-group="above" onclick="toggleMatchGroup('above',this)">
+          <div class="match-option" data-group="above" onclick="toggleMatchGroup('above',this)" style="position:relative;">
             <div class="match-option-icon">🟣</div>
             <div class="match-option-title">Above My Level</div>
-            <div class="match-option-sub" id="matchAboveSub">One level above</div>
+            <div class="match-option-sub" id="matchAboveSub">One level above <span onclick="event.stopPropagation();showGroupPlayerList('above','Above My Level')" style="font-size:10px;color:#1a7a3a;font-weight:700;cursor:pointer;text-decoration:underline;">see list</span></div>
           </div>
           <div class="match-option" data-group="specific" onclick="toggleMatchGroup('specific',this)">
             <div class="match-option-icon">🎯</div>
