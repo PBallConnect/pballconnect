@@ -5206,8 +5206,8 @@ async function doLogin(){
   }
 }
 
-function signOut(){
-  _supabase.auth.signOut().catch(()=>{});
+async function signOut(){
+  try{ await _supabase.auth.signOut(); }catch(e){}
   localStorage.removeItem('pb_email');
   SUPABASE_ACCESS_TOKEN = SUPABASE_ANON_KEY;
   S.email=''; S.nickname=''; S.avatarEmoji='🎾'; S.skill='';
