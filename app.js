@@ -6959,6 +6959,53 @@ function validateInviteForm(){
   if(smsBtn){smsBtn.style.opacity=validPhone?'1':'0.4';smsBtn.style.pointerEvents=validPhone?'auto':'none';}
 }
 
+
+async function sendInvite(method){
+  const myEmail = getMyEmail();
+  const myName  = getMyName() || 'A fellow pickleball player';
+  if(!myEmail){ openLoginModal(); return; }
+
+  const inviteeEmail = (document.getElementById('inviteEmail')?.value||'').trim();
+  const inviteePhone = (document.getElementById('invitePhone')?.value||'').replace(/\D/g,'');
+  const note         = (document.getElementById('inviteNote')?.value||'').trim();
+  const statusEl     = document.getElementById('inviteStatus');
+  const inviteUrl    = await getMyInviteUrl();
+
+  if(method==='email'){
+    if(!inviteeEmail||!inviteeEmail.includes('@')){ showToast('Please enter a valid email address','#f59e0b'); return; }
+    if(statusEl) statusEl.textContent='Sending…';
+    try{
+      await sendEmail({
+        to_email:    inviteeEmail,
+        type:        'app_invite',
+        personal_note: note || myName+' personally invited you to join PBallConnect — the best way to find pickleball players near you!',
+        invite_url:  inviteUrl
+      });
+      showToast('✅ Invite sent to '+inviteeEmail,'#1a7a3a');
+      if(statusEl) statusEl.textContent='';
+      document.getElementById('inviteEmail').value='';
+      document.getElementById('inviteNote').value='';
+      // Save as pending connection
+      fetch(`${SUPABASE_URL}/rest/v1/connections`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Prefer':'return=minimal'},
+        body:JSON.stringify({requester_email:myEmail,requester_name:myName,recipient_email:inviteeEmail,recipient_name:inviteeEmail.split('@')[0],status:'pending'})
+      }).then(()=>loadIcInvites()).catch(()=>{});
+      validateInviteForm();
+      loadSentInvites();
+    }catch(e){
+      if(statusEl) statusEl.textContent='⚠️ Failed to send';
+      showToast('Could not send email: '+(e.message||'unknown error'),'#dc2626');
+    }
+  } else if(method==='sms'){
+    if(!inviteePhone||inviteePhone.length<10){ showToast('Please enter a valid phone number','#f59e0b'); return; }
+    const smsBody = encodeURIComponent((myName.split(' ')[0])+' invited you to PBallConnect! '+(note?'"'+note+'" ':'')+inviteUrl);
+    window.open('sms:'+inviteePhone+'?body='+smsBody);
+    showToast('Messages app opened! 💬','#60a5fa');
+    loadSentInvites();
+  }
+}
+
 // ══════════════════════════════════════════════════════
 // QR CODE SHARE
 // ══════════════════════════════════════════════════════

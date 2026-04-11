@@ -1292,19 +1292,19 @@
 
         <!-- Email/phone form for tracked invites -->
         <div>
-          <div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Or enter their details for a tracked invite:</div>
+          <div style="font-size:11px;font-weight:700;color:#1a5c32;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Or enter their details for a tracked invite:</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
             <input type="email" id="inviteEmail" placeholder="Email address"
-              style="width:100%;background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box;"
+              style="width:100%;background:#f9fafb;border:2px solid #9ca3af;border-radius:10px;padding:10px 12px;color:#111;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box;"
               oninput="validateInviteForm()"/>
             <input type="tel" id="invitePhone" placeholder="Phone (optional)"
-              style="width:100%;background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box;"
+              style="width:100%;background:#f9fafb;border:2px solid #9ca3af;border-radius:10px;padding:10px 12px;color:#111;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box;"
               oninput="formatPhone(this)"/>
           </div>
           <textarea id="inviteNote" placeholder="Hey! I'd love to play pickleball with you — join my Inner Circle on PBallConnect! 🎾"
-            style="width:100%;background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:#fff;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;resize:none;min-height:60px;box-sizing:border-box;margin-bottom:10px;" rows="2"></textarea>
+            style="width:100%;background:#f9fafb;border:2px solid #9ca3af;border-radius:10px;padding:10px 12px;color:#111;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;resize:none;min-height:60px;box-sizing:border-box;margin-bottom:10px;" rows="2"></textarea>
           <div style="display:flex;gap:8px;align-items:center;">
-            <button id="inviteSendEmailBtn" class="ic-find-members-btn" style="opacity:0.4;pointer-events:none;" onclick="sendInvite('email')">✉️ Send Email</button>
+            <button id="inviteSendEmailBtn" class="ic-find-members-btn" style="opacity:0.4;pointer-events:none;background:#d1fae5;border:2px solid #1a7a3a;color:#1a7a3a;font-weight:700;" onclick="sendInvite('email')">✉️ Send Email</button>
             <button id="inviteSendSmsBtn" class="ic-find-members-btn" style="background:rgba(59,130,246,0.1);border-color:rgba(59,130,246,0.4);color:#60a5fa;opacity:0.4;pointer-events:none;" onclick="sendInvite('sms')">💬 Send Text</button>
             <div id="inviteStatus" style="font-size:11px;color:var(--dim);"></div>
           </div>
