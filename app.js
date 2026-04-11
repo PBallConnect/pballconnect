@@ -814,6 +814,11 @@ function showToast(msg, color='#ef4444'){
 // ── Secure email sender — Cloudflare Pages Function ──────────────────
 async function sendEmail({ to_email, type, personal_note, invite_url, subject }){
   if(!to_email || !to_email.includes('@')) return;
+  // Skip obvious test/fake addresses — plus-addressed test emails, example.com, etc.
+  const lower = to_email.toLowerCase();
+  if(lower.includes('+') && lower.includes('@gmail.com')) return; // dippa+1234@gmail.com pattern
+  if(lower.endsWith('@example.com')) return;
+  if(lower.endsWith('@test.com')) return;
   try{
     const res = await fetch('/api/send-email', {
       method: 'POST',
