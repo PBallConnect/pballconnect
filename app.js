@@ -4062,20 +4062,20 @@ async function loadConfirmedMatchWeather(matchId, date, lat, lon){
     const emoji=getWeatherEmoji(code),desc=getWeatherDesc(code);
     const windLevel=wind<10?'Calm':wind<20?'Breezy':wind<30?'Windy':'Very Windy';
     const precipColor=precip<20?'#1a7a3a':precip<50?'#b45309':'#dc2626';
-    const windColor=wind<10?'var(--green)':wind<20?'#fbbf24':'#f87171';
+    const windColor=wind<10?'#1a7a3a':wind<20?'#b45309':'#dc2626';
     el.innerHTML=
       '<div style="display:flex;align-items:center;gap:10px;">'+
         '<span style="font-size:28px;">'+emoji+'</span>'+
         '<div style="flex:1;">'+
-          '<div style="color:#fff;font-size:13px;font-weight:600;">'+desc+' - '+high+'F high / '+low+'F low</div>'+
+          '<div style="color:#111;font-size:13px;font-weight:600;">'+desc+' · '+high+'°F / '+low+'°F</div>'+
           '<div style="display:flex;gap:12px;margin-top:3px;flex-wrap:wrap;">'+
             '<span style="font-size:11px;color:'+precipColor+';">Rain: '+precip+'%</span>'+
             '<span style="font-size:11px;color:'+windColor+';">Wind: '+wind+' mph ('+windLevel+')</span>'+
           '</div>'+
         '</div>'+
       '</div>'+
-      (precip>=50?'<div style="margin-top:6px;font-size:11px;color:#f87171;background:rgba(239,68,68,0.08);border-radius:6px;padding:5px 8px;">High rain chance - consider an indoor backup</div>':'')+
-      (wind>=25?'<div style="margin-top:4px;font-size:11px;color:#fbbf24;background:rgba(251,191,36,0.08);border-radius:6px;padding:5px 8px;">High winds may affect play</div>':'');
+      (precip>=50?'<div style="margin-top:6px;font-size:11px;color:#dc2626;background:#fff1f2;border:1px solid #fca5a5;border-radius:6px;padding:5px 8px;">☔ High rain chance — consider an indoor backup</div>':'')+
+      (wind>=25?'<div style="margin-top:4px;font-size:11px;color:#b45309;background:#fef9e7;border:1px solid #fde68a;border-radius:6px;padding:5px 8px;">💨 High winds may affect play</div>':'');
   }catch(e){ el.textContent='Weather unavailable'; }
 }
 
@@ -5105,6 +5105,7 @@ function showNewInvitePopup(count, matchId){
 }
 
 function openLoginModal(){
+  window.scrollTo({top:0,behavior:'smooth'});
   const modal = document.getElementById('loginModal');
   if(modal){
     modal.style.display='flex';
@@ -7199,21 +7200,23 @@ function showInviteBanner(invite){
   if(existing) existing.remove();
   const banner=document.createElement('div');
   banner.id='inviteBanner';
-  banner.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:400;background:#0a120b;border-top:2px solid #4CAF7D;padding:16px 20px 28px;box-shadow:0 -8px 32px rgba(0,0,0,0.6);';
+  banner.style.cssText='position:fixed;inset:0;z-index:800;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:20px;-webkit-overflow-scrolling:touch;';
   const inviterName=invite.inviter_name||'A fellow player';
   const note=invite.personal_note?'<div style="margin-top:6px;font-size:12px;color:#fff;font-style:italic;padding:8px 10px;background:rgba(255,255,255,0.05);border-radius:8px;">"'+invite.personal_note+'"</div>':'';
   banner.innerHTML=
-    '<div style="display:flex;align-items:flex-start;gap:12px;">'+
-    '<span style="font-size:26px;flex-shrink:0;">🎾</span>'+
-    '<div style="flex:1;">'+
-      '<div style="color:#4CAF7D;font-weight:800;font-size:15px;margin-bottom:4px;">'+inviterName+' invited you!</div>'+
-      '<div style="color:rgba(255,255,255,0.75);font-size:12px;line-height:1.5;">Create your profile to join and connect with '+inviterName+'.</div>'+
-      note+
+    '<div style="background:#ffffff;border-radius:20px;padding:28px 24px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'+
+      '<div style="text-align:center;margin-bottom:16px;">'+
+        '<div style="font-size:48px;margin-bottom:8px;">🎾</div>'+
+        '<div style="font-size:18px;font-weight:800;color:#111;margin-bottom:6px;">You are invited!</div>'+
+        '<div style="font-size:14px;font-weight:700;color:#1a7a3a;margin-bottom:4px;">'+inviterName+' wants to play pickleball with you</div>'+
+        '<div style="font-size:13px;color:#555;line-height:1.5;">Create your free profile to join their Inner Circle on PBallConnect.</div>'+
+      '</div>'+
+      (invite.personal_note?'<div style="margin-bottom:16px;padding:10px 14px;background:#f0fdf4;border:1px solid #d1fae5;border-radius:10px;font-size:13px;color:#1a5c32;font-style:italic;">\"'+invite.personal_note+'\"</div>':'')+
       '<button onclick="document.getElementById(\'inviteBanner\').remove();openLoginModal();" '+
-        'style="margin-top:12px;width:100%;padding:12px;border-radius:10px;border:none;background:#4CAF7D;color:#0a120b;font-weight:700;font-size:14px;cursor:pointer;">'+
-        '↓ Start My Profile</button>'+
-    '</div>'+
-    '<button onclick="document.getElementById(\'inviteBanner\').remove()" style="background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:22px;flex-shrink:0;padding:0;line-height:1;">✕</button>'+
+        'style="width:100%;padding:14px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-weight:800;font-size:15px;cursor:pointer;margin-bottom:10px;">'+
+        '🏓 Create My Profile</button>'+
+      '<button onclick="document.getElementById(\'inviteBanner\').remove()" style="width:100%;padding:10px;border-radius:12px;border:2px solid #e5e7eb;background:#ffffff;color:#6b7280;font-weight:600;font-size:13px;cursor:pointer;">'+
+        'Maybe later</button>'+
     '</div>';
   document.body.appendChild(banner);
 }
