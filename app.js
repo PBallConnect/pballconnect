@@ -6268,16 +6268,31 @@ async function loadIcPending(){
     if(badge) badge.textContent=pending.length;
     if(!list) return;
     list.innerHTML='';
+
+    // Fetch player profiles for all requesters in one call
+    const emails = pending.map(c=>c.requester_email).filter(Boolean);
+    let profiles = {};
+    if(emails.length){
+      try{
+        const pr = await fetch(
+          `${SUPABASE_URL}/rest/v1/registrations?email=in.(${emails.map(e=>encodeURIComponent(e)).join(',')})&select=email,skill_level,playing_since,city,state`,
+          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+        if(pr.ok)(await pr.json()).forEach(p=>{ profiles[p.email.toLowerCase()]=p; });
+      }catch(_){}
+    }
+
     pending.forEach(conn=>{
-      const row=buildPendingRequestRow(conn);
+      const player = profiles[(conn.requester_email||'').toLowerCase()] || {};
+      const row=buildPendingRequestRow(conn, player);
       list.appendChild(row);
     });
   }catch(e){ console.warn('loadIcPending error:',e); }
 }
 
-function buildPendingRequestRow(conn){
+function buildPendingRequestRow(conn, player={}){
   const row=document.createElement('div');
   row.className='ic-invite-row';
+  row.style.alignItems='flex-start';
   const name=conn.requester_name||conn.requester_email;
   const initials=name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
   const acceptBtn=document.createElement('button');
@@ -6288,9 +6303,20 @@ function buildPendingRequestRow(conn){
   declineBtn.className='ic-action-btn ic-btn-decline';
   declineBtn.textContent='Decline';
   declineBtn.onclick=()=>icRespond(conn.id,'declined',declineBtn);
+
+  // Build detail chips
+  const chips=[];
+  if(player.skill_level) chips.push('⭐ '+player.skill_level);
+  if(player.playing_since) chips.push('Since '+player.playing_since);
+  if(player.city||player.state) chips.push('📍 '+[player.city,player.state].filter(Boolean).join(', '));
+  const detailHtml = chips.length
+    ? '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;">'+
+        chips.map(c=>'<span style="font-size:10px;padding:2px 7px;border-radius:999px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;font-weight:600;">'+c+'</span>').join('')+
+      '</div>'
+    : '';
+
   row.innerHTML='<div class="ic-invite-avatar">'+initials+'</div>'+
-    '<div style="flex:1;"><div class="ic-invite-name">'+name+'</div>'+
-    '<div class="ic-invite-meta">Wants to join your Inner Circle</div></div>';
+    '<div style="flex:1;"><div class="ic-invite-name">'+name+'</div>'+detailHtml+'</div>';
   row.appendChild(acceptBtn);
   row.appendChild(declineBtn);
   return row;
