@@ -2885,7 +2885,8 @@ function buildSpecificPicker(){
 function updateMatchGroupLabels(){
   const mySkill = S.skill || SESSION_PLAYER?.skill_level || '';
   const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
-  const el = (id,txt)=>{ const e=document.getElementById(id); if(e)e.textContent=txt; };
+  const sl = (grp, lbl) => ' <span onclick="event.stopPropagation();showGroupPlayerList(\'' + grp + '\',\'' + lbl + '\')" style="font-size:10px;color:#1a7a3a;font-weight:700;cursor:pointer;text-decoration:underline;">see list</span>';
+  const el = (id,txt)=>{ const e=document.getElementById(id); if(e)e.innerHTML=txt; };
 
   // Count players in each group
   const countGroup = (group)=>{
@@ -2908,10 +2909,10 @@ function updateMatchGroupLabels(){
 
   const countBadge = (n)=> n===0 ? '— no players' : n+' player'+(n!==1?'s':'')+(n<maxNeeded?' ⚠️':'');
 
-  el('matchAllSub',     allCount+' player'+(allCount!==1?'s':''));
-  el('matchMyLevelSub', (skills?.my||'—')+' · '+countBadge(myCount));
-  el('matchBelowSub',   (skills?.below||'—')+' · '+countBadge(belowCount));
-  el('matchAboveSub',   (skills?.above||'—')+' · '+countBadge(aboveCount));
+  el('matchAllSub',     allCount+' player'+(allCount!==1?'s':'')+sl('all','Entire Inner Circle'));
+  el('matchMyLevelSub', (skills?.my||'—')+' · '+countBadge(myCount)+sl('my_level','My Level'));
+  el('matchBelowSub',   (skills?.below||'—')+' · '+countBadge(belowCount)+sl('below','Below My Level'));
+  el('matchAboveSub',   (skills?.above||'—')+' · '+countBadge(aboveCount)+sl('above','Above My Level'));
   el('matchSpecificSub','Pick up to '+(MS.format==='doubles'?3:1)+' from '+allCount);
 }
 
