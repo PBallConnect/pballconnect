@@ -28,7 +28,6 @@ create view public_profiles as
     handedness,
     schedule,
     anytime,
-    wants_partner,
     state,
     county,
     city,
