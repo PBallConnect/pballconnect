@@ -1399,7 +1399,7 @@ async function loadCoachDirectory(){
   if(!list)return;
   list.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;">🔍 Finding coaches near you…</div>';
   try{
-    const res=await fetch(`${SUPABASE_URL}/rest/v1/registrations?is_coach=eq.true&select=first_name,last_name,nickname,avatar_emoji,photo_url,skill_level,city,state,coach_certifications,coach_lesson_types,coach_formats,coach_rate_min,coach_rate_max,coach_bio,email&order=skill_level.desc`,
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/public_profiles?is_coach=eq.true&select=first_name,last_name,nickname,avatar_emoji,photo_url,skill_level,city,state,coach_certifications,coach_lesson_types,coach_formats,coach_rate_min,coach_rate_max,coach_bio,email&order=skill_level.desc`,
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const coaches=res.ok?await res.json():[];
     if(meta)meta.textContent=coaches.length+' coach'+(coaches.length!==1?'es':'')+' registered';
@@ -6141,7 +6141,7 @@ async function loadInnerCircle(){
     IC_MEMBERS = [];
     if(otherEmails.length){
       const pr = await fetch(
-        `${SUPABASE_URL}/rest/v1/registrations?email=in.(${otherEmails.map(e=>encodeURIComponent(e)).join(',')})&select=*`,
+        `${SUPABASE_URL}/rest/v1/public_profiles?email=in.(${otherEmails.map(e=>encodeURIComponent(e)).join(',')})&select=email,first_name,last_name,nickname,avatar_emoji,photo_url,skill_level,dupr_rating,gender,city,state,court_name,play_venues,playing_since,is_coach,handedness`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
       );
       if(pr.ok){
@@ -6541,7 +6541,7 @@ async function icSearchPlayers(val){
     try{
       const q=val.trim();
       const filter='or=(first_name.ilike.'+encodeURIComponent('*'+q+'*')+',last_name.ilike.'+encodeURIComponent('*'+q+'*')+',nickname.ilike.'+encodeURIComponent('*'+q+'*')+')';
-      const res=await fetch(`${SUPABASE_URL}/rest/v1/registrations?${filter}&select=first_name,last_name,email,nickname,skill_level,dupr_rating,gender,city,state,court_name,playing_since&limit=20`,
+      const res=await fetch(`${SUPABASE_URL}/rest/v1/public_profiles?${filter}&select=first_name,last_name,email,nickname,skill_level,dupr_rating,gender,city,state,court_name,playing_since&limit=20`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       if(!res.ok){ if(results) results.innerHTML='<div class="ic-empty">Search failed.</div>'; return; }
       const players=await res.json();
@@ -6817,7 +6817,7 @@ async function loadNearbyPlayers(){
       }
       if(!nearbyPlayers.length){
         const stateAbbr=(S.state||'NH').length===2?S.state.toUpperCase():'NH';
-        const res=await fetch(`${SUPABASE_URL}/rest/v1/registrations?state=eq.${encodeURIComponent(stateAbbr)}&select=first_name,last_name,email,nickname,skill_level,dupr_rating,play_venues,court_name,city,state,avatar_emoji,gender,handedness,playing_since,lat,lon&limit=2000`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+        const res=await fetch(`${SUPABASE_URL}/rest/v1/public_profiles?state=eq.${encodeURIComponent(stateAbbr)}&select=first_name,last_name,email,nickname,skill_level,dupr_rating,play_venues,court_name,city,state,avatar_emoji,gender,handedness,playing_since,lat,lon&limit=2000`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
         if(res.ok){
           const all=await res.json();
           nearbyPlayers=cityData?all.filter(p=>{if(!p.lat||!p.lon)return false;return haversine(cityData.lat,cityData.lon,parseFloat(p.lat),parseFloat(p.lon))<=radiusMi*1.60934;}):all;
@@ -6957,7 +6957,7 @@ async function loadIcInvites(){
       const emails=pending.map(c=>c.recipient_email).filter(Boolean);
       if(emails.length){
         try{
-          const pr=await fetch(`${SUPABASE_URL}/rest/v1/registrations?email=in.(${emails.map(e=>encodeURIComponent(e)).join(',')})&select=email,gender,skill_level`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+          const pr=await fetch(`${SUPABASE_URL}/rest/v1/public_profiles?email=in.(${emails.map(e=>encodeURIComponent(e)).join(',')})&select=email,gender,skill_level`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
           const registered = pr.ok ? await pr.json() : [];
           // For invitees not yet registered, create placeholder entries so count is correct
           const regEmails = new Set(registered.map(r=>r.email.toLowerCase()));
@@ -7571,7 +7571,9 @@ function checkInviteToken(){
   const params=new URLSearchParams(window.location.search);
   const token=params.get('invite');
   if(!token) return;
-  fetch(`${SUPABASE_URL}/rest/v1/invites?invite_token=eq.${token}`,{method:'PATCH',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=representation'},body:JSON.stringify({status:'opened',opened_at:new Date().toISOString()})})
+  // Read via invite_tokens view (anon-safe: exposes only invite_token, inviter_name, invitee_email, status).
+  // The status:'opened' PATCH stays on the full invites table and fires after auth.
+  fetch(`${SUPABASE_URL}/rest/v1/invite_tokens?invite_token=eq.${token}`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
   .then(r=>r.json()).then(rows=>{
     if(rows.length){
       const inv=rows[0];
@@ -7580,6 +7582,8 @@ function checkInviteToken(){
       if(emailInput&&inv.invitee_email) emailInput.value=inv.invitee_email;
       showInviteBanner(inv);
       showPage('playerProfile');
+      // Mark opened — fires after auth; fire-and-forget
+      fetch(`${SUPABASE_URL}/rest/v1/invites?invite_token=eq.${token}`,{method:'PATCH',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},body:JSON.stringify({status:'opened',opened_at:new Date().toISOString()})}).catch(()=>{});
     }
   }).catch(()=>{});
 }
