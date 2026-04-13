@@ -8623,7 +8623,32 @@ function buildGroupCard(group, members){
 
 // ── Create / Edit modal ───────────────────────────────────────
 
-function showCreateGroupModal(){ _openGroupModal(null, null); }
+async function showCreateGroupModal(){
+  // Ensure IC members are loaded before opening the picker
+  if(!IC_MEMBERS.length){
+    const myEmail = getMyEmail();
+    if(myEmail){
+      try{
+        const connsRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/connections?or=(requester_email.eq.${encodeURIComponent(myEmail)},recipient_email.eq.${encodeURIComponent(myEmail)})&status=eq.accepted&select=requester_email,recipient_email`,
+          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+        );
+        if(connsRes.ok){
+          const conns = await connsRes.json();
+          const others = conns.map(c=>c.requester_email===myEmail?c.recipient_email:c.requester_email);
+          if(others.length){
+            const pr = await fetch(
+              `${SUPABASE_URL}/rest/v1/public_profiles?email=in.(${others.map(e=>encodeURIComponent(e)).join(',')})&select=email,first_name,last_name,nickname,avatar_emoji,skill_level,gender,city,state`,
+              {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+            );
+            if(pr.ok){ IC_MEMBERS = (await pr.json()).map(player=>({player})); }
+          }
+        }
+      }catch(e){}
+    }
+  }
+  _openGroupModal(null, null);
+}
 
 async function editGroupModal(groupId){
   const group = _groups.find(g=>g.id===groupId);
@@ -8672,7 +8697,7 @@ function _openGroupModal(group, members){
       '<div style="margin-bottom:16px;">' +
         '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Group Size</label>' +
         '<div style="display:flex;gap:8px;margin-top:6px;" id="gModalSizeChips">' +
-          [4,8,12,16].map(n=>'<button onclick="gModalSize='+n+';render()" style="padding:8px 16px;border-radius:8px;border:2px solid '+(((group?.max_players||4)===n)?'#1a7a3a':'#d1d5db')+';background:'+(((group?.max_players||4)===n)?'#d1fae5':'#f9fafb')+';color:'+(((group?.max_players||4)===n)?'#1a7a3a':'#374151')+';font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">'+n+'</button>').join('') +
+          [4,8,12,16].map(n=>'<button onclick="gModalSize='+n+';render()" style="padding:8px 16px;border-radius:8px;border:2px solid '+((window.gModalSize===n)?'#1a7a3a':'#d1d5db')+';background:'+((window.gModalSize===n)?'#d1fae5':'#f9fafb')+';color:'+((window.gModalSize===n)?'#1a7a3a':'#374151')+';font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">'+n+'</button>').join('') +
         '</div>' +
       '</div>' +
 
@@ -8707,7 +8732,6 @@ function _openGroupModal(group, members){
     // Expose sel and render to window for inline handlers
     window._gSel = sel;
     window._gRender = render;
-    window.gModalSize = group?.max_players || 4;
   }
 
   window._gTogglePrimary = (email, name)=>{
@@ -8773,6 +8797,8 @@ function _openGroupModal(group, members){
     }catch(e){ showToast('Error: '+e.message,'#f87171'); if(saveBtn){saveBtn.disabled=false;saveBtn.textContent=existingId?'Save Changes':'Create Group';} }
   };
 
+  // Initialize size BEFORE first render so chips read the right value
+  window.gModalSize = group?.max_players || 4;
   render();
   overlay.appendChild(sheet);
   document.body.appendChild(overlay);
