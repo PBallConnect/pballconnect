@@ -437,15 +437,14 @@ create policy "Authenticated users can submit beta feedback"
 
 -- ── PLAYER_GROUPS ─────────────────────────────────────────────
 -- Named groups created by organizers for quick match inviting.
--- Run in SQL editor to create the table if it doesn't exist yet:
---   create table if not exists player_groups (
---     id uuid primary key default gen_random_uuid(),
---     organizer_email text not null,
---     name text not null,
---     max_players int not null default 4,  -- 4 / 8 / 12 / 16
---     notes text,
---     created_at timestamptz default now()
---   );
+create table if not exists player_groups (
+  id uuid primary key default gen_random_uuid(),
+  organizer_email text not null,
+  name text not null,
+  max_players int not null default 4,  -- 4 / 8 / 12 / 16
+  notes text,
+  created_at timestamptz default now()
+);
 
 alter table player_groups enable row level security;
 
@@ -477,16 +476,15 @@ create policy "Organizers can delete their own groups"
 
 -- ── PLAYER_GROUP_MEMBERS ──────────────────────────────────────
 -- Members of a named group (primary players + sub pool).
--- Run in SQL editor:
---   create table if not exists player_group_members (
---     id uuid primary key default gen_random_uuid(),
---     group_id uuid references player_groups(id) on delete cascade,
---     player_email text not null,
---     player_name text,
---     role text not null default 'primary',  -- 'primary' | 'sub'
---     sub_category text,                      -- e.g. 'Backup', 'Weather sub'
---     created_at timestamptz default now()
---   );
+create table if not exists player_group_members (
+  id uuid primary key default gen_random_uuid(),
+  group_id uuid references player_groups(id) on delete cascade,
+  player_email text not null,
+  player_name text,
+  role text not null default 'primary',  -- 'primary' | 'sub'
+  sub_category text,                      -- e.g. 'Backup', 'Weather sub'
+  created_at timestamptz default now()
+);
 
 alter table player_group_members enable row level security;
 
@@ -542,22 +540,21 @@ create policy "Organizers can delete group members"
 
 -- ── RECURRING_MATCHES ─────────────────────────────────────────
 -- Recurring match schedules linked to a named group.
--- Run in SQL editor:
---   create table if not exists recurring_matches (
---     id uuid primary key default gen_random_uuid(),
---     organizer_email text not null,
---     group_id uuid references player_groups(id) on delete set null,
---     group_name text,
---     days_of_week text not null,   -- comma-separated: 'Mon,Wed,Fri'
---     time_start text not null,     -- 'HH:MM' 24-hr
---     duration_hours numeric not null default 2,
---     court_id uuid,
---     court_name text,
---     auto_invite_hours int not null default 48,  -- 24 / 48 / 72 / 96
---     gap_alert_hours int not null default 4,
---     status text not null default 'active',      -- 'active' | 'paused'
---     created_at timestamptz default now()
---   );
+create table if not exists recurring_matches (
+  id uuid primary key default gen_random_uuid(),
+  organizer_email text not null,
+  group_id uuid references player_groups(id) on delete set null,
+  group_name text,
+  days_of_week text not null,   -- comma-separated: 'Mon,Wed,Fri'
+  time_start text not null,     -- 'HH:MM' 24-hr
+  duration_hours numeric not null default 2,
+  court_id uuid,
+  court_name text,
+  auto_invite_hours int not null default 48,  -- 24 / 48 / 72 / 96
+  gap_alert_hours int not null default 4,
+  status text not null default 'active',      -- 'active' | 'paused'
+  created_at timestamptz default now()
+);
 
 alter table recurring_matches enable row level security;
 
