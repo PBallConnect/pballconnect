@@ -39,6 +39,7 @@ const DUPR_VALS=['2.0','2.25','2.5','2.75','3.0','3.25','3.5','3.75','4.0','4.25
 
 (function(){
   const tb=document.getElementById('schedBody');
+  if(!tb) return; // schedule grid removed in favour of availability toggles
   DAYS.forEach(d=>{
     const tr=document.createElement('tr');
     const td0=document.createElement('td');
