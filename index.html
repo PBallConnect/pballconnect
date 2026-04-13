@@ -151,6 +151,19 @@
         <span id="navCourtPublic" title="Public Courts" style="display:none;margin-left:3px;min-width:20px;height:20px;border-radius:4px;background:rgba(76,175,125,0.2);border:1px solid rgba(76,175,125,0.4);color:var(--green);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 5px;cursor:default;"></span>
       </div>
 
+      <!-- ── Organizer (shown only when is_organizer = true) ── -->
+      <div id="organizerNav" style="display:none;">
+        <div style="height:1px;background:var(--border);margin:6px 20px;opacity:0.5;"></div>
+        <div class="nav-section-label">Organizer</div>
+        <div class="nav-item" onclick="showPage('myGroups')" id="nav-myGroups" title="My Groups">
+          <span class="nav-icon">🗂️</span><span class="nav-label">My Groups</span>
+          <span id="navGroupsBadge" style="display:none;margin-left:auto;min-width:20px;height:20px;border-radius:4px;background:rgba(76,175,125,0.2);border:1px solid rgba(76,175,125,0.4);color:var(--green);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 5px;"></span>
+        </div>
+        <div class="nav-item" onclick="showPage('recurringMatches')" id="nav-recurringMatches" title="Recurring Matches">
+          <span class="nav-icon">🔄</span><span class="nav-label">Recurring Matches</span>
+        </div>
+      </div>
+
       <div style="height:1px;background:var(--border);margin:6px 20px;opacity:0.5;"></div>
 
       <!-- ── Stats ── -->
@@ -503,6 +516,16 @@
         </div>
       </div>
       <div class="hint">Approximately how many miles are you willing to drive to play from your home address?</div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="field">
+      <label>Do you organize matches?</label>
+      <div class="chips" id="isOrganizerChips">
+        <button class="chip" onclick="selChip('isOrganizerChips',this,'isOrganizer')">Yes</button>
+        <button class="chip" onclick="selChip('isOrganizerChips',this,'isOrganizer')">Not yet</button>
+      </div>
+      <div class="hint">Organizers unlock Named Groups and Recurring Match scheduling</div>
     </div>
 
     <div class="btn-row">
@@ -1797,6 +1820,8 @@
           </div>
         </div>
         <div style="font-size:11px;color:var(--dim);margin-bottom:8px;">Tap to select one or more groups — selections stack together.</div>
+        <!-- Named Groups (organizer feature) — injected by injectNamedGroupOptions() when is_organizer -->
+        <div id="namedGroupOptions" style="display:none;margin-bottom:10px;"></div>
         <!-- Gender filter notice — shown when organizer has set a non-"either" gender preference -->
         <div id="matchGenderFilterBanner" style="display:none;margin-bottom:10px;padding:9px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:12px;color:#1e40af;line-height:1.5;"></div>
         <div class="match-options" id="matchGroupOptions">
@@ -1979,6 +2004,36 @@
         </button>
       </div>
       <div id="recordScoresList"></div>
+    </div>
+
+    <!-- MY GROUPS PAGE -->
+    <div class="page-section" id="page-myGroups">
+      <div class="page-header">
+        <h1 style="color:#111;">🗂️ My <span style="color:#1a7a3a;">Groups</span></h1>
+        <p>Named player groups for quick match inviting</p>
+      </div>
+      <div style="margin-bottom:16px;">
+        <button onclick="showCreateGroupModal()"
+          style="padding:10px 20px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+          + Create Group
+        </button>
+      </div>
+      <div id="myGroupsList"></div>
+    </div>
+
+    <!-- RECURRING MATCHES PAGE -->
+    <div class="page-section" id="page-recurringMatches">
+      <div class="page-header">
+        <h1 style="color:#111;">🔄 Recurring <span style="color:#1a7a3a;">Matches</span></h1>
+        <p>Schedule repeating matches linked to your groups</p>
+      </div>
+      <div style="margin-bottom:16px;">
+        <button onclick="showCreateRecurringModal()"
+          style="padding:10px 20px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+          + New Recurring Match
+        </button>
+      </div>
+      <div id="recurringMatchesList"></div>
     </div>
 
     <div class="page-section" id="page-myInvites" style="background:#ffffff;">

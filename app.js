@@ -29,7 +29,7 @@
 const S={gender:'',skill:'',schedule:new Set(),anytime:false,partner:false,
   waiver:false,photoSrc:null,state:'',stateFips:'',county:'',city:'',email:'',
   court:'',courtName:'',duprVal:null,venues:new Set(),driveDistance:'25 miles',
-  playStyle:'',playFormat:'Both',matchGenderPref:'Both',handedness:'',avatarEmoji:'🎾',venuePref:'',playingSince:'',nickname:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null,_privacyConsent:false,_riskConsent:false,isCoach:'',coachCerts:new Set(),coachLessonTypes:new Set(),coachFormats:new Set()};
+  playStyle:'',playFormat:'Both',matchGenderPref:'Both',handedness:'',avatarEmoji:'🎾',venuePref:'',playingSince:'',nickname:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null,_privacyConsent:false,_riskConsent:false,isCoach:'',coachCerts:new Set(),coachLessonTypes:new Set(),coachFormats:new Set(),isOrganizer:''};
 
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const TIMES=['Early AM','Morning','Afternoon','Evening'];
@@ -1029,6 +1029,7 @@ async function doSaveProfile(){
       lat:                 S.addrLat || SESSION_PLAYER?.lat || null,
       lon:                 S.addrLon || SESSION_PLAYER?.lon || null,
       is_coach:            S.isCoach==='Yes',
+      is_organizer:        S.isOrganizer==='Yes',
       coach_certifications: S.coachCerts&&S.coachCerts.size>0 ? [...S.coachCerts].join(', ') : null,
       coach_lesson_types:  S.coachLessonTypes&&S.coachLessonTypes.size>0 ? [...S.coachLessonTypes].join(', ') : null,
       coach_formats:       S.coachFormats&&S.coachFormats.size>0 ? [...S.coachFormats].join(', ') : null,
@@ -1092,6 +1093,7 @@ async function doSaveProfile(){
           if(rows.length){
             SESSION_PLAYER = rows[0];
             updateTopBar(rows[0]);
+            updateOrganizerNav();
           }
         }
       }catch(e){}
@@ -1301,7 +1303,9 @@ function showPage(page){
   }
   if(page==='findPlayers')  initFindPlayers();
   if(page==='playerStats')   { loadCommunitySnapshot(); }
-  if(page==='setupMatch')     { initSetupMatch(); loadMatchSquareCounts(); }
+  if(page==='setupMatch')        { initSetupMatch(); loadMatchSquareCounts(); }
+  if(page==='myGroups')          loadMyGroups();
+  if(page==='recurringMatches')  loadRecurringMatches();
   if(page==='confirmedMatches') { loadConfirmedMatches(); }
   if(page==='recordScores')  { loadRecordScores(); }
   if(page==='myInvites')      { loadMyInvitesPage(); }
@@ -2489,6 +2493,7 @@ function matchGoTo(step){
   });
   if(step===3) loadMatchCourts();
   if(step===4){
+    injectNamedGroupOptions();
     updateMatchGroupLabels();
     // Reset group selection state visually
     // Re-apply 'on' state for all selected groups
@@ -5603,7 +5608,9 @@ async function restoreSession(email, playerData){
   S.wantsToImprove = player.wants_to_improve || '';
   S.goalRating   = player.goal_rating || null;
   S.matchGenderPref = player.match_gender_pref || 'Both';
+  S.isOrganizer     = player.is_organizer ? 'Yes' : 'Not yet';
   SESSION_PLAYER = player;
+  updateOrganizerNav();
 
   const navBtn = document.getElementById('navLoginBtn');
   if(navBtn) navBtn.classList.add('signed-in');
@@ -5994,6 +6001,17 @@ function restoreProfileForm(player){
     }
   }
 
+  // Restore organizer flag
+  {
+    const isOrg = !!player.is_organizer;
+    S.isOrganizer = isOrg ? 'Yes' : 'Not yet';
+    const chips = document.getElementById('isOrganizerChips');
+    if(chips) chips.querySelectorAll('.chip').forEach(ch=>{
+      const t = ch.textContent.trim();
+      ch.classList.toggle('on', isOrg ? t==='Yes' : t==='Not yet');
+    });
+  }
+
   [1,2,3].forEach(i=>{const step=document.getElementById('step'+i);if(step)step.style.display='block';});
   try{populateSummary();}catch(e){}
   // Lock form on restore — edit mode flag controls whether lock applies
@@ -6041,6 +6059,8 @@ function startChangeDetection(){
         const currentNorm=S.anytime?'Anytime':[...S.schedule].sort().join(',');
         return storedNorm!==currentNorm;
       })()||
+      // Organizer flag
+      (S.isOrganizer==='Yes')!==(p.is_organizer||false)||
       // Coach fields
       (S.isCoach==='Yes')!==(p.is_coach||false)||
       [...(S.coachCerts||[])].sort().join(',')!==(p.coach_certifications||'').split(',').map(s=>s.trim()).filter(Boolean).sort().join(',')||
@@ -8074,13 +8094,22 @@ function getCountdown(matchDate, timeStart){
   const matchDt = new Date(matchDate+'T'+(timeStart||'12:00'));
   const diff = matchDt - new Date();
   if(diff <= 0) return null;
-  const days  = Math.floor(diff/(1000*60*60*24));
-  const hours = Math.floor((diff%(1000*60*60*24))/(1000*60*60));
-  const mins  = Math.floor((diff%(1000*60*60))/(1000*60));
-  if(days>1)  return {text:days+'d '+hours+'h until match time', urgent:false};
-  if(days===1) return {text:'Tomorrow · '+hours+'h '+mins+'m away', urgent:true};
-  if(hours>0) return {text:'Today · '+hours+'h '+mins+'m away', urgent:true};
-  return {text:mins+'m until match time ⚠️', urgent:true};
+  const totalMins = Math.floor(diff / (1000*60));
+  const days  = Math.floor(totalMins / (60*24));
+  const hours = Math.floor((totalMins % (60*24)) / 60);
+  const mins  = totalMins % 60;
+  // Calendar-day comparison: urgent only if match is today or the actual next calendar day
+  const now = new Date();
+  const todayStr = now.toLocaleDateString('en-CA');           // YYYY-MM-DD local
+  const tmrDt = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1);
+  const tmrStr = tmrDt.toLocaleDateString('en-CA');
+  const urgent = matchDate === todayStr || matchDate === tmrStr;
+  // Build "Xd Xh Xm away", omitting leading zero components except always show mins
+  const parts = [];
+  if(days > 0)           parts.push(days+'d');
+  if(hours > 0 || days > 0) parts.push(hours+'h');
+  parts.push(mins+'m');
+  return {text: parts.join(' ')+' away', urgent};
 }
 
 // Helper to render countdown div
@@ -8512,3 +8541,512 @@ document.addEventListener('click', function(e){
 document.addEventListener('DOMContentLoaded', ()=>{
   setTimeout(maybeShowBetaBanner, 1500);
 });
+
+
+// ══════════════════════════════════════════════════════════════
+// PART 1 — Organizer flag helpers
+// ══════════════════════════════════════════════════════════════
+
+function updateOrganizerNav(){
+  const isOrg = !!(SESSION_PLAYER?.is_organizer);
+  const navDiv = document.getElementById('organizerNav');
+  if(navDiv) navDiv.style.display = isOrg ? 'block' : 'none';
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// PART 2 — Named Groups (player_groups + player_group_members)
+// ══════════════════════════════════════════════════════════════
+
+let _groups = [];   // cache for the current session
+
+// ── Load + render ────────────────────────────────────────────
+
+async function loadMyGroups(){
+  const myEmail = getMyEmail();
+  const container = document.getElementById('myGroupsList');
+  if(!container || !myEmail) return;
+  container.innerHTML = '<div style="color:var(--dim);font-size:13px;padding:20px 0;">Loading groups…</div>';
+  try{
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/player_groups?organizer_email=eq.${encodeURIComponent(myEmail)}&order=created_at.asc`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+    );
+    const groups = res.ok ? await res.json() : [];
+    _groups = groups;
+    // Update nav badge
+    const badge = document.getElementById('navGroupsBadge');
+    if(badge){ badge.textContent = groups.length; badge.style.display = groups.length ? 'inline-flex' : 'none'; }
+    if(!groups.length){
+      container.innerHTML = '<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">No groups yet.<br>Create your first named group to use it in Set Up A Match.</div>';
+      return;
+    }
+    // Load members for all groups in one pass
+    const ids = groups.map(g=>g.id);
+    const mRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/player_group_members?group_id=in.(${ids.join(',')})&order=role.asc,created_at.asc`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+    );
+    const allMembers = mRes.ok ? await mRes.json() : [];
+    container.innerHTML = '';
+    groups.forEach(g=>{
+      const members = allMembers.filter(m=>m.group_id===g.id);
+      container.appendChild(buildGroupCard(g, members));
+    });
+  }catch(e){
+    container.innerHTML = '<div style="color:#f87171;font-size:13px;padding:20px 0;">Error loading groups.</div>';
+  }
+}
+
+function buildGroupCard(group, members){
+  const primaries = members.filter(m=>m.role==='primary');
+  const subs      = members.filter(m=>m.role==='sub');
+  const card = document.createElement('div');
+  card.style.cssText = 'background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,0.05);';
+  card.innerHTML =
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">' +
+      '<div>' +
+        '<div style="font-size:16px;font-weight:800;color:#111;">'+group.name+'</div>' +
+        '<div style="font-size:11px;color:var(--dim);margin-top:2px;">'+group.max_players+'-player group</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;">' +
+        '<button onclick="editGroupModal(\''+group.id+'\')" style="padding:6px 12px;border-radius:8px;border:1px solid #d1d5db;background:#f9fafb;color:#374151;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">✏️ Edit</button>' +
+        '<button onclick="deleteGroup(\''+group.id+'\')" style="padding:6px 12px;border-radius:8px;border:1px solid #fecaca;background:#fff1f2;color:#dc2626;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">✕</button>' +
+      '</div>' +
+    '</div>' +
+    (primaries.length ? '<div style="margin-bottom:6px;"><span style="font-size:10px;font-weight:700;color:#1a7a3a;text-transform:uppercase;letter-spacing:.05em;">Primary ('+primaries.length+')</span><div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;">'+primaries.map(m=>'<span style="padding:3px 9px;border-radius:999px;background:#d1fae5;border:1px solid #6ee7b7;font-size:11px;color:#065f46;font-weight:600;">'+m.player_name+'</span>').join('')+'</div></div>' : '') +
+    (subs.length ? '<div><span style="font-size:10px;font-weight:700;color:#d97706;text-transform:uppercase;letter-spacing:.05em;">Sub Pool ('+subs.length+')</span><div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;">'+subs.map(m=>'<span style="padding:3px 9px;border-radius:999px;background:#fef3c7;border:1px solid #fde68a;font-size:11px;color:#92400e;font-weight:600;">'+m.player_name+(m.sub_category?' · '+m.sub_category:'')+'</span>').join('')+'</div></div>' : '') +
+    (group.notes ? '<div style="margin-top:8px;font-size:12px;color:var(--dim);">'+group.notes+'</div>' : '');
+  return card;
+}
+
+// ── Create / Edit modal ───────────────────────────────────────
+
+function showCreateGroupModal(){ _openGroupModal(null, null); }
+
+async function editGroupModal(groupId){
+  const group = _groups.find(g=>g.id===groupId);
+  if(!group) return;
+  // Load members
+  const mRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/player_group_members?group_id=eq.${groupId}&order=role.asc,created_at.asc`,
+    {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+  );
+  const members = mRes.ok ? await mRes.json() : [];
+  _openGroupModal(group, members);
+}
+
+function _openGroupModal(group, members){
+  // Remove any existing modal
+  document.getElementById('groupModal')?.remove();
+  const isEdit = !!group;
+  // IC members for the picker
+  const icPlayers = IC_MEMBERS.map(({player})=>player);
+
+  const overlay = document.createElement('div');
+  overlay.id = 'groupModal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:flex-end;justify-content:center;';
+
+  const sheet = document.createElement('div');
+  sheet.style.cssText = 'background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;padding:24px 20px 32px;';
+
+  // Track selections in this modal
+  const sel = {
+    primary: new Set(members ? members.filter(m=>m.role==='primary').map(m=>m.player_email) : []),
+    subs:    members ? members.filter(m=>m.role==='sub').map(m=>({email:m.player_email,name:m.player_name,cat:m.sub_category||''})) : []
+  };
+
+  function render(){
+    sheet.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">' +
+        '<div style="font-size:18px;font-weight:800;color:#111;">'+(isEdit?'Edit Group':'Create Group')+'</div>' +
+        '<button onclick="document.getElementById(\'groupModal\').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#6b7280;">✕</button>' +
+      '</div>' +
+
+      '<div style="margin-bottom:16px;">' +
+        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Group Name</label>' +
+        '<input id="gModalName" type="text" placeholder="e.g. Tuesday Crew" value="'+(group?.name||'')+'" style="margin-top:6px;width:100%;background:#f9fafb;border:1px solid #d1d5db;border-radius:10px;padding:10px 14px;color:#111;font-size:14px;font-family:\'DM Sans\',sans-serif;outline:none;box-sizing:border-box;"/>' +
+      '</div>' +
+
+      '<div style="margin-bottom:16px;">' +
+        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Group Size</label>' +
+        '<div style="display:flex;gap:8px;margin-top:6px;" id="gModalSizeChips">' +
+          [4,8,12,16].map(n=>'<button onclick="gModalSize='+n+';render()" style="padding:8px 16px;border-radius:8px;border:2px solid '+(((group?.max_players||4)===n)?'#1a7a3a':'#d1d5db')+';background:'+(((group?.max_players||4)===n)?'#d1fae5':'#f9fafb')+';color:'+(((group?.max_players||4)===n)?'#1a7a3a':'#374151')+';font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">'+n+'</button>').join('') +
+        '</div>' +
+      '</div>' +
+
+      '<div style="margin-bottom:16px;">' +
+        '<label style="font-size:12px;font-weight:700;color:#1a7a3a;text-transform:uppercase;letter-spacing:.06em;">🟢 Primary Players <span style="font-weight:400;color:var(--dim);">(from Inner Circle)</span></label>' +
+        '<div style="font-size:11px;color:var(--dim);margin:4px 0 8px;">These players are your first-choice invites. Tap to select.</div>' +
+        (icPlayers.length ? '<div style="display:flex;flex-wrap:wrap;gap:6px;">'+icPlayers.map(p=>{
+          const name = ((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim()||p.email;
+          const on = sel.primary.has(p.email);
+          return '<button onclick="_gTogglePrimary(\''+p.email+'\',\''+name+'\')" style="padding:5px 12px;border-radius:999px;border:2px solid '+(on?'#1a7a3a':'#d1d5db')+';background:'+(on?'#d1fae5':'#f9fafb')+';color:'+(on?'#065f46':'#374151')+';font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">'+name+'</button>';
+        }).join('') + '</div>' : '<div style="color:var(--dim);font-size:12px;">Add players to your Inner Circle first.</div>') +
+      '</div>' +
+
+      '<div style="margin-bottom:20px;">' +
+        '<label style="font-size:12px;font-weight:700;color:#d97706;text-transform:uppercase;letter-spacing:.06em;">🟡 Sub Pool <span style="font-weight:400;color:var(--dim);">(optional backups)</span></label>' +
+        '<div style="font-size:11px;color:var(--dim);margin:4px 0 8px;">Subs are contacted when primaries can\'t make it.</div>' +
+        (icPlayers.length ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">'+icPlayers.filter(p=>!sel.primary.has(p.email)).map(p=>{
+          const name = ((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim()||p.email;
+          const inSubs = sel.subs.some(s=>s.email===p.email);
+          return '<button onclick="_gToggleSub(\''+p.email+'\',\''+name+'\')" style="padding:5px 12px;border-radius:999px;border:2px solid '+(inSubs?'#f59e0b':'#d1d5db')+';background:'+(inSubs?'#fef3c7':'#f9fafb')+';color:'+(inSubs?'#92400e':'#374151')+';font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">'+name+'</button>';
+        }).join('') + '</div>' : '') +
+        (sel.subs.length ? '<div style="margin-top:6px;">'+sel.subs.map((s,i)=>'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;"><span style="font-size:12px;color:#92400e;font-weight:600;">'+s.name+'</span><input placeholder="Category (e.g. Backup)" value="'+s.cat+'" onchange="sel.subs['+i+'].cat=this.value" style="flex:1;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;font-family:\'DM Sans\',sans-serif;outline:none;"/></div>').join('') + '</div>' : '') +
+      '</div>' +
+
+      '<div style="margin-bottom:16px;">' +
+        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Notes <span style="font-weight:400;text-transform:none;color:var(--dim);">— optional</span></label>' +
+        '<input id="gModalNotes" type="text" placeholder="e.g. Rain or shine, bring your A-game" value="'+(group?.notes||'')+'" style="margin-top:6px;width:100%;background:#f9fafb;border:1px solid #d1d5db;border-radius:10px;padding:10px 14px;color:#111;font-size:14px;font-family:\'DM Sans\',sans-serif;outline:none;box-sizing:border-box;"/>' +
+      '</div>' +
+
+      '<button onclick="_gSave(\''+( isEdit ? group.id : ''  )+'\')" style="width:100%;padding:14px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-weight:800;font-size:15px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+(isEdit?'Save Changes':'Create Group')+'</button>';
+
+    // Expose sel and render to window for inline handlers
+    window._gSel = sel;
+    window._gRender = render;
+    window.gModalSize = group?.max_players || 4;
+  }
+
+  window._gTogglePrimary = (email, name)=>{
+    if(sel.primary.has(email)){ sel.primary.delete(email); }
+    else { sel.primary.add(email); sel.subs = sel.subs.filter(s=>s.email!==email); }
+    render();
+  };
+  window._gToggleSub = (email, name)=>{
+    const idx = sel.subs.findIndex(s=>s.email===email);
+    if(idx>=0){ sel.subs.splice(idx,1); }
+    else { sel.subs.push({email, name, cat:''}); }
+    render();
+  };
+  window._gSave = async(existingId)=>{
+    const name = document.getElementById('gModalName')?.value?.trim();
+    if(!name){ showToast('Please enter a group name','#f59e0b'); return; }
+    const saveBtn = sheet.querySelector('button[onclick*="_gSave"]');
+    if(saveBtn){ saveBtn.disabled=true; saveBtn.textContent='Saving…'; }
+    try{
+      const myEmail = getMyEmail();
+      let groupId = existingId;
+      if(existingId){
+        // Update group
+        await fetch(`${SUPABASE_URL}/rest/v1/player_groups?id=eq.${existingId}`,{
+          method:'PATCH',
+          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+          body:JSON.stringify({name, max_players:window.gModalSize, notes:document.getElementById('gModalNotes')?.value?.trim()||null})
+        });
+        // Replace all members
+        await fetch(`${SUPABASE_URL}/rest/v1/player_group_members?group_id=eq.${existingId}`,{
+          method:'DELETE',
+          headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}
+        });
+      } else {
+        // Create group
+        const cr = await fetch(`${SUPABASE_URL}/rest/v1/player_groups`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=representation'},
+          body:JSON.stringify({organizer_email:myEmail, name, max_players:window.gModalSize, notes:document.getElementById('gModalNotes')?.value?.trim()||null})
+        });
+        const newGroup = await cr.json();
+        groupId = newGroup[0]?.id || newGroup?.id;
+      }
+      // Insert members
+      const memberRows = [
+        ...[...sel.primary].map(email=>{
+          const p = IC_MEMBERS.find(({player})=>player.email===email)?.player;
+          const pName = p ? ((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim() : email;
+          return {group_id:groupId, player_email:email, player_name:pName, role:'primary'};
+        }),
+        ...sel.subs.map(s=>({group_id:groupId, player_email:s.email, player_name:s.name, role:'sub', sub_category:s.cat||null}))
+      ];
+      if(memberRows.length){
+        await fetch(`${SUPABASE_URL}/rest/v1/player_group_members`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+          body:JSON.stringify(memberRows)
+        });
+      }
+      document.getElementById('groupModal')?.remove();
+      showToast(existingId ? 'Group updated!' : 'Group created!','#4CAF7D');
+      loadMyGroups();
+    }catch(e){ showToast('Error: '+e.message,'#f87171'); if(saveBtn){saveBtn.disabled=false;saveBtn.textContent=existingId?'Save Changes':'Create Group';} }
+  };
+
+  render();
+  overlay.appendChild(sheet);
+  document.body.appendChild(overlay);
+  // Close on backdrop click
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+}
+
+async function deleteGroup(groupId){
+  if(!confirm('Delete this group? This cannot be undone.')) return;
+  await fetch(`${SUPABASE_URL}/rest/v1/player_groups?id=eq.${groupId}`,{
+    method:'DELETE',
+    headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}
+  });
+  showToast('Group deleted','#6b7280');
+  loadMyGroups();
+}
+
+// ── Inject named group options into Set Up A Match Step 4 ─────
+
+async function injectNamedGroupOptions(){
+  const container = document.getElementById('namedGroupOptions');
+  if(!container) return;
+  if(!SESSION_PLAYER?.is_organizer){ container.style.display='none'; return; }
+  const myEmail = getMyEmail();
+  try{
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/player_groups?organizer_email=eq.${encodeURIComponent(myEmail)}&order=created_at.asc`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+    );
+    const groups = res.ok ? await res.json() : [];
+    _groups = groups;
+    if(!groups.length){ container.style.display='none'; return; }
+    container.style.display='block';
+    container.innerHTML =
+      '<div style="font-size:11px;font-weight:700;color:#1a7a3a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">My Named Groups</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+        groups.map(g=>'<div class="match-option" data-group="named_'+g.id+'" onclick="toggleMatchGroup(\'named_'+g.id+'\',this)" style="padding:10px 12px;"><div style="font-size:13px;font-weight:700;color:#111;">🗂️ '+g.name+'</div><div style="font-size:10px;color:var(--dim);margin-top:2px;">'+g.max_players+' players</div></div>').join('') +
+      '</div>';
+  }catch(e){ container.style.display='none'; }
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// PART 3 — Recurring Matches (recurring_matches table)
+// ══════════════════════════════════════════════════════════════
+
+async function loadRecurringMatches(){
+  const myEmail = getMyEmail();
+  const container = document.getElementById('recurringMatchesList');
+  if(!container || !myEmail) return;
+  container.innerHTML = '<div style="color:var(--dim);font-size:13px;padding:20px 0;">Loading…</div>';
+  try{
+    const [rRes, gRes] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/recurring_matches?organizer_email=eq.${encodeURIComponent(myEmail)}&order=created_at.asc`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}),
+      fetch(`${SUPABASE_URL}/rest/v1/player_groups?organizer_email=eq.${encodeURIComponent(myEmail)}&select=id,name`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
+    ]);
+    const schedules = rRes.ok ? await rRes.json() : [];
+    _groups = gRes.ok ? await gRes.json() : [];
+    if(!schedules.length){
+      container.innerHTML = '<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">No recurring matches yet.<br>Create one to auto-invite your group on a set schedule.</div>';
+      return;
+    }
+    container.innerHTML = '';
+    schedules.forEach(s=>container.appendChild(buildRecurringCard(s)));
+  }catch(e){
+    container.innerHTML = '<div style="color:#f87171;font-size:13px;padding:20px 0;">Error loading recurring matches.</div>';
+  }
+}
+
+function _nextOccurrence(daysOfWeek, timeStart){
+  const dayMap = {Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6,Sun:0};
+  const days = daysOfWeek.split(',').map(d=>dayMap[d.trim()]).filter(d=>d!==undefined);
+  if(!days.length) return null;
+  const [h,m] = (timeStart||'12:00').split(':').map(Number);
+  const now = new Date();
+  for(let i=0;i<8;i++){
+    const d = new Date(now); d.setDate(d.getDate()+i); d.setHours(h,m,0,0);
+    if(days.includes(d.getDay()) && d > now) return d;
+  }
+  return null;
+}
+
+function buildRecurringCard(s){
+  const card = document.createElement('div');
+  card.style.cssText = 'background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,0.05);';
+  const isPaused = s.status==='paused';
+  const nextDt = _nextOccurrence(s.days_of_week, s.time_start);
+  const nextStr = nextDt ? nextDt.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+' '+fmt12(s.time_start) : '—';
+  const daysLabel = s.days_of_week || '—';
+  const autoLabel = s.auto_invite_hours+'h before';
+  card.innerHTML =
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">' +
+      '<div>' +
+        '<div style="font-size:15px;font-weight:800;color:#111;">'+(s.group_name||'Unnamed Group')+'</div>' +
+        '<div style="display:flex;align-items:center;gap:6px;margin-top:3px;">' +
+          '<span style="font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700;background:'+(isPaused?'#f3f4f6':'#d1fae5')+';color:'+(isPaused?'#6b7280':'#065f46')+';border:1px solid '+(isPaused?'#d1d5db':'#6ee7b7')+';'+(isPaused?'':'')+'">'+( isPaused?'⏸ Paused':'● Active')+'</span>' +
+          '<button onclick="toggleRecurringStatus(\''+s.id+'\',\''+s.status+'\')" style="font-size:11px;padding:2px 8px;border-radius:6px;border:1px solid #d1d5db;background:#f9fafb;color:#374151;cursor:pointer;font-family:inherit;">'+(isPaused?'Resume':'Pause')+'</button>' +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;">' +
+        '<button onclick="editRecurringModal(\''+s.id+'\')" style="padding:6px 12px;border-radius:8px;border:1px solid #d1d5db;background:#f9fafb;color:#374151;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">✏️</button>' +
+        '<button onclick="deleteRecurring(\''+s.id+'\')" style="padding:6px 12px;border-radius:8px;border:1px solid #fecaca;background:#fff1f2;color:#dc2626;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">✕</button>' +
+      '</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;">' +
+      '<div style="color:var(--dim);">📅 Days</div><div style="font-weight:600;color:#111;">'+daysLabel+'</div>' +
+      '<div style="color:var(--dim);">⏰ Time</div><div style="font-weight:600;color:#111;">'+fmt12(s.time_start)+' · '+s.duration_hours+'h</div>' +
+      '<div style="color:var(--dim);">🏟️ Court</div><div style="font-weight:600;color:#111;">'+(s.court_name||'TBD')+'</div>' +
+      '<div style="color:var(--dim);">📤 Auto-invite</div><div style="font-weight:600;color:#111;">'+autoLabel+'</div>' +
+      '<div style="color:var(--dim);">📍 Next</div><div style="font-weight:600;color:#1a7a3a;">'+nextStr+'</div>' +
+      '<div style="color:var(--dim);">⚠️ Gap alert</div><div style="font-weight:600;color:#111;">'+s.gap_alert_hours+'h before</div>' +
+    '</div>';
+  return card;
+}
+
+// ── Create / Edit recurring modal ─────────────────────────────
+
+function showCreateRecurringModal(){ _openRecurringModal(null); }
+
+async function editRecurringModal(id){
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/recurring_matches?id=eq.${id}&limit=1`,
+    {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+  );
+  const rows = res.ok ? await res.json() : [];
+  if(rows.length) _openRecurringModal(rows[0]);
+}
+
+function _openRecurringModal(rec){
+  document.getElementById('recurringModal')?.remove();
+  const isEdit = !!rec;
+  const ALL_DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const selDays  = new Set(rec ? rec.days_of_week.split(',').map(d=>d.trim()) : []);
+  let selGroupId = rec?.group_id || '';
+  let selGroupName = rec?.group_name || '';
+  let selCourtId   = rec?.court_id  || '';
+  let selCourtName = rec?.court_name || '';
+
+  const overlay = document.createElement('div');
+  overlay.id = 'recurringModal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:flex-end;justify-content:center;';
+
+  const sheet = document.createElement('div');
+  sheet.style.cssText = 'background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;padding:24px 20px 40px;';
+
+  function render(){
+    sheet.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">' +
+        '<div style="font-size:18px;font-weight:800;color:#111;">'+(isEdit?'Edit Recurring Match':'New Recurring Match')+'</div>' +
+        '<button onclick="document.getElementById(\'recurringModal\').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#6b7280;">✕</button>' +
+      '</div>' +
+
+      // Group picker
+      '<div style="margin-bottom:16px;">' +
+        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Group</label>' +
+        '<select id="rmGroup" onchange="selGroupId=this.value;selGroupName=this.options[this.selectedIndex].text" style="margin-top:6px;width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:\'DM Sans\',sans-serif;background:#f9fafb;color:#111;outline:none;">' +
+          '<option value="">— Select a group —</option>' +
+          _groups.map(g=>'<option value="'+g.id+'"'+( selGroupId===g.id?' selected':'')+'>'+g.name+'</option>').join('') +
+        '</select>' +
+      '</div>' +
+
+      // Days of week
+      '<div style="margin-bottom:16px;">' +
+        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Days of Week</label>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">' +
+          ALL_DAYS.map(d=>'<button onclick="_rmToggleDay(\''+d+'\')" style="padding:6px 12px;border-radius:8px;border:2px solid '+(selDays.has(d)?'#1a7a3a':'#d1d5db')+';background:'+(selDays.has(d)?'#d1fae5':'#f9fafb')+';color:'+(selDays.has(d)?'#065f46':'#374151')+';font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">'+d+'</button>').join('') +
+        '</div>' +
+      '</div>' +
+
+      // Time + duration
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">' +
+        '<div><label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Start Time</label>' +
+          '<input id="rmTime" type="time" value="'+(rec?.time_start||'09:00')+'" style="margin-top:6px;width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;background:#f9fafb;color:#111;outline:none;box-sizing:border-box;"/></div>' +
+        '<div><label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Duration</label>' +
+          '<select id="rmDuration" style="margin-top:6px;width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;background:#f9fafb;color:#111;outline:none;">' +
+            [1,1.5,2,2.5,3].map(h=>'<option value="'+h+'"'+(parseFloat(rec?.duration_hours||2)===h?' selected':'')+'>'+h+'h</option>').join('') +
+          '</select></div>' +
+      '</div>' +
+
+      // Court
+      '<div style="margin-bottom:16px;">' +
+        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Court</label>' +
+        '<input id="rmCourtName" type="text" placeholder="Court name (type or pick from My Courts)" value="'+selCourtName+'" oninput="selCourtName=this.value;selCourtId=\'\'" style="margin-top:6px;width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:\'DM Sans\',sans-serif;background:#f9fafb;color:#111;outline:none;box-sizing:border-box;"/>' +
+      '</div>' +
+
+      // Auto-invite timing
+      '<div style="margin-bottom:16px;">' +
+        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Auto-invite Timing</label>' +
+        '<div style="font-size:11px;color:var(--dim);margin:3px 0 6px;">How far in advance to auto-invite the group</div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+          [24,48,72,96].map(h=>'<button onclick="document.getElementById(\'rmAutoInvite\').value='+h+';render()" style="padding:7px 14px;border-radius:8px;border:2px solid '+( (rec?.auto_invite_hours||48)===h?'#1a7a3a':'#d1d5db')+';background:'+((rec?.auto_invite_hours||48)===h?'#d1fae5':'#f9fafb')+';color:'+((rec?.auto_invite_hours||48)===h?'#065f46':'#374151')+';font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">'+h+'h</button>').join('') +
+        '</div>' +
+        '<input type="hidden" id="rmAutoInvite" value="'+(rec?.auto_invite_hours||48)+'"/>' +
+      '</div>' +
+
+      // Gap alert
+      '<div style="margin-bottom:20px;">' +
+        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Gap Alert Timing</label>' +
+        '<div style="font-size:11px;color:var(--dim);margin:3px 0 6px;">Alert me this many hours before if the match isn\'t full</div>' +
+        '<select id="rmGapAlert" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;background:#f9fafb;color:#111;outline:none;">' +
+          [2,4,6,12,24].map(h=>'<option value="'+h+'"'+(parseInt(rec?.gap_alert_hours||4)===h?' selected':'')+'>'+h+' hours before</option>').join('') +
+        '</select>' +
+      '</div>' +
+
+      '<button onclick="_rmSave(\''+( isEdit?rec.id:''  )+'\')" style="width:100%;padding:14px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-weight:800;font-size:15px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+(isEdit?'Save Changes':'Create Recurring Match')+'</button>';
+
+    window._rmToggleDay = d=>{ if(selDays.has(d)) selDays.delete(d); else selDays.add(d); render(); };
+  }
+
+  window._rmSave = async(existingId)=>{
+    const gId   = document.getElementById('rmGroup')?.value;
+    const gName = document.getElementById('rmGroup')?.options[document.getElementById('rmGroup').selectedIndex]?.text || '';
+    if(!gId){ showToast('Please select a group','#f59e0b'); return; }
+    if(!selDays.size){ showToast('Please select at least one day','#f59e0b'); return; }
+    const timeVal = document.getElementById('rmTime')?.value;
+    if(!timeVal){ showToast('Please set a start time','#f59e0b'); return; }
+    const saveBtn = sheet.querySelector('button[onclick*="_rmSave"]');
+    if(saveBtn){ saveBtn.disabled=true; saveBtn.textContent='Saving…'; }
+    const payload = {
+      organizer_email: getMyEmail(),
+      group_id:        gId,
+      group_name:      gName==='— Select a group —' ? '' : gName,
+      days_of_week:    [...selDays].join(','),
+      time_start:      timeVal,
+      duration_hours:  parseFloat(document.getElementById('rmDuration')?.value||2),
+      court_name:      document.getElementById('rmCourtName')?.value?.trim()||null,
+      auto_invite_hours: parseInt(document.getElementById('rmAutoInvite')?.value||48),
+      gap_alert_hours:   parseInt(document.getElementById('rmGapAlert')?.value||4),
+      status:          rec?.status || 'active',
+    };
+    try{
+      if(existingId){
+        await fetch(`${SUPABASE_URL}/rest/v1/recurring_matches?id=eq.${existingId}`,{
+          method:'PATCH',
+          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+          body:JSON.stringify(payload)
+        });
+      } else {
+        await fetch(`${SUPABASE_URL}/rest/v1/recurring_matches`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+          body:JSON.stringify(payload)
+        });
+      }
+      document.getElementById('recurringModal')?.remove();
+      showToast(existingId?'Updated!':'Recurring match created!','#4CAF7D');
+      loadRecurringMatches();
+    }catch(e){ showToast('Error: '+e.message,'#f87171'); if(saveBtn){saveBtn.disabled=false;saveBtn.textContent=existingId?'Save Changes':'Create Recurring Match';} }
+  };
+
+  render();
+  overlay.appendChild(sheet);
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+}
+
+async function toggleRecurringStatus(id, currentStatus){
+  const newStatus = currentStatus==='active' ? 'paused' : 'active';
+  await fetch(`${SUPABASE_URL}/rest/v1/recurring_matches?id=eq.${id}`,{
+    method:'PATCH',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+    body:JSON.stringify({status:newStatus})
+  });
+  showToast(newStatus==='active'?'Resumed ✅':'Paused ⏸','#4CAF7D');
+  loadRecurringMatches();
+}
+
+async function deleteRecurring(id){
+  if(!confirm('Delete this recurring match?')) return;
+  await fetch(`${SUPABASE_URL}/rest/v1/recurring_matches?id=eq.${id}`,{
+    method:'DELETE',
+    headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}
+  });
+  showToast('Deleted','#6b7280');
+  loadRecurringMatches();
+}

@@ -31,8 +31,6 @@ create view public_profiles as
     state,
     county,
     city,
-    drive_distance,
-    venues,
     playing_since,
     wants_to_improve,
     goal_rating,
@@ -54,7 +52,9 @@ create view public_profiles as
     -- coach directory
     coach_rate_min,
     coach_rate_max,
-    coach_bio
+    coach_bio,
+    -- organizer feature
+    is_organizer
   from registrations;
 
 
@@ -430,3 +430,155 @@ create policy "Authenticated users can submit beta feedback"
   on beta_feedback for insert
   to authenticated
   with check (true);
+
+
+-- ── PLAYER_GROUPS ─────────────────────────────────────────────
+-- Named groups created by organizers for quick match inviting.
+-- Run in SQL editor to create the table if it doesn't exist yet:
+--   create table if not exists player_groups (
+--     id uuid primary key default gen_random_uuid(),
+--     organizer_email text not null,
+--     name text not null,
+--     max_players int not null default 4,  -- 4 / 8 / 12 / 16
+--     notes text,
+--     created_at timestamptz default now()
+--   );
+
+alter table player_groups enable row level security;
+
+drop policy if exists "Organizers can read their own groups" on player_groups;
+drop policy if exists "Organizers can insert their own groups" on player_groups;
+drop policy if exists "Organizers can update their own groups" on player_groups;
+drop policy if exists "Organizers can delete their own groups" on player_groups;
+
+create policy "Organizers can read their own groups"
+  on player_groups for select
+  to authenticated
+  using (auth.email() = organizer_email);
+
+create policy "Organizers can insert their own groups"
+  on player_groups for insert
+  to authenticated
+  with check (auth.email() = organizer_email);
+
+create policy "Organizers can update their own groups"
+  on player_groups for update
+  to authenticated
+  using (auth.email() = organizer_email);
+
+create policy "Organizers can delete their own groups"
+  on player_groups for delete
+  to authenticated
+  using (auth.email() = organizer_email);
+
+
+-- ── PLAYER_GROUP_MEMBERS ──────────────────────────────────────
+-- Members of a named group (primary players + sub pool).
+-- Run in SQL editor:
+--   create table if not exists player_group_members (
+--     id uuid primary key default gen_random_uuid(),
+--     group_id uuid references player_groups(id) on delete cascade,
+--     player_email text not null,
+--     player_name text,
+--     role text not null default 'primary',  -- 'primary' | 'sub'
+--     sub_category text,                      -- e.g. 'Backup', 'Weather sub'
+--     created_at timestamptz default now()
+--   );
+
+alter table player_group_members enable row level security;
+
+drop policy if exists "Organizers can read their group members" on player_group_members;
+drop policy if exists "Organizers can insert group members" on player_group_members;
+drop policy if exists "Organizers can update group members" on player_group_members;
+drop policy if exists "Organizers can delete group members" on player_group_members;
+
+create policy "Organizers can read their group members"
+  on player_group_members for select
+  to authenticated
+  using (
+    exists (
+      select 1 from player_groups
+      where player_groups.id = player_group_members.group_id
+        and player_groups.organizer_email = auth.email()
+    )
+  );
+
+create policy "Organizers can insert group members"
+  on player_group_members for insert
+  to authenticated
+  with check (
+    exists (
+      select 1 from player_groups
+      where player_groups.id = player_group_members.group_id
+        and player_groups.organizer_email = auth.email()
+    )
+  );
+
+create policy "Organizers can update group members"
+  on player_group_members for update
+  to authenticated
+  using (
+    exists (
+      select 1 from player_groups
+      where player_groups.id = player_group_members.group_id
+        and player_groups.organizer_email = auth.email()
+    )
+  );
+
+create policy "Organizers can delete group members"
+  on player_group_members for delete
+  to authenticated
+  using (
+    exists (
+      select 1 from player_groups
+      where player_groups.id = player_group_members.group_id
+        and player_groups.organizer_email = auth.email()
+    )
+  );
+
+
+-- ── RECURRING_MATCHES ─────────────────────────────────────────
+-- Recurring match schedules linked to a named group.
+-- Run in SQL editor:
+--   create table if not exists recurring_matches (
+--     id uuid primary key default gen_random_uuid(),
+--     organizer_email text not null,
+--     group_id uuid references player_groups(id) on delete set null,
+--     group_name text,
+--     days_of_week text not null,   -- comma-separated: 'Mon,Wed,Fri'
+--     time_start text not null,     -- 'HH:MM' 24-hr
+--     duration_hours numeric not null default 2,
+--     court_id uuid,
+--     court_name text,
+--     auto_invite_hours int not null default 48,  -- 24 / 48 / 72 / 96
+--     gap_alert_hours int not null default 4,
+--     status text not null default 'active',      -- 'active' | 'paused'
+--     created_at timestamptz default now()
+--   );
+
+alter table recurring_matches enable row level security;
+
+drop policy if exists "Organizers can read their recurring matches" on recurring_matches;
+drop policy if exists "Organizers can insert recurring matches" on recurring_matches;
+drop policy if exists "Organizers can update recurring matches" on recurring_matches;
+drop policy if exists "Organizers can delete recurring matches" on recurring_matches;
+
+create policy "Organizers can read their recurring matches"
+  on recurring_matches for select
+  to authenticated
+  using (auth.email() = organizer_email);
+
+create policy "Organizers can insert recurring matches"
+  on recurring_matches for insert
+  to authenticated
+  with check (auth.email() = organizer_email);
+
+create policy "Organizers can update recurring matches"
+  on recurring_matches for update
+  to authenticated
+  using (auth.email() = organizer_email);
+
+create policy "Organizers can delete recurring matches"
+  on recurring_matches for delete
+  to authenticated
+  using (auth.email() = organizer_email);
