@@ -900,6 +900,7 @@ function showProfileDiff(){
        return [...S.schedule].sort().join(',');
      })()},
     {label:'Anytime',       old:String(player.anytime||false),        nw:String(S.anytime||false)},
+    {label:'Is Organizer',  old:String(player.is_organizer||false),    nw:String(S.isOrganizer==='Yes')},
     {label:'Is Coach',      old:String(player.is_coach||false),       nw:String(S.isCoach==='Yes')},
     {label:'Coach Certs',   old:player.coach_certifications||'',      nw:S.coachCerts&&S.coachCerts.size>0?[...S.coachCerts].join(', '):''},
     {label:'Lesson Types',  old:player.coach_lesson_types||'',        nw:S.coachLessonTypes&&S.coachLessonTypes.size>0?[...S.coachLessonTypes].join(', '):''},
