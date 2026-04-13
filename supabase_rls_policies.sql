@@ -10,6 +10,9 @@
 -- Browse queries should use /rest/v1/public_profiles.
 -- Self-reads (profile page, restoreSession) stay on /rest/v1/registrations.
 
+-- Add is_organizer column to registrations if it doesn't already exist
+alter table registrations add column if not exists is_organizer boolean not null default false;
+
 drop view if exists public_profiles;
 
 create view public_profiles as
