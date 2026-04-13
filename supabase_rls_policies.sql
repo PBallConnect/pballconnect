@@ -13,6 +13,12 @@
 -- Add is_organizer column to registrations if it doesn't already exist
 alter table registrations add column if not exists is_organizer boolean not null default false;
 
+-- Add availability window columns
+alter table registrations add column if not exists avail_weekday_morning   boolean default false;
+alter table registrations add column if not exists avail_weekday_afternoon boolean default false;
+alter table registrations add column if not exists avail_weekday_evening   boolean default false;
+alter table registrations add column if not exists avail_weekends          boolean default false;
+
 drop view if exists public_profiles;
 
 create view public_profiles as
@@ -57,7 +63,12 @@ create view public_profiles as
     coach_rate_max,
     coach_bio,
     -- organizer feature
-    is_organizer
+    is_organizer,
+    -- availability windows
+    avail_weekday_morning,
+    avail_weekday_afternoon,
+    avail_weekday_evening,
+    avail_weekends
   from registrations;
 
 

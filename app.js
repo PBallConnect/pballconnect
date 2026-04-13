@@ -29,7 +29,8 @@
 const S={gender:'',skill:'',schedule:new Set(),anytime:false,partner:false,
   waiver:false,photoSrc:null,state:'',stateFips:'',county:'',city:'',email:'',
   court:'',courtName:'',duprVal:null,venues:new Set(),driveDistance:'25 miles',
-  playStyle:'',playFormat:'Both',matchGenderPref:'Both',handedness:'',avatarEmoji:'🎾',venuePref:'',playingSince:'',nickname:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null,_privacyConsent:false,_riskConsent:false,isCoach:'',coachCerts:new Set(),coachLessonTypes:new Set(),coachFormats:new Set(),isOrganizer:''};
+  playStyle:'',playFormat:'Both',matchGenderPref:'Both',handedness:'',avatarEmoji:'🎾',venuePref:'',playingSince:'',nickname:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null,_privacyConsent:false,_riskConsent:false,isCoach:'',coachCerts:new Set(),coachLessonTypes:new Set(),coachFormats:new Set(),isOrganizer:'',
+  availWeekdayMorning:false,availWeekdayAfternoon:false,availWeekdayEvening:false,availWeekends:false};
 
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const TIMES=['Early AM','Morning','Afternoon','Evening'];
@@ -337,44 +338,9 @@ function updateGoalRedBar(minIdx, goalIdx){
 }
 
 function toggleGoalRating(answer){
-  const field=document.getElementById('goalRatingField');
-  if(!field) return;
-  if(answer.trim()==='Yes'){
-    field.style.display='block';
-    const personalSlider=document.getElementById('personalRatingSlider');
-    const currentIdx=personalSlider?parseInt(personalSlider.value):0;
-    const sl=document.getElementById('goalRatingSlider');
-    // Keep min=0 so thumb renders correctly across full track
-    // Enforcement of minimum is done in updateGoalRating
-    sl.min=0;
-    sl.max=21;
-    // Start thumb AT the personal rating position
-    const startVal=currentIdx>0?currentIdx:1;
-    sl.value=startVal;
-    const pct=(startVal/21*100).toFixed(1)+'%';
-    sl.style.setProperty('--pct',pct);
-    const gd=document.getElementById('goalRatingDisplay');
-    if(gd){
-      if(!currentIdx) gd.innerHTML='-- <span>slide right to set your goal</span>';
-      else gd.innerHTML=DUPR_VALS[startVal]+' <span>Goal Rating</span>';
-    }
-    S.goalRating=currentIdx>0?DUPR_VALS[startVal]:null;
-    buildGoalTicks(currentIdx);
-    updateGoalRedBar(currentIdx, startVal);
-    // Show lesson questions
-    const ls=document.getElementById('lessonSection');
-    if(ls) ls.style.display='block';
-  } else {
-    const ls=document.getElementById('lessonSection');
-    if(ls) ls.style.display='none';
-    S.hasHadLesson=''; S.wantsLesson='';
-    field.style.display='none';
-    S.goalRating=null;
-    const sl=document.getElementById('goalRatingSlider');
-    if(sl){sl.value=0;sl.min=0;sl.style.setProperty('--pct','0%');}
-    const gd=document.getElementById('goalRatingDisplay');
-    if(gd) gd.innerHTML='-- <span>slide to set your goal</span>';
-  }
+  // Legacy wrapper — old data stored 'Yes'/'No', new UI uses 'improve'/'fun'
+  const val = (answer.trim()==='Yes'||answer.trim()==='improve') ? 'improve' : 'fun';
+  selectImproveGoal(val);
 }
 function updateGoalRating(idx){
   const i=parseInt(idx);
@@ -416,6 +382,7 @@ function updateGoalRating(idx){
     const gd=document.getElementById('goalRatingDisplay');
     if(gd) gd.innerHTML=S.goalRating+' <span>Goal Rating</span>';
   }
+  updateGoalGapViz();
 }
 
 // ── Photo ─────────────────────────────────────────────
@@ -577,9 +544,74 @@ function restoreCoachChips(chipGroupId,sKey,savedStr){
 }
 function toggleAnytime(){
   S.anytime=!S.anytime;
-  document.getElementById('anytimeBtn').classList.toggle('on',S.anytime);
+  const ab=document.getElementById('anytimeBtn');
+  if(ab) ab.classList.toggle('on',S.anytime);
   document.querySelectorAll('.sched-cell').forEach(c=>{c.style.opacity=S.anytime?'0.35':'';c.style.cursor=S.anytime?'default':'';});
   chk2();
+}
+
+// ── Availability toggles (replaces schedule grid) ─────────────
+function toggleAvail(key){
+  S[key] = !S[key];
+  updateAvailToggles();
+  chk2();
+}
+
+function updateAvailToggles(){
+  const map = {
+    availWeekdayMorning:   'availWeekdayMorningBtn',
+    availWeekdayAfternoon: 'availWeekdayAfternoonBtn',
+    availWeekdayEvening:   'availWeekdayEveningBtn',
+    availWeekends:         'availWeekendsBtn',
+  };
+  Object.entries(map).forEach(([key, btnId])=>{
+    const btn   = document.getElementById(btnId);
+    if(!btn) return;
+    const on    = !!S[key];
+    const track = btn.querySelector('.avail-track');
+    const thumb = btn.querySelector('.avail-thumb');
+    if(track) track.style.background = on ? '#1a7a3a' : '#d1d5db';
+    if(thumb) thumb.style.left       = on ? '22px'   : '2px';
+    btn.style.borderColor = on ? '#1a7a3a' : '#d1d5db';
+    btn.style.background  = on ? '#f0fdf4' : '#f9fafb';
+    const labelSpan = btn.querySelector('span');
+    if(labelSpan) labelSpan.style.color = on ? '#065f46' : '#374151';
+  });
+}
+
+// ── Improve / fun selection ────────────────────────────────────
+function selectImproveGoal(val){
+  S.wantsToImprove = val;
+  document.getElementById('improveYesBtn')?.classList.toggle('on', val==='improve');
+  document.getElementById('improveFunBtn')?.classList.toggle('on', val==='fun');
+  const goalField = document.getElementById('goalRatingField');
+  const lessonSec = document.getElementById('lessonSection');
+  if(val==='improve'){
+    if(goalField){ goalField.style.display='block'; }
+    if(lessonSec){ lessonSec.style.display='block'; }
+    updateGoalGapViz();
+  } else {
+    if(goalField) goalField.style.display='none';
+    if(lessonSec) lessonSec.style.display='none';
+    S.goalRating=null; S.hasHadLesson=''; S.wantsLesson='';
+  }
+  chk2();
+}
+
+function updateGoalGapViz(){
+  const currentRaw = parseFloat(S.skill||0);
+  const goalRaw    = parseFloat(S.goalRating||0);
+  const max        = 7.0;
+  const pctCurrent = Math.min(100, (currentRaw / max) * 100).toFixed(1);
+  const pctGoal    = Math.min(100, (goalRaw    / max) * 100).toFixed(1);
+  const curBar  = document.getElementById('vizCurrentBar');
+  const tgtBar  = document.getElementById('vizTargetBar');
+  const curVal  = document.getElementById('vizCurrentVal');
+  const tgtVal  = document.getElementById('vizTargetVal');
+  if(curBar)  curBar.style.width  = pctCurrent+'%';
+  if(tgtBar)  tgtBar.style.width  = pctGoal+'%';
+  if(curVal)  curVal.textContent  = currentRaw > 0 ? currentRaw.toFixed(2) : '—';
+  if(tgtVal)  tgtVal.textContent  = goalRaw    > 0 ? goalRaw.toFixed(2)    : '—';
 }
 function togglePartner(){S.partner=!S.partner;const pt=document.getElementById('partnerTrack');if(pt)pt.classList.toggle('on',S.partner);}
 function toggleConsent(type){
@@ -674,26 +706,19 @@ function populateSummary(){
   const driveEl=document.getElementById('driveDistance');
   set('sumDrive', driveEl?driveEl.value+' miles':'—');
 
-  // Schedule grid
+  // Availability toggles summary
   const schedGrid = document.getElementById('sumSchedGrid');
   if(schedGrid){
-    const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-    const times=['Morning','Afternoon','Evening'];
-    let html='<table style="border-collapse:collapse;width:100%;font-size:11px;">';
-    html+='<tr><th style="padding:4px;"></th>';
-    days.forEach(d=>html+='<th style="padding:4px;color:var(--green);font-size:9px;">'+d+'</th>');
-    html+='</tr>';
-    times.forEach(t=>{
-      html+='<tr><td style="padding:4px;color:var(--dim);font-size:9px;white-space:nowrap;">'+t+'</td>';
-      days.forEach(d=>{
-        const key=d+'|'+t;
-        const on=S.anytime||S.schedule.has(key);
-        html+='<td style="padding:4px;text-align:center;color:'+(on?'var(--green)':'rgba(255,255,255,0.12)')+';">'+(on?'✓':'·')+'</td>';
-      });
-      html+='</tr>';
-    });
-    html+='</table>';
-    schedGrid.innerHTML=html;
+    const windows=[
+      {key:'availWeekdayMorning',  label:'Weekday mornings'},
+      {key:'availWeekdayAfternoon',label:'Weekday afternoons'},
+      {key:'availWeekdayEvening',  label:'Weekday evenings'},
+      {key:'availWeekends',        label:'Weekends'},
+    ];
+    const active=windows.filter(w=>S[w.key]);
+    schedGrid.innerHTML=active.length
+      ? active.map(w=>'<span style="display:inline-block;padding:3px 9px;border-radius:999px;background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.4);color:#4CAF7D;font-size:11px;font-weight:600;margin:2px;">'+w.label+'</span>').join('')
+      : '<span style="color:var(--dim);font-size:12px;">None selected</span>';
   }
 
   // Section 3 — Levels
@@ -888,18 +913,10 @@ function showProfileDiff(){
     {label:'Wants to Improve', old:player.wants_to_improve||'',      nw:S.wantsToImprove||''},
     {label:'Had a Lesson',  old:player.has_had_lesson||'',            nw:S.hasHadLesson||''},
     {label:'Wants Lesson',  old:player.wants_lesson||'',              nw:S.wantsLesson||''},
-    {label:'Schedule',      old:(()=>{
-       const stored=(player.schedule||player.play_schedule||'');
-       if(!stored||stored==='Not specified') return '';
-       if(stored==='Anytime') return 'Anytime';
-       return stored.split(',').map(s=>s.trim()).filter(Boolean).sort().join(',');
-     })(),
-     nw:(()=>{
-       if(S.anytime) return 'Anytime';
-       if(!S.schedule||S.schedule.size===0) return '';
-       return [...S.schedule].sort().join(',');
-     })()},
-    {label:'Anytime',       old:String(player.anytime||false),        nw:String(S.anytime||false)},
+    {label:'Wkdy Mornings', old:String(!!(player.avail_weekday_morning)),   nw:String(!!S.availWeekdayMorning)},
+    {label:'Wkdy Afternoons',old:String(!!(player.avail_weekday_afternoon)),nw:String(!!S.availWeekdayAfternoon)},
+    {label:'Wkdy Evenings', old:String(!!(player.avail_weekday_evening)),   nw:String(!!S.availWeekdayEvening)},
+    {label:'Weekends',      old:String(!!(player.avail_weekends)),           nw:String(!!S.availWeekends)},
     {label:'Is Organizer',  old:String(player.is_organizer||false),    nw:String(S.isOrganizer==='Yes')},
     {label:'Is Coach',      old:String(player.is_coach||false),       nw:String(S.isCoach==='Yes')},
     {label:'Coach Certs',   old:player.coach_certifications||'',      nw:S.coachCerts&&S.coachCerts.size>0?[...S.coachCerts].join(', '):''},
@@ -1027,6 +1044,10 @@ async function doSaveProfile(){
       goal_rating:         S.goalRating || null,
       has_had_lesson:      S.hasHadLesson || null,
       wants_lesson:        S.wantsLesson || null,
+      avail_weekday_morning:   !!S.availWeekdayMorning,
+      avail_weekday_afternoon: !!S.availWeekdayAfternoon,
+      avail_weekday_evening:   !!S.availWeekdayEvening,
+      avail_weekends:          !!S.availWeekends,
       lat:                 S.addrLat || SESSION_PLAYER?.lat || null,
       lon:                 S.addrLon || SESSION_PLAYER?.lon || null,
       is_coach:            S.isCoach==='Yes',
@@ -5874,12 +5895,14 @@ function restoreProfileForm(player){
   S.matchGenderPref=player.match_gender_pref||'Both';
   restoreChip('matchGenderPrefChips',player.match_gender_pref||'Both');
   onMatchGenderPrefChange(S.matchGenderPref);
-  restoreChip('improveChips',player.wants_to_improve);
   restoreChip('lessonChips',player.has_had_lesson);
   S.gender=player.gender||''; S.handedness=player.handedness||'';
   S.venuePref=player.play_venues||''; S.playStyle=player.play_style||'';
-  S.wantsToImprove=player.wants_to_improve||'';
   S.hasHadLesson=player.has_had_lesson||''; S.wantsLesson=player.wants_lesson||'';
+  // Restore improve/fun goal selection (supports old 'Yes'/'No' and new 'improve'/'fun')
+  const rawImprove=player.wants_to_improve||'';
+  const improveVal=(rawImprove==='Yes'||rawImprove==='improve')?'improve':(rawImprove==='No'||rawImprove==='fun')?'fun':'';
+  if(improveVal) selectImproveGoal(improveVal); else S.wantsToImprove='';
 
   if(player.skill_level){
     const idx=DUPR_VALS.findIndex(v=>String(v)===String(player.skill_level));
@@ -5902,18 +5925,12 @@ function restoreProfileForm(player){
     }
   }
 
-  S.schedule.clear(); S.anytime=false;
-  document.querySelectorAll('.sched-cell').forEach(c=>{c.classList.remove('on');c.style.opacity='';c.style.cursor='';});
-  if(player.anytime||player.schedule==='Anytime'){
-    S.anytime=true; const ab=document.getElementById('anytimeBtn'); if(ab) ab.classList.add('on');
-  } else if(player.schedule&&player.schedule!=='Not specified'){
-    const parts=String(player.schedule).split(',').map(s=>s.trim()).filter(Boolean);
-    parts.forEach(key=>{
-      // Try exact data-key match first (Mon|Morning format)
-      let cell=document.querySelector('[data-key="'+key+'"]');
-      if(cell){cell.classList.add('on');S.schedule.add(key);}
-    });
-  }
+  // Restore 4 availability toggles
+  S.availWeekdayMorning   = !!player.avail_weekday_morning;
+  S.availWeekdayAfternoon = !!player.avail_weekday_afternoon;
+  S.availWeekdayEvening   = !!player.avail_weekday_evening;
+  S.availWeekends         = !!player.avail_weekends;
+  updateAvailToggles();
 
   if(player.drive_distance_miles){
     const dd=document.getElementById('driveDistance');
@@ -5940,20 +5957,16 @@ function restoreProfileForm(player){
     if(removeBtn) removeBtn.style.display='inline-block';
   }
 
-  if(player.wants_to_improve==='Yes'){
-    toggleGoalRating('Yes');
-    if(player.goal_rating){
-      S.goalRating=player.goal_rating;
-      const goalIdx=DUPR_VALS.findIndex(v=>String(v)===String(player.goal_rating));
-      if(goalIdx>=0){
-        const gsl=document.getElementById('goalRatingSlider');
-        if(gsl){gsl.value=goalIdx;gsl.style.setProperty('--pct',(goalIdx/21*100).toFixed(1)+'%');
-          const personalIdx=DUPR_VALS.findIndex(v=>String(v)===String(player.skill_level));
-          updateGoalRedBar(personalIdx>=0?personalIdx:0,goalIdx);}
-        const grd=document.getElementById('goalRatingDisplay');
-        if(grd) grd.innerHTML=player.goal_rating+' <span>Goal Rating</span>';
-      }
+  if(improveVal==='improve'&&player.goal_rating){
+    S.goalRating=player.goal_rating;
+    const goalIdx=DUPR_VALS.findIndex(v=>String(v)===String(player.goal_rating));
+    if(goalIdx>=0){
+      const gsl=document.getElementById('goalRatingSlider');
+      if(gsl){gsl.value=goalIdx;gsl.style.setProperty('--pct',(goalIdx/21*100).toFixed(1)+'%');}
+      const grd=document.getElementById('goalRatingDisplay');
+      if(grd) grd.innerHTML=player.goal_rating+' <span>Goal Rating</span>';
     }
+    updateGoalGapViz();
   }
 
   // Restore age
@@ -6050,16 +6063,13 @@ function startChangeDetection(){
       S.playFormat!==(p.play_format||'Both')||
       S.playStyle!==(p.play_style||'')||
       S.venuePref!==(p.play_venues||'')||
-      S.wantsToImprove!==(p.wants_to_improve||'')||
+      (()=>{const raw=p.wants_to_improve||'';const stored=(raw==='Yes'||raw==='improve')?'improve':(raw==='No'||raw==='fun')?'fun':'';return (S.wantsToImprove||'')!==stored;})()||
       S.hasHadLesson!==(p.has_had_lesson||'')||
       S.wantsLesson!==(p.wants_lesson||'')||
-      S.anytime!==(p.anytime||false)||
-      (()=>{
-        const stored=(p.schedule||p.play_schedule||'');
-        const storedNorm=(!stored||stored==='Not specified'||stored==='Anytime')?stored:stored.split(',').map(s=>s.trim()).filter(Boolean).sort().join(',');
-        const currentNorm=S.anytime?'Anytime':[...S.schedule].sort().join(',');
-        return storedNorm!==currentNorm;
-      })()||
+      !!S.availWeekdayMorning!==!!(p.avail_weekday_morning)||
+      !!S.availWeekdayAfternoon!==!!(p.avail_weekday_afternoon)||
+      !!S.availWeekdayEvening!==!!(p.avail_weekday_evening)||
+      !!S.availWeekends!==!!(p.avail_weekends)||
       // Organizer flag
       (S.isOrganizer==='Yes')!==(p.is_organizer||false)||
       // Coach fields
@@ -6102,7 +6112,7 @@ function lockProfileForm(){
     // Use readOnly+style instead of disabled — disabled can clear values in Chrome
     step.querySelectorAll('input:not([type="hidden"]),textarea').forEach(el=>{el.readOnly=true;el.style.opacity='0.6';el.style.cursor='not-allowed';el.style.pointerEvents='none';});
     step.querySelectorAll('select').forEach(el=>{el.disabled=true;el.style.opacity='0.6';el.style.cursor='not-allowed';});
-    step.querySelectorAll('.chip,.chip-rect,.sched-cell,.anytime-btn,.day-btn').forEach(el=>{el.style.pointerEvents='none';el.style.opacity='0.6';});
+    step.querySelectorAll('.chip,.chip-rect,.sched-cell,.anytime-btn,.day-btn,.avail-toggle').forEach(el=>{el.style.pointerEvents='none';el.style.opacity='0.6';});
     const ep=document.getElementById('emojiPreview');if(ep){ep.style.pointerEvents='none';ep.style.cursor='default';}
     step.querySelectorAll('input[type="range"]').forEach(el=>{el.disabled=true;});
     step.querySelectorAll('.btn-next,.btn-back').forEach(el=>{el.style.display='none';});
@@ -6121,7 +6131,7 @@ function unlockProfileForm(){
     const step=document.getElementById(id);if(!step)return;
     step.querySelectorAll('input:not([type="hidden"]),textarea').forEach(el=>{el.readOnly=false;el.style.opacity='';el.style.cursor='';el.style.pointerEvents='';});
     step.querySelectorAll('select').forEach(el=>{el.disabled=false;el.style.opacity='';el.style.cursor='';});
-    step.querySelectorAll('.chip,.chip-rect,.sched-cell,.anytime-btn,.day-btn').forEach(el=>{el.style.pointerEvents='';el.style.opacity='';});
+    step.querySelectorAll('.chip,.chip-rect,.sched-cell,.anytime-btn,.day-btn,.avail-toggle').forEach(el=>{el.style.pointerEvents='';el.style.opacity='';});
     const ep=document.getElementById('emojiPreview');if(ep){ep.style.pointerEvents='';ep.style.cursor='pointer';}
     step.querySelectorAll('input[type="range"]').forEach(el=>{el.disabled=false;});
     step.querySelectorAll('.btn-next,.btn-back').forEach(el=>{el.style.display='';});
@@ -8677,6 +8687,10 @@ function _openGroupModal(group, members){
   const selected = new Set(
     members ? members.filter(m=>m.role==='primary' && m.player_email!==myEmail).map(m=>m.player_email) : []
   );
+  // subs = IC member emails chosen as subs/backups
+  const subs = new Set(
+    members ? members.filter(m=>m.role==='sub').map(m=>m.player_email) : []
+  );
 
   const overlay = document.createElement('div');
   overlay.id = 'groupModal';
@@ -8743,6 +8757,28 @@ function _openGroupModal(group, members){
         ) +
       '</div>' +
 
+      // Sub Pool
+      '<div style="margin-bottom:20px;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
+          '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Sub Pool <span style="font-weight:400;text-transform:none;color:#9ca3af;">— optional backups</span></label>' +
+          (subs.size ? '<span style="font-size:12px;font-weight:700;color:#d97706;">'+subs.size+' sub'+(subs.size===1?'':'s')+'</span>' : '') +
+        '</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:8px;">' +
+          (icPlayers.filter(p=>!selected.has(p.email)).length
+            ? icPlayers.filter(p=>!selected.has(p.email)).map(p=>{
+                const nm  = ((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim()||p.email;
+                const on  = subs.has(p.email);
+                return '<button onclick="_gToggleSub(\''+p.email+'\',\''+nm.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\') "'+
+                  ' style="padding:7px 14px;border-radius:999px;border:2px solid '+(on?'#d97706':'#d1d5db')+
+                  ';background:'+(on?'#fef3c7':'#f9fafb')+
+                  ';color:'+(on?'#92400e':'#374151')+
+                  ';font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">'+nm+'</button>';
+              }).join('')
+            : '<span style="color:#6b7280;font-size:12px;padding:4px 0;">All IC members are already in the primary group.</span>'
+          ) +
+        '</div>' +
+      '</div>' +
+
       // Notes
       '<div style="margin-bottom:20px;">' +
         '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Notes <span style="font-weight:400;text-transform:none;color:#9ca3af;">— optional</span></label>' +
@@ -8763,6 +8799,16 @@ function _openGroupModal(group, members){
         return;
       }
       selected.add(email);
+      subs.delete(email); // can't be both primary and sub
+    }
+    render();
+  };
+
+  window._gToggleSub = (email, name)=>{
+    if(subs.has(email)){
+      subs.delete(email);
+    } else {
+      subs.add(email);
     }
     render();
   };
@@ -8793,14 +8839,19 @@ function _openGroupModal(group, members){
         const newGroup = await cr.json();
         groupId = newGroup[0]?.id || newGroup?.id;
       }
-      // Always save organizer as first member, then selected IC players
+      // Always save organizer as first member, then selected IC players, then subs
       const memberRows = [
         {group_id:groupId, player_email:myEmail, player_name:myName, role:'primary'},
         ...[...selected].map(email=>{
           const p = IC_MEMBERS.find(({player})=>player.email===email)?.player;
           const pName = p ? ((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim() : email;
           return {group_id:groupId, player_email:email, player_name:pName, role:'primary'};
-        })
+        }),
+        ...[...subs].map(email=>{
+          const p = IC_MEMBERS.find(({player})=>player.email===email)?.player;
+          const pName = p ? ((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim() : email;
+          return {group_id:groupId, player_email:email, player_name:pName, role:'sub'};
+        }),
       ];
       if(memberRows.length){
         await fetch(`${SUPABASE_URL}/rest/v1/player_group_members`,{
