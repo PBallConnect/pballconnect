@@ -8663,110 +8663,128 @@ async function editGroupModal(groupId){
 }
 
 function _openGroupModal(group, members){
-  // Remove any existing modal
   document.getElementById('groupModal')?.remove();
-  const isEdit = !!group;
-  // IC members for the picker
+  const isEdit   = !!group;
   const icPlayers = IC_MEMBERS.map(({player})=>player);
+  const myEmail  = getMyEmail();
+  const myPlayer = SESSION_PLAYER;
+  const myName   = ((myPlayer?.first_name||'')+(myPlayer?.last_name?' '+myPlayer.last_name:'')).trim()||myEmail;
+
+  // Initialize size state once
+  window.gModalSize = group?.max_players || 4;
+
+  // selected = IC member emails chosen as primary players (organizer is implicit, always slot 1)
+  const selected = new Set(
+    members ? members.filter(m=>m.role==='primary' && m.player_email!==myEmail).map(m=>m.player_email) : []
+  );
 
   const overlay = document.createElement('div');
   overlay.id = 'groupModal';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:flex-end;justify-content:center;';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1000;display:flex;align-items:flex-end;justify-content:center;';
 
   const sheet = document.createElement('div');
   sheet.style.cssText = 'background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;padding:24px 20px 32px;';
 
-  // Track selections in this modal
-  const sel = {
-    primary: new Set(members ? members.filter(m=>m.role==='primary').map(m=>m.player_email) : []),
-    subs:    members ? members.filter(m=>m.role==='sub').map(m=>({email:m.player_email,name:m.player_name,cat:m.sub_category||''})) : []
-  };
-
   function render(){
+    const size      = window.gModalSize;
+    const filled    = 1 + selected.size; // organizer + selected IC members
+    const remaining = Math.max(0, size - filled);
+    const full      = remaining === 0;
+    const ctrColor  = full ? '#dc2626' : remaining === 1 ? '#d97706' : '#1a7a3a';
+
     sheet.innerHTML =
+      // Header
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">' +
         '<div style="font-size:18px;font-weight:800;color:#111;">'+(isEdit?'Edit Group':'Create Group')+'</div>' +
         '<button onclick="document.getElementById(\'groupModal\').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#6b7280;">✕</button>' +
       '</div>' +
 
+      // Group name
       '<div style="margin-bottom:16px;">' +
         '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Group Name</label>' +
         '<input id="gModalName" type="text" placeholder="e.g. Tuesday Crew" value="'+(group?.name||'')+'" style="margin-top:6px;width:100%;background:#f9fafb;border:1px solid #d1d5db;border-radius:10px;padding:10px 14px;color:#111;font-size:14px;font-family:\'DM Sans\',sans-serif;outline:none;box-sizing:border-box;"/>' +
       '</div>' +
 
-      '<div style="margin-bottom:16px;">' +
+      // Group size chips
+      '<div style="margin-bottom:20px;">' +
         '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Group Size</label>' +
-        '<div style="display:flex;gap:8px;margin-top:6px;" id="gModalSizeChips">' +
-          [4,8,12,16].map(n=>'<button onclick="gModalSize='+n+';render()" style="padding:8px 16px;border-radius:8px;border:2px solid '+((window.gModalSize===n)?'#1a7a3a':'#d1d5db')+';background:'+((window.gModalSize===n)?'#d1fae5':'#f9fafb')+';color:'+((window.gModalSize===n)?'#1a7a3a':'#374151')+';font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">'+n+'</button>').join('') +
+        '<div style="display:flex;gap:8px;margin-top:8px;">' +
+          [4,8,12,16].map(n=>{
+            const on = (window.gModalSize === n);
+            return '<button onclick="window.gModalSize='+n+';window._gRender()" style="flex:1;padding:10px 0;border-radius:10px;border:2px solid '+(on?'#1a7a3a':'#d1d5db')+';background:'+(on?'#d1fae5':'#f9fafb')+';color:'+(on?'#1a7a3a':'#6b7280')+';font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;">'+n+'</button>';
+          }).join('') +
         '</div>' +
       '</div>' +
 
-      '<div style="margin-bottom:16px;">' +
-        '<label style="font-size:12px;font-weight:700;color:#1a7a3a;text-transform:uppercase;letter-spacing:.06em;">🟢 Primary Players <span style="font-weight:400;color:var(--dim);">(from Inner Circle)</span></label>' +
-        '<div style="font-size:11px;color:var(--dim);margin:4px 0 8px;">These players are your first-choice invites. Tap to select.</div>' +
-        (icPlayers.length ? '<div style="display:flex;flex-wrap:wrap;gap:6px;">'+icPlayers.map(p=>{
-          const name = ((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim()||p.email;
-          const on = sel.primary.has(p.email);
-          return '<button onclick="_gTogglePrimary(\''+p.email+'\',\''+name+'\')" style="padding:5px 12px;border-radius:999px;border:2px solid '+(on?'#1a7a3a':'#d1d5db')+';background:'+(on?'#d1fae5':'#f9fafb')+';color:'+(on?'#065f46':'#374151')+';font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">'+name+'</button>';
-        }).join('') + '</div>' : '<div style="color:var(--dim);font-size:12px;">Add players to your Inner Circle first.</div>') +
+      // Player counter + tiles
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">' +
+        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Players</label>' +
+        '<span style="font-size:13px;font-weight:800;color:'+ctrColor+';">' +
+          (full ? '✅ Full &nbsp;'+size+' / '+size : filled+' / '+size+'&nbsp; · &nbsp;'+remaining+' spot'+(remaining===1?'':'s')+' remaining') +
+        '</span>' +
+      '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;">' +
+        // Organizer tile — always first, red, non-clickable
+        '<button disabled style="padding:7px 14px;border-radius:999px;border:2px solid #dc2626;background:#fee2e2;color:#991b1b;font-size:12px;font-weight:700;cursor:default;font-family:inherit;">'+myName+' · Organizer</button>' +
+        // IC member buttons
+        (icPlayers.length
+          ? icPlayers.map(p=>{
+              const nm  = ((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim()||p.email;
+              const on  = selected.has(p.email);
+              const dis = !on && full;
+              return '<button onclick="_gTogglePlayer(\''+p.email+'\',\''+nm.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\')" '+(dis?'disabled':'')+
+                ' style="padding:7px 14px;border-radius:999px;border:2px solid '+(on?'#1a7a3a':dis?'#e5e7eb':'#d1d5db')+
+                ';background:'+(on?'#d1fae5':dis?'#f3f4f6':'#f9fafb')+
+                ';color:'+(on?'#065f46':dis?'#9ca3af':'#374151')+
+                ';font-size:12px;font-weight:600;cursor:'+(dis?'default':'pointer')+
+                ';font-family:inherit;opacity:'+(dis?'0.5':'1')+';">'+nm+'</button>';
+            }).join('')
+          : '<span style="color:#6b7280;font-size:12px;padding:4px 0;">No Inner Circle members yet.</span>'
+        ) +
       '</div>' +
 
+      // Notes
       '<div style="margin-bottom:20px;">' +
-        '<label style="font-size:12px;font-weight:700;color:#d97706;text-transform:uppercase;letter-spacing:.06em;">🟡 Sub Pool <span style="font-weight:400;color:var(--dim);">(optional backups)</span></label>' +
-        '<div style="font-size:11px;color:var(--dim);margin:4px 0 8px;">Subs are contacted when primaries can\'t make it.</div>' +
-        (icPlayers.length ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">'+icPlayers.filter(p=>!sel.primary.has(p.email)).map(p=>{
-          const name = ((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim()||p.email;
-          const inSubs = sel.subs.some(s=>s.email===p.email);
-          return '<button onclick="_gToggleSub(\''+p.email+'\',\''+name+'\')" style="padding:5px 12px;border-radius:999px;border:2px solid '+(inSubs?'#f59e0b':'#d1d5db')+';background:'+(inSubs?'#fef3c7':'#f9fafb')+';color:'+(inSubs?'#92400e':'#374151')+';font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">'+name+'</button>';
-        }).join('') + '</div>' : '') +
-        (sel.subs.length ? '<div style="margin-top:6px;">'+sel.subs.map((s,i)=>'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;"><span style="font-size:12px;color:#92400e;font-weight:600;">'+s.name+'</span><input placeholder="Category (e.g. Backup)" value="'+s.cat+'" onchange="sel.subs['+i+'].cat=this.value" style="flex:1;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:11px;font-family:\'DM Sans\',sans-serif;outline:none;"/></div>').join('') + '</div>' : '') +
-      '</div>' +
-
-      '<div style="margin-bottom:16px;">' +
-        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Notes <span style="font-weight:400;text-transform:none;color:var(--dim);">— optional</span></label>' +
+        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Notes <span style="font-weight:400;text-transform:none;color:#9ca3af;">— optional</span></label>' +
         '<input id="gModalNotes" type="text" placeholder="e.g. Rain or shine, bring your A-game" value="'+(group?.notes||'')+'" style="margin-top:6px;width:100%;background:#f9fafb;border:1px solid #d1d5db;border-radius:10px;padding:10px 14px;color:#111;font-size:14px;font-family:\'DM Sans\',sans-serif;outline:none;box-sizing:border-box;"/>' +
       '</div>' +
 
-      '<button onclick="_gSave(\''+( isEdit ? group.id : ''  )+'\')" style="width:100%;padding:14px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-weight:800;font-size:15px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+(isEdit?'Save Changes':'Create Group')+'</button>';
+      '<button onclick="_gSave(\''+( isEdit ? group.id : '' )+'\')" style="width:100%;padding:14px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-weight:800;font-size:15px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+(isEdit?'Save Changes':'Create Group')+'</button>';
 
-    // Expose sel and render to window for inline handlers
-    window._gSel = sel;
     window._gRender = render;
   }
 
-  window._gTogglePrimary = (email, name)=>{
-    if(sel.primary.has(email)){ sel.primary.delete(email); }
-    else { sel.primary.add(email); sel.subs = sel.subs.filter(s=>s.email!==email); }
+  window._gTogglePlayer = (email, name)=>{
+    if(selected.has(email)){
+      selected.delete(email);
+    } else {
+      if(1 + selected.size >= window.gModalSize){
+        showToast('Group is full — increase the size or deselect someone','#f59e0b');
+        return;
+      }
+      selected.add(email);
+    }
     render();
   };
-  window._gToggleSub = (email, name)=>{
-    const idx = sel.subs.findIndex(s=>s.email===email);
-    if(idx>=0){ sel.subs.splice(idx,1); }
-    else { sel.subs.push({email, name, cat:''}); }
-    render();
-  };
+
   window._gSave = async(existingId)=>{
     const name = document.getElementById('gModalName')?.value?.trim();
     if(!name){ showToast('Please enter a group name','#f59e0b'); return; }
     const saveBtn = sheet.querySelector('button[onclick*="_gSave"]');
     if(saveBtn){ saveBtn.disabled=true; saveBtn.textContent='Saving…'; }
     try{
-      const myEmail = getMyEmail();
       let groupId = existingId;
       if(existingId){
-        // Update group
         await fetch(`${SUPABASE_URL}/rest/v1/player_groups?id=eq.${existingId}`,{
           method:'PATCH',
           headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
           body:JSON.stringify({name, max_players:window.gModalSize, notes:document.getElementById('gModalNotes')?.value?.trim()||null})
         });
-        // Replace all members
         await fetch(`${SUPABASE_URL}/rest/v1/player_group_members?group_id=eq.${existingId}`,{
           method:'DELETE',
           headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}
         });
       } else {
-        // Create group
         const cr = await fetch(`${SUPABASE_URL}/rest/v1/player_groups`,{
           method:'POST',
           headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=representation'},
@@ -8775,14 +8793,14 @@ function _openGroupModal(group, members){
         const newGroup = await cr.json();
         groupId = newGroup[0]?.id || newGroup?.id;
       }
-      // Insert members
+      // Always save organizer as first member, then selected IC players
       const memberRows = [
-        ...[...sel.primary].map(email=>{
+        {group_id:groupId, player_email:myEmail, player_name:myName, role:'primary'},
+        ...[...selected].map(email=>{
           const p = IC_MEMBERS.find(({player})=>player.email===email)?.player;
           const pName = p ? ((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim() : email;
           return {group_id:groupId, player_email:email, player_name:pName, role:'primary'};
-        }),
-        ...sel.subs.map(s=>({group_id:groupId, player_email:s.email, player_name:s.name, role:'sub', sub_category:s.cat||null}))
+        })
       ];
       if(memberRows.length){
         await fetch(`${SUPABASE_URL}/rest/v1/player_group_members`,{
@@ -8797,12 +8815,9 @@ function _openGroupModal(group, members){
     }catch(e){ showToast('Error: '+e.message,'#f87171'); if(saveBtn){saveBtn.disabled=false;saveBtn.textContent=existingId?'Save Changes':'Create Group';} }
   };
 
-  // Initialize size BEFORE first render so chips read the right value
-  window.gModalSize = group?.max_players || 4;
   render();
   overlay.appendChild(sheet);
   document.body.appendChild(overlay);
-  // Close on backdrop click
   overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
 }
 
