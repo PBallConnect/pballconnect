@@ -4796,12 +4796,21 @@ async function loadInvitedByOthersPage(){
     const allMatches=mr.ok?await mr.json():[];
     // Filter out: past matches AND matches I organized (case-insensitive email compare)
     const myEmailLower = myEmail.toLowerCase();
-    const matches=allMatches.filter(m=>
+    const allFiltered = allMatches.filter(m=>
       !isMatchPast(m) &&
       (m.organizer_email||'').toLowerCase() !== myEmailLower
     );
+    // Split into actionable (pending/in/waitlist) and declined/removed (out)
+    const matches = allFiltered.filter(m=>{
+      const resp = myResponses.find(r=>r.match_id===m.id)?.response||'pending';
+      return resp !== 'out';
+    });
+    const declinedMatches = allFiltered.filter(m=>{
+      const resp = myResponses.find(r=>r.match_id===m.id)?.response;
+      return resp === 'out';
+    });
     container.innerHTML='';
-    if(!matches.length){
+    if(!matches.length && !declinedMatches.length){
       container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">No open match invites from others.<br><span style="font-size:12px;">Confirmed matches appear under Confirmed Matches.</span></div>';
       return;
     }
@@ -4901,6 +4910,38 @@ async function loadInvitedByOthersPage(){
       render();
       container.appendChild(card);
     });
+
+    // ── Empty state when only declined matches exist ──
+    if(!matches.length){
+      const emptyDiv=document.createElement('div');
+      emptyDiv.style.cssText='color:var(--dim);font-size:13px;padding:20px 0;text-align:center;';
+      emptyDiv.innerHTML='No open match invites from others.<br><span style="font-size:12px;">Confirmed matches appear under Confirmed Matches.</span>';
+      container.appendChild(emptyDiv);
+    }
+
+    // ── Declined / Removed section ────────────────────
+    if(declinedMatches.length){
+      const section=document.createElement('div');
+      section.style.cssText='margin-top:20px;';
+      section.innerHTML=
+        '<div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);">'+
+          '✕ Declined or Removed ('+declinedMatches.length+')'+
+        '</div>';
+      declinedMatches.forEach(m=>{
+        const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}):'TBD';
+        const timeStr=m.time_start?fmt12(m.time_start):'TBD';
+        const row=document.createElement('div');
+        row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;opacity:0.65;';
+        row.innerHTML=
+          '<div>'+
+            '<div style="font-size:13px;font-weight:700;color:var(--dim);">'+dateStr+' · '+timeStr+'</div>'+
+            '<div style="font-size:11px;color:var(--dim);margin-top:2px;">By '+(m.organizer_name||(m.organizer_email||'').split('@')[0]||'Unknown')+'</div>'+
+          '</div>'+
+          '<div style="font-size:11px;font-weight:700;color:#6b7280;padding:3px 8px;border-radius:999px;background:rgba(255,255,255,0.06);border:1px solid var(--border);">Declined / Removed</div>';
+        section.appendChild(row);
+      });
+      container.appendChild(section);
+    }
   }catch(e){
     container.innerHTML='<div style="color:#f87171;font-size:13px;">Error: '+e.message+'</div>';
   }
@@ -8110,25 +8151,26 @@ function getCountdown(matchDate, timeStart){
   const days  = Math.floor(totalMins / (60*24));
   const hours = Math.floor((totalMins % (60*24)) / 60);
   const mins  = totalMins % 60;
-  // Calendar-day comparison: urgent only if match is today or the actual next calendar day
-  const now = new Date();
-  const todayStr = now.toLocaleDateString('en-CA');           // YYYY-MM-DD local
-  const tmrDt = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1);
-  const tmrStr = tmrDt.toLocaleDateString('en-CA');
-  const urgent = matchDate === todayStr || matchDate === tmrStr;
+  // Urgency: red < 24h, amber 24-48h, neutral > 48h
+  const urgency = diff < 24*60*60*1000 ? 'urgent'
+                : diff < 48*60*60*1000 ? 'caution'
+                : 'normal';
   // Build "Xd Xh Xm away", omitting leading zero components except always show mins
   const parts = [];
-  if(days > 0)           parts.push(days+'d');
-  if(hours > 0 || days > 0) parts.push(hours+'h');
+  if(days > 0)               parts.push(days+'d');
+  if(hours > 0 || days > 0)  parts.push(hours+'h');
   parts.push(mins+'m');
-  return {text: parts.join(' ')+' away', urgent};
+  return {text: parts.join(' ')+' away', urgent: urgency==='urgent', urgency};
 }
 
 // Helper to render countdown div
 function renderCountdown(matchDate, timeStart){
   const cd = getCountdown(matchDate, timeStart);
   if(!cd) return '';
-  return '<div style="font-size:11px;font-weight:800;color:#dc2626;margin-top:3px;"'+
+  const color = cd.urgency==='urgent'  ? '#dc2626'
+              : cd.urgency==='caution' ? '#f59e0b'
+              : '#9ca3af';
+  return '<div style="font-size:11px;font-weight:800;color:'+color+';margin-top:3px;"'+
     (cd.urgent?' class="pb-urgent"':'')+'>⏱ '+cd.text+'</div>';
 }
 
