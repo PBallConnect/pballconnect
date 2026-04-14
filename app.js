@@ -9061,34 +9061,52 @@ async function _openRecurringModal(rec){
     return String(h).padStart(2,'0') + ':' + String(rmMinute).padStart(2,'0');
   };
 
-  // Return a caution string if the time looks like a mistake
-  const timeWarning = () => {
+  // 'early' = midnight–5:59 AM, 'late' = 8:00 PM+, '' = fine
+  let rmWarnAck = false; // user clicked "Yes, that's right"
+  const timeWarnType = () => {
+    if(rmWarnAck) return '';
     let h24 = rmHour === 12 ? 0 : rmHour;
     if(rmAmPm === 'PM') h24 += 12;
-    if(h24 >= 0 && h24 <= 5)
-      return '⚠️ ' + rmHour + ':' + String(rmMinute).padStart(2,'0') + ' ' + rmAmPm +
-             ' is the middle of the night — did you mean PM?';
-    if(h24 >= 23)
-      return '⚠️ ' + rmHour + ':' + String(rmMinute).padStart(2,'0') + ' ' + rmAmPm +
-             ' is very late at night. Is that intentional?';
+    if(h24 < 6)  return 'early';
+    if(h24 >= 20) return 'late';
     return '';
+  };
+
+  // Build the acknowledge-banner HTML (empty string if no warning)
+  const timeWarnHtml = () => {
+    const type = timeWarnType();
+    if(!type) return '';
+    const timeStr = rmHour + ':' + String(rmMinute).padStart(2,'0') + ' ' + rmAmPm;
+    const opposite = rmAmPm === 'AM' ? 'PM' : 'AM';
+    const msg = type === 'early'
+      ? '⚠️ ' + timeStr + ' is before 6 AM — most matches don\'t start that early. Did you mean ' + rmHour + ':' + String(rmMinute).padStart(2,'0') + ' PM?'
+      : '⚠️ ' + timeStr + ' is after 8 PM — just double-checking this is intentional.';
+    return '<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:12px 14px;margin-top:8px;">' +
+      '<div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:10px;">'+msg+'</div>' +
+      '<div style="display:flex;gap:8px;">' +
+        '<button onclick="_rmAckWarn(\'yes\')" style="flex:1;padding:8px;border-radius:8px;border:2px solid #d97706;background:#fff;color:#92400e;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">✓ Yes, I meant '+rmAmPm+'</button>' +
+        '<button onclick="_rmAckWarn(\'no\')" style="flex:1;padding:8px;border-radius:8px;border:none;background:#d97706;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">↩ No, switch to '+opposite+'</button>' +
+      '</div>' +
+    '</div>';
   };
 
   // Day label for auto-invite buttons
   const aiDayLabel = h => ({24:'1 day',48:'2 days',72:'3 days',96:'4 days'}[h] || h+'h');
 
+  const REQ = '<span style="color:#dc2626;margin-left:2px;">*</span>'; // required indicator
+
   function render(){
-    const warn = timeWarning();
     sheet.innerHTML =
       // ── Header ──────────────────────────────────────
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">' +
         '<div style="font-size:18px;font-weight:800;color:#111;">'+(isEdit?'Edit Recurring Match':'New Recurring Match')+'</div>' +
         '<button onclick="document.getElementById(\'recurringModal\').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#6b7280;">✕</button>' +
       '</div>' +
+      '<div style="font-size:11px;color:#9ca3af;margin-bottom:16px;"><span style="color:#dc2626;">*</span> Required</div>' +
 
       // ── Group picker ────────────────────────────────
       '<div style="margin-bottom:16px;">' +
-        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Group</label>' +
+        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Group'+REQ+'</label>' +
         '<select id="rmGroup" onchange="_rmSetGroup(this.value,this.options[this.selectedIndex].text)" style="margin-top:6px;width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:\'DM Sans\',sans-serif;background:#f9fafb;color:#111;outline:none;">' +
           '<option value="">— Select a group —</option>' +
           _groups.map(g=>'<option value="'+g.id+'"'+(selGroupId===String(g.id)?' selected':'')+'>'+g.name+'</option>').join('') +
@@ -9105,7 +9123,7 @@ async function _openRecurringModal(rec){
 
       // ── Start Time (12-hour selects) ────────────────
       '<div style="margin-bottom:16px;">' +
-        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Start Time</label>' +
+        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Start Time'+REQ+'</label>' +
         '<div style="display:flex;align-items:center;gap:6px;margin-top:6px;">' +
           // Hour
           '<select id="rmHourSel" onchange="_rmSetHour(this.value)" style="flex:1;padding:10px 6px;border:1px solid #d1d5db;border-radius:10px;font-size:17px;font-weight:700;background:#f9fafb;color:#111;outline:none;text-align:center;">' +
@@ -9124,7 +9142,7 @@ async function _openRecurringModal(rec){
             '<option value="PM"'+(rmAmPm==='PM'?' selected':'')+'>PM</option>' +
           '</select>' +
         '</div>' +
-        (warn ? '<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:9px 12px;margin-top:8px;color:#92400e;font-size:12px;font-weight:600;">'+warn+'</div>' : '') +
+        timeWarnHtml() +
       '</div>' +
 
       // ── Duration ────────────────────────────────────
@@ -9139,7 +9157,7 @@ async function _openRecurringModal(rec){
 
       // ── Court picker ────────────────────────────────
       '<div style="margin-bottom:16px;">' +
-        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Court</label>' +
+        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Court'+REQ+'</label>' +
         (myCourts.length ?
           '<select id="rmCourtSel" onchange="_rmSetCourt(this.value,this.options[this.selectedIndex].text)" style="margin-top:6px;width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:\'DM Sans\',sans-serif;background:#f9fafb;color:#111;outline:none;">' +
             '<option value="">— Select a court —</option>' +
@@ -9195,9 +9213,13 @@ async function _openRecurringModal(rec){
       if(!isEdit) selAutoInvite = calcDefaultAI(); // recalculate smart default
       render();
     };
-    window._rmSetHour       = v=>{ rmHour=parseInt(v);  render(); };
-    window._rmSetMin        = v=>{ rmMinute=parseInt(v); render(); };
-    window._rmSetAmPm       = v=>{ rmAmPm=v;             render(); };
+    window._rmAckWarn = choice=>{
+      if(choice==='yes'){ rmWarnAck=true; render(); }
+      else { rmAmPm = rmAmPm==='AM'?'PM':'AM'; rmWarnAck=false; render(); }
+    };
+    window._rmSetHour  = v=>{ rmHour=parseInt(v);  rmWarnAck=false; render(); };
+    window._rmSetMin   = v=>{ rmMinute=parseInt(v); rmWarnAck=false; render(); };
+    window._rmSetAmPm  = v=>{ rmAmPm=v;             rmWarnAck=false; render(); };
     window._rmSetAutoInvite = h=>{ selAutoInvite=h;      render(); };
     window._rmSetCourt      = (id, label)=>{
       selCourtId   = id;
@@ -9211,13 +9233,14 @@ async function _openRecurringModal(rec){
     const gName = gEl?.options[gEl.selectedIndex]?.text || '';
     if(!gId){ showToast('Please select a group','#f59e0b'); return; }
     if(!selDays.size){ showToast('Please select at least one day','#f59e0b'); return; }
+    const cSel = document.getElementById('rmCourtSel');
+    if(cSel){ if(cSel.value){ selCourtId=cSel.value; selCourtName=cSel.options[cSel.selectedIndex]?.text||''; } }
+    if(selCourtName==='— Select a court —') selCourtName='';
+    if(myCourts.length && !selCourtId){ showToast('Please select a court','#f59e0b'); return; }
 
     // Snapshot current values before showing confirm overlay
     const durVal = rmDuration;
-    const gapVal = parseInt(document.getElementById('rmGapAlert')?.value || 12);
-    const cSel   = document.getElementById('rmCourtSel');
-    if(cSel && cSel.value){ selCourtId=cSel.value; selCourtName=cSel.options[cSel.selectedIndex]?.text||''; }
-    if(selCourtName==='— Select a court —') selCourtName='';
+    const gapVal = parseInt(document.getElementById('rmGapAlert')?.value || 24);
 
     const timeStr   = to24();
     const timeDisp  = rmHour+':'+String(rmMinute).padStart(2,'0')+' '+rmAmPm;
@@ -9242,7 +9265,7 @@ async function _openRecurringModal(rec){
           '<span style="color:#6b7280;font-weight:600;align-self:center;">Auto-invite</span><span style="font-weight:700;color:#111;">'+selAutoInvite+'h ('+aiDayLabel(selAutoInvite)+') before</span>' +
           '<span style="color:#6b7280;font-weight:600;align-self:center;">Gap alert</span><span style="font-weight:700;color:#111;">'+gapVal+'h before</span>' +
         '</div>' +
-        (warn ? '<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:10px 14px;margin-bottom:16px;color:#92400e;font-size:12px;font-weight:600;">'+warn+'</div>' : '') +
+        (timeWarnType() ? '<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:10px 14px;margin-bottom:16px;color:#92400e;font-size:12px;font-weight:600;">'+timeDisp+' — please double-check this time before confirming.</div>' : '') +
         '<div style="display:flex;gap:10px;">' +
           '<button onclick="document.getElementById(\'rmConfirmOverlay\').remove()" style="flex:1;padding:13px;border-radius:10px;border:2px solid #d1d5db;background:#fff;color:#374151;font-weight:700;font-size:14px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">← Go Back</button>' +
           '<button id="rmConfirmBtn" style="flex:2;padding:13px;border-radius:10px;border:none;background:#1a7a3a;color:#fff;font-weight:800;font-size:14px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+(existingId?'Save Changes':'Confirm & Create')+'</button>' +
