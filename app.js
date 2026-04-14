@@ -8996,15 +8996,42 @@ async function editRecurringModal(id){
   if(rows.length) _openRecurringModal(rows[0]);
 }
 
-function _openRecurringModal(rec){
+async function _openRecurringModal(rec){
   document.getElementById('recurringModal')?.remove();
   const isEdit = !!rec;
   const ALL_DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   const selDays  = new Set(rec ? rec.days_of_week.split(',').map(d=>d.trim()) : []);
-  let selGroupId = rec?.group_id || '';
+  let selGroupId   = rec?.group_id   || '';
   let selGroupName = rec?.group_name || '';
-  let selCourtId   = rec?.court_id  || '';
+  let selCourtId   = rec?.court_id   ? String(rec.court_id) : '';
   let selCourtName = rec?.court_name || '';
+
+  // 12-hour time state — parse existing 24h time_start if editing
+  let rmHour = 9, rmMinute = 0, rmAmPm = 'AM';
+  if(rec?.time_start){
+    const [hStr, mStr] = rec.time_start.split(':');
+    const h24 = parseInt(hStr);
+    rmAmPm  = h24 >= 12 ? 'PM' : 'AM';
+    rmHour  = h24 % 12 || 12;
+    rmMinute = Math.min(45, Math.round(parseInt(mStr) / 15) * 15);
+  }
+
+  // Smart auto-invite default: frequent matches → 1 day, weekly → 3 days
+  const calcDefaultAI = () => selDays.size >= 3 ? 24 : 72;
+  let selAutoInvite = rec ? (rec.auto_invite_hours || 72) : calcDefaultAI();
+  let selGapAlert   = parseInt(rec?.gap_alert_hours || 12);
+
+  // Fetch organizer's courts from My Courts
+  const myEmail = getMyEmail();
+  let myCourts = [];
+  try{
+    const cRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(myEmail)}&select=court_id,courts(id,name,city,state)`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+    );
+    const pcRows = cRes.ok ? await cRes.json() : [];
+    myCourts = pcRows.map(r=>r.courts).filter(Boolean);
+  }catch(e){}
 
   const overlay = document.createElement('div');
   overlay.id = 'recurringModal';
@@ -9013,23 +9040,48 @@ function _openRecurringModal(rec){
   const sheet = document.createElement('div');
   sheet.style.cssText = 'background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;padding:24px 20px 40px;';
 
+  // Convert current 12h state → 24h "HH:MM" string
+  const to24 = () => {
+    let h = rmHour === 12 ? 0 : rmHour;
+    if(rmAmPm === 'PM') h += 12;
+    return String(h).padStart(2,'0') + ':' + String(rmMinute).padStart(2,'0');
+  };
+
+  // Return a caution string if the time looks like a mistake
+  const timeWarning = () => {
+    let h24 = rmHour === 12 ? 0 : rmHour;
+    if(rmAmPm === 'PM') h24 += 12;
+    if(h24 >= 0 && h24 <= 5)
+      return '⚠️ ' + rmHour + ':' + String(rmMinute).padStart(2,'0') + ' ' + rmAmPm +
+             ' is the middle of the night — did you mean PM?';
+    if(h24 >= 23)
+      return '⚠️ ' + rmHour + ':' + String(rmMinute).padStart(2,'0') + ' ' + rmAmPm +
+             ' is very late at night. Is that intentional?';
+    return '';
+  };
+
+  // Day label for auto-invite buttons
+  const aiDayLabel = h => ({24:'1 day',48:'2 days',72:'3 days',96:'4 days'}[h] || h+'h');
+
   function render(){
+    const warn = timeWarning();
     sheet.innerHTML =
+      // ── Header ──────────────────────────────────────
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">' +
         '<div style="font-size:18px;font-weight:800;color:#111;">'+(isEdit?'Edit Recurring Match':'New Recurring Match')+'</div>' +
         '<button onclick="document.getElementById(\'recurringModal\').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#6b7280;">✕</button>' +
       '</div>' +
 
-      // Group picker
+      // ── Group picker ────────────────────────────────
       '<div style="margin-bottom:16px;">' +
         '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Group</label>' +
-        '<select id="rmGroup" onchange="selGroupId=this.value;selGroupName=this.options[this.selectedIndex].text" style="margin-top:6px;width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:\'DM Sans\',sans-serif;background:#f9fafb;color:#111;outline:none;">' +
+        '<select id="rmGroup" onchange="_rmSetGroup(this.value,this.options[this.selectedIndex].text)" style="margin-top:6px;width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:\'DM Sans\',sans-serif;background:#f9fafb;color:#111;outline:none;">' +
           '<option value="">— Select a group —</option>' +
-          _groups.map(g=>'<option value="'+g.id+'"'+( selGroupId===g.id?' selected':'')+'>'+g.name+'</option>').join('') +
+          _groups.map(g=>'<option value="'+g.id+'"'+(selGroupId===String(g.id)?' selected':'')+'>'+g.name+'</option>').join('') +
         '</select>' +
       '</div>' +
 
-      // Days of week
+      // ── Days of week ────────────────────────────────
       '<div style="margin-bottom:16px;">' +
         '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Days of Week</label>' +
         '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">' +
@@ -9037,85 +9089,184 @@ function _openRecurringModal(rec){
         '</div>' +
       '</div>' +
 
-      // Time + duration
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">' +
-        '<div><label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Start Time</label>' +
-          '<input id="rmTime" type="time" value="'+(rec?.time_start||'09:00')+'" style="margin-top:6px;width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;background:#f9fafb;color:#111;outline:none;box-sizing:border-box;"/></div>' +
-        '<div><label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Duration</label>' +
-          '<select id="rmDuration" style="margin-top:6px;width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;background:#f9fafb;color:#111;outline:none;">' +
-            [1,1.5,2,2.5,3].map(h=>'<option value="'+h+'"'+(parseFloat(rec?.duration_hours||2)===h?' selected':'')+'>'+h+'h</option>').join('') +
-          '</select></div>' +
-      '</div>' +
-
-      // Court
+      // ── Start Time (12-hour selects) ────────────────
       '<div style="margin-bottom:16px;">' +
-        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Court</label>' +
-        '<input id="rmCourtName" type="text" placeholder="Court name (type or pick from My Courts)" value="'+selCourtName+'" oninput="selCourtName=this.value;selCourtId=\'\'" style="margin-top:6px;width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:\'DM Sans\',sans-serif;background:#f9fafb;color:#111;outline:none;box-sizing:border-box;"/>' +
-      '</div>' +
-
-      // Auto-invite timing
-      '<div style="margin-bottom:16px;">' +
-        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Auto-invite Timing</label>' +
-        '<div style="font-size:11px;color:var(--dim);margin:3px 0 6px;">How far in advance to auto-invite the group</div>' +
-        '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-          [24,48,72,96].map(h=>'<button onclick="document.getElementById(\'rmAutoInvite\').value='+h+';render()" style="padding:7px 14px;border-radius:8px;border:2px solid '+( (rec?.auto_invite_hours||48)===h?'#1a7a3a':'#d1d5db')+';background:'+((rec?.auto_invite_hours||48)===h?'#d1fae5':'#f9fafb')+';color:'+((rec?.auto_invite_hours||48)===h?'#065f46':'#374151')+';font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">'+h+'h</button>').join('') +
+        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Start Time</label>' +
+        '<div style="display:flex;align-items:center;gap:6px;margin-top:6px;">' +
+          // Hour
+          '<select id="rmHourSel" onchange="_rmSetHour(this.value)" style="flex:1;padding:10px 6px;border:1px solid #d1d5db;border-radius:10px;font-size:17px;font-weight:700;background:#f9fafb;color:#111;outline:none;text-align:center;">' +
+            [1,2,3,4,5,6,7,8,9,10,11,12].map(h=>'<option value="'+h+'"'+(rmHour===h?' selected':'')+'>'+h+'</option>').join('') +
+          '</select>' +
+          '<span style="font-size:22px;font-weight:800;color:#374151;line-height:1;">:</span>' +
+          // Minute — :00 and :30 dark green
+          '<select id="rmMinSel" onchange="_rmSetMin(this.value)" style="flex:1;padding:10px 6px;border:1px solid #d1d5db;border-radius:10px;font-size:17px;font-weight:700;background:#f9fafb;color:#111;outline:none;text-align:center;">' +
+            [0,15,30,45].map(m=>'<option value="'+m+'"'+(rmMinute===m?' selected':'')+
+              ' style="color:'+(m===0||m===30?'#1a5c32':'#374151')+';font-weight:'+(m===0||m===30?'800':'500')+'">'+
+              String(m).padStart(2,'0')+'</option>').join('') +
+          '</select>' +
+          // AM / PM
+          '<select id="rmAmPmSel" onchange="_rmSetAmPm(this.value)" style="flex:1;padding:10px 6px;border:1px solid #d1d5db;border-radius:10px;font-size:17px;font-weight:700;background:#f9fafb;color:#111;outline:none;text-align:center;">' +
+            '<option value="AM"'+(rmAmPm==='AM'?' selected':'')+'>AM</option>' +
+            '<option value="PM"'+(rmAmPm==='PM'?' selected':'')+'>PM</option>' +
+          '</select>' +
         '</div>' +
-        '<input type="hidden" id="rmAutoInvite" value="'+(rec?.auto_invite_hours||48)+'"/>' +
+        (warn ? '<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:9px 12px;margin-top:8px;color:#92400e;font-size:12px;font-weight:600;">'+warn+'</div>' : '') +
       '</div>' +
 
-      // Gap alert
-      '<div style="margin-bottom:20px;">' +
-        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Gap Alert Timing</label>' +
-        '<div style="font-size:11px;color:var(--dim);margin:3px 0 6px;">Alert me this many hours before if the match isn\'t full</div>' +
-        '<select id="rmGapAlert" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;background:#f9fafb;color:#111;outline:none;">' +
-          [2,4,6,12,24].map(h=>'<option value="'+h+'"'+(parseInt(rec?.gap_alert_hours||4)===h?' selected':'')+'>'+h+' hours before</option>').join('') +
+      // ── Duration ────────────────────────────────────
+      '<div style="margin-bottom:16px;">' +
+        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Duration</label>' +
+        '<select id="rmDuration" style="margin-top:6px;width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;background:#f9fafb;color:#111;outline:none;">' +
+          [1,1.5,2,2.5,3].map(h=>'<option value="'+h+'"'+(parseFloat(rec?.duration_hours||2)===h?' selected':'')+'>'+h+' hour'+(h===1?'':'s')+'</option>').join('') +
         '</select>' +
       '</div>' +
 
-      '<button onclick="_rmSave(\''+( isEdit?rec.id:''  )+'\')" style="width:100%;padding:14px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-weight:800;font-size:15px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+(isEdit?'Save Changes':'Create Recurring Match')+'</button>';
+      // ── Court picker ────────────────────────────────
+      '<div style="margin-bottom:16px;">' +
+        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Court</label>' +
+        (myCourts.length ?
+          '<select id="rmCourtSel" onchange="_rmSetCourt(this.value,this.options[this.selectedIndex].text)" style="margin-top:6px;width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-family:\'DM Sans\',sans-serif;background:#f9fafb;color:#111;outline:none;">' +
+            '<option value="">— Select a court —</option>' +
+            myCourts.map(c=>'<option value="'+c.id+'"'+(selCourtId===String(c.id)?' selected':'')+'>'+(c.name||'Court')+(c.city?', '+c.city:'')+'</option>').join('') +
+          '</select>'
+          :
+          '<div style="margin-top:6px;background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:12px 14px;">' +
+            '<div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:4px;">⚠️ No courts set up yet</div>' +
+            '<div style="font-size:12px;color:#78350f;line-height:1.5;">Organizers should add their home courts in <strong>My Courts</strong> first — this ensures players always know exactly where to show up. Your courts will appear here once added.</div>' +
+          '</div>'
+        ) +
+      '</div>' +
 
-    window._rmToggleDay = d=>{ if(selDays.has(d)) selDays.delete(d); else selDays.add(d); render(); };
+      // ── Auto-invite timing ──────────────────────────
+      '<div style="margin-bottom:16px;">' +
+        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Auto-invite Timing</label>' +
+        '<div style="font-size:11px;color:#6b7280;margin:3px 0 8px;">How far in advance to send the invite to your group</div>' +
+        '<div style="display:flex;gap:8px;">' +
+          [24,48,72,96].map(h=>{
+            const on = selAutoInvite===h;
+            return '<button onclick="_rmSetAutoInvite('+h+')" style="flex:1;padding:10px 4px;border-radius:10px;border:2px solid '+(on?'#1a7a3a':'#d1d5db')+';background:'+(on?'#d1fae5':'#f9fafb')+';cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;">' +
+              '<span style="font-size:15px;font-weight:800;color:'+(on?'#065f46':'#374151')+';">'+h+'h</span>' +
+              '<span style="font-size:10px;font-weight:600;color:'+(on?'#1a7a3a':'#9ca3af')+';">'+aiDayLabel(h)+'</span>' +
+            '</button>';
+          }).join('') +
+        '</div>' +
+      '</div>' +
+
+      // ── Gap alert ───────────────────────────────────
+      '<div style="margin-bottom:24px;">' +
+        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Gap Alert Timing</label>' +
+        '<div style="font-size:11px;color:#6b7280;margin:3px 0 6px;">Alert me this many hours before if the match isn\'t full</div>' +
+        '<select id="rmGapAlert" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;background:#f9fafb;color:#111;outline:none;">' +
+          [2,4,6,12,24].map(h=>'<option value="'+h+'"'+(selGapAlert===h?' selected':'')+'>'+h+' hours before</option>').join('') +
+        '</select>' +
+      '</div>' +
+
+      '<button onclick="_rmSave(\''+( isEdit?rec.id:'' )+'\')" style="width:100%;padding:14px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-weight:800;font-size:15px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+(isEdit?'Save Changes':'Review & Create')+'</button>';
+
+    // ── Inline handlers tied to closure state ──
+    window._rmSetGroup = (id, label)=>{
+      selGroupId   = id;
+      selGroupName = label==='— Select a group —' ? '' : label;
+    };
+    window._rmToggleDay = d=>{
+      if(selDays.has(d)) selDays.delete(d); else selDays.add(d);
+      if(!isEdit) selAutoInvite = calcDefaultAI(); // recalculate smart default
+      render();
+    };
+    window._rmSetHour       = v=>{ rmHour=parseInt(v);  render(); };
+    window._rmSetMin        = v=>{ rmMinute=parseInt(v); render(); };
+    window._rmSetAmPm       = v=>{ rmAmPm=v;             render(); };
+    window._rmSetAutoInvite = h=>{ selAutoInvite=h;      render(); };
+    window._rmSetCourt      = (id, label)=>{
+      selCourtId   = id;
+      selCourtName = label==='— Select a court —' ? '' : label;
+    };
   }
 
   window._rmSave = async(existingId)=>{
-    const gId   = document.getElementById('rmGroup')?.value;
-    const gName = document.getElementById('rmGroup')?.options[document.getElementById('rmGroup').selectedIndex]?.text || '';
+    const gEl   = document.getElementById('rmGroup');
+    const gId   = gEl?.value || '';
+    const gName = gEl?.options[gEl.selectedIndex]?.text || '';
     if(!gId){ showToast('Please select a group','#f59e0b'); return; }
     if(!selDays.size){ showToast('Please select at least one day','#f59e0b'); return; }
-    const timeVal = document.getElementById('rmTime')?.value;
-    if(!timeVal){ showToast('Please set a start time','#f59e0b'); return; }
-    const saveBtn = sheet.querySelector('button[onclick*="_rmSave"]');
-    if(saveBtn){ saveBtn.disabled=true; saveBtn.textContent='Saving…'; }
-    const payload = {
-      organizer_email: getMyEmail(),
-      group_id:        gId,
-      group_name:      gName==='— Select a group —' ? '' : gName,
-      days_of_week:    [...selDays].join(','),
-      time_start:      timeVal,
-      duration_hours:  parseFloat(document.getElementById('rmDuration')?.value||2),
-      court_name:      document.getElementById('rmCourtName')?.value?.trim()||null,
-      auto_invite_hours: parseInt(document.getElementById('rmAutoInvite')?.value||48),
-      gap_alert_hours:   parseInt(document.getElementById('rmGapAlert')?.value||4),
-      status:          rec?.status || 'active',
-    };
-    try{
-      if(existingId){
-        await fetch(`${SUPABASE_URL}/rest/v1/recurring_matches?id=eq.${existingId}`,{
-          method:'PATCH',
-          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
-          body:JSON.stringify(payload)
-        });
-      } else {
-        await fetch(`${SUPABASE_URL}/rest/v1/recurring_matches`,{
-          method:'POST',
-          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
-          body:JSON.stringify(payload)
-        });
+
+    // Snapshot current select values before showing confirm overlay
+    const durVal = parseFloat(document.getElementById('rmDuration')?.value || 2);
+    const gapVal = parseInt(document.getElementById('rmGapAlert')?.value || 12);
+    const cSel   = document.getElementById('rmCourtSel');
+    if(cSel && cSel.value){ selCourtId=cSel.value; selCourtName=cSel.options[cSel.selectedIndex]?.text||''; }
+    if(selCourtName==='— Select a court —') selCourtName='';
+
+    const timeStr   = to24();
+    const timeDisp  = rmHour+':'+String(rmMinute).padStart(2,'0')+' '+rmAmPm;
+    const warn      = timeWarning();
+    const gNameClean = gName==='— Select a group —' ? '—' : gName;
+
+    // ── Confirmation overlay ────────────────────────────────────────
+    const confirmOverlay = document.createElement('div');
+    confirmOverlay.id = 'rmConfirmOverlay';
+    confirmOverlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;';
+    confirmOverlay.innerHTML =
+      '<div style="background:#fff;border-radius:20px;max-width:460px;width:100%;padding:28px 24px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">' +
+        '<div style="font-size:26px;text-align:center;margin-bottom:6px;">🏓</div>' +
+        '<div style="font-size:17px;font-weight:800;color:#111;text-align:center;margin-bottom:4px;">Let\'s make sure we got this right</div>' +
+        '<div style="font-size:12px;color:#6b7280;text-align:center;margin-bottom:20px;">Review your recurring match details before saving</div>' +
+        '<div style="background:#f9fafb;border-radius:12px;padding:16px;margin-bottom:16px;display:grid;grid-template-columns:110px 1fr;row-gap:10px;column-gap:8px;font-size:13px;">' +
+          '<span style="color:#6b7280;font-weight:600;align-self:center;">Group</span><span style="font-weight:700;color:#111;">'+gNameClean+'</span>' +
+          '<span style="color:#6b7280;font-weight:600;align-self:center;">Days</span><span style="font-weight:700;color:#111;">'+([...selDays].join(', ')||'—')+'</span>' +
+          '<span style="color:#6b7280;font-weight:600;align-self:center;">Start Time</span><span style="font-weight:800;color:#1a7a3a;font-size:16px;">'+timeDisp+'</span>' +
+          '<span style="color:#6b7280;font-weight:600;align-self:center;">Duration</span><span style="font-weight:700;color:#111;">'+durVal+' hour'+(durVal===1?'':'s')+'</span>' +
+          '<span style="color:#6b7280;font-weight:600;align-self:center;">Court</span><span style="font-weight:700;color:#111;">'+(selCourtName||'Not selected')+'</span>' +
+          '<span style="color:#6b7280;font-weight:600;align-self:center;">Auto-invite</span><span style="font-weight:700;color:#111;">'+selAutoInvite+'h ('+aiDayLabel(selAutoInvite)+') before</span>' +
+          '<span style="color:#6b7280;font-weight:600;align-self:center;">Gap alert</span><span style="font-weight:700;color:#111;">'+gapVal+'h before</span>' +
+        '</div>' +
+        (warn ? '<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:10px 14px;margin-bottom:16px;color:#92400e;font-size:12px;font-weight:600;">'+warn+'</div>' : '') +
+        '<div style="display:flex;gap:10px;">' +
+          '<button onclick="document.getElementById(\'rmConfirmOverlay\').remove()" style="flex:1;padding:13px;border-radius:10px;border:2px solid #d1d5db;background:#fff;color:#374151;font-weight:700;font-size:14px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">← Go Back</button>' +
+          '<button id="rmConfirmBtn" style="flex:2;padding:13px;border-radius:10px;border:none;background:#1a7a3a;color:#fff;font-weight:800;font-size:14px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+(existingId?'Save Changes':'Confirm & Create')+'</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(confirmOverlay);
+
+    document.getElementById('rmConfirmBtn').onclick = async()=>{
+      const btn = document.getElementById('rmConfirmBtn');
+      btn.disabled=true; btn.textContent='Saving…';
+      const payload = {
+        organizer_email:   myEmail,
+        group_id:          gId,
+        group_name:        gNameClean==='—'?'':gNameClean,
+        days_of_week:      [...selDays].join(','),
+        time_start:        timeStr,
+        duration_hours:    durVal,
+        court_id:          selCourtId||null,
+        court_name:        selCourtName||null,
+        auto_invite_hours: selAutoInvite,
+        gap_alert_hours:   gapVal,
+        status:            rec?.status || 'active',
+      };
+      try{
+        if(existingId){
+          await fetch(`${SUPABASE_URL}/rest/v1/recurring_matches?id=eq.${existingId}`,{
+            method:'PATCH',
+            headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+            body:JSON.stringify(payload)
+          });
+        } else {
+          await fetch(`${SUPABASE_URL}/rest/v1/recurring_matches`,{
+            method:'POST',
+            headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+            body:JSON.stringify(payload)
+          });
+        }
+        confirmOverlay.remove();
+        document.getElementById('recurringModal')?.remove();
+        showToast(existingId?'Updated!':'Recurring match created!','#4CAF7D');
+        loadRecurringMatches();
+      }catch(e){
+        showToast('Error: '+e.message,'#f87171');
+        document.getElementById('rmConfirmOverlay')?.remove();
       }
-      document.getElementById('recurringModal')?.remove();
-      showToast(existingId?'Updated!':'Recurring match created!','#4CAF7D');
-      loadRecurringMatches();
-    }catch(e){ showToast('Error: '+e.message,'#f87171'); if(saveBtn){saveBtn.disabled=false;saveBtn.textContent=existingId?'Save Changes':'Create Recurring Match';} }
+    };
   };
 
   render();
