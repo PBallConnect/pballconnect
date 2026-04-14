@@ -9242,9 +9242,8 @@ async function _openRecurringModal(rec){
     const durVal = rmDuration;
     const gapVal = parseInt(document.getElementById('rmGapAlert')?.value || 24);
 
-    const timeStr   = to24();
-    const timeDisp  = rmHour+':'+String(rmMinute).padStart(2,'0')+' '+rmAmPm;
-    const warn      = timeWarning();
+    const timeStr    = to24();
+    const timeDisp   = rmHour+':'+String(rmMinute).padStart(2,'0')+' '+rmAmPm;
     const gNameClean = gName==='— Select a group —' ? '—' : gName;
 
     // ── Confirmation overlay ────────────────────────────────────────
