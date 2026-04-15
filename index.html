@@ -1633,7 +1633,7 @@
       <!-- STEP 1: FORMAT + WHO -->
       <div class="match-card" id="matchStep1">
 
-        <div class="match-q">What kind of match?</div>
+        <div class="match-q">Match Type</div>
         <div class="match-options" id="matchFormatOptions">
           <div class="match-option on" id="matchOptDoubles" onclick="selectMatchFormat('doubles',this)">
             <div class="match-option-icon"><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/></div>
@@ -1647,8 +1647,42 @@
           </div>
         </div>
 
+        <!-- Multi-match + organizer toggle -->
+        <div style="margin-top:20px;">
+          <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:8px;">
+            How many <span id="matchTypeLabel">Doubles</span> matches are you organizing?
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:10px;">
+            <button id="numCourtsBtn1" onclick="selectNumCourts(1)"
+              style="padding:8px 18px;border-radius:999px;border:1.5px solid #1a7a3a;
+                     background:#1a7a3a;color:#fff;font-size:13px;font-weight:700;
+                     cursor:pointer;font-family:inherit;transition:all .15s;opacity:1;">1</button>
+            <button id="numCourtsBtn2" onclick="selectNumCourts(2)"
+              style="padding:8px 18px;border-radius:999px;border:1.5px solid #d1d5db;
+                     background:#f3f4f6;color:#6b7280;font-size:13px;font-weight:700;
+                     cursor:pointer;font-family:inherit;transition:all .15s;opacity:0.35;">2</button>
+            <button id="numCourtsBtn3" onclick="selectNumCourts(3)"
+              style="padding:8px 18px;border-radius:999px;border:1.5px solid #d1d5db;
+                     background:#f3f4f6;color:#6b7280;font-size:13px;font-weight:700;
+                     cursor:pointer;font-family:inherit;transition:all .15s;opacity:0.35;">3</button>
+            <button id="numCourtsBtn4" onclick="selectNumCourts(4)"
+              style="padding:8px 18px;border-radius:999px;border:1.5px solid #d1d5db;
+                     background:#f3f4f6;color:#6b7280;font-size:13px;font-weight:700;
+                     cursor:pointer;font-family:inherit;transition:all .15s;opacity:0.35;">4</button>
+          </div>
+          <div id="matchPlayerCountLine"
+            style="font-size:12px;font-weight:700;color:#1a7a3a;margin-bottom:8px;">
+            Total players needed: 3
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;">
+            <input type="checkbox" id="matchOrganizerPlaying" checked
+              onchange="toggleOrganizerPlaying(this.checked)"
+              style="accent-color:#1a7a3a;width:15px;height:15px;cursor:pointer;"/>
+            I'll be playing in this match
+          </label>
+        </div>
 
-        <div class="match-q" style="margin-top:24px;">Gender preference?</div>
+        <div class="match-q" style="margin-top:24px;">Play Structure</div>
         <div class="match-options" id="matchGenderOptions" style="grid-template-columns:repeat(3,1fr);">
           <div class="match-option on" id="matchGenderEither" onclick="selectMatchGender('either',this)">
             <div class="match-option-icon">👥</div>
@@ -1796,6 +1830,7 @@
             <div style="font-size:10px;font-weight:700;color:#1a7a3a;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Selected courts</div>
             <div id="matchSelectedCourtsList"></div>
           </div>
+          <div id="matchCourtCapacityWarn" style="display:none;margin-top:10px;padding:10px 12px;border-radius:10px;border:1.5px solid;font-size:12px;font-weight:600;line-height:1.5;"></div>
         </div>
 
         <div class="match-btn-row" style="margin-top:20px;">
