@@ -2574,6 +2574,11 @@ function selectMatchGender(pref, el){
   el.classList.remove('dim');
   el.classList.add('on');
   refreshGenderFilterBanner();
+  // Re-render open pickers so dimming updates live
+  const specificPicker = document.getElementById('matchSpecificPicker');
+  if(specificPicker && specificPicker.style.display !== 'none') buildSpecificPicker();
+  const subsPicker = document.getElementById('matchGroupSubsPicker');
+  if(subsPicker && subsPicker.style.display !== 'none') buildGroupSubPicker();
 }
 
 // ── Gender filter helper ──────────────────────────────
@@ -2619,16 +2624,22 @@ function buildGroupSubPicker(){
     return;
   }
   if(empty) empty.style.display='none';
+  const myGenderGS = S.gender || SESSION_PLAYER?.gender || '';
+  const genderActiveGS = MS.genderPref && MS.genderPref !== 'either';
   list.innerHTML = members.map(p=>{
     const email = (p.email||'').toLowerCase();
     const name = ((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim()||email;
     const emoji = p.avatar_emoji||'🧑';
     const isPrimary = MS.primaryPlayers.has(email);
     const isSub = MS.subPlayers.has(email);
+    const passesGender = playerPassesGenderFilter(p, MS.genderPref, myGenderGS);
+    const genderBlocked = genderActiveGS && !passesGender;
     let bg='#f3f4f6', border='transparent', badge='';
     if(isPrimary){ bg='#dcfce7'; border='#1a7a3a'; badge='<span style="font-size:9px;background:#1a7a3a;color:#fff;border-radius:4px;padding:1px 5px;margin-left:4px;">Primary</span>'; }
     else if(isSub){ bg='#fef9c3'; border='#d97706'; badge='<span style="font-size:9px;background:#d97706;color:#fff;border-radius:4px;padding:1px 5px;margin-left:4px;">Sub</span>'; }
-    return '<div onclick="toggleGroupSubPlayer(\''+email+'\')" style="cursor:pointer;display:flex;align-items:center;gap:8px;padding:8px 10px;background:'+bg+';border:1.5px solid '+border+';border-radius:10px;">'+
+    if(genderBlocked){ badge += '<span style="font-size:9px;color:#d97706;margin-left:4px;">⚧</span>'; }
+    const clickAttr = genderBlocked ? '' : 'onclick="toggleGroupSubPlayer(\''+email+'\')"';
+    return '<div '+clickAttr+' style="'+(genderBlocked?'opacity:0.4;cursor:not-allowed;':'cursor:pointer;')+'display:flex;align-items:center;gap:8px;padding:8px 10px;background:'+bg+';border:1.5px solid '+border+';border-radius:10px;">'+
       '<span style="font-size:18px;">'+emoji+'</span>'+
       '<div style="flex:1;min-width:0;">'+
         '<div style="font-size:12px;font-weight:700;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+name+badge+'</div>'+
@@ -2830,18 +2841,26 @@ function showGroupPlayerList(group, groupLabel){
   const modal = document.createElement('div');
   modal.style.cssText = 'background:#ffffff;border:2px solid #1a7a3a;border-radius:16px;padding:20px;width:100%;max-width:420px;max-height:80vh;overflow-y:auto;';
 
+  const myGender = S.gender || SESSION_PLAYER?.gender || '';
+  const genderActive = MS.genderPref && MS.genderPref !== 'either';
+  const passCount = genderActive ? players.filter(p=>playerPassesGenderFilter(p, MS.genderPref, myGender)).length : players.length;
+  const genderNote = (genderActive && passCount < players.length)
+    ? ' · <span style="color:#d97706;font-weight:600;">'+passCount+' match pref</span>' : '';
+
   const header = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">'+
-    '<div style="font-size:15px;font-weight:800;color:#111;">'+groupLabel+' <span style="font-size:12px;color:#6b7280;font-weight:600;">('+players.length+' players)</span></div>'+
+    '<div style="font-size:15px;font-weight:800;color:#111;">'+groupLabel+' <span style="font-size:12px;color:#6b7280;font-weight:600;">('+players.length+' players'+genderNote+')</span></div>'+
     '<button onclick="document.getElementById(`groupPlayerPopup`).remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280;">✕</button>'+
   '</div>';
 
   const playerRows = players.length ? players.map(p=>{
     const name = ((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim() || p.email;
     const emoji = p.avatar_emoji || '🧑';
-    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:#f3f4f6;border-radius:8px;margin-bottom:6px;">'+
+    const passesGender = playerPassesGenderFilter(p, MS.genderPref, myGender);
+    const genderBlocked = genderActive && !passesGender;
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:#f3f4f6;border-radius:8px;margin-bottom:6px;'+(genderBlocked?'opacity:0.4;':'')+'">'+
       '<span style="font-size:20px;">'+emoji+'</span>'+
       '<div>'+
-        '<div style="font-size:13px;font-weight:700;color:#111;">'+name+'</div>'+
+        '<div style="font-size:13px;font-weight:700;color:#111;">'+name+(genderBlocked?' <span style="font-size:10px;color:#d97706;">⚧</span>':'')+'</div>'+
         (p.skill_level?'<div style="font-size:11px;color:#555;">Rating '+p.skill_level+'</div>':'')+
       '</div>'+
     '</div>';
@@ -3042,18 +3061,26 @@ function buildSpecificPicker(){
 
   list.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 12px;align-items:start;';
 
+  const myGender = S.gender || SESSION_PLAYER?.gender || '';
+
   colDefs.forEach(col=>{
     const players = buckets[col.key];
     const colEl = document.createElement('div');
 
-    // Column header
+    // Column header — show gender match count when a filter is active
+    const genderActive = MS.genderPref && MS.genderPref !== 'either';
+    const passCount = genderActive
+      ? players.filter(p=>playerPassesGenderFilter(p, MS.genderPref, myGender)).length
+      : players.length;
     const hdr = document.createElement('div');
     hdr.style.cssText='text-align:center;padding:8px 4px 6px;margin-bottom:6px;'+
       'border-radius:8px;font-size:11px;font-weight:700;'+
       'background:#e5e7eb;border:2px solid #d1d5db;'+
       'color:#374151;line-height:1.4;';
     hdr.innerHTML = col.label+'<br><span style="font-size:10px;opacity:0.7;">'+
-      (col.skill?'Rating '+col.skill:'—')+' · '+players.length+' player'+(players.length!==1?'s':'')+'</span>';
+      (col.skill?'Rating '+col.skill:'—')+' · '+players.length+' player'+(players.length!==1?'s':'')+
+      (genderActive&&passCount<players.length?' · <span style="color:#d97706;">'+passCount+' match pref</span>':'')+
+      '</span>';
     colEl.appendChild(hdr);
 
     if(!players.length){
@@ -3067,21 +3094,25 @@ function buildSpecificPicker(){
       const name    = ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim();
       const checked = MS.specificPlayers.has(player.email);
       const atMax   = !checked && selected >= maxNeeded;
+      const passesGender = playerPassesGenderFilter(player, MS.genderPref, myGender);
+      const genderBlocked = !passesGender && !checked;
 
       const card = document.createElement('div');
       card.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:3px;'+
-        'padding:8px 4px;border-radius:10px;margin-bottom:6px;text-align:center;cursor:'+(atMax?'not-allowed':'pointer')+';'+
+        'padding:8px 4px;border-radius:10px;margin-bottom:6px;text-align:center;'+
+        'cursor:'+(genderBlocked||atMax?'not-allowed':'pointer')+';'+
         'border:2px solid '+(checked?'#1a7a3a':'#d1d5db')+';'+
         'background:'+(checked?'#d1fae5':'#f3f4f6')+';color:#111;'+
-        'opacity:'+(atMax?'0.4':'1')+';transition:all .15s;';
+        'opacity:'+(genderBlocked?'0.3':atMax?'0.4':'1')+';transition:all .15s;';
 
       card.innerHTML =
         '<span style="font-size:22px;line-height:1;">'+(player.avatar_emoji||'\ud83e\uddd1')+'</span>'+
         '<div style="color:#111;font-size:11px;font-weight:700;line-height:1.3;word-break:break-word;">'+name+'</div>'+
-        '<div style="color:#555;font-size:10px;">'+( player.skill_level||'?')+'</div>'+
-        (checked?'<div style="color:#1a7a3a;font-size:10px;font-weight:700;">\u2713 Selected</div>':'');
+        '<div style="color:#555;font-size:10px;">'+(player.skill_level||'?')+'</div>'+
+        (checked?'<div style="color:#1a7a3a;font-size:10px;font-weight:700;">\u2713 Selected</div>':'')+
+        (genderBlocked?'<div style="color:#9ca3af;font-size:9px;">\u26a7 Not invited</div>':'');
 
-      if(!atMax || checked){
+      if(checked || (!atMax && !genderBlocked)){
         card.onclick = ()=>{
           if(MS.specificPlayers.has(player.email)){
             MS.specificPlayers.delete(player.email);
@@ -8940,11 +8971,40 @@ async function injectNamedGroupOptions(){
     const groups = res.ok ? await res.json() : [];
     _groups = groups;
     if(!groups.length){ container.style.display='none'; return; }
+
+    // Fetch members for gender check
+    const ids = groups.map(g=>g.id);
+    let allMembers = [];
+    try{
+      const mRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/player_group_members?group_id=in.(${ids.join(',')})&select=group_id,email`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+      );
+      if(mRes.ok) allMembers = await mRes.json();
+    }catch(_){}
+
+    const myGender = S.gender || SESSION_PLAYER?.gender || '';
+    const genderActive = MS.genderPref && MS.genderPref !== 'either';
+
     container.style.display='block';
     container.innerHTML =
       '<div style="font-size:11px;font-weight:700;color:#1a7a3a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">My Named Groups</div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
-        groups.map(g=>'<div class="match-option" data-group="named_'+g.id+'" onclick="toggleMatchGroup(\'named_'+g.id+'\',this)" style="padding:10px 12px;"><div style="font-size:13px;font-weight:700;color:#111;">🗂️ '+g.name+'</div><div style="font-size:10px;color:var(--dim);margin-top:2px;">'+g.max_players+' players</div></div>').join('') +
+        groups.map(g=>{
+          const members = allMembers.filter(m=>m.group_id===g.id);
+          let genderNote = '';
+          if(genderActive && members.length){
+            const icMap = new Map(IC_MEMBERS.map(({player})=>[(player.email||'').toLowerCase(), player]));
+            const passCount = members.filter(m=>{
+              const p = icMap.get((m.email||'').toLowerCase());
+              return p ? playerPassesGenderFilter(p, MS.genderPref, myGender) : true;
+            }).length;
+            if(passCount < members.length){
+              genderNote = '<div style="font-size:9px;color:#d97706;margin-top:2px;">⚠️ '+passCount+'/'+members.length+' match pref</div>';
+            }
+          }
+          return '<div class="match-option" data-group="named_'+g.id+'" onclick="toggleMatchGroup(\'named_'+g.id+'\',this)" style="padding:10px 12px;"><div style="font-size:13px;font-weight:700;color:#111;">🗂️ '+g.name+'</div><div style="font-size:10px;color:var(--dim);margin-top:2px;">'+g.max_players+' players</div>'+genderNote+'</div>';
+        }).join('') +
       '</div>';
   }catch(e){ container.style.display='none'; }
 }
