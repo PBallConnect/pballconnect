@@ -2612,35 +2612,67 @@ function selectNumCourts(n){
 }
 
 function toggleOrganizerPlaying(checked){
-  MS.organizerPlaying = checked;
-  updateMatchPlayerCount();
+  if(checked){
+    MS.organizerPlaying = true;
+    updateMatchPlayerCount();
+  } else {
+    // Show confirmation before removing organizer from slot count
+    const existing = document.getElementById('orgPlayingConfirmOverlay');
+    if(existing) existing.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'orgPlayingConfirmOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.innerHTML =
+      '<div style="background:#fff;border-radius:16px;padding:24px;max-width:360px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'+
+        '<div style="font-size:16px;font-weight:800;color:#111;margin-bottom:10px;">Not playing?</div>'+
+        '<div style="font-size:14px;color:#374151;line-height:1.6;margin-bottom:20px;">Are you sure you will <strong>NOT</strong> be playing in this match?</div>'+
+        '<div style="display:flex;gap:10px;">'+
+          '<button onclick="document.getElementById(\'orgPlayingConfirmOverlay\').remove();MS.organizerPlaying=false;updateMatchPlayerCount();" '+
+            'style="flex:1;padding:13px;border-radius:10px;border:none;background:#1a7a3a;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+
+            'Yes, I\'m just organizing'+
+          '</button>'+
+          '<button onclick="document.getElementById(\'orgPlayingConfirmOverlay\').remove();const cb=document.getElementById(\'matchOrganizerPlaying\');if(cb)cb.checked=true;" '+
+            'style="flex:1;padding:13px;border-radius:10px;border:2px solid #d1d5db;background:#fff;color:#374151;font-weight:700;font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+
+            'No, I\'ll be playing'+
+          '</button>'+
+        '</div>'+
+      '</div>';
+    document.body.appendChild(overlay);
+  }
 }
 
 function updateMatchPlayerCount(){
   const el = document.getElementById('matchPlayerCountLine');
   if(!el) return;
-  el.textContent = 'Total players needed: '+matchMaxNeeded();
+  const n = matchMaxNeeded();
+  el.innerHTML =
+    '<span style="font-size:12px;font-weight:600;color:#374151;">Total players needed:</span> '+
+    '<span style="display:inline-block;background:#fee2e2;border:2px solid #f87171;border-radius:8px;'+
+      'padding:6px 14px;font-size:22px;font-weight:800;color:#111;vertical-align:middle;line-height:1.2;">'+n+'</span>';
 }
 
 function renderCourtCapacityWarning(){
   const el = document.getElementById('matchCourtCapacityWarn');
   if(!el) return;
-  if(MS.selectedCourts.size===0||MS.location==='tbd'){ el.style.display='none'; return; }
+  if(MS.selectedCourts.size===0||MS.location==='tbd'){ el.style.display='none'; el.style.animation=''; return; }
   let courtName='', courtNumCourts=null;
   MS.selectedCourts.forEach(court=>{ courtName=court.name; courtNumCourts=court.numCourts??null; });
   const n = MS.numCourts||1;
+  const base = 'display:block;margin-top:10px;padding:10px 12px;border-radius:10px;font-size:12px;font-weight:600;line-height:1.5;';
   if(courtNumCourts===null||courtNumCourts===undefined){
-    el.style.display='block';
-    el.style.cssText='display:block;margin-top:10px;padding:10px 12px;border-radius:10px;border:1.5px solid #d1d5db;background:#f3f4f6;color:#6b7280;font-size:12px;font-weight:600;line-height:1.5;';
+    el.style.cssText = base+'border:1.5px solid #d1d5db;background:#f3f4f6;color:#6b7280;';
+    el.style.animation = '';
     el.textContent='⚠️ We don\'t have court count data for '+courtName+'. Please confirm availability before inviting players.';
   } else if(n > courtNumCourts){
-    el.style.cssText='display:block;margin-top:10px;padding:10px 12px;border-radius:10px;border:1.5px solid #f87171;background:#fff1f2;color:#dc2626;font-size:12px;font-weight:600;line-height:1.5;';
+    el.style.cssText = base+'border:1.5px solid #f87171;background:#fff1f2;color:#dc2626;';
+    el.style.animation='pb-card-pulse 1.4s ease-in-out infinite';
     el.textContent='🚫 '+courtName+' only has '+courtNumCourts+' court'+(courtNumCourts!==1?'s':'')+'. Your match requires '+n+' — players will be waiting or this venue may not be suitable.';
   } else if(n===courtNumCourts){
-    el.style.cssText='display:block;margin-top:10px;padding:10px 12px;border-radius:10px;border:1.5px solid #d97706;background:#fef9c3;color:#b45309;font-size:12px;font-weight:600;line-height:1.5;';
+    el.style.cssText = base+'border:1.5px solid #d97706;background:#fef9c3;color:#b45309;';
+    el.style.animation='pb-card-pulse 1.4s ease-in-out infinite';
     el.textContent='⚠️ Please be aware that '+courtName+' only has '+courtNumCourts+' court'+(courtNumCourts!==1?'s':'')+'. You\'re using all of them — confirm availability.';
   } else {
-    el.style.display='none';
+    el.style.display='none'; el.style.animation='';
   }
 }
 
@@ -3063,7 +3095,9 @@ function checkGroupSize(){
 
 function getGroupPlayers(group, skills){
   if(!group||group==='specific') return [];
+  const myGender = S.gender || SESSION_PLAYER?.gender || '';
   return IC_MEMBERS.filter(({player})=>{
+    if(!playerPassesGenderFilter(player, MS.genderPref, myGender)) return false;
     const pEmail=(player.email||'').toLowerCase();
     if(group==='favorites') return IC_FAVORITES.has(pEmail);
     if(group==='all') return true;
@@ -5082,6 +5116,8 @@ function initSetupMatch(){
   MS.format='doubles'; MS.numCourts=1; MS.organizerPlaying=true; MS.group=null; MS.specificPlayers.clear(); MS.extraGroups=new Set(); MS.selectedGroups=new Set(); MS.deselectedPlayers=new Set();
   MS.isFeeler=false; MS.duration=2; MS.selectedCourts=new Map();
   matchGoTo(1);
+  selectNumCourts(1);
+  updateMatchPlayerCount();
   updateMatchGroupLabels();
   buildMatchTimeChips();
   loadSentMatches();
@@ -8212,11 +8248,13 @@ function toggleSelectAll(){
 function updateInviteCounter(){
   const counter = document.getElementById('matchInviteCounter');
   if(!counter) return;
+  const myGender = S.gender || SESSION_PLAYER?.gender || '';
   const mySkill = S.skill || SESSION_PLAYER?.skill_level || '';
   const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
   const allGroups = MS.selectedGroups && MS.selectedGroups.size ? MS.selectedGroups : new Set([MS.group, ...MS.extraGroups]);
   const seen = new Set();
-  let total = 0;
+  // Organizer counts as 1 confirmed slot when playing
+  let total = MS.organizerPlaying ? 1 : 0;
   allGroups.forEach(g=>{
     if(!g||g==='specific'||g==='group_subs') return;
     getGroupPlayers(g, skills).forEach(p=>{
@@ -8226,18 +8264,25 @@ function updateInviteCounter(){
       }
     });
   });
-  // Add specific picks (deduplicated)
+  // Add specific picks (deduplicated, gender-filtered)
   if(allGroups.has('specific')){
-    MS.specificPlayers.forEach(e=>{ if(!seen.has(e)){ seen.add(e); total++; } });
+    MS.specificPlayers.forEach(e=>{
+      if(seen.has(e)) return;
+      const pm = IC_MEMBERS.find(({player})=>(player.email||'').toLowerCase()===e);
+      if(!pm || playerPassesGenderFilter(pm.player, MS.genderPref, myGender)){
+        seen.add(e); total++;
+      }
+    });
   }
-  // Add group+subs picks (primary + subs)
+  // Add group+subs picks (primary + subs — hand-picked, no gender filter)
   if(allGroups.has('group_subs')){
     MS.primaryPlayers.forEach(e=>{ if(!seen.has(e)){ seen.add(e); total++; } });
     MS.subPlayers.forEach(e=>{ if(!seen.has(e)){ seen.add(e); total++; } });
   }
 
+  const totalSlots = matchTotalSlots();
   counter.style.display = allGroups.size > 0 ? 'block' : 'none';
-  counter.textContent   = total+' player'+(total!==1?'s':'')+' invited';
+  counter.textContent = total+' of '+totalSlots+' confirmed'+(MS.organizerPlaying?' (includes you)':'');
   counter.style.background = total>0 ? 'rgba(76,175,125,0.12)' : 'rgba(255,255,255,0.06)';
   counter.style.color       = total>0 ? 'var(--green)' : 'var(--dim)';
 }
