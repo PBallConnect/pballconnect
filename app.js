@@ -115,7 +115,7 @@ let usTopoData=null;
     });
     svg.append('path').datum(topojson.mesh(us,us.objects.states,(a,b)=>a!==b))
       .attr('fill','none').attr('stroke','rgba(76,175,125,0.3)').attr('stroke-width','0.5px').attr('d',path);
-  }catch(err){document.getElementById('mapLoading').textContent='⚠️ Map failed to load.';console.error(err);}
+  }catch(err){const ml=document.getElementById('mapLoading');if(ml)ml.textContent='⚠️ Map failed to load.';console.error(err);}
 })();
 
 // ── County Map ─────────────────────────────────────────
