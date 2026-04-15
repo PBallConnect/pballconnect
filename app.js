@@ -79,7 +79,7 @@ let usTopoData=null;
   try{
     const us=await d3.json("https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json");
     usTopoData=us;
-    document.getElementById('mapLoading').remove();
+    document.getElementById('mapLoading')?.remove();
     const container=document.getElementById('mapContainer');
     const W=960,H=600;
     const svg=d3.select(container).append('svg').attr('viewBox',`0 0 ${W} ${H}`).attr('preserveAspectRatio','xMidYMid meet');
