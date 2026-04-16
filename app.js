@@ -2700,13 +2700,9 @@ function refreshGenderFilterBanner(){
     banner.style.display = 'none';
     return;
   }
-  const myGender = S.gender || SESSION_PLAYER?.gender || '';
-  const total = IC_MEMBERS.length;
-  const matching = IC_MEMBERS.filter(({player})=>playerPassesGenderFilter(player, pref, myGender)).length;
-  const prefLabel = pref==='same' ? 'Same Gender' : 'Mixed';
-  const genderLabel = pref==='same' ? (myGender||'same gender') : 'opposite gender';
   banner.style.display = 'block';
-  banner.innerHTML = `🔵 Gender preference is set to <strong>${prefLabel}</strong> — ${matching} of ${total} Inner Circle members are ${genderLabel} and will be invited. <span style="color:#1e40af;font-weight:600;">${total-matching} will be excluded.</span>`;
+  const formatLabel = pref==='same' ? 'Same Gender' : pref==='mixed' ? 'Mixed' : 'Open';
+  banner.innerHTML = `🔵 Match Format: <strong>${formatLabel}</strong>`;
 }
 
 // ── Group + Subs picker ───────────────────────────────
@@ -3131,15 +3127,22 @@ function buildSpecificPicker(){
   const warnEl  = document.getElementById('matchSpecificWarning');
   if(!list) return;
 
-  const maxNeeded = matchMaxNeeded();
-  const selected  = MS.specificPlayers.size;
+  const totalSlots = matchMaxNeeded();
+  const selected   = MS.specificPlayers.size;
+  const confirmed  = Math.min(selected, totalSlots);
+  const subs       = Math.max(0, selected - totalSlots);
 
-  if(countEl) countEl.textContent = selected+' selected';
+  if(countEl){
+    countEl.textContent = subs > 0
+      ? selected+' selected ('+confirmed+' confirmed · '+subs+' sub'+(subs!==1?'s':'')+')'
+      : selected+' selected';
+  }
 
   if(warnEl){
-    if(selected > maxNeeded){
-      warnEl.style.display='block';
-      warnEl.textContent = '\u26a0\ufe0f Only '+maxNeeded+' more player'+(maxNeeded>1?'s':'')+' needed. Please deselect '+(selected-maxNeeded)+'.';
+    if(selected >= totalSlots && totalSlots > 0){
+      warnEl.style.cssText='display:block;color:#065f46;background:#d1fae5;border:1px solid #6ee7b7;'+
+        'border-radius:8px;padding:8px 12px;font-size:12px;margin-bottom:8px;';
+      warnEl.textContent='\u2705 Slots filled! Any additional players you select will be added as subs in case someone drops.';
     } else {
       warnEl.style.display='none';
     }
@@ -3170,9 +3173,10 @@ function buildSpecificPicker(){
     {key:'below', label:'\ud83d\udfe1 Below My Level', skill: skills?.below||''},
     {key:'my',    label:'\ud83d\udfe2 My Level',       skill: skills?.my||''},
     {key:'above', label:'\ud83d\udfe3 Above My Level', skill: skills?.above||''},
+    {key:'other', label:'\u26aa Other Levels',          skill: ''},
   ];
 
-  list.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 12px;align-items:start;';
+  list.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0 12px;align-items:start;';
 
   const myGender = S.gender || SESSION_PLAYER?.gender || '';
 
@@ -3186,13 +3190,19 @@ function buildSpecificPicker(){
       ? players.filter(p=>playerPassesGenderFilter(p, MS.genderPref, myGender)).length
       : players.length;
     const hdr = document.createElement('div');
+    const isOther = col.key === 'other';
     hdr.style.cssText='text-align:center;padding:8px 4px 6px;margin-bottom:6px;'+
-      'border-radius:8px;font-size:11px;font-weight:700;'+
-      'background:#e5e7eb;border:2px solid #d1d5db;'+
-      'color:#374151;line-height:1.4;';
-    hdr.innerHTML = col.label+'<br><span style="font-size:10px;opacity:0.7;">'+
-      (col.skill?'Rating '+col.skill:'—')+' · '+players.length+' player'+(players.length!==1?'s':'')+
-      (genderActive&&passCount<players.length?' · <span style="color:#d97706;">'+passCount+' match pref</span>':'')+
+      'border-radius:8px;font-size:11px;font-weight:700;line-height:1.4;'+
+      (isOther
+        ? 'background:#f3f4f6;border:2px solid #9ca3af;color:#6b7280;'
+        : 'background:#e5e7eb;border:2px solid #d1d5db;color:#374151;');
+    const skillHtml = col.skill
+      ? ' \u00b7 <span style="color:#991b1b;font-weight:800;font-size:15px;">'+col.skill+'</span>'
+      : '';
+    hdr.innerHTML = col.label + skillHtml +
+      '<br><span style="font-size:10px;opacity:0.7;">'+
+        players.length+' player'+(players.length!==1?'s':'')+
+        (genderActive&&passCount<players.length?' \u00b7 <span style="color:#d97706;">'+passCount+' match pref</span>':'')+
       '</span>';
     colEl.appendChild(hdr);
 
@@ -3206,17 +3216,16 @@ function buildSpecificPicker(){
     players.forEach(player=>{
       const name    = ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim();
       const checked = MS.specificPlayers.has(player.email);
-      const atMax   = !checked && selected >= maxNeeded;
       const passesGender = playerPassesGenderFilter(player, MS.genderPref, myGender);
       const genderBlocked = !passesGender && !checked;
 
       const card = document.createElement('div');
       card.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:3px;'+
         'padding:8px 4px;border-radius:10px;margin-bottom:6px;text-align:center;'+
-        'cursor:'+(genderBlocked||atMax?'not-allowed':'pointer')+';'+
+        'cursor:'+(genderBlocked?'not-allowed':'pointer')+';'+
         'border:2px solid '+(checked?'#1a7a3a':'#d1d5db')+';'+
         'background:'+(checked?'#d1fae5':'#f3f4f6')+';color:#111;'+
-        'opacity:'+(genderBlocked?'0.3':atMax?'0.4':'1')+';transition:all .15s;';
+        'opacity:'+(genderBlocked?'0.3':'1')+';transition:all .15s;';
 
       card.innerHTML =
         '<span style="font-size:22px;line-height:1;">'+(player.avatar_emoji||'\ud83e\uddd1')+'</span>'+
@@ -3225,15 +3234,11 @@ function buildSpecificPicker(){
         (checked?'<div style="color:#1a7a3a;font-size:10px;font-weight:700;">\u2713 Selected</div>':'')+
         (genderBlocked?'<div style="color:#9ca3af;font-size:9px;">\u26a7 Not invited</div>':'');
 
-      if(checked || (!atMax && !genderBlocked)){
+      if(!genderBlocked){
         card.onclick = ()=>{
           if(MS.specificPlayers.has(player.email)){
             MS.specificPlayers.delete(player.email);
           } else {
-            if(MS.specificPlayers.size >= maxNeeded){
-              showToast('\u26a0\ufe0f Only '+maxNeeded+' more player'+(maxNeeded!==1?'s':'')+' needed!','#f59e0b');
-              return;
-            }
             MS.specificPlayers.add(player.email);
           }
           buildSpecificPicker();
