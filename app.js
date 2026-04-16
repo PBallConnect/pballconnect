@@ -2536,6 +2536,7 @@ function matchGoTo(step){
     if(activeGroups.has('specific')){ buildSpecificPicker(); document.getElementById('matchSpecificPicker').style.display='block'; }
     if(activeGroups.has('group_subs')){ buildGroupSubPicker(); document.getElementById('matchGroupSubsPicker').style.display='block'; }
     refreshGenderFilterBanner();
+    updateInviteCounter();
     checkMatchStep4();
   }
   if(step===5){ buildMatchSummary(); setTimeout(loadMatchWeather, 300); }
@@ -2591,6 +2592,7 @@ function selectMatchGender(pref, el){
   if(specificPicker && specificPicker.style.display !== 'none') buildSpecificPicker();
   const subsPicker = document.getElementById('matchGroupSubsPicker');
   if(subsPicker && subsPicker.style.display !== 'none') buildGroupSubPicker();
+  updateInviteCounter();
 }
 
 // ── Multi-court / organizer toggle ────────────────────
@@ -2938,11 +2940,25 @@ function showGroupPlayerList(group, groupLabel){
 
   const myGender = S.gender || SESSION_PLAYER?.gender || '';
   const genderActive = MS.genderPref && MS.genderPref !== 'either';
-  const passCount = genderActive ? players.filter(p=>playerPassesGenderFilter(p, MS.genderPref, myGender)).length : players.length;
+  const basePlayers = genderActive ? players.filter(p=>playerPassesGenderFilter(p, MS.genderPref, myGender)) : players;
+  const passCount = basePlayers.length;
   const genderNote = (genderActive && passCount < players.length)
     ? ' · <span style="color:#d97706;font-weight:600;">'+passCount+' match pref</span>' : '';
 
-  const header = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">'+
+  // Gender breakdown pills
+  const gMen   = basePlayers.filter(p=>(p.gender||'').toLowerCase()==='male').length;
+  const gWomen = basePlayers.filter(p=>(p.gender||'').toLowerCase()==='female').length;
+  const gOther = basePlayers.length - gMen - gWomen;
+  const genderBreakdownRow = basePlayers.length > 0
+    ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">'+
+        '<span style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:600;color:#1d4ed8;">👨 '+gMen+' Men</span>'+
+        '<span style="background:#fdf4ff;border:1px solid #e879f9;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:600;color:#7e22ce;">👩 '+gWomen+' Women</span>'+
+        (gOther>0?'<span style="background:#f3f4f6;border:1px solid #d1d5db;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:600;color:#6b7280;">❓ '+gOther+' N/A</span>':'')+
+        (genderActive?'<span style="font-size:10px;color:#d97706;align-self:center;">(filtered)</span>':'')+
+      '</div>'
+    : '';
+
+  const header = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'+
     '<div style="font-size:15px;font-weight:800;color:#111;">'+groupLabel+' <span style="font-size:12px;color:#6b7280;font-weight:600;">('+players.length+' players'+genderNote+')</span></div>'+
     '<button onclick="document.getElementById(`groupPlayerPopup`).remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280;">✕</button>'+
   '</div>';
@@ -2961,7 +2977,7 @@ function showGroupPlayerList(group, groupLabel){
     '</div>';
   }).join('') : '<div style="text-align:center;color:#6b7280;padding:20px;">No players in this group yet.</div>';
 
-  modal.innerHTML = header + playerRows;
+  modal.innerHTML = header + genderBreakdownRow + playerRows;
   overlay.appendChild(modal);
   overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
   document.body.appendChild(overlay);
@@ -3233,12 +3249,13 @@ function buildSpecificPicker(){
 }
 
 function updateMatchGroupLabels(){
-  const mySkill = S.skill || SESSION_PLAYER?.skill_level || '';
-  const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
+  const mySkill  = S.skill || SESSION_PLAYER?.skill_level || '';
+  const myGender = S.gender || SESSION_PLAYER?.gender || '';
+  const skills   = mySkill ? getAdjacentSkills(mySkill) : null;
   const sl = (grp, lbl) => ' <span onclick="event.stopPropagation();showGroupPlayerList(\'' + grp + '\',\'' + lbl + '\')" style="font-size:10px;color:#1a7a3a;font-weight:700;cursor:pointer;text-decoration:underline;">see list</span>';
   const el = (id,txt)=>{ const e=document.getElementById(id); if(e)e.innerHTML=txt; };
 
-  // Count players in each group
+  // Count players in each group (unfiltered — for total display)
   const countGroup = (group)=>{
     if(!skills) return 0;
     return IC_MEMBERS.filter(({player})=>{
@@ -3251,19 +3268,40 @@ function updateMatchGroupLabels(){
     }).length;
   };
 
-  const maxNeeded = matchMaxNeeded();
+  // Gender breakdown pills for a player array (already gender-filtered via getGroupPlayers)
+  const filt = MS.genderPref && MS.genderPref !== 'either';
+  const genBreak = (players) => {
+    if(!players.length) return '';
+    const m = players.filter(p=>(p.gender||'').toLowerCase()==='male').length;
+    const w = players.filter(p=>(p.gender||'').toLowerCase()==='female').length;
+    const o = players.length - m - w;
+    return '<span style="font-size:9px;color:#9ca3af;display:block;margin-top:2px;line-height:1.4;">'+
+      '👨 '+m+' · 👩 '+w+(o?' · ❓ '+o:'')+(filt?' <span style="color:#d97706;">(filtered)</span>':'')+
+    '</span>';
+  };
+
+  const maxNeeded  = matchMaxNeeded();
   const allCount   = IC_MEMBERS.length;
   const myCount    = countGroup('my_level');
   const belowCount = countGroup('below');
   const aboveCount = countGroup('above');
+  const favCount   = IC_MEMBERS.filter(({player})=>IC_FAVORITES.has((player.email||'').toLowerCase())).length;
+
+  const allGP    = getGroupPlayers('all',       skills);
+  const myGP     = getGroupPlayers('my_level',  skills);
+  const belowGP  = getGroupPlayers('below',     skills);
+  const aboveGP  = getGroupPlayers('above',     skills);
+  const favGP    = IC_MEMBERS.filter(({player})=>IC_FAVORITES.has((player.email||'').toLowerCase()) &&
+                     playerPassesGenderFilter(player, MS.genderPref, myGender)).map(x=>x.player);
 
   const countBadge = (n)=> n===0 ? '— no players' : n+' player'+(n!==1?'s':'')+(n<maxNeeded?' ⚠️':'');
 
-  el('matchAllSub',     allCount+' player'+(allCount!==1?'s':'')+sl('all','Entire Inner Circle'));
-  el('matchMyLevelSub', (skills?.my||'—')+' · '+countBadge(myCount)+sl('my_level','My Level'));
-  el('matchBelowSub',   (skills?.below||'—')+' · '+countBadge(belowCount)+sl('below','Below My Level'));
-  el('matchAboveSub',   (skills?.above||'—')+' · '+countBadge(aboveCount)+sl('above','Above My Level'));
-  el('matchSpecificSub','Pick up to '+matchMaxNeeded()+' from '+allCount);
+  el('matchFavoritesSub', favCount+' player'+(favCount!==1?'s':'')+sl('favorites','My Favorites')+genBreak(favGP));
+  el('matchAllSub',       allCount+' player'+(allCount!==1?'s':'')+sl('all','Entire Inner Circle')+genBreak(allGP));
+  el('matchMyLevelSub',   (skills?.my||'—')+' · '+countBadge(myCount)+sl('my_level','My Level')+genBreak(myGP));
+  el('matchBelowSub',     (skills?.below||'—')+' · '+countBadge(belowCount)+sl('below','Below My Level')+genBreak(belowGP));
+  el('matchAboveSub',     (skills?.above||'—')+' · '+countBadge(aboveCount)+sl('above','Above My Level')+genBreak(aboveGP));
+  el('matchSpecificSub',  'Pick up to '+matchMaxNeeded()+' from '+allCount+genBreak(allGP));
 }
 
 // ── Step 2: Where ──────────────────────────────────────
@@ -8245,6 +8283,38 @@ function toggleSelectAll(){
   updateInviteCounter();
 }
 
+// ── Mixed gender slot breakdown panel (Step 4) ───────
+function renderMixedBreakdown(pendingMen, pendingWomen){
+  const el = document.getElementById('matchMixedBreakdown');
+  if(!el) return;
+  if(MS.genderPref !== 'mixed'){ el.style.display='none'; return; }
+  const perCourt = MS.format==='doubles' ? 2 : 1;
+  let neededMen   = perCourt * (MS.numCourts||1);
+  let neededWomen = perCourt * (MS.numCourts||1);
+  const myGenderLc = (S.gender||SESSION_PLAYER?.gender||'').toLowerCase();
+  if(MS.organizerPlaying){
+    if(myGenderLc==='male')        neededMen   = Math.max(0, neededMen-1);
+    else if(myGenderLc==='female') neededWomen = Math.max(0, neededWomen-1);
+  }
+  const menOver    = pendingMen   > neededMen;
+  const womenOver  = pendingWomen > neededWomen;
+  const menFull    = pendingMen   >= neededMen;
+  const womenFull  = pendingWomen >= neededWomen;
+  const menColor   = menOver   ? '#d97706' : menFull   ? '#1a7a3a' : '#1e40af';
+  const womenColor = womenOver ? '#d97706' : womenFull ? '#1a7a3a' : '#1e40af';
+  let html = '<div style="padding:10px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:12px;line-height:1.6;">';
+  html += '<div style="font-weight:700;color:#1e40af;margin-bottom:6px;">Mixed match slot breakdown:</div>';
+  html += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:4px;">';
+  html += '<span style="font-weight:700;color:'+menColor+';">👨 '+pendingMen+'/'+neededMen+' Men'+(menFull&&!menOver?' ✓':'')+'</span>';
+  html += '<span style="font-weight:700;color:'+womenColor+';">👩 '+pendingWomen+'/'+neededWomen+' Women'+(womenFull&&!womenOver?' ✓':'')+'</span>';
+  html += '</div>';
+  if(menOver)   html += '<div style="font-size:11px;color:#d97706;">⚠️ More Men in pool than slots — some may not get in</div>';
+  if(womenOver) html += '<div style="font-size:11px;color:#d97706;">⚠️ More Women in pool than slots — some may not get in</div>';
+  html += '</div>';
+  el.style.display='block';
+  el.innerHTML = html;
+}
+
 function updateInviteCounter(){
   const counter = document.getElementById('matchInviteCounter');
   if(!counter) return;
@@ -8253,38 +8323,46 @@ function updateInviteCounter(){
   const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
   const allGroups = MS.selectedGroups && MS.selectedGroups.size ? MS.selectedGroups : new Set([MS.group, ...MS.extraGroups]);
   const seen = new Set();
-  // Organizer counts as 1 confirmed slot when playing
-  let total = MS.organizerPlaying ? 1 : 0;
+  let pending = 0, pendingMen = 0, pendingWomen = 0;
+
+  const addPending = (player) => {
+    pending++;
+    const g = (player?.gender||'').toLowerCase();
+    if(g==='male') pendingMen++;
+    else if(g==='female') pendingWomen++;
+  };
+
   allGroups.forEach(g=>{
     if(!g||g==='specific'||g==='group_subs') return;
     getGroupPlayers(g, skills).forEach(p=>{
       const e=(p.email||'').toLowerCase();
-      if(!seen.has(e) && !MS.deselectedPlayers?.has(e)){
-        seen.add(e); total++;
-      }
+      if(!seen.has(e) && !MS.deselectedPlayers?.has(e)){ seen.add(e); addPending(p); }
     });
   });
-  // Add specific picks (deduplicated, gender-filtered)
+  // Specific picks — gender-filtered
   if(allGroups.has('specific')){
     MS.specificPlayers.forEach(e=>{
       if(seen.has(e)) return;
       const pm = IC_MEMBERS.find(({player})=>(player.email||'').toLowerCase()===e);
       if(!pm || playerPassesGenderFilter(pm.player, MS.genderPref, myGender)){
-        seen.add(e); total++;
+        seen.add(e); addPending(pm?.player);
       }
     });
   }
-  // Add group+subs picks (primary + subs — hand-picked, no gender filter)
+  // Group+subs — hand-picked, no gender filter
   if(allGroups.has('group_subs')){
-    MS.primaryPlayers.forEach(e=>{ if(!seen.has(e)){ seen.add(e); total++; } });
-    MS.subPlayers.forEach(e=>{ if(!seen.has(e)){ seen.add(e); total++; } });
+    [...MS.primaryPlayers, ...MS.subPlayers].forEach(e=>{
+      if(seen.has(e)) return;
+      const pm = IC_MEMBERS.find(({player})=>(player.email||'').toLowerCase()===e);
+      seen.add(e); addPending(pm?.player);
+    });
   }
 
-  const totalSlots = matchTotalSlots();
-  counter.style.display = allGroups.size > 0 ? 'block' : 'none';
-  counter.textContent = total+' of '+totalSlots+' confirmed'+(MS.organizerPlaying?' (includes you)':'');
-  counter.style.background = total>0 ? 'rgba(76,175,125,0.12)' : 'rgba(255,255,255,0.06)';
-  counter.style.color       = total>0 ? 'var(--green)' : 'var(--dim)';
+  counter.style.display = 'block'; // always visible on Step 4
+  counter.textContent = (MS.organizerPlaying ? '1 confirmed (you)' : '0 confirmed')+' · '+pending+' pending invite'+(pending!==1?'s':'');
+  counter.style.background = 'rgba(76,175,125,0.12)';
+  counter.style.color = 'var(--green)';
+  renderMixedBreakdown(pendingMen, pendingWomen);
 }
 
 
