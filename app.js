@@ -8035,9 +8035,13 @@ function showInviteEmailStep(){
     if(errEl) errEl.style.display='none';
     if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
     try{
+      // Include invite token in redirect URL so checkInviteToken() re-fires on the redirect page
+      // and PENDING_INVITE is set before onAuthStateChange fires startNewRegistration()
+      const invToken = PENDING_INVITE?.invite_token;
+      const redirectTo = window.location.origin + window.location.pathname + (invToken ? '?invite='+encodeURIComponent(invToken) : '');
       const { error } = await _supabase.auth.signInWithOtp({
         email,
-        options:{ emailRedirectTo: window.location.origin + window.location.pathname }
+        options:{ emailRedirectTo: redirectTo }
       });
       if(error) throw error;
       // Persist email so startNewRegistration can use it after redirect
@@ -8056,82 +8060,94 @@ function showInviteEmailStep(){
   };
 }
 
-function _showStartChoiceModal(email){
-  const rawName = email.split('@')[0].replace(/[._\-\d]+/g,' ').trim().split(' ')[0];
-  const firstName = rawName ? rawName.charAt(0).toUpperCase()+rawName.slice(1).toLowerCase() : 'there';
+function showInviteLandingChoice(email, inv){
+  document.getElementById('startChoiceOverlay')?.remove();
+
+  const inviterName = inv?.inviter_name || 'A fellow player';
 
   const overlay = document.createElement('div');
   overlay.id = 'startChoiceOverlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:900;background:#fff;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;';
   overlay.innerHTML =
-    '<div id="startChoiceCard" style="background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'+
-      '<div style="text-align:center;margin-bottom:20px;">'+
-        '<div style="font-size:40px;margin-bottom:10px;">🎉</div>'+
-        '<div style="font-size:20px;font-weight:800;color:#111;margin-bottom:6px;">You\'re in, '+firstName+'!</div>'+
-        '<div style="font-size:13px;color:#6b7280;">How would you like to get started?</div>'+
+    '<div id="startChoiceCard" style="width:100%;max-width:420px;">'+
+      '<div style="text-align:center;margin-bottom:24px;">'+
+        '<div style="font-size:48px;margin-bottom:10px;">🎾</div>'+
+        '<div style="font-size:22px;font-weight:800;color:#111;margin-bottom:6px;">Welcome to PBallConnect!</div>'+
+        '<div style="font-size:14px;color:#6b7280;">'+inviterName+' invited you to join.</div>'+
       '</div>'+
+      '<div style="font-size:14px;font-weight:700;color:#374151;text-align:center;margin-bottom:14px;">How would you like to get started?</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">'+
-        '<div onclick="_doStartChoiceFull()" style="cursor:pointer;border:2px solid #1a7a3a;border-radius:14px;padding:18px 14px;text-align:center;">'+
-          '<div style="font-size:26px;margin-bottom:8px;">📋</div>'+
-          '<div style="font-size:13px;font-weight:800;color:#1a7a3a;margin-bottom:4px;">Full Profile</div>'+
-          '<div style="font-size:11px;color:#6b7280;line-height:1.4;">All features — your complete pickleball identity</div>'+
+        '<div onclick="_ilcChooseFull()" style="cursor:pointer;border:2px solid #1a7a3a;border-radius:14px;padding:20px 14px;text-align:center;">'+
+          '<div style="font-size:28px;margin-bottom:10px;">📋</div>'+
+          '<div style="font-size:13px;font-weight:800;color:#1a7a3a;margin-bottom:6px;">Full Profile</div>'+
+          '<div style="font-size:11px;color:#6b7280;line-height:1.5;">All features, your complete pickleball identity</div>'+
         '</div>'+
-        '<div onclick="_doStartChoiceQuick()" style="cursor:pointer;border:2px solid #d1d5db;border-radius:14px;padding:18px 14px;text-align:center;">'+
-          '<div style="font-size:26px;margin-bottom:8px;">⚡</div>'+
-          '<div style="font-size:13px;font-weight:800;color:#374151;margin-bottom:4px;">Quick Connect</div>'+
-          '<div style="font-size:11px;color:#6b7280;line-height:1.4;">On the court fast — just the basics</div>'+
+        '<div onclick="_ilcChooseQuick()" style="cursor:pointer;border:2px solid #d1d5db;border-radius:14px;padding:20px 14px;text-align:center;">'+
+          '<div style="font-size:28px;margin-bottom:10px;">⚡</div>'+
+          '<div style="font-size:13px;font-weight:800;color:#6b7280;margin-bottom:6px;">Quick Connect</div>'+
+          '<div style="font-size:11px;color:#6b7280;line-height:1.5;">On the court fast — just the basics</div>'+
         '</div>'+
       '</div>'+
     '</div>';
 
   document.body.appendChild(overlay);
 
-  window._doStartChoiceFull = function(){
+  window._ilcChooseFull = function(){
     overlay.remove();
-    showToast('Great! You\'ll enjoy all the benefits of PBallConnect. Let\'s build your profile — it\'s quick and fun!', '#1a7a3a');
-    _doStartFullProfile(email);
+    // Reset form state before navigating
+    const emailEl = document.getElementById('email');
+    if(emailEl) emailEl.value = email;
+    S._privacyConsent = false;
+    S._riskConsent = false;
+    document.getElementById('checkBoxPrivacy')?.classList.remove('on');
+    document.getElementById('checkBoxRisk')?.classList.remove('on');
+    const sb = document.getElementById('btnSubmit');
+    if(sb) sb.disabled = true;
+    document.getElementById('lessonSection') && (document.getElementById('lessonSection').style.display = 'none');
+    document.getElementById('lessonOfferSection') && (document.getElementById('lessonOfferSection').style.display = 'none');
+    _doStartFullProfile(email, 'Great! Let\'s build your full profile — it\'s quick and fun! 🎾');
   };
 
-  window._doStartChoiceQuick = function(){
+  window._ilcChooseQuick = function(){
     const card = document.getElementById('startChoiceCard');
     if(!card) return;
     card.innerHTML =
       '<div style="text-align:center;margin-bottom:20px;">'+
-        '<div style="font-size:32px;margin-bottom:10px;">⚡</div>'+
+        '<div style="font-size:32px;margin-bottom:10px;">🤔</div>'+
         '<div style="font-size:17px;font-weight:800;color:#111;margin-bottom:8px;">Are you sure?</div>'+
-        '<div style="font-size:13px;color:#6b7280;line-height:1.5;">Your full Pickleball Profile unlocks everything — finding players nearby, joining groups, tracking matches, and more.</div>'+
+        '<div style="font-size:13px;color:#6b7280;line-height:1.6;">Your full profile unlocks everything on PBallConnect — finding players nearby, joining groups, tracking matches, and more.</div>'+
       '</div>'+
       '<div style="display:flex;flex-direction:column;gap:10px;">'+
-        '<button onclick="_doStartChoiceFull()" style="padding:13px;border-radius:12px;border:2px solid #1a7a3a;background:#fff;color:#1a7a3a;font-weight:800;font-size:14px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+
+        '<button onclick="_ilcChooseFull()" style="padding:13px;border-radius:12px;border:2px solid #1a7a3a;background:#fff;color:#1a7a3a;font-weight:800;font-size:14px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+
           '📋 Full Profile'+
         '</button>'+
-        '<button onclick="_doStartChoiceConfirmQuick()" style="padding:13px;border-radius:12px;border:1px solid #d1d5db;background:transparent;color:#6b7280;font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+
-          'Quick Connect — just the basics'+
+        '<button onclick="_ilcConfirmQuick()" style="padding:13px;border-radius:12px;border:1px solid #d1d5db;background:transparent;color:#6b7280;font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+
+          'Yes, Quick Connect'+
         '</button>'+
       '</div>';
   };
 
-  window._doStartChoiceConfirmQuick = function(){
+  window._ilcConfirmQuick = function(){
     overlay.remove();
-    showQuickConnectForm(email);
+    showQuickConnectForm(email, inv);
   };
 }
 
-function _doStartFullProfile(email){
+function _doStartFullProfile(email, toastMsg){
   showPage('playerProfile');
   unlockProfileForm();
   goTo(1);
   setTimeout(()=>{
     window.scrollTo({top:0, behavior:'smooth'});
-    showToast('👋 Welcome! Fill out your profile below.', '#4CAF7D');
+    showToast(toastMsg || '👋 Welcome! Fill out your profile below.', '#4CAF7D');
     chk1();
     const fn = document.getElementById('firstName');
     if(fn){ fn.focus(); fn.scrollIntoView({behavior:'smooth', block:'center'}); }
   }, 400);
 }
 
-function showQuickConnectForm(email){
-  const inviterName = PENDING_INVITE?.inviter_name || 'Your friend';
+function showQuickConnectForm(email, inv){
+  const inviterName = (inv || PENDING_INVITE)?.inviter_name || 'Your friend';
 
   const overlay = document.createElement('div');
   overlay.id = 'quickConnectOverlay';
@@ -8204,7 +8220,7 @@ function showQuickConnectForm(email){
         'Save & Join PBallConnect 🏓'+
       '</button>'+
       '<div style="text-align:center;">'+
-        '<span onclick="document.getElementById(\'quickConnectOverlay\').remove();_doStartFullProfile(\''+email+'\')" style="font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline;">Switch to Full Profile</span>'+
+        '<span onclick="window._qcSwitchFull()" style="font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline;">Switch to Full Profile</span>'+
       '</div>'+
     '</div>';
 
@@ -8274,6 +8290,21 @@ function showQuickConnectForm(email){
     }
   };
 
+  window._qcSwitchFull = function(){
+    document.getElementById('quickConnectOverlay')?.remove();
+    const emailEl = document.getElementById('email');
+    if(emailEl) emailEl.value = email;
+    S._privacyConsent = false;
+    S._riskConsent = false;
+    document.getElementById('checkBoxPrivacy')?.classList.remove('on');
+    document.getElementById('checkBoxRisk')?.classList.remove('on');
+    const sb = document.getElementById('btnSubmit');
+    if(sb) sb.disabled = true;
+    document.getElementById('lessonSection') && (document.getElementById('lessonSection').style.display = 'none');
+    document.getElementById('lessonOfferSection') && (document.getElementById('lessonOfferSection').style.display = 'none');
+    _doStartFullProfile(email, 'Great! Let\'s build your full profile — it\'s quick and fun! 🎾');
+  };
+
   setTimeout(()=>document.getElementById('qcFirstName')?.focus(), 150);
 }
 
@@ -8333,6 +8364,18 @@ function startNewRegistration(emailParam){
   const email = emailParam || localStorage.getItem('pb_pending_email') || '';
   localStorage.removeItem('pb_pending_email');
 
+  // If user arrived via invite link, show landing choice instead of bare profile form.
+  // checkInviteToken() already set PENDING_INVITE (synchronously) before auth fired.
+  if(PENDING_INVITE){
+    _newUserRegistrationStarted = true;
+    closeLoginModal();
+    S.email = email.toLowerCase();
+    // Keep email in storage in case Full Profile is chosen and page reloads
+    localStorage.setItem('pb_pending_email', email);
+    showInviteLandingChoice(email, PENDING_INVITE);
+    return;
+  }
+
   _newUserRegistrationStarted = true;
   closeLoginModal();
 
@@ -8354,12 +8397,6 @@ function startNewRegistration(emailParam){
   // Hide lesson section — not needed during initial signup
   document.getElementById('lessonSection') && (document.getElementById('lessonSection').style.display = 'none');
   document.getElementById('lessonOfferSection') && (document.getElementById('lessonOfferSection').style.display = 'none');
-
-  // Invite flow: offer Full Profile vs Quick Connect choice
-  if(PENDING_INVITE){
-    _showStartChoiceModal(email);
-    return;
-  }
 
   _doStartFullProfile(email);
 }
