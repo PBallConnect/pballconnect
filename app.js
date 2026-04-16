@@ -700,7 +700,11 @@ function goTo(n){
     lbl.className='step-label'+(i===n?' active':'');
     if(i<3) document.getElementById('line'+i).className='step-line'+(i<n?' done':'');
   });
-  if(n===3) populateSummary();
+  if(n===3){
+    populateSummary();
+    const submitBtn=document.getElementById('btnSubmit');
+    if(submitBtn) submitBtn.disabled=!(S._privacyConsent&&S._riskConsent);
+  }
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -709,9 +713,11 @@ function populateSummary(){
   const show = (id,val)=>{ const el=document.getElementById(id); if(el) el.style.display=val?'flex':'none'; };
 
   // Section 1 header — emoji + name + nickname
-  const lastName = v('lastName') ? v('lastName').trim().charAt(0).toUpperCase()+'.' : '';
-  const fullName = (v('firstName')+' '+lastName).trim();
-  const nick = v('nickname')||S.nickname||'';
+  const _firstName = document.getElementById('firstName')?.value?.trim() || '';
+  const _lastName  = document.getElementById('lastName')?.value?.trim()  || '';
+  const lastName = _lastName ? _lastName.charAt(0).toUpperCase()+'.' : '';
+  const fullName = (_firstName+' '+lastName).trim();
+  const nick = document.getElementById('nickname')?.value?.trim() || S.nickname || '';
   const emoji = document.getElementById('avatarEmoji')?.value || S.avatarEmoji || '🎾';
   const emojiEl = document.getElementById('sumEmojiDisplay');
   if(emojiEl){
@@ -736,24 +742,24 @@ function populateSummary(){
   set('sumNickname', nick||'—');
 
   // Personal info rows
-  set('sumEmail', v('email')||S.email||getMyEmail()||'—');
-  const rawPhone = v('phone')||'';
+  set('sumEmail', document.getElementById('email')?.value?.trim() || S.email || getMyEmail() || '—');
+  const rawPhone = document.getElementById('phone')?.value?.trim() || S.phone || '';
   const digits = rawPhone.replace(/\D/g,'');
   const fmtPhone = digits.length===10?'('+digits.substring(0,3)+') '+digits.substring(3,6)+'-'+digits.substring(6):digits||formatPhoneForDisplay(S.phone)||'—';
   set('sumPhone', fmtPhone);
   set('sumDob', document.getElementById('playerAge')?.value || S.dob || '—');
-  set('sumGender', S.gender||'—');
-  set('sumCity', document.getElementById('addrCity')?.value||S.city||'—');
-  set('sumState', document.getElementById('addrState')?.value||S.state||'—');
-  set('sumZip', v('addrZip')||S.zip||'—');
-  set('sumShirt', v('shirtSize')||'—');
+  set('sumGender', S.gender || '—');
+  set('sumCity', document.getElementById('addrCity')?.value?.trim() || S.city || '—');
+  set('sumState', document.getElementById('addrState')?.value?.trim() || S.state || '—');
+  set('sumZip', document.getElementById('addrZip')?.value?.trim() || S.zip || '—');
+  set('sumShirt', document.getElementById('shirtSize')?.value?.trim() || '—');
 
   // Section 2 — Player info
-  set('sumSince', v('playingSince')||S.playingSince||'—');
+  set('sumSince', document.getElementById('playingSince')?.value?.trim() || S.playingSince || '—');
   set('sumHandedness', S.handedness||'—');
   set('sumFormat', S.playFormat||'—');
   set('sumStyle', S.playStyle||'—');
-  set('sumVenue', S.venuePref||'—');
+  set('sumVenuePref', S.venuePref||'—');
   const driveEl=document.getElementById('driveDistance');
   set('sumDrive', driveEl?driveEl.value+' miles':'—');
 
@@ -766,7 +772,12 @@ function populateSummary(){
       {key:'availWeekdayEvening',  label:'Weekday evenings'},
       {key:'availWeekends',        label:'Weekends'},
     ];
-    const active=windows.filter(w=>S[w.key]);
+    const active=windows.filter(w=>{
+      const btnId = w.key==='availWeekdayMorning'   ? 'availWeekdayMorningBtn'   :
+                    w.key==='availWeekdayAfternoon' ? 'availWeekdayAfternoonBtn' :
+                    w.key==='availWeekdayEvening'   ? 'availWeekdayEveningBtn'   : 'availWeekendsBtn';
+      return S[w.key] || document.getElementById(btnId)?.classList.contains('on');
+    });
     schedGrid.innerHTML=active.length
       ? active.map(w=>'<span style="display:inline-block;padding:3px 9px;border-radius:999px;background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.4);color:#4CAF7D;font-size:11px;font-weight:600;margin:2px;">'+w.label+'</span>').join('')
       : '<span style="color:var(--dim);font-size:12px;">None selected</span>';
@@ -6440,7 +6451,10 @@ function lockProfileForm(){
     // Use readOnly+style instead of disabled — disabled can clear values in Chrome
     step.querySelectorAll('input:not([type="hidden"]),textarea').forEach(el=>{el.readOnly=true;el.style.opacity='0.6';el.style.cursor='not-allowed';el.style.pointerEvents='none';});
     step.querySelectorAll('select').forEach(el=>{el.disabled=true;el.style.opacity='0.6';el.style.cursor='not-allowed';});
-    step.querySelectorAll('.chip,.chip-rect,.sched-cell,.anytime-btn,.day-btn,.avail-toggle').forEach(el=>{el.style.pointerEvents='none';el.style.opacity='0.6';});
+    const toggleSelector = SESSION_PLAYER
+      ? '.chip,.chip-rect,.sched-cell,.anytime-btn,.day-btn,.avail-toggle'
+      : '.chip,.chip-rect,.sched-cell,.anytime-btn,.day-btn';
+    step.querySelectorAll(toggleSelector).forEach(el=>{el.style.pointerEvents='none';el.style.opacity='0.6';});
     const ep=document.getElementById('emojiPreview');if(ep){ep.style.pointerEvents='none';ep.style.cursor='default';}
     step.querySelectorAll('input[type="range"]').forEach(el=>{el.disabled=true;});
     step.querySelectorAll('.btn-next,.btn-back').forEach(el=>{el.style.display='none';});
@@ -8037,11 +8051,13 @@ function startNewRegistration(email){
   closeLoginModal();
   const emailEl = document.getElementById('email');
   if(emailEl){ emailEl.value = email; }
+  S.email = email.toLowerCase();
   showPage('playerProfile');
   // Ensure the form is fully interactive (not left locked from a previous session)
   // and that the user starts on Step 1 with all navigation buttons visible.
   unlockProfileForm();
   goTo(1);
+  chk1(); // re-evaluate now that email is pre-filled
   // Reset consent state — new user must check both waiver boxes fresh
   S._privacyConsent = false;
   S._riskConsent = false;

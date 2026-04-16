@@ -407,9 +407,9 @@
         <input type="file" id="photoFileInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handlePhotoSelected(this)"/>
       </div>
     </div>
-    <div class="field"><label>Email Address</label><input type="email" id="email" placeholder="jane@example.com" autocomplete="off" oninput="chk1()"/></div>
+    <div class="field"><label>Email Address <span style="color:#dc2626;font-weight:700;">*</span></label><input type="email" id="email" placeholder="jane@example.com" autocomplete="off" oninput="chk1()"/></div>
     <div class="grid2">
-      <div class="field"><label>First Name</label><input type="text" id="firstName" placeholder="Jane" autocomplete="off" oninput="chk1()"/></div>
+      <div class="field"><label>First Name <span style="color:#dc2626;font-weight:700;">*</span></label><input type="text" id="firstName" placeholder="Jane" autocomplete="off" oninput="chk1()"/></div>
       <div class="field">
         <label>Last Name <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— optional · only initial stored</span></label>
         <input type="text" id="lastName" placeholder="S." autocomplete="off"/>
@@ -548,7 +548,7 @@
     </div>
     <div class="divider"></div>
     <div class="field">
-      <label>Personal Skill Rating</label>
+      <label>Personal Skill Rating <span style="color:#dc2626;font-weight:700;">*</span></label>
       <div style="padding:4px 0 8px">
         <div class="dupr-display" id="personalRatingDisplay">-- <span>not set — slide to choose</span></div>
         <input type="range" id="personalRatingSlider" min="0" max="21" step="1" value="0" oninput="updatePersonalRating(this.value)" style="--pct:0%"/>
@@ -599,8 +599,12 @@
     <div class="field" id="goalRatingField" style="display:none;">
       <label>Target Rating in the Next Year</label>
       <div style="padding:4px 0 8px">
-        <input type="range" id="goalRatingSlider" min="0" max="21" step="1" value="0"
-          oninput="updateGoalRating(this.value)" style="width:100%;--pct:0%;"/>
+        <div class="dupr-display" id="goalRatingDisplay">-- <span>slide right to set your goal</span></div>
+        <div style="position:relative;margin-top:4px;">
+          <div id="goalThumbLabel" style="display:none;position:absolute;top:-22px;transform:translateX(-50%);background:#1a7a3a;color:#fff;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;pointer-events:none;white-space:nowrap;"></div>
+          <input type="range" id="goalRatingSlider" min="0" max="21" step="1" value="0"
+            oninput="updateGoalRating(this.value)" style="width:100%;--pct:0%;"/>
+        </div>
         <div class="dupr-ticks" id="goalTicks" style="margin-top:6px;"></div>
       </div>
       <!-- Two-bar gap visual -->
@@ -653,7 +657,7 @@
       </select>
     </div>
     <div class="field">
-      <label>Playing Since <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— what year did you start playing?</span></label>
+      <label>Playing Since <span style="color:#dc2626;font-weight:700;">*</span> <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— what year did you start playing?</span></label>
       <select id="playingSince" onchange="S.playingSince=this.value;chk2()">
         <option value="">Select year</option>
         <option>2026</option>
