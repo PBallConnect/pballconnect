@@ -2687,7 +2687,7 @@ function playerPassesGenderFilter(player, genderPref, myGender){
   const mg = (myGender||'').toLowerCase();
   if(!mg) return true; // can't filter without knowing organizer gender
   if(genderPref==='same') return pg === mg;
-  if(genderPref==='mixed') return pg !== '' && pg !== 'prefer not to say' && pg !== mg;
+  if(genderPref==='mixed') return true; // mixed = all genders invited; slot breakdown handles the math
   return true;
 }
 
@@ -2939,7 +2939,7 @@ function showGroupPlayerList(group, groupLabel){
   modal.style.cssText = 'background:#ffffff;border:2px solid #1a7a3a;border-radius:16px;padding:20px;width:100%;max-width:420px;max-height:80vh;overflow-y:auto;';
 
   const myGender = S.gender || SESSION_PLAYER?.gender || '';
-  const genderActive = MS.genderPref && MS.genderPref !== 'either';
+  const genderActive = MS.genderPref === 'same';
   const basePlayers = genderActive ? players.filter(p=>playerPassesGenderFilter(p, MS.genderPref, myGender)) : players;
   const passCount = basePlayers.length;
   const genderNote = (genderActive && passCount < players.length)
@@ -3269,7 +3269,7 @@ function updateMatchGroupLabels(){
   };
 
   // Gender breakdown pills for a player array (already gender-filtered via getGroupPlayers)
-  const filt = MS.genderPref && MS.genderPref !== 'either';
+  const filt = MS.genderPref === 'same';
   const genBreak = (players) => {
     if(!players.length) return '';
     const m = players.filter(p=>(p.gender||'').toLowerCase()==='male').length;
@@ -8302,14 +8302,14 @@ function renderMixedBreakdown(pendingMen, pendingWomen){
   const womenFull  = pendingWomen >= neededWomen;
   const menColor   = menOver   ? '#d97706' : menFull   ? '#1a7a3a' : '#1e40af';
   const womenColor = womenOver ? '#d97706' : womenFull ? '#1a7a3a' : '#1e40af';
-  let html = '<div style="padding:10px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:12px;line-height:1.6;">';
-  html += '<div style="font-weight:700;color:#1e40af;margin-bottom:6px;">Mixed match slot breakdown:</div>';
+  let html = '<div style="padding:12px 16px;background:#fee2e2;border:2px solid #f87171;border-radius:12px;font-size:12px;line-height:1.6;margin-bottom:12px;">';
+  html += '<div style="font-weight:700;color:#991b1b;margin-bottom:6px;">Mixed match slot breakdown:</div>';
   html += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:4px;">';
   html += '<span style="font-weight:700;color:'+menColor+';">👨 '+pendingMen+'/'+neededMen+' Men'+(menFull&&!menOver?' ✓':'')+'</span>';
   html += '<span style="font-weight:700;color:'+womenColor+';">👩 '+pendingWomen+'/'+neededWomen+' Women'+(womenFull&&!womenOver?' ✓':'')+'</span>';
   html += '</div>';
-  if(menOver)   html += '<div style="font-size:11px;color:#d97706;">⚠️ More Men in pool than slots — some may not get in</div>';
-  if(womenOver) html += '<div style="font-size:11px;color:#d97706;">⚠️ More Women in pool than slots — some may not get in</div>';
+  if(menOver)   html += '<div style="font-size:11px;color:#b91c1c;">⚠️ '+pendingMen+' Men invited but only '+neededMen+' slot'+(neededMen!==1?'s':'')+' — some may not get in</div>';
+  if(womenOver) html += '<div style="font-size:11px;color:#b91c1c;">⚠️ '+pendingWomen+' Women invited but only '+neededWomen+' slot'+(neededWomen!==1?'s':'')+' — some may not get in</div>';
   html += '</div>';
   el.style.display='block';
   el.innerHTML = html;
@@ -8883,6 +8883,23 @@ async function loadMyGroups(){
 function buildGroupCard(group, members){
   const primaries = members.filter(m=>m.role==='primary');
   const subs      = members.filter(m=>m.role==='sub');
+
+  // Gender breakdown of primary members via IC_MEMBERS lookup
+  const priGenders = primaries.map(m=>{
+    const ic = IC_MEMBERS.find(({player})=>(player.email||'').toLowerCase()===(m.email||'').toLowerCase());
+    return ic ? (ic.player.gender||'').toLowerCase() : '';
+  });
+  const priMen   = priGenders.filter(g=>g==='male').length;
+  const priWomen = priGenders.filter(g=>g==='female'||g==='woman').length;
+  const priOther = primaries.length - priMen - priWomen;
+  const genderBreakdown = primaries.length > 0
+    ? '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;margin-bottom:2px;">'+
+        '<span style="background:#dbeafe;border:1px solid #93c5fd;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:700;color:#1e40af;">👨 '+priMen+'</span>'+
+        '<span style="background:#fce7f3;border:1px solid #f9a8d4;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:700;color:#9d174d;">👩 '+priWomen+'</span>'+
+        (priOther>0?'<span style="background:#f3f4f6;border:1px solid #d1d5db;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:700;color:#6b7280;">❓ '+priOther+'</span>':'')+
+      '</div>'
+    : '';
+
   const card = document.createElement('div');
   card.style.cssText = 'background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,0.05);';
   card.innerHTML =
@@ -8890,6 +8907,7 @@ function buildGroupCard(group, members){
       '<div>' +
         '<div style="font-size:16px;font-weight:800;color:#111;">'+group.name+'</div>' +
         '<div style="font-size:11px;color:var(--dim);margin-top:2px;">'+group.max_players+'-player group</div>' +
+        genderBreakdown +
       '</div>' +
       '<div style="display:flex;gap:6px;">' +
         '<button onclick="editGroupModal(\''+group.id+'\')" style="padding:6px 12px;border-radius:8px;border:1px solid #d1d5db;background:#f9fafb;color:#374151;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">✏️ Edit</button>' +
