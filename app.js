@@ -7971,7 +7971,7 @@ function checkInviteToken(){
 }
 
 function showInviteBanner(invite){
-  if(getMyEmail()) return;
+  if(getMyEmail() && SESSION_PLAYER) return;
   const existing=document.getElementById('inviteBanner');
   if(existing) existing.remove();
   const banner=document.createElement('div');
