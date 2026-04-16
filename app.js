@@ -7989,145 +7989,109 @@ function showInviteBanner(invite){
       '</div>'+
       noteHtml+
       '<div style="font-size:12px;color:#9ca3af;text-align:center;margin-bottom:18px;font-style:italic;">"If you want to play ball, click a link."</div>'+
-      '<button onclick="showInviteEmailStep()" style="width:100%;padding:14px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-weight:800;font-size:15px;cursor:pointer;margin-bottom:12px;font-family:\'DM Sans\',sans-serif;">'+
+      '<button onclick="document.getElementById(\'inviteBanner\').remove();showInviteEmailStep(window._pendingInviteRef);" style="width:100%;padding:14px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-weight:800;font-size:15px;cursor:pointer;margin-bottom:12px;font-family:\'DM Sans\',sans-serif;">'+
         'Yes, I want to join! 🏓'+
       '</button>'+
       '<div style="text-align:center;">'+
         '<span onclick="document.getElementById(\'inviteBanner\').remove()" style="font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline;">Maybe Later</span>'+
       '</div>'+
     '</div>';
+  window._pendingInviteRef = invite;
   document.body.appendChild(banner);
 }
 
-function showInviteEmailStep(){
-  const inv = PENDING_INVITE;
-  const card = document.getElementById('inviteBannerCard');
-  if(!card) return;
-  const prefill = (inv?.invitee_email || '').toLowerCase();
-  card.innerHTML =
-    '<div style="text-align:center;margin-bottom:18px;">'+
-      '<div style="font-size:32px;margin-bottom:8px;">🔐</div>'+
-      '<div style="font-size:16px;font-weight:800;color:#111;margin-bottom:6px;">One more step</div>'+
-      '<div style="font-size:13px;color:#6b7280;line-height:1.5;">To protect your data, we\'ll send a secure magic link to your email.</div>'+
-    '</div>'+
-    '<div style="margin-bottom:14px;">'+
-      '<label style="display:block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#1a5c32;margin-bottom:6px;">Email Address</label>'+
-      '<input id="inviteEmailInput" type="email" placeholder="you@example.com" value="'+prefill+'" '+
-        'style="width:100%;padding:12px 14px;border:2px solid #d1d5db;border-radius:10px;font-size:14px;font-family:\'DM Sans\',sans-serif;outline:none;box-sizing:border-box;"/>'+
-    '</div>'+
-    '<button id="inviteOtpBtn" onclick="_inviteSendOtp()" style="width:100%;padding:13px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-weight:800;font-size:14px;cursor:pointer;margin-bottom:14px;font-family:\'DM Sans\',sans-serif;">'+
-      'Send My Magic Link →'+
-    '</button>'+
-    '<div style="text-align:center;font-size:11px;color:#9ca3af;">🔒 No password needed — ever.</div>'+
-    '<div id="inviteOtpError" style="display:none;margin-top:10px;padding:8px 12px;background:#fef2f2;border-radius:8px;font-size:12px;color:#dc2626;"></div>';
-
-  setTimeout(()=>document.getElementById('inviteEmailInput')?.focus(), 100);
-
-  window._inviteSendOtp = async function(){
-    const emailInput = document.getElementById('inviteEmailInput');
-    const btn        = document.getElementById('inviteOtpBtn');
-    const errEl      = document.getElementById('inviteOtpError');
-    const email = (emailInput?.value||'').trim().toLowerCase();
-    if(!email || !email.includes('@')){
-      if(errEl){ errEl.textContent='Please enter a valid email address.'; errEl.style.display='block'; }
-      return;
-    }
-    if(errEl) errEl.style.display='none';
+function showInviteEmailStep(inv){
+  const existing = document.getElementById('inviteEmailStep');
+  if(existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'inviteEmailStep';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:20px;';
+  const inviterName = inv?.inviter_name || 'A fellow player';
+  const prefillEmail = inv?.invitee_email || '';
+  overlay.innerHTML =
+    '<div style="background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'+
+      '<div style="text-align:center;margin-bottom:20px;">'+
+        '<div style="font-size:40px;margin-bottom:8px;">🔐</div>'+
+        '<div style="font-size:17px;font-weight:800;color:#111;margin-bottom:6px;">One quick step</div>'+
+        '<div style="font-size:13px;color:#555;line-height:1.5;">To protect your data, enter your email and we\'ll send you a secure magic link — no password ever needed.</div>'+
+      '</div>'+
+      '<input id="inviteEmailInput" type="email" value="'+prefillEmail+'" placeholder="your@email.com" '+
+        'style="width:100%;padding:12px 14px;border:2px solid #d1d5db;border-radius:10px;font-size:14px;color:#111;margin-bottom:12px;box-sizing:border-box;outline:none;" />'+
+      '<button id="inviteEmailSendBtn" onclick="window._sendInviteMagicLink()" '+
+        'style="width:100%;padding:14px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-weight:800;font-size:15px;cursor:pointer;margin-bottom:8px;">'+
+        'Send My Magic Link →</button>'+
+      '<div id="inviteEmailMsg" style="text-align:center;font-size:12px;color:#6b7280;display:none;padding:10px;"></div>'+
+      '<div style="text-align:center;font-size:11px;color:#9ca3af;margin-top:6px;">🔒 Secure magic link · No password needed</div>'+
+    '</div>';
+  document.body.appendChild(overlay);
+  // Store invite token for after magic link redirect
+  if(inv?.invite_token) localStorage.setItem('pb_pending_invite_token', inv.invite_token);
+  if(prefillEmail) localStorage.setItem('pb_pending_email', prefillEmail);
+  setTimeout(()=>{ const el=document.getElementById('inviteEmailInput'); if(el&&!prefillEmail) el.focus(); }, 200);
+  window._sendInviteMagicLink = async function(){
+    const emailVal = (document.getElementById('inviteEmailInput')?.value||'').trim().toLowerCase();
+    if(!emailVal||!emailVal.includes('@')){ showToast('⚠️ Please enter a valid email','#f59e0b'); return; }
+    const btn = document.getElementById('inviteEmailSendBtn');
+    const msg = document.getElementById('inviteEmailMsg');
     if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
+    localStorage.setItem('pb_pending_email', emailVal);
+    const token = inv?.invite_token || localStorage.getItem('pb_pending_invite_token') || '';
+    const redirectTo = window.location.origin + window.location.pathname + (token ? '?invite='+token : '');
     try{
-      // Include invite token in redirect URL so checkInviteToken() re-fires on the redirect page
-      // and PENDING_INVITE is set before onAuthStateChange fires startNewRegistration()
-      const invToken = PENDING_INVITE?.invite_token;
-      const redirectTo = window.location.origin + window.location.pathname + (invToken ? '?invite='+encodeURIComponent(invToken) : '');
-      const { error } = await _supabase.auth.signInWithOtp({
-        email,
-        options:{ emailRedirectTo: redirectTo }
-      });
+      const { error } = await _supabase.auth.signInWithOtp({ email: emailVal, options:{ emailRedirectTo: redirectTo } });
       if(error) throw error;
-      // Persist email so startNewRegistration can use it after redirect
-      localStorage.setItem('pb_pending_email', email);
-      // Show success state
-      card.innerHTML=
-        '<div style="text-align:center;padding:8px 0;">'+
-          '<div style="font-size:48px;margin-bottom:12px;">✅</div>'+
-          '<div style="font-size:18px;font-weight:800;color:#111;margin-bottom:8px;">Check your inbox!</div>'+
-          '<div style="font-size:13px;color:#6b7280;line-height:1.6;">Click the magic link in your email to continue.<br>You can close this tab.</div>'+
-        '</div>';
+      if(btn){ btn.style.display='none'; }
+      if(msg){ msg.style.display='block'; msg.style.color='#1a7a3a'; msg.style.fontWeight='700'; msg.style.fontSize='14px';
+        msg.innerHTML='✅ Check your inbox!<br><span style="font-weight:400;color:#555;">Click the magic link in your email to continue.</span>'; }
     }catch(e){
       if(btn){ btn.disabled=false; btn.textContent='Send My Magic Link →'; }
-      if(errEl){ errEl.textContent='Could not send link: '+(e.message||'Unknown error'); errEl.style.display='block'; }
+      showToast('⚠️ Could not send link: '+e.message,'#f59e0b');
     }
   };
 }
 
 function showInviteLandingChoice(email, inv){
-  document.getElementById('startChoiceOverlay')?.remove();
-
+  document.getElementById('inviteEmailStep')?.remove();
   const inviterName = inv?.inviter_name || 'A fellow player';
-
+  const firstName = email.split('@')[0];
   const overlay = document.createElement('div');
-  overlay.id = 'startChoiceOverlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:900;background:#fff;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;';
+  overlay.id = 'inviteLandingChoice';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:20px;';
   overlay.innerHTML =
-    '<div id="startChoiceCard" style="width:100%;max-width:420px;">'+
-      '<div style="text-align:center;margin-bottom:24px;">'+
-        '<div style="font-size:48px;margin-bottom:10px;">🎾</div>'+
-        '<div style="font-size:22px;font-weight:800;color:#111;margin-bottom:6px;">Welcome to PBallConnect!</div>'+
-        '<div style="font-size:14px;color:#6b7280;">'+inviterName+' invited you to join.</div>'+
+    '<div style="background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'+
+      '<div style="text-align:center;margin-bottom:20px;">'+
+        '<div style="font-size:40px;margin-bottom:8px;">🎾</div>'+
+        '<div style="font-size:18px;font-weight:800;color:#111;margin-bottom:4px;">Welcome to PBallConnect!</div>'+
+        '<div style="font-size:13px;color:#1a7a3a;font-weight:600;margin-bottom:4px;">'+inviterName+' invited you to join.</div>'+
+        '<div style="font-size:12px;color:#6b7280;">How would you like to get started?</div>'+
       '</div>'+
-      '<div style="font-size:14px;font-weight:700;color:#374151;text-align:center;margin-bottom:14px;">How would you like to get started?</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">'+
-        '<div onclick="_ilcChooseFull()" style="cursor:pointer;border:2px solid #1a7a3a;border-radius:14px;padding:20px 14px;text-align:center;">'+
-          '<div style="font-size:28px;margin-bottom:10px;">📋</div>'+
-          '<div style="font-size:13px;font-weight:800;color:#1a7a3a;margin-bottom:6px;">Full Profile</div>'+
-          '<div style="font-size:11px;color:#6b7280;line-height:1.5;">All features, your complete pickleball identity</div>'+
+        '<div onclick="window._inviteChoiceFull()" style="cursor:pointer;border:2px solid #1a7a3a;border-radius:14px;padding:16px 12px;text-align:center;">'+
+          '<div style="font-size:22px;margin-bottom:6px;">📋</div>'+
+          '<div style="font-size:13px;font-weight:800;color:#1a7a3a;margin-bottom:4px;">Full Profile</div>'+
+          '<div style="font-size:11px;color:#555;line-height:1.4;">All features · Your complete pickleball identity</div>'+
         '</div>'+
-        '<div onclick="_ilcChooseQuick()" style="cursor:pointer;border:2px solid #d1d5db;border-radius:14px;padding:20px 14px;text-align:center;">'+
-          '<div style="font-size:28px;margin-bottom:10px;">⚡</div>'+
-          '<div style="font-size:13px;font-weight:800;color:#6b7280;margin-bottom:6px;">Quick Connect</div>'+
-          '<div style="font-size:11px;color:#6b7280;line-height:1.5;">On the court fast — just the basics</div>'+
+        '<div onclick="window._inviteChoiceQuick()" style="cursor:pointer;border:2px solid #d1d5db;border-radius:14px;padding:16px 12px;text-align:center;">'+
+          '<div style="font-size:22px;margin-bottom:6px;">⚡</div>'+
+          '<div style="font-size:13px;font-weight:800;color:#374151;margin-bottom:4px;">Quick Connect</div>'+
+          '<div style="font-size:11px;color:#555;line-height:1.4;">On the court fast · Just the basics</div>'+
         '</div>'+
       '</div>'+
     '</div>';
-
   document.body.appendChild(overlay);
-
-  window._ilcChooseFull = function(){
+  window._inviteChoiceFull = function(){
     overlay.remove();
-    // Reset form state before navigating
-    const emailEl = document.getElementById('email');
-    if(emailEl) emailEl.value = email;
-    S._privacyConsent = false;
-    S._riskConsent = false;
+    const emailEl = document.getElementById('email'); if(emailEl) emailEl.value = email;
+    showPage('playerProfile'); unlockProfileForm(); goTo(1);
+    S._privacyConsent=false; S._riskConsent=false;
     document.getElementById('checkBoxPrivacy')?.classList.remove('on');
     document.getElementById('checkBoxRisk')?.classList.remove('on');
-    const sb = document.getElementById('btnSubmit');
-    if(sb) sb.disabled = true;
-    document.getElementById('lessonSection') && (document.getElementById('lessonSection').style.display = 'none');
-    document.getElementById('lessonOfferSection') && (document.getElementById('lessonOfferSection').style.display = 'none');
-    _doStartFullProfile(email, 'Great! Let\'s build your full profile — it\'s quick and fun! 🎾');
+    const sb=document.getElementById('btnSubmit'); if(sb) sb.disabled=true;
+    document.getElementById('lessonSection') && (document.getElementById('lessonSection').style.display='none');
+    showToast('🎾 Great! Let\'s build your full profile — it\'s quick and fun!','#4CAF7D');
+    setTimeout(()=>{ const fn=document.getElementById('firstName'); if(fn) fn.focus(); chk1(); }, 350);
   };
-
-  window._ilcChooseQuick = function(){
-    const card = document.getElementById('startChoiceCard');
-    if(!card) return;
-    card.innerHTML =
-      '<div style="text-align:center;margin-bottom:20px;">'+
-        '<div style="font-size:32px;margin-bottom:10px;">🤔</div>'+
-        '<div style="font-size:17px;font-weight:800;color:#111;margin-bottom:8px;">Are you sure?</div>'+
-        '<div style="font-size:13px;color:#6b7280;line-height:1.6;">Your full profile unlocks everything on PBallConnect — finding players nearby, joining groups, tracking matches, and more.</div>'+
-      '</div>'+
-      '<div style="display:flex;flex-direction:column;gap:10px;">'+
-        '<button onclick="_ilcChooseFull()" style="padding:13px;border-radius:12px;border:2px solid #1a7a3a;background:#fff;color:#1a7a3a;font-weight:800;font-size:14px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+
-          '📋 Full Profile'+
-        '</button>'+
-        '<button onclick="_ilcConfirmQuick()" style="padding:13px;border-radius:12px;border:1px solid #d1d5db;background:transparent;color:#6b7280;font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+
-          'Yes, Quick Connect'+
-        '</button>'+
-      '</div>';
-  };
-
-  window._ilcConfirmQuick = function(){
+  window._inviteChoiceQuick = function(){
     overlay.remove();
     showQuickConnectForm(email, inv);
   };
@@ -8359,46 +8323,34 @@ async function sendMutualInvite(theirEmail, theirName){
   setTimeout(()=>document.getElementById('mutualInvitePrompt')?.remove(), 1500);
 }
 
-function startNewRegistration(emailParam){
-  // Restore pending email set before magic link redirect
-  const email = emailParam || localStorage.getItem('pb_pending_email') || '';
+function startNewRegistration(email){
+  closeLoginModal();
+  S.email = (email||'').toLowerCase();
   localStorage.removeItem('pb_pending_email');
 
-  // If user arrived via invite link, show landing choice instead of bare profile form.
-  // checkInviteToken() already set PENDING_INVITE (synchronously) before auth fired.
+  // If user arrived via invite, show the landing choice instead of bare profile form
   if(PENDING_INVITE){
-    _newUserRegistrationStarted = true;
-    closeLoginModal();
-    S.email = email.toLowerCase();
-    // Keep email in storage in case Full Profile is chosen and page reloads
-    localStorage.setItem('pb_pending_email', email);
     showInviteLandingChoice(email, PENDING_INVITE);
     return;
   }
 
-  _newUserRegistrationStarted = true;
-  closeLoginModal();
-
-  // Pre-fill email in full profile form
+  // Normal new user — go straight to profile form
   const emailEl = document.getElementById('email');
   if(emailEl) emailEl.value = email;
-  S.email = email.toLowerCase();
-
-  // Reset consent state
-  S._privacyConsent = false;
-  S._riskConsent = false;
+  showPage('playerProfile');
+  unlockProfileForm();
+  goTo(1);
+  S._privacyConsent = false; S._riskConsent = false;
   document.getElementById('checkBoxPrivacy')?.classList.remove('on');
   document.getElementById('checkBoxRisk')?.classList.remove('on');
-
-  // Disable submit until consents checked
-  const sb = document.getElementById('btnSubmit');
-  if(sb) sb.disabled = true;
-
-  // Hide lesson section — not needed during initial signup
-  document.getElementById('lessonSection') && (document.getElementById('lessonSection').style.display = 'none');
-  document.getElementById('lessonOfferSection') && (document.getElementById('lessonOfferSection').style.display = 'none');
-
-  _doStartFullProfile(email);
+  const sb = document.getElementById('btnSubmit'); if(sb) sb.disabled = true;
+  document.getElementById('lessonSection') && (document.getElementById('lessonSection').style.display='none');
+  setTimeout(()=>{
+    window.scrollTo({top:0,behavior:'smooth'});
+    showToast('👋 Welcome! Fill out your profile below.','#4CAF7D');
+    const fn=document.getElementById('firstName'); if(fn){ fn.focus(); }
+    chk1();
+  }, 350);
 }
 
 async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
