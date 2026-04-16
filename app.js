@@ -5722,12 +5722,16 @@ function closeLoginModal(){
   const error = document.getElementById('loginError');
   const emailEl = document.getElementById('loginEmail');
   const btn = document.getElementById('loginSubmitBtn');
+  const titleEl = document.getElementById('loginModalTitle');
+  const subEl   = document.getElementById('loginModalSub');
   if(form) form.style.display='block';
   if(loading) loading.style.display='none';
   if(success) success.style.display='none';
   if(error) error.style.display='none';
   if(emailEl) emailEl.value='';
-  if(btn){ btn.disabled=false; btn.textContent='Sign In →'; }
+  if(btn){ btn.disabled=false; btn.textContent='Continue →'; }
+  if(titleEl) titleEl.textContent='Sign In';
+  if(subEl)   subEl.textContent="Enter your email — we'll send you a magic link to sign in";
 }
 
 document.addEventListener('click', function(e){
@@ -5743,6 +5747,8 @@ async function doLogin(){
   const formEl     = document.getElementById('loginForm');
   const successEl  = document.getElementById('loginSuccess');
   const detailEl   = document.getElementById('loginSuccessDetail');
+  const titleEl    = document.getElementById('loginModalTitle');
+  const subEl      = document.getElementById('loginModalSub');
 
   const email = (emailInput?.value||'').trim().toLowerCase();
   if(!email || !email.includes('@')){
@@ -5750,7 +5756,33 @@ async function doLogin(){
     return;
   }
   if(errorEl) errorEl.style.display='none';
-  if(submitBtn){ submitBtn.disabled=true; submitBtn.textContent='Sending link…'; }
+
+  // Step 1: Check whether this email already has a registration
+  if(submitBtn){ submitBtn.disabled=true; submitBtn.textContent='Checking…'; }
+  let isNewUser = false;
+  try{
+    const checkRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(email)}&select=id&limit=1`,
+      { headers:{ 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer '+SUPABASE_ACCESS_TOKEN } }
+    );
+    if(checkRes.ok){
+      const rows = await checkRes.json();
+      isNewUser = rows.length === 0;
+    }
+  }catch(e){ /* treat as unknown — proceed */ }
+
+  // Update modal headline and button to reflect new vs. returning user
+  if(isNewUser){
+    if(titleEl) titleEl.textContent = 'Create Your Account';
+    if(subEl)   subEl.textContent   = "Enter your email — we'll send a magic link to get you started";
+    if(submitBtn) submitBtn.textContent = 'Create Account →';
+  } else {
+    if(titleEl) titleEl.textContent = 'Welcome Back';
+    if(subEl)   subEl.textContent   = "We'll send a magic link to your inbox";
+    if(submitBtn) submitBtn.textContent = 'Sign In →';
+  }
+
+  // Step 2: Send magic link
   if(formEl) formEl.style.display='none';
   if(loadingEl) loadingEl.style.display='block';
 
@@ -5762,11 +5794,15 @@ async function doLogin(){
     if(error) throw error;
     if(loadingEl) loadingEl.style.display='none';
     if(successEl) successEl.style.display='block';
-    if(detailEl) detailEl.textContent='We sent a magic link to '+email+'. Click it to sign in — no password needed.';
+    if(detailEl){
+      detailEl.textContent = isNewUser
+        ? 'Welcome! We sent you a magic link — click it to create your account.'
+        : 'We sent a magic link to '+email+'. Click it to sign in.';
+    }
   }catch(e){
     if(loadingEl) loadingEl.style.display='none';
     if(formEl) formEl.style.display='block';
-    if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent='Continue →'; }
+    if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent=isNewUser?'Create Account →':'Sign In →'; }
     if(errorEl){ errorEl.textContent='Could not send link: '+e.message; errorEl.style.display='block'; }
   }
 }
@@ -7924,6 +7960,10 @@ function startNewRegistration(email){
   const emailEl = document.getElementById('email');
   if(emailEl){ emailEl.value = email; }
   showPage('playerProfile');
+  // Ensure the form is fully interactive (not left locked from a previous session)
+  // and that the user starts on Step 1 with all navigation buttons visible.
+  unlockProfileForm();
+  goTo(1);
   setTimeout(()=>{
     window.scrollTo({top:0,behavior:'smooth'});
     showToast('👋 Welcome! Fill out your profile below.','#4CAF7D');
