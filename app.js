@@ -288,17 +288,29 @@ function updateDupr(idx){
 function buildGoalTicks(minIdx){
   const ticks=document.getElementById('goalTicks');
   if(!ticks) return;
-  // Show 8 evenly spaced labels matching the DUPR range
-  const showAt=[0,3,6,9,12,15,18,21];
-  const labels=DUPR_VALS; // ['2.0','2.25',...,'7.0+']
   ticks.innerHTML='';
-  ticks.style.cssText='display:flex;justify-content:space-between;margin-top:4px;';
-  showAt.forEach(i=>{
+  ticks.style.cssText='position:relative;height:26px;margin-top:2px;';
+  // Full-number indices: 2.0=0, 3.0=4, 4.0=8, 5.0=12, 6.0=16, 7.0=20
+  const fullNumIdxs=[0,4,8,12,16,20];
+  for(let i=0;i<=21;i++){
+    const pct=(i/21*100).toFixed(2);
+    const isFull=fullNumIdxs.includes(i);
+    const isPast=i<minIdx;
+    const tickColor=isPast?'rgba(239,68,68,0.4)':'rgba(156,163,175,0.6)';
+    const labelColor=isPast?'rgba(239,68,68,0.6)':'var(--dim)';
     const sp=document.createElement('span');
-    sp.textContent=labels[i]||'7.0+';
-    sp.style.cssText='font-size:10px;font-weight:'+(i===minIdx?'700':'400')+';color:'+(i<minIdx?'rgba(239,68,68,0.8)':i===minIdx?'#ef4444':'var(--dim)')+';';
+    sp.style.cssText='position:absolute;left:'+pct+'%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;';
+    if(isFull){
+      sp.innerHTML=
+        '<span style="display:block;width:2px;height:8px;background:'+tickColor+';"></span>'+
+        '<span style="font-size:9px;color:'+labelColor+';margin-top:1px;white-space:nowrap;">'+
+          (DUPR_VALS[i]==='7.0+'?'7.0':DUPR_VALS[i])+
+        '</span>';
+    } else {
+      sp.innerHTML='<span style="display:block;width:1px;height:4px;background:'+tickColor+';margin-top:2px;"></span>';
+    }
     ticks.appendChild(sp);
-  });
+  }
 }
 
 function updateGoalRedBar(minIdx, goalIdx){
@@ -501,12 +513,20 @@ async function uploadProfilePhoto(email){
 
 // ── Chips ─────────────────────────────────────────────
 function selChip(gid,el,key){
-  document.querySelectorAll('#'+gid+' .chip,#'+gid+' .chip-rect').forEach(c=>c.classList.remove('on'));
+  const allChips = document.querySelectorAll('#'+gid+' .chip,#'+gid+' .chip-rect');
+  // Clear all on states and any Both-specific inline styles
+  allChips.forEach(c=>{ c.classList.remove('on'); c.style.background=''; c.style.color=''; c.style.borderColor=''; });
   el.classList.add('on');
   // Strip ALL emoji and symbols — save only clean text to S state and DB
   const raw = el.textContent.trim();
   const clean = raw.replace(/[^a-zA-Z0-9 ]/g,'').replace(/\s+/g,' ').trim();
-  S[key] = clean || raw;
+  const val = clean || raw;
+  S[key] = val;
+  if(val === 'Both'){
+    // Light up all sibling chips too, and style Both chip dark red
+    allChips.forEach(c=>c.classList.add('on'));
+    el.style.background='#991b1b'; el.style.color='#fff'; el.style.borderColor='#7f1d1d';
+  }
   if(key==='gender') chk1();
   if(key==='skill')  chk2();
 }
@@ -590,6 +610,8 @@ function selectImproveGoal(val){
   if(val==='improve'){
     if(goalField){ goalField.style.display='block'; }
     if(lessonSec){ lessonSec.style.display='block'; }
+    const _ps=document.getElementById('personalRatingSlider');
+    buildGoalTicks(_ps?parseInt(_ps.value):0);
     updateGoalGapViz();
   } else {
     if(goalField) goalField.style.display='none';
@@ -618,10 +640,9 @@ function togglePartner(){S.partner=!S.partner;const pt=document.getElementById('
 function toggleConsent(type){
   if(type==='privacy'){S._privacyConsent=!S._privacyConsent;document.getElementById('checkBoxPrivacy')?.classList.toggle('on',S._privacyConsent);}
   else{S._riskConsent=!S._riskConsent;document.getElementById('checkBoxRisk')?.classList.toggle('on',S._riskConsent);}
-  const btn=document.getElementById('btnSubmit');
-  // Gate the submit button on consent, not the step 1 continue button
+  // Always gate the submit button on consent — covers new-user mid-flow and profile edit
   const submitBtn=document.getElementById('btnSubmit');
-  if(submitBtn&&!SESSION_PLAYER) submitBtn.disabled=!(S._privacyConsent&&S._riskConsent);
+  if(submitBtn) submitBtn.disabled=!(S._privacyConsent&&S._riskConsent);
 }
 function toggleWaiver(){toggleConsent('risk');}
 
@@ -2453,8 +2474,8 @@ function onLessonOfferAnswer(answer){
     msgDiv.innerHTML=`
       <div style="background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.3);border-radius:14px;padding:16px;margin-top:8px;">
         <div style="color:var(--green);font-size:13px;font-weight:700;margin-bottom:6px;">🎾 Great — we'll set that up!</div>
-        <div style="color:rgba(255,255,255,0.7);font-size:12px;line-height:1.7;">
-          After completing registration, click <strong style="color:#fff;">Get Lessons</strong> in the left menu 
+        <div style="color:#111;font-size:12px;line-height:1.7;">
+          After completing registration, click <strong style="color:#111;">Get Lessons</strong> in the left menu
           to browse certified instructors near you and book within 30 days.
         </div>
       </div>`;
@@ -2605,8 +2626,8 @@ function selectNumCourts(n){
       btn.style.background='#1a7a3a'; btn.style.color='#fff';
       btn.style.borderColor='#1a7a3a'; btn.style.opacity='1';
     } else {
-      btn.style.background='#f3f4f6'; btn.style.color='#6b7280';
-      btn.style.borderColor='#d1d5db'; btn.style.opacity='0.35';
+      btn.style.background='#f3f4f6'; btn.style.color='#374151';
+      btn.style.borderColor='#d1d5db'; btn.style.opacity='1';
     }
   });
   updateMatchPlayerCount();
@@ -6125,9 +6146,20 @@ function restoreProfileForm(player){
     if(!value) return;
     const clean=s=>(s||'').replace(/[^a-zA-Z0-9 ]/g,'').replace(/\s+/g,' ').trim().toLowerCase();
     const cleanVal=clean(value);
-    document.querySelectorAll('#'+groupId+' .chip, #'+groupId+' .chip-rect').forEach(btn=>{
-      if(clean(btn.textContent)===cleanVal) btn.classList.add('on');
+    const isBoth = cleanVal === 'both';
+    const allChips = document.querySelectorAll('#'+groupId+' .chip, #'+groupId+' .chip-rect');
+    allChips.forEach(btn=>{
+      btn.style.background=''; btn.style.color=''; btn.style.borderColor='';
+      if(isBoth) btn.classList.add('on');
+      else if(clean(btn.textContent)===cleanVal) btn.classList.add('on');
     });
+    if(isBoth){
+      allChips.forEach(btn=>{
+        if(clean(btn.textContent)==='both'){
+          btn.style.background='#991b1b'; btn.style.color='#fff'; btn.style.borderColor='#7f1d1d';
+        }
+      });
+    }
   }
 
   const textFields={
@@ -6380,6 +6412,13 @@ function lockProfileForm(){
     step.querySelectorAll('.btn-next,.btn-back').forEach(el=>{el.style.display='none';});
   });
   const btn=document.getElementById('btnSubmit');if(btn){btn.disabled=true;btn.classList.remove('has-changes');}
+  // Consent checkboxes must always remain interactive — never locked
+  ['checkBoxPrivacy','checkBoxRisk'].forEach(id=>{
+    const cb=document.getElementById(id);
+    if(cb){ cb.style.pointerEvents=''; cb.style.opacity=''; }
+    const row=cb?.closest('.check-row');
+    if(row){ row.style.pointerEvents=''; row.style.opacity=''; }
+  });
   const h2=document.querySelector('#step1 h2');
   if(h2&&!document.getElementById('readOnlyBanner')){
     const b=document.createElement('div');b.id='readOnlyBanner';
@@ -7969,6 +8008,13 @@ function startNewRegistration(email){
   // and that the user starts on Step 1 with all navigation buttons visible.
   unlockProfileForm();
   goTo(1);
+  // Reset consent state — new user must check both waiver boxes fresh
+  S._privacyConsent = false;
+  S._riskConsent = false;
+  document.getElementById('checkBoxPrivacy')?.classList.remove('on');
+  document.getElementById('checkBoxRisk')?.classList.remove('on');
+  const _sb = document.getElementById('btnSubmit');
+  if(_sb) _sb.disabled = true;
   setTimeout(()=>{
     window.scrollTo({top:0,behavior:'smooth'});
     showToast('👋 Welcome! Fill out your profile below.','#4CAF7D');
@@ -8328,36 +8374,63 @@ function toggleSelectAll(){
   updateInviteCounter();
 }
 
-// ── Mixed gender slot breakdown panel (Step 4) ───────
+// ── Gender slot breakdown panel (Step 4) ─────────────
 function renderMixedBreakdown(pendingMen, pendingWomen){
   const el = document.getElementById('matchMixedBreakdown');
   if(!el) return;
-  if(MS.genderPref !== 'mixed'){ el.style.display='none'; return; }
-  const perCourt = MS.format==='doubles' ? 2 : 1;
-  let neededMen   = perCourt * (MS.numCourts||1);
-  let neededWomen = perCourt * (MS.numCourts||1);
-  const myGenderLc = (S.gender||SESSION_PLAYER?.gender||'').toLowerCase();
-  if(MS.organizerPlaying){
-    if(myGenderLc==='male')        neededMen   = Math.max(0, neededMen-1);
-    else if(myGenderLc==='female') neededWomen = Math.max(0, neededWomen-1);
+  const pref = MS.genderPref || 'either';
+  const perCourt = MS.format === 'doubles' ? 2 : 1;
+  const numCourts = MS.numCourts || 1;
+  const myGenderLc = (S.gender || SESSION_PLAYER?.gender || '').toLowerCase();
+  const orgIsMale   = MS.organizerPlaying && myGenderLc === 'male';
+  const orgIsFemale = MS.organizerPlaying && myGenderLc === 'female';
+
+  const neededMen   = perCourt * numCourts;
+  const neededWomen = perCourt * numCourts;
+  const neededTotal = matchTotalSlots();
+  const invitedMen   = pendingMen   + (orgIsMale   ? 1 : 0);
+  const invitedWomen = pendingWomen + (orgIsFemale ? 1 : 0);
+  const invitedTotal = pendingMen + pendingWomen + (MS.organizerPlaying ? 1 : 0);
+
+  const hdrTh  = 'padding:6px 10px;font-size:11px;font-weight:700;text-align:center;color:#fff;background:#991b1b;';
+  const hdrLbl = 'padding:6px 10px;font-size:11px;font-weight:700;text-align:left;color:#fff;background:#991b1b;';
+  const bodyLbl = 'padding:7px 10px;font-size:13px;font-weight:600;color:#374151;background:#fff;border-top:1px solid #f3f4f6;';
+  const bodyNum = ok=>'padding:7px 10px;font-size:13px;font-weight:700;text-align:center;background:#fff;border-top:1px solid #f3f4f6;color:'+(ok?'#1a7a3a':'#111')+';';
+
+  let rows = '';
+  if(pref === 'mixed'){
+    rows =
+      '<tr>'+
+        '<td style="'+bodyLbl+'">👨 Men</td>'+
+        '<td style="'+bodyNum(false)+'">'+neededMen+'</td>'+
+        '<td style="'+bodyNum(invitedMen>=neededMen)+'">'+invitedMen+(orgIsMale?' ★':'')+'</td>'+
+      '</tr>'+
+      '<tr>'+
+        '<td style="'+bodyLbl+'">👩 Women</td>'+
+        '<td style="'+bodyNum(false)+'">'+neededWomen+'</td>'+
+        '<td style="'+bodyNum(invitedWomen>=neededWomen)+'">'+invitedWomen+(orgIsFemale?' ★':'')+'</td>'+
+      '</tr>';
+  } else {
+    rows =
+      '<tr>'+
+        '<td style="'+bodyLbl+'">Total</td>'+
+        '<td style="'+bodyNum(false)+'">'+neededTotal+'</td>'+
+        '<td style="'+bodyNum(invitedTotal>=neededTotal)+'">'+invitedTotal+(MS.organizerPlaying?' ★':'')+'</td>'+
+      '</tr>';
   }
-  const menOver    = pendingMen   > neededMen;
-  const womenOver  = pendingWomen > neededWomen;
-  const menFull    = pendingMen   >= neededMen;
-  const womenFull  = pendingWomen >= neededWomen;
-  const menColor   = menOver   ? '#d97706' : menFull   ? '#1a7a3a' : '#1e40af';
-  const womenColor = womenOver ? '#d97706' : womenFull ? '#1a7a3a' : '#1e40af';
-  let html = '<div style="padding:12px 16px;background:#fee2e2;border:2px solid #f87171;border-radius:12px;font-size:12px;line-height:1.6;margin-bottom:12px;">';
-  html += '<div style="font-weight:700;color:#991b1b;margin-bottom:6px;">Mixed match slot breakdown:</div>';
-  html += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:4px;">';
-  html += '<span style="font-weight:700;color:'+menColor+';">👨 '+pendingMen+'/'+neededMen+' Men'+(menFull&&!menOver?' ✓':'')+'</span>';
-  html += '<span style="font-weight:700;color:'+womenColor+';">👩 '+pendingWomen+'/'+neededWomen+' Women'+(womenFull&&!womenOver?' ✓':'')+'</span>';
-  html += '</div>';
-  if(menOver)   html += '<div style="font-size:11px;color:#b91c1c;">⚠️ '+pendingMen+' Men invited but only '+neededMen+' slot'+(neededMen!==1?'s':'')+' — some may not get in</div>';
-  if(womenOver) html += '<div style="font-size:11px;color:#b91c1c;">⚠️ '+pendingWomen+' Women invited but only '+neededWomen+' slot'+(neededWomen!==1?'s':'')+' — some may not get in</div>';
-  html += '</div>';
-  el.style.display='block';
-  el.innerHTML = html;
+
+  el.style.display = 'block';
+  el.innerHTML =
+    '<div style="padding:12px 16px;background:#fee2e2;border:2px solid #f87171;border-radius:12px;margin-bottom:12px;">'+
+      '<table style="width:100%;border-collapse:collapse;border-radius:8px;overflow:hidden;">'+
+        '<thead><tr>'+
+          '<th style="'+hdrLbl+'"></th>'+
+          '<th style="'+hdrTh+'">Needed</th>'+
+          '<th style="'+hdrTh+'">Invited</th>'+
+        '</tr></thead>'+
+        '<tbody>'+rows+'</tbody>'+
+      '</table>'+
+    '</div>';
 }
 
 function updateInviteCounter(){
