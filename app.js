@@ -926,7 +926,7 @@ function showToast(msg, color='#ef4444'){
   setTimeout(()=>t.remove(), 6000);
 }
 // ── Secure email sender — Cloudflare Pages Function ──────────────────
-async function sendEmail({ to_email, type, personal_note, invite_url, subject }){
+async function sendEmail({ to_email, type, personal_note, invite_url, subject, inviter_name }){
   if(!to_email || !to_email.includes('@')) return;
   // Skip obvious test/fake addresses — plus-addressed test emails, example.com, etc.
   const lower = to_email.toLowerCase();
@@ -943,6 +943,7 @@ async function sendEmail({ to_email, type, personal_note, invite_url, subject })
         invite_url: invite_url||window.location.origin,
         site_url: window.location.origin,
         subject: subject||null,
+        inviter_name: inviter_name||null,
       })
     });
     if(!res.ok) console.warn('sendEmail failed:', res.status);
@@ -7750,10 +7751,11 @@ async function sendInvite(method){
     if(statusEl) statusEl.textContent='Sending…';
     try{
       await sendEmail({
-        to_email:    inviteeEmail,
-        type:        'app_invite',
-        personal_note: note || myName+' personally invited you to join PBallConnect — the best way to find pickleball players near you!',
-        invite_url:  inviteUrl
+        to_email:     inviteeEmail,
+        type:         'app_invite',
+        inviter_name: myName,
+        personal_note: note || null,
+        invite_url:   inviteUrl
       });
       showToast('✅ Invite sent to '+inviteeEmail,'#1a7a3a');
       if(statusEl) statusEl.textContent='';
@@ -7900,7 +7902,7 @@ async function openQuickInvite(method){
   } else if(method==='email'){
     if(statusEl) statusEl.textContent='Sending email…';
     try{
-      await sendEmail({ to_email:inviteeEmail, type:'app_invite', personal_note:note||myName+' personally invited you to join PBallConnect!', invite_url:inviteUrl });
+      await sendEmail({ to_email:inviteeEmail, type:'app_invite', inviter_name:myName, personal_note:note||null, invite_url:inviteUrl });
       if(statusEl) statusEl.textContent='';
       showToast('✅ Email invite sent to '+inviteeEmail,'#4CAF7D');
       const emailEl=document.getElementById('inviteEmail');if(emailEl)emailEl.value='';
@@ -7961,10 +7963,7 @@ function checkInviteToken(){
     if(rows.length){
       const inv=rows[0];
       PENDING_INVITE=inv;
-      const emailInput=document.getElementById('email');
-      if(emailInput&&inv.invitee_email) emailInput.value=inv.invitee_email;
       showInviteBanner(inv);
-      showPage('playerProfile');
       // Mark opened — fires after auth; fire-and-forget
       fetch(`${SUPABASE_URL}/rest/v1/invites?invite_token=eq.${token}`,{method:'PATCH',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},body:JSON.stringify({status:'opened',opened_at:new Date().toISOString()})}).catch(()=>{});
     }
