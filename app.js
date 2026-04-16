@@ -5695,27 +5695,8 @@ function startInvitePolling(email){
 }
 
 async function refreshTopInviteBadge(){
-  const myEmail = getMyEmail();
-  if(!myEmail) return;
-  try{
-    const rRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.pending&select=match_id`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
-    const pending = rRes.ok ? await rRes.json() : [];
-    let count = 0;
-    if(pending.length){
-      const ids = pending.map(r=>r.match_id);
-      const mRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/matches?id=in.(${ids.join(',')})&status=neq.full&status=neq.cancelled&select=id,match_date,time_start,time_end,organizer_email`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
-      const openMatches = mRes.ok ? await mRes.json() : [];
-      count = openMatches.filter(m=>!isMatchPast(m) && (m.organizer_email||'').toLowerCase()!==myEmail.toLowerCase()).length;
-    }
-    const topBadge = document.getElementById('topMatchInvitesBadge');
-    const topLabel = document.getElementById('topMatchInvitesLabel');
-    if(topBadge){ topBadge.textContent=count; topBadge.style.display=count>0?'inline-block':'none'; }
-    if(topLabel) topLabel.textContent = count>0 ? 'Invited to Play ('+count+')' : 'Invited to Play';
-  }catch(e){}
+  // Delegate to loadAllMatchBadges so nav badge and top badge always come from one source of truth
+  await loadAllMatchBadges();
 }
 
 async function checkForNewInvites(email){
@@ -8070,30 +8051,36 @@ async function sendMutualInvite(theirEmail, theirName){
 
 function startNewRegistration(email){
   _newUserRegistrationStarted = true;
-  // Close login modal, pre-fill email, scroll to registration form
   closeLoginModal();
+
+  // Pre-fill email
   const emailEl = document.getElementById('email');
-  if(emailEl){ emailEl.value = email; }
+  if(emailEl) emailEl.value = email;
   S.email = email.toLowerCase();
-  showPage('playerProfile');
-  // Ensure the form is fully interactive (not left locked from a previous session)
-  // and that the user starts on Step 1 with all navigation buttons visible.
-  unlockProfileForm();
-  goTo(1);
-  chk1(); // re-evaluate now that email is pre-filled
-  // Hide lesson sections — those belong in Edit Profile after registration
-  document.getElementById('lessonSection') && (document.getElementById('lessonSection').style.display='none');
-  document.getElementById('lessonOfferSection') && (document.getElementById('lessonOfferSection').style.display='none');
-  // Reset consent state — new user must check both waiver boxes fresh
+
+  // Reset consent state
   S._privacyConsent = false;
   S._riskConsent = false;
   document.getElementById('checkBoxPrivacy')?.classList.remove('on');
   document.getElementById('checkBoxRisk')?.classList.remove('on');
+
+  // Disable submit until consents checked
   const sb = document.getElementById('btnSubmit');
   if(sb) sb.disabled = true;
+
+  // Hide lesson section — not needed during initial signup
+  document.getElementById('lessonSection') && (document.getElementById('lessonSection').style.display = 'none');
+  document.getElementById('lessonOfferSection') && (document.getElementById('lessonOfferSection').style.display = 'none');
+
+  // Show the profile page, unlock the form, go to Step 1
+  showPage('playerProfile');
+  unlockProfileForm();
+  goTo(1);
+
   setTimeout(()=>{
-    window.scrollTo({top:0,behavior:'smooth'});
-    showToast('👋 Welcome! Fill out your profile below.','#4CAF7D');
+    window.scrollTo({top:0, behavior:'smooth'});
+    showToast('👋 Welcome! Fill out your profile below.', '#4CAF7D');
+    chk1(); // evaluate Step 1 Next button state
   }, 300);
 }
 
