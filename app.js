@@ -340,38 +340,43 @@ function buildStaticSliderTicks(containerId){
 }
 
 function updateGoalRedBar(minIdx, goalIdx){
-  const redBar=document.getElementById('goalSliderRedBar');
-  const greenBar=document.getElementById('goalSliderGreenBar');
-  const redLabel=document.getElementById('goalRedLabel');
+  const redBar   = document.getElementById('goalSliderRedBar');
+  const greenBar = document.getElementById('goalSliderGreenBar');
+  const xMarker  = document.getElementById('goalRedLabel');
   if(!redBar) return;
 
-  const redPct=(minIdx/21*100).toFixed(1);
-  const goalPct=(goalIdx/21*100).toFixed(1);
+  const redPct  = (minIdx/21*100).toFixed(1);
+  const goalPct = (goalIdx/21*100).toFixed(1);
 
-  // Red bar: 0 to personal rating
-  redBar.style.width=redPct+'%';
+  // Black bar: 0 → personal rating (represents the floor you can't go below)
+  redBar.style.width        = redPct+'%';
+  redBar.style.background   = '#111';
+  redBar.style.borderRadius = '3px 0 0 3px';
 
-  // Red label showing personal rating value at the boundary
-  if(redLabel){
+  // ✕ marker at personal rating position
+  if(xMarker){
     if(minIdx>0){
-      redLabel.style.display='block';
-      redLabel.style.left=redPct+'%';
-      redLabel.textContent=DUPR_VALS[minIdx]||'';
+      xMarker.style.display    = 'block';
+      xMarker.style.left       = redPct+'%';
+      xMarker.style.transform  = 'translateX(-50%)';
+      xMarker.style.color      = '#991b1b';
+      xMarker.style.fontWeight = '900';
+      xMarker.style.fontSize   = '14px';
+      xMarker.textContent      = '✕';
     } else {
-      redLabel.style.display='none';
+      xMarker.style.display = 'none';
     }
   }
 
-  // Green bar: personal rating to goal
+  // Green bar: personal rating → goal (only when goal > personal)
   if(greenBar){
     if(goalIdx>minIdx){
-      greenBar.style.left=redPct+'%';
-      greenBar.style.width=(goalPct-redPct)+'%';
-      // Round right corners only when there's a green section
-      greenBar.style.borderRadius='0 3px 3px 0';
+      greenBar.style.left        = redPct+'%';
+      greenBar.style.width       = (goalPct-redPct)+'%';
+      greenBar.style.background  = '#1a7a3a';
+      greenBar.style.borderRadius= '0 3px 3px 0';
     } else {
-      // No improvement yet — no green bar
-      greenBar.style.width='0%';
+      greenBar.style.width = '0%';
     }
   }
 }
@@ -635,7 +640,7 @@ function selectImproveGoal(val){
   const lessonSec = document.getElementById('lessonSection');
   if(val==='improve'){
     if(goalField){ goalField.style.display='block'; }
-    if(lessonSec){ lessonSec.style.display='block'; }
+    if(lessonSec){ lessonSec.style.display = SESSION_PLAYER?.id ? 'block' : 'none'; }
     const _ps=document.getElementById('personalRatingSlider');
     const psIdx=_ps?parseInt(_ps.value):0;
     const goalSlider=document.getElementById('goalRatingSlider');
@@ -712,85 +717,99 @@ function populateSummary(){
   const set = (id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val||'—'; };
   const show = (id,val)=>{ const el=document.getElementById(id); if(el) el.style.display=val?'flex':'none'; };
 
-  // Section 1 header — emoji + name + nickname
-  const _firstName = document.getElementById('firstName')?.value?.trim() || '';
-  const _lastName  = document.getElementById('lastName')?.value?.trim()  || '';
-  const lastName = _lastName ? _lastName.charAt(0).toUpperCase()+'.' : '';
-  const fullName = (_firstName+' '+lastName).trim();
-  const nick = document.getElementById('nickname')?.value?.trim() || S.nickname || '';
-  const emoji = document.getElementById('avatarEmoji')?.value || S.avatarEmoji || '🎾';
+  // — Read all values up front from DOM first, S-state as fallback —
+  const firstName = document.getElementById('firstName')?.value?.trim() || '';
+  const lastName  = document.getElementById('lastName')?.value?.trim()  || '';
+  const email     = document.getElementById('email')?.value?.trim()     || S.email || getMyEmail() || '';
+  const phone     = document.getElementById('phone')?.value?.trim()     || '';
+  const ageRange  = document.getElementById('playerAge')?.value         || S.dob   || '';
+  const gender    = S.gender    || '';
+  const city      = document.getElementById('addrCity')?.value?.trim()  || S.city  || '';
+  const state     = document.getElementById('addrState')?.value?.trim() || S.state || '';
+  const zip       = document.getElementById('addrZip')?.value?.trim()   || S.zip   || '';
+  const shirt     = document.getElementById('shirtSize')?.value         || '';
+  const since     = document.getElementById('playingSince')?.value?.trim() || S.playingSince || '';
+  const hand      = S.handedness || '';
+  const format    = S.playFormat || '';
+  const style     = S.playStyle  || '';
+  const venue     = S.venuePref  || '';
+  const skill     = S.skill      || '';
+  const dupr      = S.duprVal    || '';
+  const goal      = S.goalRating || '';
+  const improve   = S.wantsToImprove || '';
+  const nick      = document.getElementById('nickname')?.value?.trim() || S.nickname || '';
+  const emoji     = document.getElementById('avatarEmoji')?.value || S.avatarEmoji || '🎾';
+
+  // — Name header —
+  const lastInitial = lastName ? lastName.charAt(0).toUpperCase()+'.' : '';
+  const fullName = (firstName+' '+lastInitial).trim();
+
   const emojiEl = document.getElementById('sumEmojiDisplay');
   if(emojiEl){
     if(S.photoSrc){
-      // Show actual photo in the summary circle
-      emojiEl.style.overflow='hidden';
-      emojiEl.style.padding='0';
+      emojiEl.style.overflow='hidden'; emojiEl.style.padding='0';
       emojiEl.innerHTML=`<img src="${S.photoSrc}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`;
     } else {
-      emojiEl.style.overflow='';
-      emojiEl.style.padding='';
+      emojiEl.style.overflow=''; emojiEl.style.padding='';
       emojiEl.textContent = emoji;
     }
   }
   const nameBig = document.getElementById('sumNameBig');
-  if(nameBig) nameBig.textContent = fullName||'—';
+  if(nameBig) nameBig.textContent = fullName || '—';
   const nickSub = document.getElementById('sumNicknameSub');
   if(nickSub) nickSub.textContent = nick ? '"'+nick+'"' : '';
-
-  // Hidden legacy fields (used by some older code)
   set('sumName', fullName);
-  set('sumNickname', nick||'—');
+  set('sumNickname', nick || '—');
 
-  // Personal info rows
-  set('sumEmail', document.getElementById('email')?.value?.trim() || S.email || getMyEmail() || '—');
-  const rawPhone = document.getElementById('phone')?.value?.trim() || S.phone || '';
-  const digits = rawPhone.replace(/\D/g,'');
-  const fmtPhone = digits.length===10?'('+digits.substring(0,3)+') '+digits.substring(3,6)+'-'+digits.substring(6):digits||formatPhoneForDisplay(S.phone)||'—';
+  // — Personal info rows —
+  set('sumEmail', email || '—');
+  const digits = phone.replace(/\D/g,'');
+  const fmtPhone = digits.length===10
+    ? '('+digits.substring(0,3)+') '+digits.substring(3,6)+'-'+digits.substring(6)
+    : digits || formatPhoneForDisplay(S.phone) || '—';
   set('sumPhone', fmtPhone);
-  set('sumDob', document.getElementById('playerAge')?.value || S.dob || '—');
-  set('sumGender', S.gender || '—');
-  set('sumCity', document.getElementById('addrCity')?.value?.trim() || S.city || '—');
-  set('sumState', document.getElementById('addrState')?.value?.trim() || S.state || '—');
-  set('sumZip', document.getElementById('addrZip')?.value?.trim() || S.zip || '—');
-  set('sumShirt', document.getElementById('shirtSize')?.value?.trim() || '—');
+  set('sumDob',    ageRange || '—');
+  set('sumGender', gender   || '—');
+  set('sumCity',   city     || '—');
+  set('sumState',  state    || '—');
+  set('sumZip',    zip      || '—');
+  set('sumShirt',  shirt    || '—');
 
-  // Section 2 — Player info
-  set('sumSince', document.getElementById('playingSince')?.value?.trim() || S.playingSince || '—');
-  set('sumHandedness', S.handedness||'—');
-  set('sumFormat', S.playFormat||'—');
-  set('sumStyle', S.playStyle||'—');
-  set('sumVenuePref', S.venuePref||'—');
-  const driveEl=document.getElementById('driveDistance');
-  set('sumDrive', driveEl?driveEl.value+' miles':'—');
+  // — Player info rows —
+  set('sumSince',     since  || '—');
+  set('sumHandedness',hand   || '—');
+  set('sumFormat',    format || '—');
+  set('sumStyle',     style  || '—');
+  set('sumVenuePref', venue  || '—');
+  const driveEl = document.getElementById('driveDistance');
+  set('sumDrive', driveEl ? driveEl.value+' miles' : '—');
 
-  // Availability toggles summary
+  // — Availability —
   const schedGrid = document.getElementById('sumSchedGrid');
   if(schedGrid){
     const windows=[
-      {key:'availWeekdayMorning',  label:'Weekday mornings'},
-      {key:'availWeekdayAfternoon',label:'Weekday afternoons'},
-      {key:'availWeekdayEvening',  label:'Weekday evenings'},
-      {key:'availWeekends',        label:'Weekends'},
+      {key:'availWeekdayMorning',  label:'Weekday mornings',   btnId:'availWeekdayMorningBtn'},
+      {key:'availWeekdayAfternoon',label:'Weekday afternoons',  btnId:'availWeekdayAfternoonBtn'},
+      {key:'availWeekdayEvening',  label:'Weekday evenings',    btnId:'availWeekdayEveningBtn'},
+      {key:'availWeekends',        label:'Weekends',            btnId:'availWeekendsBtn'},
     ];
-    const active=windows.filter(w=>{
-      const btnId = w.key==='availWeekdayMorning'   ? 'availWeekdayMorningBtn'   :
-                    w.key==='availWeekdayAfternoon' ? 'availWeekdayAfternoonBtn' :
-                    w.key==='availWeekdayEvening'   ? 'availWeekdayEveningBtn'   : 'availWeekendsBtn';
-      return S[w.key] || document.getElementById(btnId)?.classList.contains('on');
+    const active = windows.filter(w=>{
+      const btn = document.getElementById(w.btnId);
+      return S[w.key] || btn?.classList.contains('on') || btn?.dataset?.active==='true';
     });
-    schedGrid.innerHTML=active.length
+    schedGrid.innerHTML = active.length
       ? active.map(w=>'<span style="display:inline-block;padding:3px 9px;border-radius:999px;background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.4);color:#4CAF7D;font-size:11px;font-weight:600;margin:2px;">'+w.label+'</span>').join('')
       : '<span style="color:var(--dim);font-size:12px;">None selected</span>';
   }
 
-  // Section 3 — Levels
-  set('sumSkill', S.skill||'—');
-  set('sumDupr', S.duprVal||'Not set');
-  if(S.goalRating){ show('sumGoalRow',true); set('sumGoal', S.goalRating); }
+  // — Playing levels —
+  set('sumSkill',  skill || '—');
+  set('sumDupr',   dupr  || 'Not set');
+  if(goal){ show('sumGoalRow',true); set('sumGoal', goal); }
   else show('sumGoalRow',false);
-  set('sumImprove', S.wantsToImprove||'—');
-  set('sumLesson', S.hasHadLesson||'—');
-  set('sumWantsLesson', S.wantsLesson||'—');
+  set('sumImprove',      improve || '—');
+  set('sumLesson',       S.hasHadLesson  || '—');
+  set('sumWantsLesson',  S.wantsLesson   || '—');
 }
 
 
@@ -8058,13 +8077,16 @@ function startNewRegistration(email){
   unlockProfileForm();
   goTo(1);
   chk1(); // re-evaluate now that email is pre-filled
+  // Hide lesson sections — those belong in Edit Profile after registration
+  document.getElementById('lessonSection') && (document.getElementById('lessonSection').style.display='none');
+  document.getElementById('lessonOfferSection') && (document.getElementById('lessonOfferSection').style.display='none');
   // Reset consent state — new user must check both waiver boxes fresh
   S._privacyConsent = false;
   S._riskConsent = false;
   document.getElementById('checkBoxPrivacy')?.classList.remove('on');
   document.getElementById('checkBoxRisk')?.classList.remove('on');
-  const _sb = document.getElementById('btnSubmit');
-  if(_sb) _sb.disabled = true;
+  const sb = document.getElementById('btnSubmit');
+  if(sb) sb.disabled = true;
   setTimeout(()=>{
     window.scrollTo({top:0,behavior:'smooth'});
     showToast('👋 Welcome! Fill out your profile below.','#4CAF7D');
