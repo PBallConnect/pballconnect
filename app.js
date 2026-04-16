@@ -8385,11 +8385,11 @@ function renderMixedBreakdown(pendingMen, pendingWomen){
   const orgIsMale   = MS.organizerPlaying && myGenderLc === 'male';
   const orgIsFemale = MS.organizerPlaying && myGenderLc === 'female';
 
-  const neededMen   = perCourt * numCourts;
-  const neededWomen = perCourt * numCourts;
-  const neededTotal = matchTotalSlots();
-  const invitedMen   = pendingMen   + (orgIsMale   ? 1 : 0);
-  const invitedWomen = pendingWomen + (orgIsFemale ? 1 : 0);
+  const neededMen   = perCourt * numCourts - (orgIsMale   ? 1 : 0);
+  const neededWomen = perCourt * numCourts - (orgIsFemale ? 1 : 0);
+  const neededTotal = matchMaxNeeded();
+  const invitedMen   = pendingMen;
+  const invitedWomen = pendingWomen;
   const invitedTotal = pendingMen + pendingWomen + (MS.organizerPlaying ? 1 : 0);
 
   const hdrTh  = 'padding:6px 10px;font-size:11px;font-weight:700;text-align:center;color:#fff;background:#991b1b;';
@@ -8403,19 +8403,19 @@ function renderMixedBreakdown(pendingMen, pendingWomen){
       '<tr>'+
         '<td style="'+bodyLbl+'">👨 Men</td>'+
         '<td style="'+bodyNum(false)+'">'+neededMen+'</td>'+
-        '<td style="'+bodyNum(invitedMen>=neededMen)+'">'+invitedMen+(orgIsMale?' ★':'')+'</td>'+
+        '<td style="'+bodyNum(invitedMen>=neededMen)+'">'+invitedMen+(orgIsMale?' <span style="color:#991b1b;">★</span>':'')+'</td>'+
       '</tr>'+
       '<tr>'+
         '<td style="'+bodyLbl+'">👩 Women</td>'+
         '<td style="'+bodyNum(false)+'">'+neededWomen+'</td>'+
-        '<td style="'+bodyNum(invitedWomen>=neededWomen)+'">'+invitedWomen+(orgIsFemale?' ★':'')+'</td>'+
+        '<td style="'+bodyNum(invitedWomen>=neededWomen)+'">'+invitedWomen+(orgIsFemale?' <span style="color:#991b1b;">★</span>':'')+'</td>'+
       '</tr>';
   } else {
     rows =
       '<tr>'+
         '<td style="'+bodyLbl+'">Total</td>'+
         '<td style="'+bodyNum(false)+'">'+neededTotal+'</td>'+
-        '<td style="'+bodyNum(invitedTotal>=neededTotal)+'">'+invitedTotal+(MS.organizerPlaying?' ★':'')+'</td>'+
+        '<td style="'+bodyNum(invitedTotal>=neededTotal)+'">'+invitedTotal+(MS.organizerPlaying?' <span style="color:#991b1b;">★</span>':'')+'</td>'+
       '</tr>';
   }
 
