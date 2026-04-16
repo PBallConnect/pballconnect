@@ -203,9 +203,9 @@
   .waiver-link{color:#1a7a3a;font-size:13px;font-weight:600;cursor:pointer;margin-top:10px;display:inline-block;}
   .waiver-link:hover{text-decoration:underline;}
   .check-row{display:flex;align-items:flex-start;gap:12px;cursor:pointer;}
-  .check-box{width:20px;height:20px;border-radius:6px;border:2px solid rgba(255,255,255,0.3);flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:all .2s;cursor:pointer;}
+  .check-box{width:20px;height:20px;border-radius:6px;border:2px solid #d1d5db;background:#fff;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:all .2s;cursor:pointer;}
   .check-box.on{background:var(--green);border-color:var(--green);}
-  .check-box.on::after{content:'✓';font-size:12px;font-weight:800;color:var(--dark);}
+  .check-box.on::after{content:'✓';font-size:12px;font-weight:800;color:#fff;}
   .check-text{color:#111;font-size:13px;line-height:1.6;}
 
   /* Buttons */

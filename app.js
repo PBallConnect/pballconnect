@@ -313,6 +313,32 @@ function buildGoalTicks(minIdx){
   }
 }
 
+function buildStaticSliderTicks(containerId){
+  const ticks=document.getElementById(containerId);
+  if(!ticks) return;
+  ticks.innerHTML='';
+  ticks.style.cssText='position:relative;height:26px;margin-top:2px;';
+  const fullNumIdxs=[0,4,8,12,16,20];
+  const tickColor='rgba(156,163,175,0.6)';
+  const labelColor='var(--dim)';
+  for(let i=0;i<=21;i++){
+    const pct=(i/21*100).toFixed(2);
+    const isFull=fullNumIdxs.includes(i);
+    const sp=document.createElement('span');
+    sp.style.cssText='position:absolute;left:'+pct+'%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;';
+    if(isFull){
+      sp.innerHTML=
+        '<span style="display:block;width:2px;height:8px;background:'+tickColor+';"></span>'+
+        '<span style="font-size:9px;color:'+labelColor+';margin-top:1px;white-space:nowrap;">'+
+          (DUPR_VALS[i]==='7.0+'?'7.0':DUPR_VALS[i])+
+        '</span>';
+    } else {
+      sp.innerHTML='<span style="display:block;width:1px;height:4px;background:'+tickColor+';margin-top:2px;"></span>';
+    }
+    ticks.appendChild(sp);
+  }
+}
+
 function updateGoalRedBar(minIdx, goalIdx){
   const redBar=document.getElementById('goalSliderRedBar');
   const greenBar=document.getElementById('goalSliderGreenBar');
@@ -611,7 +637,13 @@ function selectImproveGoal(val){
     if(goalField){ goalField.style.display='block'; }
     if(lessonSec){ lessonSec.style.display='block'; }
     const _ps=document.getElementById('personalRatingSlider');
-    buildGoalTicks(_ps?parseInt(_ps.value):0);
+    const psIdx=_ps?parseInt(_ps.value):0;
+    const goalSlider=document.getElementById('goalRatingSlider');
+    if(goalSlider && parseInt(goalSlider.value)<psIdx){
+      goalSlider.value=psIdx;
+      updateGoalRating(psIdx);
+    }
+    buildGoalTicks(psIdx);
     updateGoalGapViz();
   } else {
     if(goalField) goalField.style.display='none';
@@ -649,10 +681,7 @@ function toggleWaiver(){toggleConsent('risk');}
 function v(id){const el=document.getElementById(id);return el?el.value.trim():'';}
 function chk1(){
   const btn=document.getElementById('next1');if(!btn)return;
-  // Zip is optional — city+state is enough to find nearby players
-  // Consent is checked in step 3 before final submit, not here
-  const ok=v('firstName')&&v('email')&&v('addrCity')&&v('addrState')&&S.gender
-    &&document.getElementById('playerAge')?.value;
+  const ok=v('firstName')&&v('email')&&v('phone');
   btn.disabled=!ok;
 }
 function chk2(){
@@ -707,7 +736,7 @@ function populateSummary(){
   set('sumNickname', nick||'—');
 
   // Personal info rows
-  set('sumEmail', v('email')||getMyEmail()||'—');
+  set('sumEmail', v('email')||S.email||getMyEmail()||'—');
   const rawPhone = v('phone')||'';
   const digits = rawPhone.replace(/\D/g,'');
   const fmtPhone = digits.length===10?'('+digits.substring(0,3)+') '+digits.substring(3,6)+'-'+digits.substring(6):digits||formatPhoneForDisplay(S.phone)||'—';
@@ -5582,6 +5611,11 @@ function addHours(timeStr, hrs){
 // Check for match token on page load
 document.addEventListener('DOMContentLoaded', ()=>{
   setTimeout(checkMatchToken, 1000); // After session restore
+});
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  buildStaticSliderTicks('duprTicks');
+  buildStaticSliderTicks('personalRatingTicks');
 });
 
 async function addMatchCourtToMyCourts(courtId, courtName, courtAddress, btn){
