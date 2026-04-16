@@ -1142,6 +1142,7 @@ async function doSaveProfile(){
       match_gender_pref:   S.matchGenderPref || 'Both',
     });
     console.log('✅ Registration saved');
+    _newUserRegistrationStarted = false; // registration complete — allow normal profile restore
     showToast('✅ Profile saved!', '#4CAF7D');
     // Capture current values before any navigation
     const _savedNickname  = v('nickname') || S.nickname || '';
@@ -1398,8 +1399,8 @@ function showPage(page){
   if(page==='playerProfile'){
     if(SESSION_PLAYER){
       setTimeout(()=>restoreProfileForm(SESSION_PLAYER), 200);
-    } else {
-      // Try to load from localStorage email
+    } else if(!_newUserRegistrationStarted){
+      // Try to load from localStorage email (skip if new-user registration is in progress)
       const em = localStorage.getItem('pb_email');
       if(em) fetchAndRestoreProfile(em);
     }
@@ -5936,6 +5937,7 @@ document.addEventListener('DOMContentLoaded', initLogin);
 
 let SESSION_PLAYER = null;
 let RESTORING_PROFILE = false;
+let _newUserRegistrationStarted = false; // guard against double startNewRegistration calls
 
 async function restoreSession(email, playerData){
   let player = playerData;
@@ -5950,6 +5952,7 @@ async function restoreSession(email, playerData){
   }
   // New user — auth succeeded via magic link but no registration exists yet
   if(!player){
+    if(_newUserRegistrationStarted) return; // already started — don't reset the form
     S.email = email.toLowerCase();
     startNewRegistration(email);
     return;
@@ -6194,7 +6197,7 @@ async function fetchAndRestoreProfile(email){
       }
     }
   }catch(e){}
-  showPage('playerProfile');
+  // No profile found — page is already showing; do NOT call showPage again (causes infinite loop)
 }
 
 function restoreProfileForm(player){
@@ -8066,6 +8069,7 @@ async function sendMutualInvite(theirEmail, theirName){
 }
 
 function startNewRegistration(email){
+  _newUserRegistrationStarted = true;
   // Close login modal, pre-fill email, scroll to registration form
   closeLoginModal();
   const emailEl = document.getElementById('email');
