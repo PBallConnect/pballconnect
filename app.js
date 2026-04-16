@@ -8065,7 +8065,7 @@ function _showStartChoiceModal(email){
   overlay.id = 'startChoiceOverlay';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;padding:20px;';
   overlay.innerHTML =
-    '<div style="background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'+
+    '<div id="startChoiceCard" style="background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'+
       '<div style="text-align:center;margin-bottom:20px;">'+
         '<div style="font-size:40px;margin-bottom:10px;">🎉</div>'+
         '<div style="font-size:20px;font-weight:800;color:#111;margin-bottom:6px;">You\'re in, '+firstName+'!</div>'+
@@ -8075,12 +8075,12 @@ function _showStartChoiceModal(email){
         '<div onclick="_doStartChoiceFull()" style="cursor:pointer;border:2px solid #1a7a3a;border-radius:14px;padding:18px 14px;text-align:center;">'+
           '<div style="font-size:26px;margin-bottom:8px;">📋</div>'+
           '<div style="font-size:13px;font-weight:800;color:#1a7a3a;margin-bottom:4px;">Full Profile</div>'+
-          '<div style="font-size:11px;color:#6b7280;line-height:1.4;">All features unlocked — find players, join groups, track matches</div>'+
+          '<div style="font-size:11px;color:#6b7280;line-height:1.4;">All features — your complete pickleball identity</div>'+
         '</div>'+
         '<div onclick="_doStartChoiceQuick()" style="cursor:pointer;border:2px solid #d1d5db;border-radius:14px;padding:18px 14px;text-align:center;">'+
           '<div style="font-size:26px;margin-bottom:8px;">⚡</div>'+
           '<div style="font-size:13px;font-weight:800;color:#374151;margin-bottom:4px;">Quick Connect</div>'+
-          '<div style="font-size:11px;color:#6b7280;line-height:1.4;">Basics only — takes 60 seconds, add the rest later</div>'+
+          '<div style="font-size:11px;color:#6b7280;line-height:1.4;">On the court fast — just the basics</div>'+
         '</div>'+
       '</div>'+
     '</div>';
@@ -8089,9 +8089,30 @@ function _showStartChoiceModal(email){
 
   window._doStartChoiceFull = function(){
     overlay.remove();
+    showToast('Great! You\'ll enjoy all the benefits of PBallConnect. Let\'s build your profile — it\'s quick and fun!', '#1a7a3a');
     _doStartFullProfile(email);
   };
+
   window._doStartChoiceQuick = function(){
+    const card = document.getElementById('startChoiceCard');
+    if(!card) return;
+    card.innerHTML =
+      '<div style="text-align:center;margin-bottom:20px;">'+
+        '<div style="font-size:32px;margin-bottom:10px;">⚡</div>'+
+        '<div style="font-size:17px;font-weight:800;color:#111;margin-bottom:8px;">Are you sure?</div>'+
+        '<div style="font-size:13px;color:#6b7280;line-height:1.5;">Your full Pickleball Profile unlocks everything — finding players nearby, joining groups, tracking matches, and more.</div>'+
+      '</div>'+
+      '<div style="display:flex;flex-direction:column;gap:10px;">'+
+        '<button onclick="_doStartChoiceFull()" style="padding:13px;border-radius:12px;border:2px solid #1a7a3a;background:#fff;color:#1a7a3a;font-weight:800;font-size:14px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+
+          '📋 Full Profile'+
+        '</button>'+
+        '<button onclick="_doStartChoiceConfirmQuick()" style="padding:13px;border-radius:12px;border:1px solid #d1d5db;background:transparent;color:#6b7280;font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+
+          'Quick Connect — just the basics'+
+        '</button>'+
+      '</div>';
+  };
+
+  window._doStartChoiceConfirmQuick = function(){
     overlay.remove();
     showQuickConnectForm(email);
   };
@@ -8111,6 +8132,8 @@ function _doStartFullProfile(email){
 }
 
 function showQuickConnectForm(email){
+  const inviterName = PENDING_INVITE?.inviter_name || 'Your friend';
+
   const overlay = document.createElement('div');
   overlay.id = 'quickConnectOverlay';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:900;background:#fff;overflow-y:auto;-webkit-overflow-scrolling:touch;';
@@ -8135,7 +8158,7 @@ function showQuickConnectForm(email){
       '<div style="text-align:center;margin-bottom:24px;">'+
         '<div style="font-size:36px;margin-bottom:8px;">⚡</div>'+
         '<div style="font-size:20px;font-weight:800;color:#111;margin-bottom:4px;">Quick Connect</div>'+
-        '<div style="font-size:13px;color:#6b7280;">Just the basics — you can always add more later.</div>'+
+        '<div style="font-size:13px;color:#6b7280;">You can complete your full profile anytime.</div>'+
       '</div>'+
       '<div style="margin-bottom:16px;">'+
         '<label style="'+lbl+'">Email <span style="color:#9ca3af;font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— your login</span></label>'+
@@ -8143,16 +8166,16 @@ function showQuickConnectForm(email){
       '</div>'+
       '<div style="margin-bottom:16px;">'+
         '<label style="'+lbl+'">First Name <span style="color:#dc2626;">*</span></label>'+
-        '<input id="qcFirstName" type="text" placeholder="First name" autocomplete="given-name" style="'+inp+'"/>'+
+        '<input id="qcFirstName" type="text" placeholder="First name" autocomplete="given-name" style="'+inp+'" oninput="window._qcUpdateBtn()"/>'+
       '</div>'+
       '<div style="margin-bottom:16px;">'+
         '<label style="'+lbl+'">Phone Number <span style="color:#dc2626;">*</span></label>'+
-        '<input id="qcPhone" type="tel" placeholder="(555) 555-5555" maxlength="14" style="'+inp+'"/>'+
+        '<input id="qcPhone" type="tel" placeholder="(555) 555-5555" maxlength="14" style="'+inp+'" oninput="window._qcUpdateBtn()"/>'+
       '</div>'+
       '<div style="margin-bottom:16px;">'+
-        '<label style="'+lbl+'">Personal Skill Rating</label>'+
+        '<label style="'+lbl+'">Personal Skill Rating <span style="color:#dc2626;">*</span></label>'+
         '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'+
-          '<input id="qcSkillSlider" type="range" min="0" max="21" value="8" style="flex:1;" oninput="document.getElementById(\'qcSkillVal\').textContent=DUPR_VALS[+this.value]||\'4.0\'"/>'+
+          '<input id="qcSkillSlider" type="range" min="0" max="21" value="8" style="flex:1;" oninput="document.getElementById(\'qcSkillVal\').textContent=DUPR_VALS[+this.value]||\'4.0\';window._qcUpdateBtn()"/>'+
           '<span id="qcSkillVal" style="font-weight:800;color:#1a7a3a;min-width:40px;text-align:right;">4.0</span>'+
         '</div>'+
         '<div style="font-size:10px;color:#9ca3af;text-align:center;">2.0 (beginner) → 7.0+ (pro)</div>'+
@@ -8177,17 +8200,32 @@ function showQuickConnectForm(email){
         '</div>'+
       '</div>'+
       '<div id="qcError" style="display:none;margin-bottom:12px;padding:10px 14px;background:#fef2f2;border-radius:8px;font-size:12px;color:#dc2626;"></div>'+
-      '<button id="qcSaveBtn" onclick="window._qcSave()" style="width:100%;padding:15px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-weight:800;font-size:15px;cursor:pointer;font-family:\'DM Sans\',sans-serif;margin-bottom:14px;">'+
+      '<button id="qcSaveBtn" onclick="window._qcSave()" disabled '+
+        'style="width:100%;padding:15px;border-radius:12px;border:none;background:#9ca3af;color:#fff;font-weight:800;font-size:15px;cursor:not-allowed;font-family:\'DM Sans\',sans-serif;margin-bottom:14px;transition:background .2s;">'+
         'Save & Join PBallConnect 🏓'+
       '</button>'+
       '<div style="text-align:center;">'+
-        '<span onclick="document.getElementById(\'quickConnectOverlay\').remove();_doStartFullProfile(\''+email+'\')" style="font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline;">Switch to Full Profile instead</span>'+
+        '<span onclick="document.getElementById(\'quickConnectOverlay\').remove();_doStartFullProfile(\''+email+'\')" style="font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline;">Switch to Full Profile</span>'+
       '</div>'+
     '</div>';
 
   document.body.appendChild(overlay);
 
   let _qcPrivacyOn = false, _qcRiskOn = false;
+
+  window._qcUpdateBtn = function(){
+    const fn  = document.getElementById('qcFirstName')?.value?.trim() || '';
+    const ph  = (document.getElementById('qcPhone')?.value||'').replace(/\D/g,'');
+    // slider always has a value (default 8), so just need fn + phone + both checkboxes
+    const ok  = fn.length > 0 && ph.length >= 10 && _qcPrivacyOn && _qcRiskOn;
+    const btn = document.getElementById('qcSaveBtn');
+    if(btn){
+      btn.disabled    = !ok;
+      btn.style.background  = ok ? '#1a7a3a' : '#9ca3af';
+      btn.style.cursor      = ok ? 'pointer'  : 'not-allowed';
+    }
+  };
+
   window._qcToggle = function(id){
     const box = document.getElementById(id);
     if(!box) return;
@@ -8197,6 +8235,7 @@ function showQuickConnectForm(email){
     box.style.background  = on ? '#1a7a3a' : '#fff';
     box.style.borderColor = on ? '#1a7a3a' : '#d1d5db';
     box.innerHTML = on ? '<span style="color:#fff;font-size:12px;font-weight:800;">✓</span>' : '';
+    window._qcUpdateBtn();
   };
 
   window._qcSave = async function(){
@@ -8208,21 +8247,8 @@ function showQuickConnectForm(email){
     const errEl = document.getElementById('qcError');
     const btn   = document.getElementById('qcSaveBtn');
 
-    if(!fn){
-      if(errEl){ errEl.textContent='First name is required.'; errEl.style.display='block'; }
-      document.getElementById('qcFirstName')?.focus();
-      return;
-    }
-    if(ph.length < 10){
-      if(errEl){ errEl.textContent='Please enter a valid 10-digit phone number.'; errEl.style.display='block'; }
-      return;
-    }
-    if(!_qcPrivacyOn || !_qcRiskOn){
-      if(errEl){ errEl.textContent='Please agree to both the waiver and privacy policy.'; errEl.style.display='block'; }
-      return;
-    }
     if(errEl) errEl.style.display='none';
-    if(btn){ btn.disabled=true; btn.textContent='Saving…'; }
+    if(btn){ btn.disabled=true; btn.textContent='Saving…'; btn.style.background='#9ca3af'; btn.style.cursor='not-allowed'; }
 
     try{
       await saveRegistration({
@@ -8233,6 +8259,7 @@ function showQuickConnectForm(email){
         dob:               age   || null,
         playing_since:     since || null,
         waiver_agreed:     true,
+        quick_connect:     true,
         match_gender_pref: 'Both',
         play_format:       'Both',
       });
@@ -8240,10 +8267,10 @@ function showQuickConnectForm(email){
       document.getElementById('quickConnectOverlay')?.remove();
       await restoreSession(email.toLowerCase());
       await handlePostRegistrationInvite(email.toLowerCase(), fn);
-      showToast('✅ Welcome to PBallConnect!', '#4CAF7D');
+      showToast('Welcome to PBallConnect! '+inviterName+' will be notified you\'ve joined.', '#4CAF7D');
       showPage('dashboard');
     }catch(e){
-      if(btn){ btn.disabled=false; btn.textContent='Save & Join PBallConnect 🏓'; }
+      if(btn){ btn.disabled=false; btn.textContent='Save & Join PBallConnect 🏓'; btn.style.background='#1a7a3a'; btn.style.cursor='pointer'; }
       if(errEl){ errEl.textContent='Save failed: '+(e.message||'Unknown error'); errEl.style.display='block'; }
     }
   };
