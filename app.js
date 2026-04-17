@@ -7750,12 +7750,35 @@ async function sendInvite(method){
     if(!inviteeEmail||!inviteeEmail.includes('@')){ showToast('Please enter a valid email address','#f59e0b'); return; }
     if(statusEl) statusEl.textContent='Sending…';
     try{
+      // Always create a fresh invite row for this specific invitee so invitee_email is stored
+      // and the token is guaranteed to exist in the DB.
+      let newToken;
+      try{
+        const _c = window.crypto || window.msCrypto;
+        const _a = new Uint8Array(12);
+        _c.getRandomValues(_a);
+        newToken = Array.from(_a).map(b=>b.toString(36)).join('').substring(0,16);
+      }catch(_e){ newToken = Math.random().toString(36).slice(2); }
+      const freshInvite = await fetch(`${SUPABASE_URL}/rest/v1/invites`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=representation'},
+        body: JSON.stringify({
+          inviter_email: myEmail,
+          inviter_name:  myName,
+          invitee_email: inviteeEmail,
+          invite_method: 'email',
+          invite_token:  newToken
+        })
+      });
+      const freshRows = freshInvite.ok ? await freshInvite.json() : [];
+      const inviteToken = freshRows[0]?.invite_token || newToken;
+      const emailInviteUrl = window.location.origin + window.location.pathname + '?invite=' + inviteToken;
       await sendEmail({
         to_email:     inviteeEmail,
         type:         'app_invite',
         inviter_name: myName,
         personal_note: note || null,
-        invite_url:   inviteUrl
+        invite_url:   emailInviteUrl
       });
       showToast('✅ Invite sent to '+inviteeEmail,'#1a7a3a');
       if(statusEl) statusEl.textContent='';
