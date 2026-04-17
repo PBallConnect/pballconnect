@@ -52,7 +52,7 @@ export async function onRequestPost(context) {
         ${invite_url ? `
         <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:12px;">
           <tr><td align="center">
-            <a href="${invite_url}" style="display:inline-block;width:100%;max-width:300px;padding:15px 24px;background:#1a7a3a;color:#ffffff;font-size:15px;font-weight:800;text-decoration:none;border-radius:10px;text-align:center;box-sizing:border-box;">
+            <a href="${invite_url.replace('/?invite=', '/invite.html?token=')}" style="display:inline-block;width:100%;max-width:300px;padding:15px 24px;background:#1a7a3a;color:#ffffff;font-size:15px;font-weight:800;text-decoration:none;border-radius:10px;text-align:center;box-sizing:border-box;">
               Open in PBallConnect &rarr;
             </a>
           </td></tr>
