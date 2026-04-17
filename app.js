@@ -7964,16 +7964,9 @@ function checkInviteToken(){
       const inv=rows[0];
       PENDING_INVITE=inv;
       window._pendingInviteRef=inv;
-      // Wait for restoreSession to complete before showing banner.
-      // New users will have SESSION_PLAYER===null after restore attempt.
-      const _showBanner = ()=>{
-        if(SESSION_PLAYER?.id) return; // fully registered user — skip banner
-        showInviteBanner(inv);
-      };
-      // Try at 500ms, 1000ms, and 1500ms to survive any restore race
-      setTimeout(_showBanner, 500);
-      setTimeout(_showBanner, 1000);
-      setTimeout(_showBanner, 1500);
+      setTimeout(()=>{ if(!SESSION_PLAYER?.id) showInviteBanner(inv); }, 300);
+      setTimeout(()=>{ if(!SESSION_PLAYER?.id && !document.getElementById('inviteBanner')) showInviteBanner(inv); }, 800);
+      setTimeout(()=>{ if(!SESSION_PLAYER?.id && !document.getElementById('inviteBanner')) showInviteBanner(inv); }, 1500);
       // Mark opened — fires after auth; fire-and-forget
       fetch(`${SUPABASE_URL}/rest/v1/invites?invite_token=eq.${token}`,{method:'PATCH',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},body:JSON.stringify({status:'opened',opened_at:new Date().toISOString()})}).catch(()=>{});
     }
