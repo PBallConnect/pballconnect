@@ -8335,7 +8335,19 @@ function startNewRegistration(email){
   S.email = (email||'').toLowerCase();
   localStorage.removeItem('pb_pending_email');
 
-  // If user arrived via invite, show the landing choice instead of bare profile form
+  const _urlParams = new URLSearchParams(window.location.search);
+  const _isNewUserReturn = _urlParams.get('newuser') === '1';
+  const _returnToken = _urlParams.get('invite');
+  if(_isNewUserReturn && _returnToken && !PENDING_INVITE){
+    // Coming back from magic link via invite.html — fetch invite data then show choice
+    fetch(`https://dltiirdjfbjtydazrmvr.supabase.co/rest/v1/invite_tokens?invite_token=eq.${_returnToken}`,
+      {headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsdGlpcmRqZmJqdHlkYXpybXZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MDQxNzgsImV4cCI6MjA4OTA4MDE3OH0.oBDtS3RZlGxMkqon-r1wdfYR6jPTSPGWIa8cZh7fLWA','Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
+    .then(r=>r.json()).then(rows=>{
+      PENDING_INVITE = rows[0] || {invite_token:_returnToken};
+      showInviteLandingChoice(email, PENDING_INVITE);
+    }).catch(()=>{ showInviteLandingChoice(email, null); });
+    return;
+  }
   if(PENDING_INVITE){
     showInviteLandingChoice(email, PENDING_INVITE);
     return;
