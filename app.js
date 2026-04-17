@@ -8276,6 +8276,9 @@ function showQuickConnectForm(email, inv){
       await restoreSession(email.toLowerCase());
       await handlePostRegistrationInvite(email.toLowerCase(), fn);
       showToast('Welcome to PBallConnect! '+inviterName+' will be notified you\'ve joined.', '#4CAF7D');
+      SESSION_PLAYER = SESSION_PLAYER || { email: email.toLowerCase(), first_name: fn };
+      updateOrganizerNav();
+      loadAllMatchBadges();
       showPage('dashboard');
     }catch(e){
       if(btn){ btn.disabled=false; btn.textContent='Save & Join PBallConnect 🏓'; btn.style.background='#1a7a3a'; btn.style.cursor='pointer'; }
