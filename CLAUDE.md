@@ -23,9 +23,10 @@ There are no tests, no linter, and no build commands.
 ## Architecture
 
 ### Files
-- **`app.js`** (~9500 lines) — the entire application: state, UI rendering, page navigation, Supabase calls, and all feature logic.
+- **`app.js`** (~9700 lines) — the entire application: state, UI rendering, page navigation, Supabase calls, and all feature logic.
 - **`index.html`** — shell HTML with all page sections (`<div class="page-section" id="page-*">`) and CDN script tags.
 - **`styles.css`** — all styles.
+- **`invite.html`** — standalone invite landing page (no app.js dependency). Reads `?token=TOKEN`, fetches invite data from the `invite_tokens` view, collects email, sends magic link via Supabase OTP with `emailRedirectTo = https://pballconnect.com/?newuser=1&invite=TOKEN`.
 - **`functions/api/send-email.js`** — Cloudflare Pages Function for transactional email via Resend. Reads `RESEND_API_KEY` from Cloudflare env.
 - **`supabase_rls_policies.sql`** — Supabase Row Level Security policy definitions (for reference / re-applying). Run this in Supabase SQL editor when schema changes.
 
@@ -38,6 +39,8 @@ Loaded in `index.html`: Supabase JS client, D3.js, TopoJSON, and Google Fonts.
 - **`SUPABASE_ACCESS_TOKEN`** — JWT from Supabase auth, used in every REST API call as `Authorization: Bearer`.
 - **`IC_MEMBERS`** — Inner Circle members array; only populated when IC page is visited. Group/match modals fetch on demand if empty.
 - **`_groups`** — organizer's named groups; loaded by `loadMyGroups()` and `loadRecurringMatches()`.
+- **`PENDING_INVITE`** — set by `checkInviteToken()` when `?invite=TOKEN` is in the URL. Holds the invite row from `invite_tokens`. Consumed by `startNewRegistration()` to show `showInviteLandingChoice()` instead of the bare profile form.
+- **`window._pendingInviteRef`** — parallel reference to `PENDING_INVITE` for use in inline onclick handlers in dynamically generated HTML.
 
 ### Navigation
 `showPage(page)` is the sole navigation function. It toggles `.active` on `.page-section` elements and fires a page-specific loader. Page IDs: `dashboard`, `playerProfile`, `findPlayers`, `playerStats`, `innerCircle`, `myCourts`, `myGroups`, `lessons`, `myLessons`, `setupMatch`, `confirmedMatches`, `recordScores`, `myInvites`, `invitedByOthers`, `recurringMatches`.
@@ -80,7 +83,9 @@ Supabase join syntax (`table(col,col)`) only works when FK relationships are con
 | `invite_tokens` | Anonymous-safe invite link reads |
 
 ### Email
-`sendEmail({to_email, type, personal_note, invite_url})` in `app.js` calls `POST /api/send-email`, which is the Cloudflare Pages Function. Email types: `match_invite`, `match_update`, `match_decline`, `ic_invite`, `app_invite`.
+`sendEmail({to_email, type, personal_note, invite_url, inviter_name})` in `app.js` calls `POST /api/send-email`, which is the Cloudflare Pages Function. Email types: `match_invite`, `match_update`, `match_decline`, `ic_invite`, `app_invite`.
+
+The `app_invite` email uses a white-card template (light background, green logo, inviter name, personal note box, green CTA). All other types use the dark-card template. The `app_invite` CTA button href points to `https://pballconnect.com/invite.html?token=TOKEN` (not the main app URL).
 
 ### Maps
 State and county selection use D3 + TopoJSON with data from `us-atlas` CDN. County-level bounding boxes are computed from GeoJSON coordinates and stored in `S.countyBbox` for proximity filtering. City lookup uses the Overpass API with an embedded fallback dataset.
@@ -141,6 +146,48 @@ Only one organizer tier exists (no multi-tier). Features are progressively discl
 - Confirm overlay (`rmConfirmOverlay`) shows full summary before any DB write. "Go Back" dismisses without losing state.
 - Group field uses `window._rmSetGroup` (not inline `onchange`) to properly update closure state across re-renders.
 
+## Invite flow
+
+New users arrive via `invite.html?token=TOKEN` (linked from the `app_invite` email). The full flow:
+
+### Phase 1 — Pre-auth landing (`invite.html`)
+1. `invite.html` reads `?token=TOKEN`, fetches invite data from `invite_tokens` view (anon-safe).
+2. Displays branded card: inviter name, personal note, pre-filled email input.
+3. On submit: calls `_supabase.auth.signInWithOtp` with `emailRedirectTo = https://pballconnect.com/?newuser=1&invite=TOKEN`.
+4. Shows success message — user checks email.
+
+### Phase 2 — Magic link return (`pballconnect.com/?newuser=1&invite=TOKEN`)
+1. `checkInviteToken()` fires on page load, reads `?invite=TOKEN`, fetches invite row, sets `PENDING_INVITE` and `window._pendingInviteRef`.
+2. Because `newuser=1` is present, **banner is skipped entirely** — no `showInviteBanner` calls.
+3. Supabase auth session restores → `restoreSession(email)` finds no registration row → `startNewRegistration(email)`.
+4. `startNewRegistration` checks URL for `newuser=1` + `invite=TOKEN`:
+   - If `PENDING_INVITE` already set by `checkInviteToken`: goes straight to `showInviteLandingChoice`.
+   - If `PENDING_INVITE` not yet set (race): re-fetches invite row from `invite_tokens`, sets `PENDING_INVITE`, then shows `showInviteLandingChoice`.
+5. `showInviteLandingChoice` offers two paths: **Full Profile** or **Quick Connect**.
+
+### Phase 3 — Registration choice
+**Full Profile** (`_inviteChoiceFull`): navigates to the standard `playerProfile` form (Steps 1–4).
+
+**Quick Connect** (`showQuickConnectForm`): minimal overlay — email (readonly), first name, phone, skill slider, age, playing since, waivers. On save:
+- POSTs to `registrations` (no `quick_connect` column — that field does not exist).
+- Calls `restoreSession` → sets `SESSION_PLAYER` from DB row, falls back to `{ email, first_name }` minimal object if needed.
+- Calls `updateOrganizerNav()` and `loadAllMatchBadges()`.
+- Navigates to `dashboard`.
+
+### Key `checkInviteToken()` behavior
+- Always sets `PENDING_INVITE` when a valid token is found.
+- If `newuser=1` is NOT in the URL (direct link visit, not magic-link return): shows `showInviteBanner` with retries at 300ms / 800ms / 1500ms. Each retry checks `!SESSION_PLAYER?.id` (skip if already registered) and `!document.getElementById('inviteBanner')` (dedup).
+- `showInviteBanner` itself also guards: `if(SESSION_PLAYER?.id) return` and `if(document.getElementById('inviteBanner')) return`.
+
+### Email invite creation (`sendInvite`)
+Every `app_invite` email creates a **fresh invite row** with `invitee_email` stored. Never reuses an existing token. Uses `Prefer: return=representation` to get the DB-assigned token back. This ensures `invite_tokens` view returns the correct `invitee_email` when the recipient lands on `invite.html`.
+
+### `invite.html` implementation notes
+- No app.js, no shared state, no Supabase session logic.
+- Only external dependency: Supabase JS CDN for the OTP call.
+- Uses `var` and plain function declarations (no ES modules) for broadest compatibility.
+- Error state shown when token is missing or not found in DB.
+
 ## Countdown color logic
 
 `getCountdown(matchDate, timeStart)` returns `{text, urgent, urgency}`:
@@ -169,10 +216,9 @@ PBallConnect differentiators vs PlayTime Scheduler (market leader, free), Pickle
 ## Next to build
 
 1. Group edit notifications (player added/removed gets notified)
-2. Minimum-friction invite landing page (name + skill slider, ~60 seconds)
-3. Simplified registration flow
-4. Player personality badge creator (Step 3)
-5. Quick Match feature (5 taps, one-off)
-6. Smart gap alerts ("Still need 1 for tomorrow")
-7. Web push notifications
-8. Terms of Service + How We Protect You pages in `index.html`
+2. Player personality badge creator (Step 3)
+3. Quick Match feature (5 taps, one-off)
+4. Smart gap alerts ("Still need 1 for tomorrow")
+5. Web push notifications
+6. Terms of Service + How We Protect You pages in `index.html`
+7. Simplified registration flow (Quick Connect is now the invite path; full flow still used for organic signups)
