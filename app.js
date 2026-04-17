@@ -5221,18 +5221,15 @@ document.addEventListener('click', function(e){
   const matchId = btn.dataset.mid;
   const resp = btn.dataset.resp;
   if(!matchId || !resp) return;
-  // Instant visual feedback before async save
+  // Immediately disable all buttons in the row and replace with response message
+  const btnRow = btn.parentElement;
+  btnRow.querySelectorAll('.ibo-respond-btn').forEach(b=>{ b.disabled=true; b.style.pointerEvents='none'; });
   if(resp==='in'){
-    btn.style.background='var(--green)';
-    btn.style.color='#fff';
-    btn.style.border='2px solid var(--green)';
-    btn.classList.remove('ibo-pulse');
-    btn.textContent='Saving...';
+    btnRow.innerHTML='<div style="padding:8px 12px;background:rgba(76,175,125,0.08);border:1px solid rgba(76,175,125,0.3);border-radius:8px;font-size:13px;color:var(--green);font-weight:600;">✅ You\'re in! See you on the court.</div>';
   } else {
-    btn.style.opacity='0.5';
-    btn.textContent='Saving...';
+    btnRow.innerHTML='<div style="padding:8px 12px;background:rgba(100,100,100,0.06);border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--dim);font-weight:600;">Got it — response saved.</div>';
   }
-  btn.disabled=true;
+  loadAllMatchBadges();
   respondToMatch(matchId, resp);
 });
 
@@ -5321,7 +5318,9 @@ async function checkMatchToken(){
       ).catch(()=>{});
     }
 
-    showMatchResponseBanner(match, myEmail);
+    // Don't show popup — the IBO page already has the invite card with response buttons.
+    // Just navigate to dashboard so the user sees their invites naturally.
+    showPage('dashboard');
 
   }catch(e){ console.warn('checkMatchToken error:', e); }
 }
