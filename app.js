@@ -8268,7 +8268,6 @@ function showQuickConnectForm(email, inv){
         dob:               age   || null,
         playing_since:     since || null,
         waiver_agreed:     true,
-        quick_connect:     true,
         match_gender_pref: 'Both',
         play_format:       'Both',
       });
