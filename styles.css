@@ -287,8 +287,11 @@
     cursor:pointer;padding:4px 8px;border-radius:6px;line-height:1;
     flex-shrink:0;-webkit-tap-highlight-color:transparent;}
   .nav-toggle:hover{background:rgba(255,255,255,0.08);}
-    background:#f3f4f6;border:1px solid #e5e7eb;border-radius:10px;
-    padding:8px 12px;cursor:pointer;font-size:18px;color:#111;}
+
+  /* ── Nav overlay ── */
+  .nav-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:49;}
+  .nav-overlay.visible{display:block;}
+
   @media(max-width:768px){
     /* ── Nav ── */
     .nav-toggle{display:block;}
@@ -395,8 +398,6 @@
     .sched-cell{min-width:28px;min-height:28px;}
     .page-header h1{font-size:20px;}
   }
-  .nav-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:49;}
-  .nav-overlay.visible{display:block;}
 
   /* ── Main content ─────────────────────────────────── */
   .right-column{margin-left:240px;display:flex;flex-direction:column;min-height:100vh;position:relative;flex:1;}
