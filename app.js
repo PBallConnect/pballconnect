@@ -8471,11 +8471,11 @@ function showQuickConnectForm(email, inv){
       document.getElementById('quickConnectOverlay')?.remove();
       await restoreSession(email.toLowerCase());
       await handlePostRegistrationInvite(email.toLowerCase(), fn);
-      showToast('Welcome to PBallConnect! '+inviterName+' will be notified you\'ve joined.', '#4CAF7D');
       SESSION_PLAYER = SESSION_PLAYER || { email: email.toLowerCase(), first_name: fn };
       updateOrganizerNav();
       loadAllMatchBadges();
-      showPage('dashboard');
+      // Show organizer question before going to dashboard
+      showOrganizerQuestion(email.toLowerCase(), inv);
     }catch(e){
       if(btn){ btn.disabled=false; btn.textContent='Save & Join PBallConnect 🏓'; btn.style.background='#1a7a3a'; btn.style.cursor='pointer'; }
       if(errEl){ errEl.textContent='Save failed: '+(e.message||'Unknown error'); errEl.style.display='block'; }
@@ -8498,6 +8498,91 @@ function showQuickConnectForm(email, inv){
   };
 
   setTimeout(()=>document.getElementById('qcFirstName')?.focus(), 150);
+}
+
+function showOrganizerQuestion(email, inv){
+  const existing = document.getElementById('organizerQuestionOverlay');
+  if(existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'organizerQuestionOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:20px;';
+  const inviterName = inv?.inviter_name || 'Your friend';
+  overlay.innerHTML =
+    '<div style="background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'+
+      '<div style="text-align:center;margin-bottom:20px;">'+
+        '<div style="font-size:40px;margin-bottom:8px;">🏓</div>'+
+        '<div style="font-size:18px;font-weight:800;color:#111;margin-bottom:6px;">One quick question!</div>'+
+        '<div style="font-size:13px;color:#555;line-height:1.6;">Do you plan on organizing matches for your group?</div>'+
+      '</div>'+
+      '<div style="display:flex;flex-direction:column;gap:10px;">'+
+        '<div onclick="window._orgQuestionYes()" style="cursor:pointer;border:2px solid #1a7a3a;border-radius:14px;padding:16px;background:#f0fdf4;">'+
+          '<div style="font-size:14px;font-weight:800;color:#1a7a3a;margin-bottom:3px;">Yes — I organize matches!</div>'+
+          '<div style="font-size:12px;color:#166534;">I set up games for my crew</div>'+
+        '</div>'+
+        '<div onclick="window._orgQuestionNo()" style="cursor:pointer;border:1px solid #e5e7eb;border-radius:14px;padding:16px;">'+
+          '<div style="font-size:14px;font-weight:800;color:#111;margin-bottom:3px;">No — just here to play</div>'+
+          '<div style="font-size:12px;color:#6b7280;">I accept invites and show up ready</div>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(overlay);
+  window._orgQuestionYes = async function(){
+    overlay.remove();
+    // Save wants_organizer = true
+    await fetch(`${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(email)}`,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+      body:JSON.stringify({wants_organizer:true})
+    }).catch(()=>{});
+    // Show Court Captain path
+    showCourtCaptainNudge(email);
+  };
+  window._orgQuestionNo = async function(){
+    overlay.remove();
+    // Save wants_organizer = false
+    await fetch(`${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(email)}`,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+      body:JSON.stringify({wants_organizer:false})
+    }).catch(()=>{});
+    showPage('dashboard');
+    showToast('Welcome to PBallConnect! 🎾','#1a7a3a');
+  };
+}
+
+function showCourtCaptainNudge(email){
+  const overlay = document.createElement('div');
+  overlay.id = 'courtCaptainNudge';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML =
+    '<div style="background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'+
+      '<div style="text-align:center;margin-bottom:20px;">'+
+        '<div style="font-size:40px;margin-bottom:8px;">🎉</div>'+
+        '<div style="font-size:18px;font-weight:800;color:#1a7a3a;margin-bottom:6px;">Court Captain in the making!</div>'+
+        '<div style="font-size:13px;color:#555;line-height:1.6;">To unlock match organizing tools you need your full profile. It\'s quick, easy and a lot of fun — and you\'ll be setting up matches in minutes!</div>'+
+      '</div>'+
+      '<div style="display:flex;flex-direction:column;gap:10px;">'+
+        '<button onclick="window._courtCaptainFull()" style="width:100%;padding:14px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-weight:800;font-size:15px;cursor:pointer;">'+
+          'Complete Full Profile 🏓</button>'+
+        '<button onclick="window._courtCaptainLater()" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb;background:#fff;color:#6b7280;font-size:13px;cursor:pointer;">'+
+          'I\'ll do it later</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(overlay);
+  window._courtCaptainFull = function(){
+    overlay.remove();
+    // Go to full profile form pre-filled
+    showPage('playerProfile');
+    unlockProfileForm();
+    goTo(1);
+    showToast('🎾 Let\'s build your full profile!','#1a7a3a');
+    setTimeout(()=>{ const fn=document.getElementById('firstName'); if(fn) fn.focus(); }, 350);
+  };
+  window._courtCaptainLater = function(){
+    overlay.remove();
+    showPage('dashboard');
+    showToast('Welcome to PBallConnect! Complete your profile anytime to unlock Court Captain tools. 🏓','#1a7a3a');
+  };
 }
 
 function showMutualInvitePrompt(theirEmail, theirName){
