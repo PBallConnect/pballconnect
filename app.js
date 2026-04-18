@@ -936,6 +936,20 @@ function closeNav(){
     overlay.style.pointerEvents = 'none';
   }
 }
+function showBackToDashboard(){
+  const existing = document.getElementById('backToDashBtn');
+  if(existing) return;
+  const btn = document.createElement('button');
+  btn.id = 'backToDashBtn';
+  btn.innerHTML = '← Dashboard';
+  btn.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);'+
+    'padding:10px 24px;border-radius:999px;border:none;'+
+    'background:#1a7a3a;color:#fff;font-weight:700;font-size:13px;'+
+    'cursor:pointer;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,0.2);'+
+    'font-family:\'DM Sans\',sans-serif;white-space:nowrap;';
+  btn.onclick = ()=>{ btn.remove(); showPage('dashboard'); };
+  document.body.appendChild(btn);
+}
 // ── Secure email sender — Cloudflare Pages Function ──────────────────
 async function sendEmail({ to_email, type, personal_note, invite_url, subject, inviter_name }){
   if(!to_email || !to_email.includes('@')) return;
@@ -1394,6 +1408,9 @@ function showPage(page){
   if(page!=='playerProfile'){stopChangeDetection();_editModeActive=false;}
   closeNav();
   setTimeout(closeNav, 50); // catch any async re-opens
+  // Remove existing back button, show on all pages except dashboard
+  document.getElementById('backToDashBtn')?.remove();
+  if(page !== 'dashboard') showBackToDashboard();
   document.querySelectorAll('.page-section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
@@ -7625,8 +7642,9 @@ async function loadIcInvites(){
           };
           row.appendChild(cancelBtn);
         }
-        // For accepted invites — offer to send a reverse request
-        if(conn.status==='approved'){
+        // For accepted invites — offer to send a reverse request (only if not already in IC)
+        const alreadyInIC = IC_MEMBERS.some(({player})=>(player.email||'').toLowerCase()===(conn.recipient_email||'').toLowerCase());
+        if(conn.status==='approved' && !alreadyInIC){
           const addBackBtn=document.createElement('button');
           addBackBtn.style.cssText='margin-left:8px;padding:4px 10px;font-size:11px;border-radius:6px;'+
             'border:1px solid rgba(76,175,125,0.4);background:rgba(76,175,125,0.1);color:var(--green);cursor:pointer;white-space:nowrap;';
@@ -7637,7 +7655,6 @@ async function loadIcInvites(){
             await icSendRequest(conn.recipient_email, conn.recipient_name||name, addBackBtn);
             addBackBtn.textContent='✅ Sent!';
           };
-          // Only show if they haven't already requested us back
           row.appendChild(addBackBtn);
         }
         list.appendChild(row);
