@@ -5647,7 +5647,7 @@ function showConflictConfirm(existingMatches, newMatch){
           '<tbody>'+rowsHtml+'</tbody>'+
           '<tfoot><tr style="background:#fef9c3;border-top:1px solid #fde68a;">'+
             '<td style="padding:6px 10px;font-size:12px;font-weight:800;color:#92400e;">'+newTime+'</td>'+
-            '<td style="padding:6px 10px;font-size:12px;color:#92400e;">'+(newMatch.court_name||'TBD')+'</td>'+
+            '<td style="padding:6px 10px;font-size:12px;color:#92400e;">'+(newMatch.court_name||newMatch.court_address||'TBD')+'</td>'+
             '<td style="padding:6px 10px;"><span style="font-size:10px;font-weight:700;background:#fef3c7;color:#92400e;border-radius:4px;padding:2px 6px;">NEW INVITE</span></td>'+
           '</tr></tfoot>'+
         '</table>'+
@@ -5683,7 +5683,7 @@ async function respondToMatch(matchId, response){
   try{
     // Check current match + confirmed count
     const [matchRes, confirmedRes] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}&select=match_type,status,max_players,match_date,time_start,time_end`,
+      fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}&select=match_type,status,max_players,match_date,time_start,time_end,court_name,court_address`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}),
       fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.in&select=player_email`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
