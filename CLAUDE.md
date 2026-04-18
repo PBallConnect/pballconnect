@@ -23,7 +23,7 @@ There are no tests, no linter, and no build commands.
 ## Architecture
 
 ### Files
-- **`app.js`** (~9700 lines) — the entire application: state, UI rendering, page navigation, Supabase calls, and all feature logic.
+- **`app.js`** (~10000 lines) — the entire application: state, UI rendering, page navigation, Supabase calls, and all feature logic.
 - **`index.html`** — shell HTML with all page sections (`<div class="page-section" id="page-*">`) and CDN script tags.
 - **`styles.css`** — all styles.
 - **`invite.html`** — standalone invite landing page (no app.js dependency). Reads `?token=TOKEN`, fetches invite data from the `invite_tokens` view, collects email, sends magic link via Supabase OTP with `emailRedirectTo = https://pballconnect.com/?newuser=1&invite=TOKEN`.
@@ -62,7 +62,7 @@ Supabase join syntax (`table(col,col)`) only works when FK relationships are con
 ### Database tables
 | Table | Purpose |
 |---|---|
-| `registrations` | Player profiles (primary record, keyed by email) |
+| `registrations` | Player profiles (primary record, keyed by email). Includes `wants_organizer` (boolean) and `profile_complete` (boolean) columns added for the Court Captain flow. |
 | `connections` | Inner Circle relationships |
 | `matches` | Match events created by organizers |
 | `match_responses` | Player responses (in/out/waitlist/pending) per match |
@@ -121,7 +121,21 @@ The "wants to improve" field stores `'improve'` or `'fun'` (old DB values `'Yes'
 `registrations.is_organizer` (boolean) unlocks organizer tools:
 - My Groups page (`myGroups`) — create/edit/delete named groups with primary players + sub pool
 - Recurring Matches page (`recurringMatches`) — set schedule, court, auto-invite timing, gap alerts
-- Named groups appear as options in Set Up a Match Step 4
+- Named groups appear as options in Set Up a Match
+- `is_organizer` is only set `true` after a full profile is completed
+
+`registrations.wants_organizer` (boolean) is the pre-organizer signal:
+- Set `true` when a Quick Connect user answers "Yes — I organize matches!" in `showOrganizerQuestion()`
+- Set `false` when they answer "No — just here to play"
+- Triggers `showCourtCaptainNudge()` which prompts them to complete their full profile
+- `updateNavForUserType()` reads both flags to gray/unlock nav items
+
+**Nav graying (`updateNavForUserType()`):**
+- Called after `restoreSession()`, `doSaveProfile()`, Quick Connect save, and `startNewRegistration()`
+- `is_organizer=true` → full access to all nav items
+- `wants_organizer=true` (not yet organizer) → organizer nav items at 40% opacity; clicking shows Court Captain nudge to complete full profile
+- Neither → organizer nav items at 40% opacity; clicking shows "These tools are for Court Captains" toast
+- Organizer-gated nav items: `setupMatch`, `myInvites`, `myGroups`, `recurringMatches`
 
 Only one organizer tier exists (no multi-tier). Features are progressively disclosed based on `SESSION_PLAYER.is_organizer`.
 
@@ -171,8 +185,17 @@ New users arrive via `invite.html?token=TOKEN` (linked from the `app_invite` ema
 **Quick Connect** (`showQuickConnectForm`): minimal overlay — email (readonly), first name, phone, skill slider, age, playing since, waivers. On save:
 - POSTs to `registrations` (no `quick_connect` column — that field does not exist).
 - Calls `restoreSession` → sets `SESSION_PLAYER` from DB row, falls back to `{ email, first_name }` minimal object if needed.
-- Calls `updateOrganizerNav()` and `loadAllMatchBadges()`.
-- Navigates to `dashboard`.
+- Calls `updateOrganizerNav()`, `updateNavForUserType()`, and `loadAllMatchBadges()`.
+- Shows `showOrganizerQuestion()` instead of navigating directly to dashboard.
+
+### Phase 4 — Organizer question (Quick Connect only)
+`showOrganizerQuestion(email, inv)` — white overlay card asking "Do you plan on organizing matches?"
+- **Yes** → saves `wants_organizer: true` → calls `showCourtCaptainNudge(email)`
+- **No** → saves `wants_organizer: false` → navigates to dashboard with welcome toast
+
+`showCourtCaptainNudge(email)` — follow-up overlay explaining that organizing tools require a full profile:
+- **"Complete Full Profile"** → removes overlay, navigates to `playerProfile`, calls `unlockProfileForm()` + `goTo(1)`, focuses first name field
+- **"I'll do it later"** → removes overlay, navigates to dashboard with toast explaining Court Captain tools can be unlocked any time
 
 ### Key `checkInviteToken()` behavior
 - Always sets `PENDING_INVITE` when a valid token is found.
@@ -187,6 +210,50 @@ Every `app_invite` email creates a **fresh invite row** with `invitee_email` sto
 - Only external dependency: Supabase JS CDN for the OTP call.
 - Uses `var` and plain function declarations (no ES modules) for broadest compatibility.
 - Error state shown when token is missing or not found in DB.
+
+## Set Up a Match
+
+The 5-step wizard has been replaced with a **single-scroll 7-container page** (`page-setupMatch`). No step indicators, no Next/Back buttons.
+
+### Containers
+1. **Match Type** — Doubles / Singles pills
+2. **How Many Courts?** — 1–4 pills + red "needed players" box. Organizer always plays; `matchMaxNeeded()` always subtracts 1. The "I'll be playing" checkbox has been removed.
+3. **Play Structure** — Open / Mixed / Same Gender (full-width rows)
+4. **Date & Time** — date picker + start time + duration (+/− in 15-min steps, 0.5h–4h) + read-only end time display. Inline conflict detection:
+   - **Overlap conflict** → dark red box (`background:#7f1d1d`), Send button disabled
+   - **Same-day non-overlap** → yellow advisory, Send button not blocked
+5. **Court** — Public/Private toggle + saved courts list + other courts + "+ Add a new court" button
+6. **Invite** — three modes: Entire IC / Specific Players / Named Group. Live Needed/Invited grid (gender-aware rows for Mixed/Same).
+7. **Review & Send** — live summary rows + note textarea + Send button (disabled until date + time + court + no overlap conflict)
+
+### State object (`MS`)
+```js
+const MS = {
+  format, numCourts, selectedCourts (Map), group, extraGroups (Set),
+  selectedGroups (Set), specificPlayers (Set), primaryPlayers (Set),
+  subPlayers (Set), genderPref, isFeeler, date, timeStart, timeEnd,
+  duration, location, courtId, courtName, courtAddress, isPrivate,
+  hasOverlapConflict, courtType, inviteMode
+};
+```
+
+### Key sm* helpers
+- `smUpdateNeededBox()` — updates the red needed-players count
+- `smUpdateSendBtn()` — gates Send on date + time + court + no overlap
+- `smUpdateNeededGrid()` — renders Needed/Invited grid (single row for 'either', two rows for 'mixed'/'same')
+- `smUpdateSummary()` — renders 4 summary rows in Container 7
+- `smCheckConflict()` — async; fetches matches for selected date, sets overlap or same-day warning, sets `MS.hasOverlapConflict`
+- `smSetCourtType(type)` — toggles Public/Private, clears selection, calls `smLoadCourts()`
+- `smSelectInvite(mode)` — switches invite mode, shows/hides pickers
+- `smLoadGroupSelect()` — loads `player_groups` into group dropdown
+
+### Scheduling conflict detection (`checkMatchConflict` / `smCheckConflict`)
+Conflict is detected using proper time-range overlap: `start1 < end2 AND start2 < end1`.
+- **Overlap** → `MS.hasOverlapConflict = true`, dark red warning box in Container 4, Send button disabled
+- **Same-day non-overlap** → yellow advisory only, Send not blocked
+- The conflict modal (`showConflictConfirm`) also appears when accepting an invite if the player already has a committed match that overlaps. It fetches `court_name` and `court_address` for the new invite row so the court column never shows "TBD".
+
+**KNOWN BUG (next session):** `smCheckConflict()` currently uses date-only matching rather than the proper time-range formula. Fix: `start1 < end2 AND end1 > start2` using `'HH:MM'` string comparison.
 
 ## Countdown color logic
 
@@ -204,6 +271,15 @@ Every `app_invite` email creates a **fresh invite row** with `invitee_email` sto
 - **Phone number stays in registration Step 1.**
 - **Playing since, goal rating, t-shirt size kept** in profile.
 - **Transactional email only** — no Twilio/SMS yet. Web push notifications are next.
+- **Organizer always plays** — "I'll be playing" checkbox removed from Set Up a Match. `matchMaxNeeded()` always subtracts 1 from total slots.
+- **Non-organizers see grayed nav** — organizer-only items at 40% opacity with tooltips explaining the Court Captain path.
+- **`wants_organizer=true`** shows Court Captain nudge to complete full profile. `is_organizer` is only set after full profile is completed.
+- **Scheduling conflicts block Send Invites** — only for true time-range overlaps. Same-day non-overlapping matches show a yellow advisory only.
+- **Court picker defaults to Public.** Public/Private toggle filters the saved courts list.
+- **Recurring Matches belongs under MATCHES** not ORGANIZER in the nav — visible to all users, grayed for non-organizers.
+- **Portrait mode is primary mobile orientation.**
+- **Match invite popup removed** — `checkMatchToken()` now navigates directly to `invitedByOthers` page. `showMatchResponseBanner()` has been deleted.
+- **Quick Connect users asked if they organize** — forks to Court Captain path (`wants_organizer=true`) or plain dashboard (`wants_organizer=false`).
 
 ## Competitive context
 
@@ -213,12 +289,21 @@ PBallConnect differentiators vs PlayTime Scheduler (market leader, free), Pickle
 - Court Captain organizer tools
 - Zero-friction PWA — no download required
 
+## Known bugs (fix next session)
+
+1. **Scheduling conflict detection incorrectly flags same-day non-overlapping matches.** `smCheckConflict()` uses date-only matching. Fix: proper overlap formula `start1 < end2 AND end1 > start2` using `'HH:MM'` string comparison.
+2. **Dashboard "Invited" box count can diverge from nav badge.** `loadDashTileCounts()` still fetches its own count for the subtitle text line — the `dashSq*` count elements are now driven by `loadAllMatchBadges()` only, but the subtitle (e.g. "2 invites waiting") uses a separate unfiltered fetch. Verify subtitle also filters past matches and self-organized.
+3. **Quick Connect save not redirecting to dashboard in all edge cases** — investigate `showOrganizerQuestion` path when `inv` is null.
+
 ## Next to build
 
-1. Group edit notifications (player added/removed gets notified)
-2. Player personality badge creator (Step 3)
-3. Quick Match feature (5 taps, one-off)
-4. Smart gap alerts ("Still need 1 for tomorrow")
-5. Web push notifications
-6. Terms of Service + How We Protect You pages in `index.html`
-7. Simplified registration flow (Quick Connect is now the invite path; full flow still used for organic signups)
+1. **Fix scheduling conflict overlap detection** — `smCheckConflict()` proper time-range formula
+2. **Dashboard redesign** — mobile first, max ~600px, vertical container layout, rename boxes to "Invites From Me" and "Invites To Me", add Inner Circle container with 3 buttons
+3. **Court Captain celebration moment** — toast/overlay when full profile is saved and `is_organizer` becomes true
+4. **Profile complete flag** — set `profile_complete = true` on `registrations` when full profile is saved via `doSaveProfile()`
+5. **Quick Connect → Full Profile pre-fill** — when a `wants_organizer` user completes full profile, pre-fill name/phone/skill from their Quick Connect data
+6. **Drip email for `wants_organizer` users** — send after 24h if `profile_complete` is still false
+7. **Group edit notifications** — player added/removed gets notified
+8. **Smart gap alerts** — "Still need 1 for tomorrow"
+9. **Web push notifications**
+10. **Terms of Service + How We Protect You pages** in `index.html`
