@@ -926,8 +926,13 @@ function showToast(msg, color='#ef4444'){
   setTimeout(()=>t.remove(), 6000);
 }
 function closeNav(){
-  document.getElementById('leftNav')?.classList.remove('open');
-  document.getElementById('navOverlay')?.classList.remove('visible');
+  const nav = document.getElementById('leftNav');
+  const overlay = document.getElementById('navOverlay');
+  if(nav) nav.classList.remove('open');
+  if(overlay){
+    overlay.classList.remove('visible');
+    overlay.style.display = 'none';
+  }
 }
 // ── Secure email sender — Cloudflare Pages Function ──────────────────
 async function sendEmail({ to_email, type, personal_note, invite_url, subject, inviter_name }){
@@ -1955,8 +1960,15 @@ async function saveWalkOnMatch(){
 }
 
 function toggleNav(){
-  document.getElementById('leftNav').classList.toggle('open');
-  document.getElementById('navOverlay').classList.toggle('visible');
+  const nav = document.getElementById('leftNav');
+  const overlay = document.getElementById('navOverlay');
+  nav.classList.toggle('open');
+  overlay.classList.toggle('visible');
+  if(overlay.classList.contains('visible')){
+    overlay.style.display = 'block';
+  } else {
+    overlay.style.display = 'none';
+  }
 }
 
 // ── My Courts ──────────────────────────────────────────
