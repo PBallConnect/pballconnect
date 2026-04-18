@@ -1199,6 +1199,7 @@ async function doSaveProfile(){
             SESSION_PLAYER = rows[0];
             updateTopBar(rows[0]);
             updateOrganizerNav();
+            updateNavForUserType();
           }
         }
       }catch(e){}
@@ -6161,6 +6162,7 @@ async function restoreSession(email, playerData){
   S.isOrganizer     = player.is_organizer ? 'Yes' : 'Not yet';
   SESSION_PLAYER = player;
   updateOrganizerNav();
+  updateNavForUserType();
 
   const navBtn = document.getElementById('navLoginBtn');
   if(navBtn) navBtn.classList.add('signed-in');
@@ -8473,6 +8475,7 @@ function showQuickConnectForm(email, inv){
       await handlePostRegistrationInvite(email.toLowerCase(), fn);
       SESSION_PLAYER = SESSION_PLAYER || { email: email.toLowerCase(), first_name: fn };
       updateOrganizerNav();
+      updateNavForUserType();
       loadAllMatchBadges();
       // Show organizer question before going to dashboard
       showOrganizerQuestion(email.toLowerCase(), inv);
@@ -8670,6 +8673,7 @@ function startNewRegistration(email){
   document.getElementById('checkBoxRisk')?.classList.remove('on');
   const sb = document.getElementById('btnSubmit'); if(sb) sb.disabled = true;
   document.getElementById('lessonSection') && (document.getElementById('lessonSection').style.display='none');
+  updateNavForUserType();
   setTimeout(()=>{
     window.scrollTo({top:0,behavior:'smooth'});
     showToast('👋 Welcome! Fill out your profile below.','#4CAF7D');
@@ -9607,6 +9611,51 @@ function updateOrganizerNav(){
   if(navDiv) navDiv.style.display = isOrg ? 'block' : 'none';
 }
 
+function updateNavForUserType(){
+  const isOrganizer   = !!(SESSION_PLAYER?.is_organizer);
+  const wantsOrganizer = !!(SESSION_PLAYER?.wants_organizer);
+
+  // Nav items that require organizer status
+  const organizerOnlyItems = ['setupMatch','myInvites','myGroups','recurringMatches'];
+
+  organizerOnlyItems.forEach(pageId => {
+    const el = document.getElementById('nav-' + pageId);
+    if(!el) return;
+    if(isOrganizer){
+      el.style.opacity = '1';
+      el.style.pointerEvents = 'auto';
+      el.style.cursor = '';
+      el.title = el.getAttribute('title') || '';
+      el.onclick = function(){ showPage(pageId); };
+    } else if(wantsOrganizer){
+      el.style.opacity = '0.4';
+      el.style.pointerEvents = 'auto';
+      el.style.cursor = 'pointer';
+      el.title = 'Complete your profile to unlock Court Captain tools';
+      el.onclick = function(e){
+        e.stopPropagation();
+        showToast('Complete your full profile to unlock Court Captain tools 🏓','#1a7a3a');
+        showCourtCaptainNudge(SESSION_PLAYER?.email || getMyEmail());
+      };
+    } else {
+      el.style.opacity = '0.4';
+      el.style.pointerEvents = 'auto';
+      el.style.cursor = 'default';
+      el.title = 'Organizer feature — become a Court Captain to unlock';
+      el.onclick = function(e){
+        e.stopPropagation();
+        showToast('These tools are for Court Captains. Ask your organizer about setting up matches! 🎾','#6b7280');
+      };
+    }
+  });
+
+  // Gray the Organizer section label for non-organizers
+  const orgSection = document.getElementById('organizerNav');
+  if(orgSection){
+    const label = orgSection.querySelector('.nav-section-label');
+    if(label) label.style.opacity = isOrganizer ? '1' : '0.5';
+  }
+}
 
 // ══════════════════════════════════════════════════════════════
 // PART 2 — Named Groups (player_groups + player_group_members)
