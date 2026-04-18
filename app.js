@@ -6099,6 +6099,7 @@ async function signOut(){
 }
 
 function initLogin(){
+  console.log('PBallConnect version: 3.0 — ', new Date().toISOString());
   // Listen for magic link callback and ongoing auth state changes
   _supabase.auth.onAuthStateChange(async(event, session)=>{
     if(event==='SIGNED_IN' && session){
@@ -8801,7 +8802,7 @@ if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
     // Inline service worker via blob URL
     const swCode = `
-      const CACHE = 'pb-registry-v1';
+      const CACHE = 'pb-registry-v3';
       const OFFLINE_URLS = ['/'];
       self.addEventListener('install', e => {
         e.waitUntil(caches.open(CACHE).then(c => c.addAll(OFFLINE_URLS)));
