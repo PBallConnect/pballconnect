@@ -422,7 +422,7 @@
   .courts-container.public{background:#f0fdf4;border:1px solid rgba(76,175,125,0.35);}
   .courts-container-header{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
   .courts-container-icon{font-size:24px;}
-  .courts-container-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:#fff;}
+  .courts-container-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:#111;}
   .courts-container-sub{color:var(--dim);font-size:11px;margin-top:2px;}
   .court-list-item{display:flex;align-items:flex-start;gap:10px;padding:12px;background:#f3f4f6 !important;
     border-radius:12px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.03);

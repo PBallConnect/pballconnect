@@ -5318,9 +5318,8 @@ async function checkMatchToken(){
       ).catch(()=>{});
     }
 
-    // Don't show popup — the IBO page already has the invite card with response buttons.
-    // Just navigate to dashboard so the user sees their invites naturally.
-    showPage('dashboard');
+    // Navigate to dashboard — the invite card there handles I'm In / Can't Make It
+    showPage('invitedByOthers');
 
   }catch(e){ console.warn('checkMatchToken error:', e); }
 }
