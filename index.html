@@ -1603,415 +1603,214 @@
     <div class="page-section" id="page-setupMatch">
       <div class="page-header">
         <h1 style="color:#111;">Set Up A <span style="color:#1a7a3a;">Match</span></h1>
-        <p id="matchPageSub">Let's find you a game</p>
+        <p id="matchPageSub">Fill in the details and send your invite</p>
       </div>
 
-      <!-- STEP INDICATOR -->
-      <div class="match-steps" id="matchSteps" style="margin-bottom:20px;">
-        <div style="text-align:center;">
-          <div class="match-step-dot active" id="msd1">1</div>
-          <div style="font-size:9px;color:var(--dim);margin-top:2px;">Format</div>
-        </div>
-        <div class="match-step-line" id="msl1"></div>
-        <div style="text-align:center;">
-          <div class="match-step-dot" id="msd2">2</div>
-          <div style="font-size:9px;color:var(--dim);margin-top:2px;">When</div>
-        </div>
-        <div class="match-step-line" id="msl2"></div>
-        <div style="text-align:center;">
-          <div class="match-step-dot" id="msd3">3</div>
-          <div style="font-size:9px;color:var(--dim);margin-top:2px;">Where</div>
-        </div>
-        <div class="match-step-line" id="msl3"></div>
-        <div style="text-align:center;">
-          <div class="match-step-dot" id="msd4">4</div>
-          <div style="font-size:9px;color:var(--dim);margin-top:2px;">Who</div>
-        </div>
-        <div class="match-step-line" id="msl4"></div>
-        <div style="text-align:center;">
-          <div class="match-step-dot" id="msd5">5</div>
-          <div style="font-size:9px;color:var(--dim);margin-top:2px;">Review</div>
-        </div>
+      <!-- STEP INDICATOR (hidden — kept for JS compat) -->
+      <div id="matchSteps" style="display:none;">
       </div>
 
-      <!-- STEP 1: FORMAT + WHO -->
-      <div class="match-card" id="matchStep1">
-
-        <div class="match-q">Match Type</div>
-        <div class="match-options" id="matchFormatOptions">
-          <div class="match-option on" id="matchOptDoubles" onclick="selectMatchFormat('doubles',this)">
-            <div class="match-option-icon"><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/></div>
-            <div class="match-option-title">Doubles</div>
-            <div class="match-option-sub">Need 3 others · 4 total</div>
-          </div>
-          <div class="match-option" id="matchOptSingles" onclick="selectMatchFormat('singles',this)">
-            <div class="match-option-icon"><img src="/pickleball.jpg" class="pb-icon-lg" alt="pickleball"/></div>
-            <div class="match-option-title">Singles</div>
-            <div class="match-option-sub">Need 1 other · 2 total</div>
-          </div>
+      <!-- Container 1: Match Type -->
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;">Match Type</span>
         </div>
-
-        <!-- Multi-match + organizer toggle -->
-        <div style="margin-top:20px;">
-          <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:8px;">
-            How many <span id="matchTypeLabel">Doubles</span> matches are you organizing?
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div id="smFmtDoubles" onclick="selectMatchFormat('doubles',this)"
+            style="padding:16px 12px;border:2px solid #1a7a3a;border-radius:12px;background:#f0fdf4;cursor:pointer;text-align:center;">
+            <div style="font-size:22px;margin-bottom:6px;">🏓🏓</div>
+            <div style="font-size:13px;font-weight:800;color:#111;">Doubles</div>
+            <div style="font-size:11px;color:#6b7280;margin-top:2px;">4 players / court</div>
           </div>
-          <div style="display:flex;gap:8px;margin-bottom:10px;">
-            <button id="numCourtsBtn1" onclick="selectNumCourts(1)"
-              style="padding:8px 18px;border-radius:999px;border:1.5px solid #1a7a3a;
-                     background:#1a7a3a;color:#fff;font-size:13px;font-weight:700;
-                     cursor:pointer;font-family:inherit;transition:all .15s;opacity:1;">1</button>
-            <button id="numCourtsBtn2" onclick="selectNumCourts(2)"
-              style="padding:8px 18px;border-radius:999px;border:1.5px solid #d1d5db;
-                     background:#f3f4f6;color:#374151;font-size:13px;font-weight:700;
-                     cursor:pointer;font-family:inherit;transition:all .15s;opacity:1;">2</button>
-            <button id="numCourtsBtn3" onclick="selectNumCourts(3)"
-              style="padding:8px 18px;border-radius:999px;border:1.5px solid #d1d5db;
-                     background:#f3f4f6;color:#374151;font-size:13px;font-weight:700;
-                     cursor:pointer;font-family:inherit;transition:all .15s;opacity:1;">3</button>
-            <button id="numCourtsBtn4" onclick="selectNumCourts(4)"
-              style="padding:8px 18px;border-radius:999px;border:1.5px solid #d1d5db;
-                     background:#f3f4f6;color:#374151;font-size:13px;font-weight:700;
-                     cursor:pointer;font-family:inherit;transition:all .15s;opacity:1;">4</button>
+          <div id="smFmtSingles" onclick="selectMatchFormat('singles',this)"
+            style="padding:16px 12px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;text-align:center;">
+            <div style="font-size:22px;margin-bottom:6px;">🏓</div>
+            <div style="font-size:13px;font-weight:800;color:#111;">Singles</div>
+            <div style="font-size:11px;color:#6b7280;margin-top:2px;">2 players / court</div>
           </div>
-          <div id="matchPlayerCountLine"
-            style="font-size:12px;font-weight:700;color:#1a7a3a;margin-bottom:8px;">
-            Total players needed: 3
-          </div>
-          <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;">
-            <input type="checkbox" id="matchOrganizerPlaying" checked
-              onchange="toggleOrganizerPlaying(this.checked)"
-              style="accent-color:#1a7a3a;width:15px;height:15px;cursor:pointer;"/>
-            I'll be playing in this match
-          </label>
-        </div>
-
-        <div class="match-q" style="margin-top:24px;">Play Structure</div>
-        <div class="match-options" id="matchGenderOptions" style="grid-template-columns:repeat(3,1fr);">
-          <div class="match-option on" id="matchGenderEither" onclick="selectMatchGender('either',this)">
-            <div class="match-option-icon">👥</div>
-            <div class="match-option-title">Either</div>
-            <div class="match-option-sub">No preference</div>
-          </div>
-          <div class="match-option" id="matchGenderMixed" onclick="selectMatchGender('mixed',this)">
-            <div class="match-option-icon">🤝</div>
-            <div class="match-option-title">Mixed</div>
-            <div class="match-option-sub">Men &amp; women</div>
-          </div>
-          <div class="match-option" id="matchGenderSame" onclick="selectMatchGender('same',this)">
-            <div class="match-option-icon">👤</div>
-            <div class="match-option-title">Same Gender</div>
-            <div class="match-option-sub">Men only / women only</div>
-          </div>
-        </div>
-
-        <button class="match-next-btn" id="matchNext1" onclick="matchGoTo(2)" style="margin-top:20px;">Continue →</button>
-      </div>
-
-      <!-- STEP 2: WHEN -->
-      <div class="match-card" id="matchStep2" style="display:none;color:#111;">
-        <div class="match-q">When?</div>
-
-
-
-
-        <div style="margin-bottom:4px;">
-          <div class="field" style="margin:0;max-width:220px;">
-            <label>Date</label>
-            <input type="date" id="matchDate"
-              style="width:100%;padding:10px 14px;border-radius:10px;border:2px solid #9ca3af;
-                     background:#f9fafb;color:#111;font-size:13px;
-                     box-sizing:border-box;font-family:'DM Sans',sans-serif;"
-              oninput="checkMatchStep2()"/>
-          </div>
-
-        </div>
-
-        <!-- Past date/time warning -->
-        <div id="matchPastWarning" style="display:none;margin-top:10px;padding:9px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:12px;color:#dc2626;font-weight:600;">
-          ⏰ That date and time has already passed. Please choose a future time.
-        </div>
-
-        <!-- Specific start time -->
-        <div id="matchSpecificTime" style="margin-top:12px;">
-          <div class="match-q" style="font-size:14px;margin-bottom:8px;">Start time</div>
-
-          <!-- Start → Duration → End row -->
-          <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:end;margin-top:10px;">
-
-            <!-- Start time -->
-            <div>
-              <label style="font-size:10px;font-weight:700;color:#1a5c32;text-transform:uppercase;
-                            letter-spacing:.1em;display:block;margin-bottom:6px;">Start time</label>
-              <select id="matchTimeStart" onchange="onMatchStartTimeChange(this.value);checkMatchStep2()"
-                style="width:100%;padding:10px 14px;border-radius:10px;border:2px solid #9ca3af;
-                       background:#ffffff;color:#111;font-size:14px;font-weight:600;
-                       font-family:'DM Sans',sans-serif;outline:none;appearance:none;
-                       cursor:pointer;">
-                <option value="" style="background:#ffffff;color:#9ca3af;">Select start time…</option>
-              </select>
-            </div>
-
-            <!-- Duration control — centred between start and end -->
-            <div style="text-align:center;padding-bottom:2px;">
-              <div style="font-size:9px;font-weight:700;color:#1a5c32;text-transform:uppercase;
-                          letter-spacing:.08em;margin-bottom:6px;">Duration</div>
-              <div style="display:flex;align-items:center;gap:6px;">
-                <button onclick="adjustDuration(-0.25)"
-                  style="width:28px;height:28px;border-radius:7px;border:2px solid #1a7a3a;
-                         background:#d1fae5;color:#1a7a3a;font-size:16px;cursor:pointer;
-                         font-family:'DM Sans',sans-serif;line-height:1;flex-shrink:0;font-weight:800;">−</button>
-                <span id="matchDurationDisplay"
-                  style="min-width:44px;text-align:center;font-size:13px;font-weight:700;
-                         color:#1a7a3a;white-space:nowrap;">2 hrs</span>
-                <button onclick="adjustDuration(0.25)"
-                  style="width:28px;height:28px;border-radius:7px;border:2px solid #1a7a3a;
-                         background:#d1fae5;color:#1a7a3a;font-size:16px;cursor:pointer;
-                         font-family:'DM Sans',sans-serif;line-height:1;flex-shrink:0;font-weight:800;">+</button>
-              </div>
-            </div>
-
-            <!-- End time -->
-            <div>
-              <label style="font-size:10px;font-weight:700;color:#1a5c32;text-transform:uppercase;
-                            letter-spacing:.1em;display:block;margin-bottom:6px;">End time</label>
-              <select id="matchTimeEnd" onchange="validateMatchTimes();checkMatchStep2()"
-                style="width:100%;padding:10px 14px;border-radius:10px;border:2px solid #9ca3af;
-                       background:#ffffff;color:#111;font-size:14px;font-weight:600;
-                       font-family:'DM Sans',sans-serif;outline:none;appearance:none;
-                       cursor:pointer;">
-                <option value="" style="background:#ffffff;color:#9ca3af;">—</option>
-              </select>
-            </div>
-
-          </div>
-          <div id="matchTimeWarning" style="display:none;margin-top:6px;font-size:11px;color:#f87171;">
-            ⚠️ End time cannot be before start time
-          </div>
-        </div>
-        <div class="match-btn-row" style="margin-top:20px;">
-          <button class="match-back-btn" onclick="matchGoTo(1)">← Back</button>
-          <button class="match-next-btn" id="matchNext2" disabled onclick="matchGoTo(3)">Continue →</button>
         </div>
       </div>
 
-      <!-- STEP 3: WHERE -->
-      <div class="match-card" id="matchStep3" style="display:none;">
-        <div class="match-q">Where do you want to play?</div>
-        <div class="match-options" style="margin-bottom:16px;">
-          <div class="match-option on" id="matchLocMyCourts" onclick="selectMatchLocation('my_courts',this)">
-            <div class="match-option-icon">📍</div>
-            <div class="match-option-title">My Courts</div>
-            <div class="match-option-sub">Pick from your saved courts</div>
-          </div>
-          <div class="match-option" id="matchLocTbd" onclick="selectMatchLocation('tbd',this)">
-            <div class="match-option-icon">🤷</div>
-            <div class="match-option-title">TBD</div>
-            <div class="match-option-sub">Decide with the group</div>
-          </div>
+      <!-- Container 2: How many courts? -->
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;">How Many Courts?</span>
         </div>
-
-        <div id="matchMyCourtsSection" style="color:#111;">
-          <div style="font-size:11px;color:#6b7280;margin-bottom:12px;">
-            Select your court for this match.
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div>
-              <div style="font-size:10px;font-weight:700;color:#1a7a3a;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">🌳 Free / Public</div>
-              <div id="matchPublicCourts"></div>
-            </div>
-            <div>
-              <div style="font-size:10px;font-weight:700;color:#b45309;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">🏢 Private</div>
-              <div id="matchPrivateCourts"></div>
-              <div style="margin-top:8px;padding:7px 10px;background:#fef9e7;border:1px solid #fde68a;border-radius:8px;font-size:10px;color:#b45309;">🔮 CourtReserve booking coming soon</div>
-            </div>
-          </div>
-          <div id="matchNoCourts" class="ic-empty" style="display:none;">
-            No courts saved yet.
-            <button class="match-add-courts-btn" onclick="showPage('myCourts')" style="margin-left:8px;">Find Courts →</button>
-          </div>
-          <div id="matchSelectedCourtsWrap" style="display:none;margin-top:14px;padding:12px 14px;background:#f0fdf4;border:2px solid #1a7a3a;border-radius:10px;">
-            <div style="font-size:10px;font-weight:700;color:#1a7a3a;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Selected courts</div>
-            <div id="matchSelectedCourtsList"></div>
-          </div>
-          <div id="matchCourtCapacityWarn" style="display:none;margin-top:10px;padding:10px 12px;border-radius:10px;border:1.5px solid;font-size:12px;font-weight:600;line-height:1.5;"></div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <button id="smCourtsBtn1" onclick="selectNumCourts(1)"
+            style="padding:8px 20px;border-radius:999px;border:1.5px solid #1a7a3a;background:#1a7a3a;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">1</button>
+          <button id="smCourtsBtn2" onclick="selectNumCourts(2)"
+            style="padding:8px 20px;border-radius:999px;border:1.5px solid #d1d5db;background:#f3f4f6;color:#374151;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">2</button>
+          <button id="smCourtsBtn3" onclick="selectNumCourts(3)"
+            style="padding:8px 20px;border-radius:999px;border:1.5px solid #d1d5db;background:#f3f4f6;color:#374151;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">3</button>
+          <button id="smCourtsBtn4" onclick="selectNumCourts(4)"
+            style="padding:8px 20px;border-radius:999px;border:1.5px solid #d1d5db;background:#f3f4f6;color:#374151;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">4</button>
         </div>
-
-        <div class="match-btn-row" style="margin-top:20px;">
-          <button class="match-back-btn" onclick="matchGoTo(2)">← Back</button>
-          <button class="match-next-btn" id="matchNext3" disabled onclick="matchGoTo(4)">Continue →</button>
+        <div style="background:#fee2e2;border:1px solid #f87171;border-radius:10px;padding:8px 14px;display:inline-flex;align-items:center;gap:6px;">
+          <span style="font-size:13px;color:#991b1b;font-weight:600;">Players needed (including you):</span>
+          <span id="smNeededNum" style="font-size:20px;font-weight:800;color:#991b1b;">3</span>
         </div>
       </div>
 
-      <!-- STEP 4: WHO -->
-      <div class="match-card" id="matchStep4" style="display:none;color:#111;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-          <div class="match-q" style="margin:0;">Who to invite?</div>
-          <div id="matchInviteCounter" style="display:none;background:rgba(76,175,125,0.12);
-            border:1px solid rgba(76,175,125,0.3);border-radius:20px;padding:4px 14px;
-            font-size:12px;font-weight:700;color:var(--green);">
-            0 players
+      <!-- Container 3: Play Structure -->
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;">Play Structure</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div id="smGenderEither" onclick="selectMatchGender('either',this)"
+            style="padding:12px 16px;border:2px solid #1a7a3a;border-radius:12px;background:#f0fdf4;cursor:pointer;display:flex;align-items:center;gap:12px;">
+            <span style="font-size:20px;">👥</span>
+            <div><div style="font-size:13px;font-weight:700;color:#111;">Open</div><div style="font-size:11px;color:#6b7280;">Any gender welcome</div></div>
+          </div>
+          <div id="smGenderMixed" onclick="selectMatchGender('mixed',this)"
+            style="padding:12px 16px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;display:flex;align-items:center;gap:12px;">
+            <span style="font-size:20px;">🤝</span>
+            <div><div style="font-size:13px;font-weight:700;color:#111;">Mixed</div><div style="font-size:11px;color:#6b7280;">Even number of men and women</div></div>
+          </div>
+          <div id="smGenderSame" onclick="selectMatchGender('same',this)"
+            style="padding:12px 16px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;display:flex;align-items:center;gap:12px;">
+            <span style="font-size:20px;">👤</span>
+            <div><div style="font-size:13px;font-weight:700;color:#111;">Same Gender</div><div style="font-size:11px;color:#6b7280;">Men only or women only</div></div>
           </div>
         </div>
-        <div style="font-size:11px;color:var(--dim);margin-bottom:8px;">Tap to select one or more groups — selections stack together.</div>
-        <!-- Named Groups (organizer feature) — injected by injectNamedGroupOptions() when is_organizer -->
-        <div id="namedGroupOptions" style="display:none;margin-bottom:10px;"></div>
-        <!-- Gender filter notice — shown when organizer has set a non-"either" gender preference -->
-        <div id="matchGenderFilterBanner" style="display:none;margin-bottom:10px;padding:9px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:12px;color:#1e40af;line-height:1.5;"></div>
-        <!-- Mixed match gender slot breakdown — rendered by renderMixedBreakdown() -->
-        <div id="matchMixedBreakdown" style="display:none;margin-bottom:10px;"></div>
-        <div class="match-options" id="matchGroupOptions">
-          <div class="match-option" data-group="favorites" onclick="toggleMatchGroup('favorites',this)" style="position:relative;">
-            <div class="match-option-icon">⭐</div>
-            <div class="match-option-title">My Favorites</div>
-            <div class="match-option-sub" id="matchFavoritesSub">Your starred players <span onclick="event.stopPropagation();showGroupPlayerList('favorites','My Favorites')" style="font-size:10px;color:#1a7a3a;font-weight:700;cursor:pointer;text-decoration:underline;">see list</span></div>
-          </div>
-          <div class="match-option" data-group="all" onclick="toggleMatchGroup('all',this)" style="position:relative;">
-            <div class="match-option-icon">👥</div>
-            <div class="match-option-title">Entire Inner Circle</div>
-            <div class="match-option-sub" id="matchAllSub">All approved members <span onclick="event.stopPropagation();showGroupPlayerList('all','Entire Inner Circle')" style="font-size:10px;color:#1a7a3a;font-weight:700;cursor:pointer;text-decoration:underline;">see list</span></div>
-          </div>
-          <div class="match-option" data-group="my_level" onclick="toggleMatchGroup('my_level',this)" style="position:relative;">
-            <div class="match-option-icon">🟢</div>
-            <div class="match-option-title">My Level</div>
-            <div class="match-option-sub" id="matchMyLevelSub">Players at my rating <span onclick="event.stopPropagation();showGroupPlayerList('my_level','My Level')" style="font-size:10px;color:#1a7a3a;font-weight:700;cursor:pointer;text-decoration:underline;">see list</span></div>
-          </div>
-          <div class="match-option" data-group="below" onclick="toggleMatchGroup('below',this)" style="position:relative;">
-            <div class="match-option-icon">🟡</div>
-            <div class="match-option-title">Below My Level</div>
-            <div class="match-option-sub" id="matchBelowSub">One level below <span onclick="event.stopPropagation();showGroupPlayerList('below','Below My Level')" style="font-size:10px;color:#1a7a3a;font-weight:700;cursor:pointer;text-decoration:underline;">see list</span></div>
-          </div>
-          <div class="match-option" data-group="above" onclick="toggleMatchGroup('above',this)" style="position:relative;">
-            <div class="match-option-icon">🟣</div>
-            <div class="match-option-title">Above My Level</div>
-            <div class="match-option-sub" id="matchAboveSub">One level above <span onclick="event.stopPropagation();showGroupPlayerList('above','Above My Level')" style="font-size:10px;color:#1a7a3a;font-weight:700;cursor:pointer;text-decoration:underline;">see list</span></div>
-          </div>
-          <div class="match-option" data-group="specific" onclick="toggleMatchGroup('specific',this)">
-            <div class="match-option-icon">🎯</div>
-            <div class="match-option-title">Specific Players</div>
-            <div class="match-option-sub" id="matchSpecificSub">Hand-pick from my circle</div>
-          </div>
-          <div class="match-option" data-group="group_subs" onclick="toggleMatchGroup('group_subs',this)">
-            <div class="match-option-icon">🔁</div>
-            <div class="match-option-title">Set Group + Subs</div>
-            <div class="match-option-sub" id="matchGroupSubsSub">3 primary + substitutes</div>
-          </div>
-        </div>
+      </div>
 
-        <!-- Set Group + Subs picker -->
-        <div id="matchGroupSubsPicker" style="display:none;margin-top:16px;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
-          <div style="background:#f0fdf4;border-bottom:1px solid #d1fae5;padding:12px 16px;">
-            <div style="font-size:13px;font-weight:700;color:#1a7a3a;margin-bottom:2px;">Set Group + Subs</div>
-            <div style="font-size:11px;color:#6b7280;">Click once to add as <strong style="color:#1a7a3a;">Primary</strong>, click again for <strong style="color:#d97706;">Sub</strong>, click again to remove. Subs are notified they may be called up.</div>
-          </div>
-          <div style="padding:12px 16px;background:#fff;">
-            <div style="display:flex;gap:16px;margin-bottom:12px;">
-              <div style="font-size:12px;font-weight:700;color:#1a7a3a;">🟢 Primary: <span id="gsPickerPrimaryCount">0</span> / <span id="gsPickerPrimaryMax">3</span></div>
-              <div style="font-size:12px;font-weight:700;color:#d97706;">🟡 Subs: <span id="gsPickerSubCount">0</span></div>
-            </div>
-            <div id="gsPickerList" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:280px;overflow-y:auto;"></div>
-            <div id="gsPickerEmpty" style="color:#6b7280;font-size:12px;font-style:italic;padding:8px 0;display:none;">No Inner Circle members yet — add players to your circle first.</div>
-          </div>
+      <!-- Container 4: Date & Time -->
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">4</div>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;">Date &amp; Time</span>
         </div>
-
-        <!-- Group size warning + quick-add -->
-        <div id="matchGroupWarning" style="display:none;margin-top:14px;padding:14px 16px;
-          background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.3);
-          border-radius:12px;">
-          <div style="display:flex;align-items:flex-start;gap:10px;">
-            <span style="font-size:18px;flex-shrink:0;">⚠️</span>
-            <div style="flex:1;">
-              <div id="matchGroupWarningText" style="color:#fbbf24;font-size:13px;font-weight:600;margin-bottom:10px;"></div>
-              <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">
-                Expand your invite to include additional groups:
-              </div>
-              <div id="matchGroupQuickAdd" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+        <div style="margin-bottom:12px;">
+          <input type="date" id="matchDate"
+            style="width:100%;padding:10px 14px;border-radius:10px;border:2px solid #d1d5db;background:#f9fafb;color:#111;font-size:14px;box-sizing:border-box;font-family:'DM Sans',sans-serif;"
+            oninput="MS.date=this.value;smCheckConflict();smUpdateSendBtn();smUpdateSummary()"/>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:end;margin-bottom:12px;">
+          <div>
+            <label style="font-size:10px;font-weight:700;color:#1a5c32;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:6px;">Start Time</label>
+            <select id="matchTimeStart" onchange="onMatchStartTimeChange(this.value);smCheckConflict();smUpdateSendBtn();smUpdateSummary()"
+              style="width:100%;padding:10px 14px;border-radius:10px;border:2px solid #d1d5db;background:#fff;color:#111;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;outline:none;appearance:none;cursor:pointer;">
+              <option value="">Select time…</option>
+            </select>
+          </div>
+          <div style="text-align:center;padding-bottom:2px;">
+            <div style="font-size:9px;font-weight:700;color:#1a5c32;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Duration</div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <button onclick="adjustDuration(-0.25)"
+                style="width:28px;height:28px;border-radius:7px;border:2px solid #1a7a3a;background:#d1fae5;color:#1a7a3a;font-size:16px;cursor:pointer;font-family:'DM Sans',sans-serif;line-height:1;flex-shrink:0;font-weight:800;">−</button>
+              <span id="matchDurationDisplay" style="min-width:44px;text-align:center;font-size:13px;font-weight:700;color:#1a7a3a;white-space:nowrap;">2 hrs</span>
+              <button onclick="adjustDuration(0.25)"
+                style="width:28px;height:28px;border-radius:7px;border:2px solid #1a7a3a;background:#d1fae5;color:#1a7a3a;font-size:16px;cursor:pointer;font-family:'DM Sans',sans-serif;line-height:1;flex-shrink:0;font-weight:800;">+</button>
             </div>
           </div>
-        </div>
-
-        <!-- Expanded group player list (shown when tapping Show players ▾) -->
-        <div id="matchGroupExpandArea" style="display:none;margin-top:14px;
-          background:rgba(255,255,255,0.02);border:1px solid var(--border);
-          border-radius:12px;padding:14px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-            <div id="matchExpandTitle" style="font-size:12px;font-weight:700;color:var(--green);"></div>
-            <div style="display:flex;gap:8px;align-items:center;">
-              <button onclick="toggleSelectAll()" id="matchSelectAllBtn"
-                style="font-size:11px;color:var(--green);background:rgba(76,175,125,0.1);
-                border:1px solid rgba(76,175,125,0.3);border-radius:6px;padding:4px 10px;
-                cursor:pointer;font-family:sans-serif;">Select All</button>
-              <button onclick="document.getElementById('matchGroupExpandArea').style.display='none'"
-                style="font-size:11px;color:var(--dim);background:none;border:none;cursor:pointer;">✕ Close</button>
-            </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:#1a5c32;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:6px;">End Time</label>
+            <div id="smEndTimeDisplay" style="padding:10px 14px;border-radius:10px;border:2px solid #d1d5db;background:#f3f4f6;color:#6b7280;font-size:14px;font-weight:600;">—</div>
           </div>
-          <div id="matchGroupExpandList" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;max-height:280px;overflow-y:auto;"></div>
         </div>
+        <!-- Hidden end-time select for JS compat -->
+        <select id="matchTimeEnd" style="display:none;"><option value=""></option></select>
+        <!-- Conflict detection -->
+        <div id="smConflictBox" style="display:none;"></div>
+      </div>
 
+      <!-- Container 5: Court -->
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">5</div>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;">Court</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+          <button id="smCourtTypePublic" onclick="smSetCourtType('public')"
+            style="padding:9px 16px;border-radius:999px;border:1.5px solid #1a7a3a;background:#1a7a3a;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🌳 Public</button>
+          <button id="smCourtTypePrivate" onclick="smSetCourtType('private')"
+            style="padding:9px 16px;border-radius:999px;border:1.5px solid #d1d5db;background:#f3f4f6;color:#374151;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🏢 Private</button>
+        </div>
+        <div id="smSavedCourtsLabel" style="font-size:11px;font-weight:700;color:#1a7a3a;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;">My saved public courts</div>
+        <div id="smSavedCourts" style="margin-bottom:14px;"></div>
+        <div id="smOtherCourtsLabel" style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;">Other public courts nearby</div>
+        <div id="smOtherCourts" style="margin-bottom:10px;"></div>
+        <div id="matchCourtCapacityWarn" style="display:none;margin-bottom:10px;padding:10px 12px;border-radius:10px;border:1.5px solid;font-size:12px;font-weight:600;line-height:1.5;"></div>
+        <button onclick="showPage('myCourts')"
+          style="width:100%;padding:10px;border-radius:10px;border:1.5px dashed #d1d5db;background:#f9fafb;color:#6b7280;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">+ Add a new court</button>
+      </div>
+
+      <!-- Container 6: Invite -->
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">6</div>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;">Invite</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+          <div id="smInviteAll" onclick="smSelectInvite('all')"
+            style="padding:12px 16px;border:2px solid #1a7a3a;border-radius:12px;background:#f0fdf4;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span style="font-size:20px;">👥</span>
+              <div><div style="font-size:13px;font-weight:700;color:#111;">Entire Inner Circle</div><div style="font-size:11px;color:#6b7280;">Everyone in your circle</div></div>
+            </div>
+            <span id="smInviteAllCount" style="font-size:12px;font-weight:700;color:#1a7a3a;background:rgba(26,122,58,0.1);padding:3px 10px;border-radius:999px;white-space:nowrap;flex-shrink:0;"></span>
+          </div>
+          <div id="smInviteSpecific" onclick="smSelectInvite('specific')"
+            style="padding:12px 16px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;display:flex;align-items:center;gap:12px;">
+            <span style="font-size:20px;">🎯</span>
+            <div><div style="font-size:13px;font-weight:700;color:#111;">Specific Players</div><div style="font-size:11px;color:#6b7280;">Pick names from your circle</div></div>
+          </div>
+          <div id="smInviteGroup" onclick="smSelectInvite('group')"
+            style="padding:12px 16px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;display:flex;align-items:center;gap:12px;">
+            <span style="font-size:20px;">📋</span>
+            <div><div style="font-size:13px;font-weight:700;color:#111;">Named Group</div><div style="font-size:11px;color:#6b7280;">One of your saved groups</div></div>
+          </div>
+        </div>
         <!-- Specific player picker -->
-        <div id="matchSpecificPicker" style="display:none;margin-top:16px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-            <div class="match-section-label" style="margin:0;">Select players</div>
-            <div id="matchSpecificCount" style="font-size:12px;color:var(--green);font-weight:700;"></div>
+        <div id="smSpecificPickerWrap" style="display:none;margin-bottom:14px;border:1px solid #e5e7eb;border-radius:12px;padding:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <div style="font-size:12px;font-weight:700;color:#1a7a3a;">Select players</div>
+            <div id="matchSpecificCount" style="font-size:12px;color:#6b7280;font-weight:600;"></div>
           </div>
-          <div id="matchSpecificWarning" style="display:none;padding:8px 12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;font-size:12px;color:#f87171;margin-bottom:10px;"></div>
-          <div id="matchSpecificList" class="match-court-list" style="max-height:300px;overflow-y:auto;"></div>
+          <div id="matchSpecificWarning" style="display:none;"></div>
+          <div id="matchSpecificList" style="max-height:300px;overflow-y:auto;"></div>
         </div>
-
-        <div class="match-btn-row" style="margin-top:20px;">
-          <button class="match-back-btn" onclick="matchGoTo(3)">← Back</button>
-          <button class="match-next-btn" id="matchNext4" onclick="matchGoTo(5)" style="opacity:0.35;cursor:not-allowed;">Continue →</button>
+        <!-- Named group picker -->
+        <div id="smGroupPickerWrap" style="display:none;margin-bottom:14px;">
+          <select id="smGroupSelect" onchange="smOnGroupSelect(this.value)"
+            style="width:100%;padding:10px 14px;border-radius:10px;border:2px solid #d1d5db;background:#fff;color:#111;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;">
+            <option value="">Select a group…</option>
+          </select>
+        </div>
+        <!-- Needed / Invited grid -->
+        <div id="smNeededGrid" style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+          <div style="display:grid;grid-template-columns:1fr 72px 72px;background:#f9fafb;padding:8px 12px;border-bottom:1px solid #e5e7eb;">
+            <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;"></div>
+            <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;text-align:center;">Needed</div>
+            <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;text-align:center;">Invited</div>
+          </div>
+          <div id="smNeededGridRows"></div>
         </div>
       </div>
 
-      <!-- STEP 5: REVIEW + SEND -->
-      <div class="match-card" id="matchStep5" style="display:none;color:#111;">
-        <div class="match-q">Review &amp; Send</div>
-        <div id="matchSummary" class="match-summary" style="margin-bottom:16px;"></div>
-        <div class="field">
-          <label>Add a note <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— optional</span></label>
-          <textarea id="matchNote" placeholder="e.g. Bring water, dress warmly — it's outdoor!"
-            style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);
-                   background:rgba(255,255,255,0.07);color:#111;font-size:13px;resize:vertical;
-                   min-height:60px;box-sizing:border-box;font-family:'DM Sans',sans-serif;"></textarea>
+      <!-- Container 7: Review & Send -->
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:24px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">7</div>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;">Review &amp; Send</span>
         </div>
-        <div id="matchInviteePreview" style="margin-top:16px;"></div>
-
-        <!-- Weather widget — shown for outdoor courts -->
-        <div id="matchWeatherBox" style="display:none;margin-top:16px;padding:14px 16px;
-          background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-            <span style="font-size:14px;">🌤</span>
-            <span style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;">Weather Forecast at Game Time</span>
-            <span id="matchWeatherDate" style="font-size:11px;color:var(--dim);margin-left:4px;"></span>
-          </div>
-          <div id="matchWeatherContent">
-            <div style="font-size:11px;color:var(--dim);">Loading forecast…</div>
-          </div>
+        <div id="smSummaryRows" style="margin-bottom:16px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;"></div>
+        <div style="margin-bottom:16px;">
+          <textarea id="matchNote" placeholder="Add a note for your players…"
+            style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid #d1d5db;background:#f9fafb;color:#111;font-size:13px;resize:vertical;min-height:60px;box-sizing:border-box;font-family:'DM Sans',sans-serif;outline:none;"
+            oninput="smUpdateSummary()"></textarea>
         </div>
-
-        <!-- Overlap warning -->
-        <div id="matchOverlapWarning" style="display:none;margin-top:14px;padding:12px 16px;
-          background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.35);
-          border-radius:12px;font-size:12px;color:#fbbf24;">
-          <div style="font-weight:700;margin-bottom:4px;">⚠️ Scheduling Conflict</div>
-          <div id="matchOverlapText"></div>
-        </div>
-
-        <div class="match-btn-row" style="margin-top:20px;">
-          <button class="match-back-btn" onclick="matchGoTo(4)">← Back</button>
-          <button class="match-next-btn" id="matchSendBtn"
-            style="background:var(--green);color:var(--dark);font-weight:700;"
-            onclick="submitMatch()">🎾 Send Match Invite</button>
-        </div>
-        <div id="matchSendStatus" style="font-size:12px;color:var(--dim);margin-top:8px;text-align:center;"></div>
+        <button id="matchSendBtn" onclick="submitMatch()"
+          style="width:100%;padding:15px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-size:15px;font-weight:800;font-family:inherit;opacity:0.4;cursor:not-allowed;transition:opacity .15s;"
+          disabled>🎾 Send Invites</button>
+        <div id="matchSendStatus" style="font-size:12px;color:#6b7280;margin-top:8px;text-align:center;"></div>
       </div>
 
-            <!-- Sent matches -->
-      <div id="matchSentSection" style="display:none;margin-top:24px;">
-        <div class="ic-section-label">📅 Your Match Invites</div>
-        <div id="matchSentList"></div>
-      </div>
     </div>
     <!-- MY INVITES PAGE -->
     <!-- OUTER CIRCLE PAGE -->

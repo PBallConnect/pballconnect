@@ -2561,88 +2561,53 @@ function onLessonOfferAnswer(answer){
 // ══════════════════════════════════════════════════════
 
 const MS = {
-  format:          'doubles',
-  numCourts:       1,
-  organizerPlaying: true,
-  selectedCourts:  new Map(),
-  group:           null,
-  extraGroups:     new Set(), // additional groups added via quick-add
-  selectedGroups:  new Set(), // all currently selected groups (multi-select)
-  specificPlayers: new Set(),
-  primaryPlayers:  new Set(), // for group_subs mode — primary 3
-  subPlayers:      new Set(), // for group_subs mode — substitutes
-  genderPref:      'either',  // 'either' | 'mixed' | 'same'
-  isFeeler:        false,
-  date:            null,
-  timeStart:       null,
-  timeEnd:         null,
-  duration:        2.0,   // hours, default 2
-  location:        'my_courts',
-  courtId:         null,
-  courtName:       null,
-  courtAddress:    null,
-  isPrivate:       false,
-  note:            '',
+  format:             'doubles',
+  numCourts:          1,
+  selectedCourts:     new Map(),
+  group:              null,
+  extraGroups:        new Set(),
+  selectedGroups:     new Set(['all']),
+  specificPlayers:    new Set(),
+  primaryPlayers:     new Set(),
+  subPlayers:         new Set(),
+  genderPref:         'either',
+  isFeeler:           false,
+  date:               null,
+  timeStart:          null,
+  timeEnd:            null,
+  duration:           2.0,
+  location:           'my_courts',
+  courtId:            null,
+  courtName:          null,
+  courtAddress:       null,
+  isPrivate:          false,
+  note:               '',
+  hasOverlapConflict: false,
+  courtType:          'public',  // 'public' | 'private'
+  inviteMode:         'all',     // 'all' | 'specific' | 'group'
 };
 
-// Total court slots for this match (all courts combined, no organizer offset)
+// Total court slots for this match (all courts combined)
 function matchTotalSlots(){ return (MS.numCourts||1)*(MS.format==='doubles'?4:2); }
-// Players to invite (slots minus 1 if organizer is playing)
-function matchMaxNeeded(){ return matchTotalSlots()-(MS.organizerPlaying?1:0); }
+// Players needed besides the organizer (organizer always plays)
+function matchMaxNeeded(){ return matchTotalSlots()-1; }
 
-// ── Step navigation ────────────────────────────────────
-function matchGoTo(step){
-  [1,2,3,4,5].forEach(i=>{
-    const s   = document.getElementById('matchStep'+i);
-    const dot = document.getElementById('msd'+i);
-    const line= document.getElementById('msl'+i);
-    if(s)    s.style.display = i===step ? 'block' : 'none';
-    if(dot){
-      dot.className  = 'match-step-dot'+(i<step?' done':i===step?' active':'');
-      dot.textContent= i<step ? '✓' : i;
-    }
-    if(line) line.classList.toggle('done', i<step);
-  });
-  if(step===3) loadMatchCourts();
-  if(step===4){
-    injectNamedGroupOptions();
-    updateMatchGroupLabels();
-    // Reset group selection state visually
-    // Re-apply 'on' state for all selected groups
-    document.querySelectorAll('#matchGroupOptions .match-option').forEach(o=>o.classList.remove('on'));
-    const activeGroups = (MS.selectedGroups&&MS.selectedGroups.size) ? MS.selectedGroups : new Set([MS.group,...MS.extraGroups].filter(Boolean));
-    activeGroups.forEach(g=>{
-      const optEl = document.querySelector('#matchGroupOptions .match-option[data-group="'+g+'"]');
-      if(optEl) optEl.classList.add('on');
-    });
-    if(activeGroups.has('specific')){ buildSpecificPicker(); document.getElementById('matchSpecificPicker').style.display='block'; }
-    if(activeGroups.has('group_subs')){ buildGroupSubPicker(); document.getElementById('matchGroupSubsPicker').style.display='block'; }
-    refreshGenderFilterBanner();
-    updateInviteCounter();
-    checkMatchStep4();
-  }
-  if(step===5){ buildMatchSummary(); setTimeout(loadMatchWeather, 300); }
-  const stepsEl = document.getElementById('matchSteps');
-  if(stepsEl) window.scrollTo({top:stepsEl.offsetTop-70, behavior:'smooth'});
-}
+// ── Step navigation (no-op stub — single-scroll redesign) ──────
+function matchGoTo(step){ /* single-scroll page — no step navigation */ }
 
 // ── Format selection ───────────────────────────────────
 function selectMatchFormat(fmt, el){
   MS.format = fmt;
-  document.querySelectorAll('#matchFormatOptions .match-option').forEach(o=>{
-    o.classList.remove('on','dim');
-    o.classList.add('dim');
-  });
-  el.classList.remove('dim');
-  el.classList.add('on');
-  if(MS.group==='specific') buildSpecificPicker();
-  const next1 = document.getElementById('matchNext1');
-  if(next1) next1.disabled = false;
-  // Update dynamic label and player count
-  const typeLabel = document.getElementById('matchTypeLabel');
-  if(typeLabel) typeLabel.textContent = fmt==='doubles'?'Doubles':'Singles';
-  updateMatchPlayerCount();
+  const dbl = document.getElementById('smFmtDoubles');
+  const sgl = document.getElementById('smFmtSingles');
+  if(dbl){ dbl.style.border='1px solid #e5e7eb'; dbl.style.background='#fff'; }
+  if(sgl){ sgl.style.border='1px solid #e5e7eb'; sgl.style.background='#fff'; }
+  if(el){ el.style.border='2px solid #1a7a3a'; el.style.background='#f0fdf4'; }
+  if(MS.inviteMode==='specific') buildSpecificPicker();
+  smUpdateNeededBox();
   renderCourtCapacityWarning();
+  smUpdateNeededGrid();
+  smUpdateSummary();
 }
 
 // ── Match type preference (Profile) ───────────────────
@@ -2659,40 +2624,36 @@ function onMatchGenderPrefChange(val){
   }
 }
 
-// ── Gender preference (Set Up A Match Step 1) ─────────
+// ── Gender preference (Set Up A Match Container 3) ────
 function selectMatchGender(pref, el){
   MS.genderPref = pref;
-  document.querySelectorAll('#matchGenderOptions .match-option').forEach(o=>{
-    o.classList.remove('on','dim');
-    o.classList.add('dim');
+  ['smGenderEither','smGenderMixed','smGenderSame'].forEach(id=>{
+    const d = document.getElementById(id);
+    if(d){ d.style.border='1px solid #e5e7eb'; d.style.background='#fff'; }
   });
-  el.classList.remove('dim');
-  el.classList.add('on');
-  refreshGenderFilterBanner();
-  // Re-render open pickers so dimming updates live
-  const specificPicker = document.getElementById('matchSpecificPicker');
-  if(specificPicker && specificPicker.style.display !== 'none') buildSpecificPicker();
-  const subsPicker = document.getElementById('matchGroupSubsPicker');
-  if(subsPicker && subsPicker.style.display !== 'none') buildGroupSubPicker();
-  updateInviteCounter();
+  if(el){ el.style.border='2px solid #1a7a3a'; el.style.background='#f0fdf4'; }
+  // Re-render specific picker if open
+  if(MS.inviteMode==='specific') buildSpecificPicker();
+  smUpdateNeededGrid();
+  smUpdateSummary();
 }
 
-// ── Multi-court / organizer toggle ────────────────────
+// ── Multi-court selector ──────────────────────────────
 function selectNumCourts(n){
   MS.numCourts = n;
   [1,2,3,4].forEach(i=>{
-    const btn = document.getElementById('numCourtsBtn'+i);
+    const btn = document.getElementById('smCourtsBtn'+i);
     if(!btn) return;
     if(i===n){
-      btn.style.background='#1a7a3a'; btn.style.color='#fff';
-      btn.style.borderColor='#1a7a3a'; btn.style.opacity='1';
+      btn.style.background='#1a7a3a'; btn.style.color='#fff'; btn.style.borderColor='#1a7a3a';
     } else {
-      btn.style.background='#f3f4f6'; btn.style.color='#374151';
-      btn.style.borderColor='#d1d5db'; btn.style.opacity='1';
+      btn.style.background='#f3f4f6'; btn.style.color='#374151'; btn.style.borderColor='#d1d5db';
     }
   });
-  updateMatchPlayerCount();
+  smUpdateNeededBox();
   renderCourtCapacityWarning();
+  smUpdateNeededGrid();
+  smUpdateSummary();
 }
 
 function toggleOrganizerPlaying(checked){
@@ -2725,15 +2686,7 @@ function toggleOrganizerPlaying(checked){
   }
 }
 
-function updateMatchPlayerCount(){
-  const el = document.getElementById('matchPlayerCountLine');
-  if(!el) return;
-  const n = matchMaxNeeded();
-  el.innerHTML =
-    '<span style="font-size:12px;font-weight:600;color:#374151;">Total players needed:</span> '+
-    '<span style="display:inline-block;background:#fee2e2;border:2px solid #f87171;border-radius:8px;'+
-      'padding:6px 14px;font-size:22px;font-weight:800;color:#111;vertical-align:middle;line-height:1.2;">'+n+'</span>';
-}
+function updateMatchPlayerCount(){ smUpdateNeededBox(); }
 
 function renderCourtCapacityWarning(){
   const el = document.getElementById('matchCourtCapacityWarn');
@@ -2901,8 +2854,9 @@ function onMatchStartTimeChange(startVal){
   const endSel = document.getElementById('matchTimeEnd');
   if(endSel) endSel.value = endVal;
   MS.timeEnd = endVal;
-  validateMatchTimes();
-
+  // Update read-only display
+  const endDisp = document.getElementById('smEndTimeDisplay');
+  if(endDisp) endDisp.textContent = fmt12(endVal);
 }
 
 function validateMatchTimes(){
@@ -2918,16 +2872,17 @@ function validateMatchTimes(){
 }
 
 function adjustDuration(delta){
-  MS.duration = Math.min(4, Math.max(1, parseFloat((MS.duration + delta).toFixed(2))));
+  MS.duration = Math.min(4, Math.max(0.5, parseFloat((MS.duration + delta).toFixed(2))));
   const disp = document.getElementById('matchDurationDisplay');
   if(disp){
     const h = Math.floor(MS.duration);
-    const m = (MS.duration % 1) * 60;
+    const m = Math.round((MS.duration % 1) * 60);
     disp.textContent = m > 0 ? h+'h '+m+'m' : h+' hr'+(h!==1?'s':'');
   }
   // Update end time based on new duration
   const startVal = document.getElementById('matchTimeStart')?.value || MS.timeStart;
   if(startVal) onMatchStartTimeChange(startVal);
+  smCheckConflict();
 }
 
 
@@ -2959,26 +2914,7 @@ function checkMatchStep2(){
   }
 }
 
-function checkMatchStep4(){
-  const btn = document.getElementById('matchNext4');
-  if(!btn) return;
-  const groups = MS.selectedGroups || new Set([MS.group].filter(Boolean));
-  const primaryMax = matchMaxNeeded();
-  const hasNonSpecific = [...groups].some(g=>g!=='specific'&&g!=='group_subs');
-  const hasSpecific = groups.has('specific');
-  const hasGroupSubs = groups.has('group_subs');
-  const groupSubsOk = hasGroupSubs && MS.primaryPlayers.size >= primaryMax;
-  const groupOk = groups.size > 0 && (hasNonSpecific || (hasSpecific && MS.specificPlayers.size > 0) || groupSubsOk);
-  if(groupOk){
-    btn.removeAttribute('disabled');
-    btn.style.opacity = '1';
-    btn.style.cursor  = 'pointer';
-  } else {
-    btn.setAttribute('disabled', true);
-    btn.style.opacity = '0.35';
-    btn.style.cursor  = 'not-allowed';
-  }
-}
+function checkMatchStep4(){ smUpdateSendBtn(); }
 function checkMatchStep1(){
   const btn = document.getElementById('matchNext1');
   if(!btn) return;
@@ -3541,18 +3477,8 @@ async function loadMatchCourts(){
 }
 
 function updateMatchCourtsNext(){
-  const btn = document.getElementById('matchNext3');
-  if(!btn) return;
-  const ok = MS.selectedCourts.size > 0 || MS.location === 'tbd';
-  if(ok){
-    btn.removeAttribute('disabled');
-    btn.style.opacity = '1';
-    btn.style.cursor  = 'pointer';
-  } else {
-    btn.setAttribute('disabled', true);
-    btn.style.opacity = '0.35';
-    btn.style.cursor  = 'not-allowed';
-  }
+  smUpdateSendBtn();
+  smUpdateSummary();
 }
 
 function updateMatchCourtsSummary(){
@@ -3753,7 +3679,7 @@ async function submitMatch(){
   status.textContent='Saving match…';
   const date=document.getElementById('matchDate')?.value;
   const timeStart=MS.isFeeler?document.getElementById('matchTimeRangeStart')?.value:MS.timeStart||document.getElementById('matchTimeStart')?.value;
-  const timeEnd=MS.isFeeler?document.getElementById('matchTimeRangeEnd')?.value:null;
+  const timeEnd=MS.isFeeler?document.getElementById('matchTimeRangeEnd')?.value:(MS.timeEnd||null);
   const note=document.getElementById('matchNote')?.value?.trim();
   const myName=((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim();
   try{
@@ -3863,23 +3789,12 @@ async function submitMatch(){
     showToast('🎾 Match invite sent to '+invitees.length+' players!','#4CAF7D');
     status.textContent='';
     btn.textContent='✅ Sent!';
-    document.getElementById('matchSentSection').style.display='block';
-    loadSentMatches();
     loadMatchSquareCounts();
     // Update nav badges immediately
     setTimeout(()=>loadAllMatchBadges(), 500);
     setTimeout(()=>{
-      MS.format='doubles';MS.numCourts=1;MS.organizerPlaying=true;MS.group=null;MS.specificPlayers.clear();MS.selectedGroups=new Set();MS.extraGroups=new Set();MS.primaryPlayers=new Set();MS.subPlayers=new Set();MS.genderPref='either';MS.isFeeler=false;MS.date=null;MS.courtId=null;MS.courtName=null;MS.duration=2;
-      // Reset gender pref chips
-      document.querySelectorAll('#matchGenderOptions .match-option').forEach(o=>o.classList.remove('on','dim'));
-      const eitherEl=document.getElementById('matchGenderEither');
-      if(eitherEl) eitherEl.classList.add('on');
-      // Reset numCourts pills and organizer checkbox
-      selectNumCourts(1);
-      const orgCb=document.getElementById('matchOrganizerPlaying');
-      if(orgCb) orgCb.checked=true;
-      matchGoTo(1);
-      btn.textContent='🎾 Send Match Invite';btn.disabled=false;
+      btn.textContent='🎾 Send Invites'; btn.disabled=false; btn.style.opacity='1';
+      initSetupMatch();
     },3000);
   }catch(e){ status.textContent='⚠️ Error: '+e.message; btn.disabled=false; btn.textContent='🎾 Send Match Invite'; }
 }
@@ -5233,59 +5148,411 @@ document.addEventListener('click', function(e){
   respondToMatch(matchId, resp);
 });
 
+// ══════════════════════════════════════════════════════
+// SINGLE-SCROLL MATCH SETUP HELPERS (sm*)
+// ══════════════════════════════════════════════════════
+
+function smUpdateNeededBox(){
+  const el = document.getElementById('smNeededNum');
+  if(el) el.textContent = matchMaxNeeded();
+}
+
+function smUpdateSendBtn(){
+  const btn = document.getElementById('matchSendBtn');
+  if(!btn) return;
+  const date  = document.getElementById('matchDate')?.value;
+  const time  = MS.timeStart || document.getElementById('matchTimeStart')?.value;
+  const hasCourt = MS.selectedCourts && MS.selectedCourts.size > 0;
+  const ok = !!date && !!time && hasCourt && !MS.hasOverlapConflict;
+  btn.disabled = !ok;
+  btn.style.opacity  = ok ? '1' : '0.4';
+  btn.style.cursor   = ok ? 'pointer' : 'not-allowed';
+}
+
+function smUpdateSummary(){
+  const rows = document.getElementById('smSummaryRows');
+  if(!rows) return;
+  const fmt = MS.format==='doubles' ? 'Doubles' : 'Singles';
+  const gLbl = MS.genderPref==='mixed'?'Mixed':MS.genderPref==='same'?'Same Gender':'Open';
+  const cLbl = MS.numCourts > 1 ? MS.numCourts+' courts' : '1 court';
+  const formatStr = fmt+' · '+gLbl+' · '+cLbl;
+  const date = document.getElementById('matchDate')?.value;
+  const dateStr = date ? new Date(date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) : '—';
+  const startStr = MS.timeStart ? fmt12(MS.timeStart) : '—';
+  const endStr   = MS.timeEnd   ? ' – '+fmt12(MS.timeEnd)  : '';
+  const dateTimeStr = dateStr+(MS.timeStart ? ' · '+startStr+endStr : '');
+  let courtStr = '—';
+  if(MS.selectedCourts && MS.selectedCourts.size > 0){
+    MS.selectedCourts.forEach(c=>{ courtStr = c.name+' · '+(c.isPrivate?'Private':'Public'); });
+  }
+  const mySkill  = S.skill||SESSION_PLAYER?.skill_level||'';
+  const skills   = mySkill ? getAdjacentSkills(mySkill) : null;
+  const allGroups = MS.selectedGroups && MS.selectedGroups.size ? MS.selectedGroups : new Set();
+  const seen = new Set(); let invitedCount = 0;
+  allGroups.forEach(g=>{
+    if(!g||g==='specific') return;
+    getGroupPlayers(g, skills).forEach(p=>{
+      const e=(p.email||'').toLowerCase();
+      if(!seen.has(e)){ seen.add(e); invitedCount++; }
+    });
+  });
+  if(allGroups.has('specific')) MS.specificPlayers.forEach(e=>{ if(!seen.has(e)){ seen.add(e); invitedCount++; } });
+  const invLbl = MS.inviteMode==='all'  ? invitedCount+' players from inner circle' :
+                 MS.inviteMode==='specific' ? invitedCount+' specific players' :
+                 invitedCount+' players from group';
+  const rs='display:flex;align-items:center;justify-content:space-between;padding:9px 12px;font-size:13px;border-bottom:1px solid #f3f4f6;';
+  const ls='color:#6b7280;font-weight:600;';
+  const vs='color:#111;font-weight:600;text-align:right;max-width:60%;';
+  rows.innerHTML=
+    '<div style="'+rs+'"><span style="'+ls+'">Format</span><span style="'+vs+'">'+formatStr+'</span></div>'+
+    '<div style="'+rs+'"><span style="'+ls+'">Date</span><span style="'+vs+'">'+dateTimeStr+'</span></div>'+
+    '<div style="'+rs+'"><span style="'+ls+'">Court</span><span style="'+vs+'">'+courtStr+'</span></div>'+
+    '<div style="'+rs+'border-bottom:none;"><span style="'+ls+'">Inviting</span><span style="'+vs+'">'+invLbl+'</span></div>';
+}
+
+function smUpdateNeededGrid(){
+  const rows = document.getElementById('smNeededGridRows');
+  if(!rows) return;
+  const needed = matchMaxNeeded();
+  const myGender = (S.gender||SESSION_PLAYER?.gender||'').toLowerCase();
+  const mySkill  = S.skill||SESSION_PLAYER?.skill_level||'';
+  const skills   = mySkill ? getAdjacentSkills(mySkill) : null;
+  const allGroups = MS.selectedGroups && MS.selectedGroups.size ? MS.selectedGroups : new Set();
+  const seen = new Set();
+  let invMen=myGender==='male'?1:0, invWomen=myGender==='female'?1:0, invTotal=1;
+  IC_MEMBERS.forEach(({player})=>{
+    const e=(player.email||'').toLowerCase();
+    if(seen.has(e)) return;
+    let inc=false;
+    for(const g of allGroups){
+      if(!g||g==='specific') continue;
+      if(g==='all'){ inc=true; break; }
+      if(g==='favorites'&&IC_FAVORITES.has(e)){ inc=true; break; }
+      const ps=parseFloat(player.skill_level||0);
+      if(g==='my_level'&&skills&&Math.abs(ps-skills.my)<0.13){ inc=true; break; }
+      if(g==='below'&&skills&&skills.below!==null&&Math.abs(ps-skills.below)<0.13){ inc=true; break; }
+      if(g==='above'&&skills&&skills.above!==null&&Math.abs(ps-skills.above)<0.13){ inc=true; break; }
+    }
+    if(!inc && allGroups.has('specific') && MS.specificPlayers.has(e)) inc=true;
+    if(inc){
+      seen.add(e); invTotal++;
+      const g2=(player.gender||'').toLowerCase();
+      if(g2==='male') invMen++; else if(g2==='female') invWomen++;
+    }
+  });
+  const pref = MS.genderPref;
+  const rs='display:grid;grid-template-columns:1fr 72px 72px;padding:10px 12px;border-bottom:1px solid #f3f4f6;';
+  const ls='display:grid;grid-template-columns:1fr 72px 72px;padding:10px 12px;';
+  const cn='font-size:13px;font-weight:700;text-align:center;';
+  const lb='font-size:13px;font-weight:600;color:#374151;';
+  if(pref==='either'){
+    rows.innerHTML='<div style="'+ls+'"><div style="'+lb+'">Players</div><div style="'+cn+';color:#dc2626;">'+needed+'</div><div style="'+cn+';color:#1a7a3a;">'+invTotal+'</div></div>';
+  } else {
+    const nMen=pref==='mixed'?Math.floor(needed/2):(myGender==='male'?needed:0);
+    const nWom=pref==='mixed'?Math.ceil(needed/2) :(myGender==='female'?needed:0);
+    rows.innerHTML=
+      '<div style="'+rs+'"><div style="'+lb+'">Men</div><div style="'+cn+';color:#dc2626;">'+nMen+'</div><div style="'+cn+';color:#1a7a3a;">'+invMen+'</div></div>'+
+      '<div style="'+ls+'"><div style="'+lb+'">Women</div><div style="'+cn+';color:#dc2626;">'+nWom+'</div><div style="'+cn+';color:#1a7a3a;">'+invWomen+'</div></div>';
+  }
+}
+
+async function smCheckConflict(){
+  const warnBox = document.getElementById('smConflictBox');
+  if(!warnBox) return;
+  warnBox.style.display='none'; warnBox.innerHTML='';
+  MS.hasOverlapConflict = false;
+  const myEmail = getMyEmail();
+  if(!myEmail) return;
+  const date = document.getElementById('matchDate')?.value;
+  const timeStart = MS.timeStart || document.getElementById('matchTimeStart')?.value;
+  if(!date||!timeStart) return;
+  const toMins = t=>{ if(!t) return 0; const [h,m]=t.split(':').map(Number); return h*60+m; };
+  const newStart = toMins(timeStart);
+  const newEnd   = newStart + Math.round(MS.duration * 60);
+  try{
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&match_date=eq.${date}&status=neq.cancelled&select=time_start,time_end,court_name`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+    );
+    const existing = res.ok ? await res.json() : [];
+    const overlaps = existing.filter(m=>{
+      const s=toMins(m.time_start), e=m.time_end?toMins(m.time_end):s+120;
+      return newStart < e && newEnd > s;
+    });
+    const sameDayOnly = existing.filter(m=>{
+      const s=toMins(m.time_start), e=m.time_end?toMins(m.time_end):s+120;
+      return !(newStart < e && newEnd > s);
+    });
+    if(overlaps.length){
+      MS.hasOverlapConflict = true;
+      const m=overlaps[0];
+      const ct=m.court_name?' at '+m.court_name:'';
+      const ts=fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):'');
+      warnBox.style.display='block';
+      warnBox.innerHTML='<div style="background:#7f1d1d;border-radius:10px;padding:10px 14px;margin-top:8px;">'+
+        '<div style="color:#fff;font-weight:700;font-size:13px;margin-bottom:4px;">Schedule conflict</div>'+
+        '<div style="color:#fca5a5;font-size:12px;line-height:1.5;">You have a match'+ct+' from '+ts+' that overlaps this time. Please choose a different time or date.</div>'+
+        '</div>';
+    } else if(sameDayOnly.length){
+      const m=sameDayOnly[0];
+      const ts=fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):'');
+      warnBox.style.display='block';
+      warnBox.innerHTML='<div style="background:#fef9c3;border:1px solid #d97706;border-radius:10px;padding:10px 14px;margin-top:8px;">'+
+        '<div style="color:#78350f;font-weight:700;font-size:13px;margin-bottom:4px;">Same day match</div>'+
+        '<div style="color:#92400e;font-size:12px;line-height:1.5;">You already have a match at '+ts+' on this day. Playing twice? No problem — just confirming!</div>'+
+        '</div>';
+    }
+  }catch(e){ console.warn('smCheckConflict:',e); }
+  smUpdateSendBtn();
+}
+
+function smSetCourtType(type){
+  MS.courtType = type;
+  const pubBtn=document.getElementById('smCourtTypePublic');
+  const privBtn=document.getElementById('smCourtTypePrivate');
+  if(pubBtn){
+    pubBtn.style.background=type==='public'?'#1a7a3a':'#f3f4f6';
+    pubBtn.style.color=type==='public'?'#fff':'#374151';
+    pubBtn.style.borderColor=type==='public'?'#1a7a3a':'#d1d5db';
+  }
+  if(privBtn){
+    privBtn.style.background=type==='private'?'#1a7a3a':'#f3f4f6';
+    privBtn.style.color=type==='private'?'#fff':'#374151';
+    privBtn.style.borderColor=type==='private'?'#1a7a3a':'#d1d5db';
+  }
+  const savedLbl=document.getElementById('smSavedCourtsLabel');
+  const otherLbl=document.getElementById('smOtherCourtsLabel');
+  if(savedLbl) savedLbl.textContent='My saved '+type+' courts';
+  if(otherLbl) otherLbl.textContent='Other '+type+' courts nearby';
+  // Clear selection when switching types
+  MS.selectedCourts.clear();
+  MS.courtId=null; MS.courtName=null; MS.isPrivate=false;
+  smLoadCourts();
+}
+
+async function smLoadCourts(){
+  const myEmail=getMyEmail();
+  if(!myEmail) return;
+  const savedEl=document.getElementById('smSavedCourts');
+  const otherEl=document.getElementById('smOtherCourts');
+  if(!savedEl) return;
+  savedEl.innerHTML='<div style="font-size:11px;color:#6b7280;">Loading…</div>';
+  if(otherEl) otherEl.innerHTML='';
+  const isPrivate = MS.courtType==='private';
+  try{
+    const pcRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(myEmail)}&select=court_id`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+    );
+    const pcRows = pcRes.ok ? await pcRes.json() : [];
+    const allSavedIds = pcRows.map(r=>r.court_id).filter(Boolean);
+    let savedCourts=[];
+    if(allSavedIds.length){
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/courts?id=in.(${allSavedIds.join(',')})&is_private=eq.${isPrivate}&select=id,name,address,city,is_private,num_courts`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+      );
+      savedCourts = res.ok ? await res.json() : [];
+    }
+    savedEl.innerHTML='';
+    if(!savedCourts.length){
+      savedEl.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:4px 0;font-style:italic;">No '+(isPrivate?'private':'public')+' courts saved yet.</div>';
+    } else {
+      savedCourts.forEach(c=>_smRenderCourtRow(c, savedEl, false));
+    }
+    if(otherEl){
+      let q=`${SUPABASE_URL}/rest/v1/courts?is_private=eq.${isPrivate}&select=id,name,address,city,is_private,num_courts&limit=8`;
+      if(allSavedIds.length) q+=`&id=not.in.(${allSavedIds.join(',')})`;
+      const oRes = await fetch(q,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+      const otherCourts = oRes.ok ? await oRes.json() : [];
+      otherEl.innerHTML='';
+      if(!otherCourts.length){
+        otherEl.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:4px 0;font-style:italic;">No other '+(isPrivate?'private':'public')+' courts found.</div>';
+      } else {
+        otherCourts.forEach(c=>_smRenderCourtRow(c, otherEl, true));
+      }
+    }
+  }catch(e){ if(savedEl) savedEl.innerHTML='<div style="font-size:12px;color:#dc2626;">Could not load courts.</div>'; }
+}
+
+function _smRenderCourtRow(court, container, showSaveBtn){
+  const selected = MS.selectedCourts.has(court.id);
+  const row = document.createElement('div');
+  row.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;'+
+    'border:2px solid '+(selected?'#1a7a3a':'#d1d5db')+';'+
+    'background:'+(selected?'#f0fdf4':'#f9fafb')+';cursor:pointer;margin-bottom:8px;transition:all .15s;';
+  const info=document.createElement('div');
+  info.style.cssText='flex:1;min-width:0;';
+  info.innerHTML='<div style="font-size:13px;font-weight:600;color:#111;">'+(selected?'<span style="color:#1a7a3a;margin-right:4px;">✓</span>':'')+court.name+'</div>'+
+    '<div style="font-size:11px;color:#6b7280;">'+(court.city||'')+(court.num_courts?' · '+court.num_courts+' court'+(court.num_courts!==1?'s':''):'')+'</div>';
+  row.appendChild(info);
+  if(showSaveBtn && !selected){
+    const sv=document.createElement('button');
+    sv.textContent='+ Save';
+    sv.style.cssText='font-size:11px;color:#1a7a3a;background:rgba(26,122,58,0.08);border:1px solid rgba(26,122,58,0.3);border-radius:6px;padding:4px 10px;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;';
+    sv.onclick=async(e)=>{
+      e.stopPropagation();
+      try{
+        await fetch(`${SUPABASE_URL}/rest/v1/player_courts`,{method:'POST',
+          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+          body:JSON.stringify({player_email:getMyEmail(),court_id:court.id})});
+        smLoadCourts();
+      }catch(e2){}
+    };
+    row.appendChild(sv);
+  }
+  row.onclick=()=>{
+    if(MS.selectedCourts.has(court.id)){
+      MS.selectedCourts.delete(court.id);
+      MS.courtId=null; MS.courtName=null; MS.isPrivate=false;
+    } else {
+      MS.selectedCourts.clear();
+      MS.selectedCourts.set(court.id,{
+        name:court.name,
+        address:(court.address||'')+(court.city?', '+court.city:''),
+        isPrivate:court.is_private||false,
+        preferred:true,
+        numCourts:court.num_courts??null
+      });
+      MS.courtId=court.id; MS.courtName=court.name; MS.isPrivate=court.is_private||false;
+    }
+    renderCourtCapacityWarning();
+    smUpdateSendBtn();
+    smUpdateSummary();
+    smLoadCourts();
+  };
+  container.appendChild(row);
+}
+
+function smSelectInvite(mode){
+  MS.inviteMode = mode;
+  ['all','specific','group'].forEach(m=>{
+    const cap = m.charAt(0).toUpperCase()+m.slice(1);
+    const el = document.getElementById('smInvite'+cap);
+    if(!el) return;
+    if(m===mode){ el.style.border='2px solid #1a7a3a'; el.style.background='#f0fdf4'; }
+    else         { el.style.border='1px solid #e5e7eb'; el.style.background='#fff'; }
+  });
+  const specWrap=document.getElementById('smSpecificPickerWrap');
+  const grpWrap=document.getElementById('smGroupPickerWrap');
+  if(specWrap) specWrap.style.display=mode==='specific'?'block':'none';
+  if(grpWrap)  grpWrap.style.display=mode==='group'?'block':'none';
+  if(mode==='all'){
+    MS.selectedGroups=new Set(['all']); MS.group='all';
+  } else if(mode==='specific'){
+    MS.selectedGroups=new Set(['specific']); MS.group='specific';
+    buildSpecificPicker();
+  } else if(mode==='group'){
+    MS.selectedGroups=new Set(); MS.group=null;
+    smLoadGroupSelect();
+  }
+  smUpdateNeededGrid();
+  smUpdateSummary();
+  smUpdateSendBtn();
+}
+
+async function smLoadGroupSelect(){
+  const sel=document.getElementById('smGroupSelect');
+  if(!sel||!SESSION_PLAYER?.is_organizer) return;
+  const myEmail=getMyEmail();
+  try{
+    const res=await fetch(
+      `${SUPABASE_URL}/rest/v1/player_groups?organizer_email=eq.${encodeURIComponent(myEmail)}&order=created_at.asc`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+    );
+    const groups=res.ok?await res.json():[];
+    _groups=groups;
+    sel.innerHTML='<option value="">Select a group…</option>'+
+      groups.map(g=>'<option value="'+g.id+'">'+g.name+' ('+g.max_players+' players)</option>').join('');
+  }catch(e){}
+}
+
+function smOnGroupSelect(value){
+  if(!value){ MS.selectedGroups=new Set(); MS.group=null; }
+  else { MS.selectedGroups=new Set(['named_'+value]); MS.group='named_'+value; }
+  smUpdateNeededGrid();
+  smUpdateSummary();
+  smUpdateSendBtn();
+}
+
 function initSetupMatch(){
   // Reset MS state
-  MS.format='doubles'; MS.numCourts=1; MS.organizerPlaying=true; MS.group=null; MS.specificPlayers.clear(); MS.extraGroups=new Set(); MS.selectedGroups=new Set(); MS.deselectedPlayers=new Set();
+  MS.format='doubles'; MS.numCourts=1; MS.group=null;
+  MS.specificPlayers=new Set(); MS.extraGroups=new Set(); MS.selectedGroups=new Set(['all']);
+  MS.deselectedPlayers=new Set(); MS.primaryPlayers=new Set(); MS.subPlayers=new Set();
   MS.isFeeler=false; MS.duration=2; MS.selectedCourts=new Map();
-  matchGoTo(1);
+  MS.hasOverlapConflict=false; MS.courtType='public'; MS.inviteMode='all';
+  MS.timeStart=null; MS.timeEnd=null; MS.date=null;
+  MS.courtId=null; MS.courtName=null; MS.courtAddress=null; MS.isPrivate=false;
+
+  // Format buttons
+  const dbl=document.getElementById('smFmtDoubles'), sgl=document.getElementById('smFmtSingles');
+  if(dbl){ dbl.style.border='2px solid #1a7a3a'; dbl.style.background='#f0fdf4'; }
+  if(sgl){ sgl.style.border='1px solid #e5e7eb'; sgl.style.background='#fff'; }
+
+  // Court count buttons
   selectNumCourts(1);
-  updateMatchPlayerCount();
-  updateMatchGroupLabels();
+
+  // Gender buttons
+  const ge=document.getElementById('smGenderEither'), gm=document.getElementById('smGenderMixed'), gs=document.getElementById('smGenderSame');
+  if(ge){ ge.style.border='2px solid #1a7a3a'; ge.style.background='#f0fdf4'; }
+  if(gm){ gm.style.border='1px solid #e5e7eb'; gm.style.background='#fff'; }
+  if(gs){ gs.style.border='1px solid #e5e7eb'; gs.style.background='#fff'; }
+
+  // Invite mode buttons
+  const ia=document.getElementById('smInviteAll'), isp=document.getElementById('smInviteSpecific'), ig=document.getElementById('smInviteGroup');
+  if(ia){ ia.style.border='2px solid #1a7a3a'; ia.style.background='#f0fdf4'; }
+  if(isp){ isp.style.border='1px solid #e5e7eb'; isp.style.background='#fff'; }
+  if(ig){ ig.style.border='1px solid #e5e7eb'; ig.style.background='#fff'; }
+
+  // Hide pickers
+  const specWrap=document.getElementById('smSpecificPickerWrap');
+  const grpWrap=document.getElementById('smGroupPickerWrap');
+  if(specWrap) specWrap.style.display='none';
+  if(grpWrap) grpWrap.style.display='none';
+
+  // Build time dropdowns
   buildMatchTimeChips();
-  loadSentMatches();
-  document.getElementById('matchSentSection').style.display= getMyEmail() ? 'block' : 'none';
-  // Default doubles on
-  document.getElementById('matchOptDoubles')?.classList.add('on');
-  document.getElementById('matchOptSingles')?.classList.remove('on');
-  // Duration display
   const dur=document.getElementById('matchDurationDisplay');
   if(dur) dur.textContent='2 hrs';
-  // Auto-select date: today if before 6pm, tomorrow if 6pm or later
-  const now = new Date();
-  const defaultDate = now.getHours() >= 18
-    ? new Date(now.getTime() + 86400000)  // tomorrow
-    : now;
-  const dateStr = defaultDate.toISOString().split('T')[0];
-  const dateEl = document.getElementById('matchDate');
-  if(dateEl){
-    dateEl.min   = now.toISOString().split('T')[0];
-    dateEl.value = dateStr;
-  }
-  // Date is pre-set — enable Step 2 Continue once a time is selected
-  // (time required so we don't enable yet)
-  // All 5 steps visible
-  // Step 1 Continue always enabled (Doubles pre-selected)
-  const next1 = document.getElementById('matchNext1');
-  if(next1) next1.disabled = false;
+  const endDisp=document.getElementById('smEndTimeDisplay');
+  if(endDisp) endDisp.textContent='—';
+  const tStart=document.getElementById('matchTimeStart');
+  if(tStart) tStart.value='';
+
+  // Auto-select date
+  const now=new Date();
+  const defaultDate=now.getHours()>=18 ? new Date(now.getTime()+86400000) : now;
+  const dateStr=defaultDate.toISOString().split('T')[0];
+  const dateEl=document.getElementById('matchDate');
+  if(dateEl){ dateEl.min=now.toISOString().split('T')[0]; dateEl.value=dateStr; MS.date=dateStr; }
+
+  // Reset conflict box
+  const conflictBox=document.getElementById('smConflictBox');
+  if(conflictBox){ conflictBox.style.display='none'; conflictBox.innerHTML=''; }
+
+  // Load court type (resets selection and loads courts)
+  smSetCourtType('public');
+
+  // Update UI
+  smUpdateNeededBox();
+  smUpdateNeededGrid();
+  smUpdateSummary();
+  smUpdateSendBtn();
+
+  // IC count badge
+  const countEl=document.getElementById('smInviteAllCount');
+  if(countEl) countEl.textContent=IC_MEMBERS.length ? IC_MEMBERS.length+' players' : '';
 
   applyPendingMatchInvitee();
 }
 
 function applyPendingMatchInvitee(){
   if(!_pendingMatchInvitee) return;
-  const { email, name } = _pendingMatchInvitee;
+  const { email } = _pendingMatchInvitee;
   _pendingMatchInvitee = null;
-  MS.group = 'specific';
-  MS.selectedGroups = new Set(['specific']);
   MS.specificPlayers.add(email);
-  const specificBtn = document.querySelector('#matchGroupOptions .match-option[data-group="specific"]');
-  if(specificBtn) specificBtn.classList.add('on');
-  const banner = document.getElementById('matchPreselectedBanner');
-  if(banner){
-    banner.textContent = '🎾 ' + name + ' pre-selected — pick format, date & time, then Continue.';
-    banner.style.display = 'block';
-  }
-  checkMatchStep1();
+  smSelectInvite('specific');
 }
 
 // ══════════════════════════════════════════════════════
