@@ -6104,7 +6104,7 @@ function initLogin(){
 
   // Restore from an existing Supabase session (persisted in localStorage by the SDK)
   _supabase.auth.getSession().then(async({data:{session}})=>{
-    if(session){
+    if(session && !SESSION_PLAYER){
       SUPABASE_ACCESS_TOKEN = session.access_token;
       localStorage.setItem('pb_email', session.user.email);
       await restoreSession(session.user.email);
