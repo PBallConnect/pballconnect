@@ -8779,7 +8779,10 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
   document.getElementById('icJoinNo').onclick  = ()=>showStep2(false);
 }
 
-document.addEventListener('DOMContentLoaded',checkInviteToken);
+document.addEventListener('DOMContentLoaded', ()=>{
+  // Delay invite check until after session restore attempt
+  setTimeout(checkInviteToken, 1500);
+});
 
 // Register service worker for PWA offline support
 if('serviceWorker' in navigator){
