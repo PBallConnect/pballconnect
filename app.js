@@ -4645,6 +4645,7 @@ async function loadAllMatchBadges(){
     const orgMatches = orgRes.ok ? await orgRes.json() : [];
     const pendingOrg = orgMatches.filter(m=>!isMatchPast(m)).length;
     updateMatchBadge('myInvitesBadge', pendingOrg, 'rgba(239,68,68,0.85)');
+    { const el=document.getElementById('dashSqMyInvites'); if(el) el.textContent=pendingOrg; }
 
     // Invites to me — pending response AND match is still open (not full, not cancelled,
     // not past, and not a match I organized myself)
@@ -4652,7 +4653,6 @@ async function loadAllMatchBadges(){
       `${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.pending&select=match_id`,
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const pendingResps = rRes.ok ? await rRes.json() : [];
-    // Verify the matches are still open and not past
     let iboCount = 0;
     if(pendingResps.length){
       const pendIds = pendingResps.map(r=>r.match_id);
@@ -4663,7 +4663,8 @@ async function loadAllMatchBadges(){
       iboCount = openMatches.filter(m=>!isMatchPast(m) && (m.organizer_email||'').toLowerCase()!==myEmail.toLowerCase()).length;
     }
     updateMatchBadge('invitedByOthersBadge', iboCount, 'rgba(59,130,246,0.85)');
-    // Keep top header badge in sync with the same filtered count
+    { const el=document.getElementById('dashSqInvited'); if(el) el.textContent=iboCount; }
+    // Keep top header badge in sync
     const topBadge = document.getElementById('topMatchInvitesBadge');
     const topLabel = document.getElementById('topMatchInvitesLabel');
     if(topBadge){ topBadge.textContent=iboCount; topBadge.style.display=iboCount>0?'inline-block':'none'; }
@@ -4693,6 +4694,7 @@ async function loadAllMatchBadges(){
       return !isMatchPast(m);
     }).length;
     updateConfirmedBadge(confirmedCount);
+    { const el=document.getElementById('dashSqConfirmed'); if(el) el.textContent=confirmedCount; }
   }catch(e){}
 }
 
@@ -9200,7 +9202,6 @@ async function loadDashTileCounts(myEmail){
     }
     const seen = new Set();
     const confirmed = [...cfOrg,...cfInvited].filter(m=>{ if(seen.has(m.id)) return false; seen.add(m.id); return !isMatchPast(m); });
-    setTile('dashSqConfirmed', confirmed.length);
     setTile('dashTileConfirmed', confirmed.length>0 ? confirmed.length+' upcoming' : 'None yet');
 
     // My invites — open matches I organized
@@ -9208,14 +9209,12 @@ async function loadDashTileCounts(myEmail){
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const myInvites = miRes.ok ? await miRes.json() : [];
     const openInvites = myInvites.filter(m=>!isMatchPast(m));
-    setTile('dashSqMyInvites', openInvites.length);
     setTile('dashTileMyInvites', openInvites.length>0 ? openInvites.length+' awaiting response' : 'None pending');
 
-    // Invited to play
+    // Invited to play — subtitle only; count comes from loadAllMatchBadges()
     const pendRes = await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.pending&select=match_id`,
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     const pendRows = pendRes.ok ? await pendRes.json() : [];
-    setTile('dashSqInvited', pendRows.length);
     setTile('dashTileInvited', pendRows.length>0 ? pendRows.length+' invite'+(pendRows.length>1?'s':'')+' waiting' : 'No invites');
 
     // IC requests — use live count from restoreSession
