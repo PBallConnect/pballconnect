@@ -105,31 +105,31 @@
 
       <!-- ── Matches ── -->
       <div class="nav-section-label">Matches</div>
-      <div class="nav-item" onclick="showPage('confirmedMatches')" id="nav-confirmedMatches" title="Confirmed Matches — upcoming confirmed games">
+      <button class="nav-item" onclick="showPage('confirmedMatches')" id="nav-confirmedMatches" title="Confirmed Matches — upcoming confirmed games">
         <span class="nav-icon">✅</span><span class="nav-label">Confirmed Matches</span>
         <span id="confirmedMatchesBadge" style="display:inline-flex;min-width:20px;height:20px;border-radius:50%;background:rgba(76,175,125,0.2);color:rgba(76,175,125,0.5);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;">0></span>
-      </div>
+      </button>
 
       <!-- Separator -->
       <div style="height:1px;background:var(--border);margin:6px 20px;opacity:0.5;"></div>
 
-      <div class="nav-item" onclick="showPage('myInvites')" id="nav-myInvites" title="My Match Invites — pending matches you organized">
+      <button class="nav-item" onclick="showPage('myInvites')" id="nav-myInvites" title="My Match Invites — pending matches you organized">
         <span class="nav-icon">📤</span><span class="nav-label">My Match Invites</span>
         <span id="myInvitesBadge" style="display:inline-flex;min-width:18px;height:18px;border-radius:999px;background:rgba(239,68,68,0.3);color:rgba(255,255,255,0.5);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;">0></span>
-      </div>
-      <div class="nav-item" onclick="showPage('recurringMatches')" id="nav-recurringMatches" title="Recurring Matches">
+      </button>
+      <button class="nav-item" onclick="showPage('recurringMatches')" id="nav-recurringMatches" title="Recurring Matches">
         <span class="nav-icon">🔄</span><span class="nav-label">Recurring Matches</span>
-      </div>
-      <div class="nav-item" onclick="showPage('invitedByOthers')" id="nav-invitedByOthers" title="Invited by Others — matches needing your response">
+      </button>
+      <button class="nav-item" onclick="showPage('invitedByOthers')" id="nav-invitedByOthers" title="Invited by Others — matches needing your response">
         <span class="nav-icon">📥</span><span class="nav-label">Invited by Others</span>
         <span id="invitedByOthersBadge" style="display:inline-flex;min-width:18px;height:18px;border-radius:999px;background:rgba(59,130,246,0.3);color:rgba(255,255,255,0.5);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;">0></span>
-      </div>
-      <div class="nav-item" onclick="showPage('setupMatch')" id="nav-setupMatch" title="Set Up A Match">
+      </button>
+      <button class="nav-item" onclick="showPage('setupMatch')" id="nav-setupMatch" title="Set Up A Match">
         <span class="nav-icon">🎯</span><span class="nav-label">Set Up A Match</span>
-      </div>
-      <div class="nav-item" onclick="showPage('findPlayers')" id="nav-findPlayers" title="Players Wanting to Play">
+      </button>
+      <button class="nav-item" onclick="showPage('findPlayers')" id="nav-findPlayers" title="Players Wanting to Play">
         <span class="nav-icon">🔍</span><span class="nav-label">Players Wanting to Play</span>
-      </div>
+      </button>
 
       <!-- Separator -->
       <div style="height:1px;background:var(--border);margin:6px 20px;opacity:0.5;"></div>
@@ -139,55 +139,55 @@
 
       <!-- ── Player ── -->
       <div class="nav-section-label">Player</div>
-      <div class="nav-item" onclick="showPage('playerProfile')" id="nav-playerProfile" title="Player Profile">
+      <button class="nav-item" onclick="showPage('playerProfile')" id="nav-playerProfile" title="Player Profile">
         <span class="nav-icon">👤</span><span class="nav-label">Player Profile</span>
-      </div>
-      <div class="nav-item" onclick="showPage('innerCircle')" id="nav-innerCircle" title="Inner Circle">
+      </button>
+      <button class="nav-item" onclick="showPage('innerCircle')" id="nav-innerCircle" title="Inner Circle">
         <span class="nav-icon">👥</span><span class="nav-label">Inner Circle</span>
         <span id="icNavGreenBadge" class="nav-circle-badge nav-circle-green placeholder" style="cursor:pointer;opacity:0.4;" onclick="closeNav();showIcView('members')" title="Approved members">0</span>
         <span id="icNavYellowBadge" class="nav-circle-badge nav-circle-yellow placeholder" style="cursor:pointer;opacity:0.4;" onclick="closeNav();showIcView('invited')" title="Invites sent">0</span>
         <span id="icNavPurpleBadge" class="nav-circle-badge nav-circle-purple placeholder" style="cursor:pointer;" onclick="closeNav();showIcView('incoming')" title="Requests to you">0</span>
-      </div>
-      <div class="nav-item" onclick="showPage('myCourts')" id="nav-myCourts" title="My Courts">
+      </button>
+      <button class="nav-item" onclick="showPage('myCourts')" id="nav-myCourts" title="My Courts">
         <span class="nav-icon">🏟️</span><span class="nav-label">My Courts</span>
         <span id="navCourtPrivate" title="Private Courts" style="display:none;margin-left:2px;min-width:20px;height:20px;border-radius:4px;background:rgba(140,100,255,0.2);border:1px solid rgba(140,100,255,0.4);color:#a78bfa;font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 5px;cursor:default;"></span>
         <span id="navCourtPublic" title="Public Courts" style="display:none;margin-left:3px;min-width:20px;height:20px;border-radius:4px;background:rgba(76,175,125,0.2);border:1px solid rgba(76,175,125,0.4);color:var(--green);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 5px;cursor:default;"></span>
-      </div>
+      </button>
 
       <!-- ── Organizer (shown only when is_organizer = true) ── -->
       <div id="organizerNav" style="display:none;">
         <div style="height:1px;background:var(--border);margin:6px 20px;opacity:0.5;"></div>
         <div class="nav-section-label">Organizer</div>
-        <div class="nav-item" onclick="showPage('myGroups')" id="nav-myGroups" title="My Groups">
+        <button class="nav-item" onclick="showPage('myGroups')" id="nav-myGroups" title="My Groups">
           <span class="nav-icon">🗂️</span><span class="nav-label">My Groups</span>
           <span id="navGroupsBadge" style="display:none;margin-left:auto;min-width:20px;height:20px;border-radius:4px;background:rgba(76,175,125,0.2);border:1px solid rgba(76,175,125,0.4);color:var(--green);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 5px;"></span>
-        </div>
+        </button>
       </div>
 
       <div style="height:1px;background:var(--border);margin:6px 20px;opacity:0.5;"></div>
 
       <!-- ── Stats ── -->
       <div class="nav-section-label">Stats &amp; History</div>
-      <div class="nav-item" onclick="showPage('playerStats')" id="nav-playerStats-2" title="Player Statistics">
+      <button class="nav-item" onclick="showPage('playerStats')" id="nav-playerStats-2" title="Player Statistics">
         <span class="nav-icon">📊</span><span class="nav-label">Player Statistics</span>
-      </div>
-      <div class="nav-item" onclick="showPage('recordScores')" id="nav-recordScores-2" title="Record / View Scores">
+      </button>
+      <button class="nav-item" onclick="showPage('recordScores')" id="nav-recordScores-2" title="Record / View Scores">
         <span class="nav-icon">🏆</span><span class="nav-label">Record / View Scores</span>
-      </div>
+      </button>
 
       <div style="height:1px;background:var(--border);margin:6px 20px;opacity:0.5;"></div>
 
       <div class="nav-section-label">Lessons</div>
-      <div class="nav-item nav-lessons-dim" onclick="showPage('myLessons')" id="nav-myLessons" title="My Lessons">
+      <button class="nav-item nav-lessons-dim" onclick="showPage('myLessons')" id="nav-myLessons" title="My Lessons">
         <span class="nav-icon">📚</span><span class="nav-label">My Lessons</span>
-      </div>
-      <div class="nav-item nav-lessons-dim" onclick="showPage('lessons')" id="nav-lessons" title="For Coaches">
+      </button>
+      <button class="nav-item nav-lessons-dim" onclick="showPage('lessons')" id="nav-lessons" title="For Coaches">
         <span class="nav-icon">🎓</span><span class="nav-label">For Coaches</span>
         <span class="nav-lessons-badge" id="lessonsNavBadge" style="display:none;">New</span>
-      </div>
-      <div class="nav-item" onclick="showPage('privacy')" id="nav-privacy" title="Privacy Policy">
+      </button>
+      <button class="nav-item" onclick="showPage('privacy')" id="nav-privacy" title="Privacy Policy">
         <span class="nav-icon">🔒</span><span class="nav-label">Privacy Policy</span>
-      </div>
+      </button>
 
     </div>
     <div class="nav-footer">
