@@ -929,7 +929,12 @@ function closeNav(){
   const nav = document.getElementById('leftNav');
   const overlay = document.getElementById('navOverlay');
   if(nav) nav.classList.remove('open');
-  if(overlay) overlay.classList.remove('visible');
+  if(overlay){
+    overlay.classList.remove('visible');
+    overlay.style.display = 'none';
+    overlay.style.opacity = '0';
+    overlay.style.pointerEvents = 'none';
+  }
 }
 // ── Secure email sender — Cloudflare Pages Function ──────────────────
 async function sendEmail({ to_email, type, personal_note, invite_url, subject, inviter_name }){
@@ -1960,7 +1965,14 @@ function toggleNav(){
   const nav = document.getElementById('leftNav');
   const overlay = document.getElementById('navOverlay');
   nav.classList.toggle('open');
-  overlay.classList.toggle('visible');
+  const opening = nav.classList.contains('open');
+  if(opening){
+    overlay.style.display = 'block';
+    overlay.style.pointerEvents = 'auto';
+    requestAnimationFrame(()=>{ overlay.style.opacity = '1'; });
+  } else {
+    closeNav();
+  }
 }
 
 // ── My Courts ──────────────────────────────────────────
