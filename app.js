@@ -7037,6 +7037,8 @@ function updateNavCircleBadges(memberCount,pendingCount,incomingCount){
   const inEl=document.getElementById('icInboundCount');
   if(inEl) inEl.textContent=incomingCount||0;
   // Sync the dashboard IC squares
+  const dashMemberEl=document.getElementById('dashIcMemberCount');
+  if(dashMemberEl) dashMemberEl.textContent=memberCount||0;
   const dashSentEl=document.getElementById('dashIcSentCount');
   if(dashSentEl) dashSentEl.textContent=pendingCount;
   const dashIncomingEl=document.getElementById('dashIcIncomingCount');
