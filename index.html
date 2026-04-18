@@ -144,9 +144,9 @@
       </div>
       <div class="nav-item" onclick="showPage('innerCircle')" id="nav-innerCircle" title="Inner Circle">
         <span class="nav-icon">👥</span><span class="nav-label">Inner Circle</span>
-        <span id="icNavGreenBadge" class="nav-circle-badge nav-circle-green placeholder" style="cursor:pointer;opacity:0.4;" onclick="showIcView('members')" title="Approved members">0</span>
-        <span id="icNavYellowBadge" class="nav-circle-badge nav-circle-yellow placeholder" style="cursor:pointer;opacity:0.4;" onclick="showIcView('invited')" title="Invites sent">0</span>
-        <span id="icNavPurpleBadge" class="nav-circle-badge nav-circle-purple placeholder" style="cursor:pointer;" onclick="showIcView('incoming')" title="Requests to you">0</span>
+        <span id="icNavGreenBadge" class="nav-circle-badge nav-circle-green placeholder" style="cursor:pointer;opacity:0.4;" onclick="closeNav();showIcView('members')" title="Approved members">0</span>
+        <span id="icNavYellowBadge" class="nav-circle-badge nav-circle-yellow placeholder" style="cursor:pointer;opacity:0.4;" onclick="closeNav();showIcView('invited')" title="Invites sent">0</span>
+        <span id="icNavPurpleBadge" class="nav-circle-badge nav-circle-purple placeholder" style="cursor:pointer;" onclick="closeNav();showIcView('incoming')" title="Requests to you">0</span>
       </div>
       <div class="nav-item" onclick="showPage('myCourts')" id="nav-myCourts" title="My Courts">
         <span class="nav-icon">🏟️</span><span class="nav-label">My Courts</span>
@@ -195,7 +195,7 @@
     </div>
     <!-- Beta Feedback Button -->
     <div style="padding:12px 16px;margin-top:auto;border-top:1px solid rgba(255,255,255,0.06);">
-      <button onclick="openFeedbackModal()" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid #1a5c32;background:#d1fae5;color:#1a5c32;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;">
+      <button onclick="closeNav();openFeedbackModal()" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid #1a5c32;background:#d1fae5;color:#1a5c32;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;">
         &#128172; Send Feedback
       </button>
       <div style="font-size:10px;color:#1a5c32;text-align:center;margin-top:6px;">Beta v0.1 — pballconnect.com</div>

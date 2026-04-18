@@ -925,6 +925,10 @@ function showToast(msg, color='#ef4444'){
   document.body.appendChild(t);
   setTimeout(()=>t.remove(), 6000);
 }
+function closeNav(){
+  document.getElementById('leftNav')?.classList.remove('open');
+  document.getElementById('navOverlay')?.classList.remove('visible');
+}
 // ── Secure email sender — Cloudflare Pages Function ──────────────────
 async function sendEmail({ to_email, type, personal_note, invite_url, subject, inviter_name }){
   if(!to_email || !to_email.includes('@')) return;
@@ -1381,17 +1385,13 @@ async function showCitySelector(stateName){
 // ── Navigation ─────────────────────────────────────────
 function showPage(page){
   if(page!=='playerProfile'){stopChangeDetection();_editModeActive=false;}
-  // Close mobile nav when navigating
-  document.getElementById('leftNav')?.classList.remove('open');
-  document.getElementById('navOverlay')?.classList.remove('visible');
+  closeNav();
+  setTimeout(closeNav, 50); // catch any async re-opens
   document.querySelectorAll('.page-section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   const navEl=document.getElementById('nav-'+page);
   if(navEl) navEl.classList.add('active');
-  // Close mobile nav
-  document.getElementById('leftNav').classList.remove('open');
-  document.getElementById('navOverlay').classList.remove('visible');
   // Page-specific loaders
   if(page==='dashboard')    loadDashboard();
   if(page==='myCourts')    loadMyCourts();
