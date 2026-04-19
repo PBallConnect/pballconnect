@@ -562,8 +562,8 @@ function selChip(gid,el,key){
   if(key==='skill')  chk2();
   if(key==='playStyle'){
     const goalField = document.getElementById('goalRatingField');
-    if(goalField) goalField.style.display = val==='Competitive' ? 'block' : 'none';
-    if(val!=='Competitive'){ S.goalRating=null; }
+    if(goalField) goalField.style.display = (val==='Competitive'||val==='Both') ? 'block' : 'none';
+    if(val!=='Competitive'&&val!=='Both'){ S.goalRating=null; }
   }
 }
 
@@ -2483,7 +2483,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
       if(c.textContent.trim()==='Both'){ c.classList.add('on'); S.matchGenderPref='Both'; }
     });
     document.querySelectorAll('#playStyleChips .chip').forEach(c=>{
-      if(c.textContent.trim()==='All-Around'){ c.classList.add('on'); S.playStyle='All-Around'; }
+      if(c.textContent.trim()==='Both'){ c.classList.add('on'); S.playStyle='Both'; }
     });
   }
 });
@@ -6505,7 +6505,7 @@ function restoreProfileForm(player){
   S.venuePref=player.play_venues||''; S.playStyle=player.play_style||'';
   // Show goal rating field if play style is Competitive
   const goalField = document.getElementById('goalRatingField');
-  if(goalField) goalField.style.display = (S.playStyle==='Competitive') ? 'block' : 'none';
+  if(goalField) goalField.style.display = (S.playStyle==='Competitive'||S.playStyle==='Both') ? 'block' : 'none';
 
   if(player.skill_level){
     const idx=DUPR_VALS.findIndex(v=>String(v)===String(player.skill_level));
@@ -6560,8 +6560,8 @@ function restoreProfileForm(player){
     if(removeBtn) removeBtn.style.display='inline-block';
   }
 
-  // Restore goal rating if Competitive play style
-  if(S.playStyle==='Competitive'&&player.goal_rating){
+  // Restore goal rating if Competitive or Both play style
+  if((S.playStyle==='Competitive'||S.playStyle==='Both')&&player.goal_rating){
     S.goalRating=player.goal_rating;
     const goalIdx=DUPR_VALS.findIndex(v=>String(v)===String(player.goal_rating));
     if(goalIdx>=0){
