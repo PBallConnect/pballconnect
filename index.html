@@ -376,8 +376,8 @@
         <input type="tel" id="phone" placeholder="(555) 000-0000" autocomplete="off" oninput="formatPhone(this)" maxlength="14"/>
       </div>
       <div class="field">
-        <label>Age Range as of Jan 1 this Year</label>
-        <select id="playerAge" oninput="chk1()" onchange="chk1()" style="width:100%;padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:#f9fafb;color:#111;font-size:14px;font-family:'DM Sans',sans-serif;">
+        <label style="text-decoration:underline;">Age Range as of Jan 1 this Year</label>
+        <select id="playerAge" oninput="chk1()" onchange="chk1()" style="width:100%;padding:11px 14px;border-radius:10px;border:2px solid var(--border);background:#f9fafb;color:#111;font-size:14px;font-family:'DM Sans',sans-serif;">
           <option value="">Select Age Range…</option>
           <option value="Under 18">Under 18</option>
           <option value="18">18</option>
@@ -485,16 +485,6 @@
   <div class="card" id="step2" style="display:none">
     <h2>Player Profile</h2>
     <div class="field">
-      <label>Play Style</label>
-      <div class="chips" id="playStyleChips">
-        <button class="chip" onclick="selChip('playStyleChips',this,'playStyle')">Just for fun 😄</button>
-        <button class="chip" onclick="selChip('playStyleChips',this,'playStyle')">Competitively 🏆</button>
-        <button class="chip" onclick="selChip('playStyleChips',this,'playStyle')">Both</button>
-      </div>
-    </div>
-
-    <div class="divider"></div>
-    <div class="field">
       <label>Play Format</label>
       <div class="chips" id="playFormatChips">
         <button class="chip" onclick="selChip('playFormatChips',this,'playFormat')">Singles 🎾</button>
@@ -517,7 +507,17 @@
 
     <div class="divider"></div>
     <div class="field">
-      <label>DUPR Rating</label>
+      <label>DUPR Rating
+        <span style="font-size:11px;color:#1a7a3a;cursor:pointer;text-decoration:underline;margin-left:6px;font-weight:400;text-transform:none;letter-spacing:0;"
+          onclick="document.getElementById('duprTooltip').style.display=document.getElementById('duprTooltip').style.display==='none'?'block':'none'">
+          What's DUPR?
+        </span>
+      </label>
+      <div id="duprTooltip" style="display:none;margin-bottom:10px;padding:10px 14px;background:#f0fdf4;border:1px solid #6ee7b7;border-radius:10px;font-size:12px;color:#065f46;line-height:1.6;">
+        <strong>DUPR (Dynamic Universal Pickleball Rating)</strong> is the world's most accurate pickleball rating system used by 1M+ players globally.
+        It ranges from 2.0 (beginner) to 8.0 (pro). Don't have one yet?
+        <a href="https://mydupr.com" target="_blank" style="color:#1a7a3a;font-weight:700;">Get your free DUPR rating →</a>
+      </div>
       <div style="padding:4px 0 8px">
         <div class="dupr-display" id="duprDisplay">-- <span>not set — slide to choose</span></div>
         <input type="range" id="duprSlider" min="0" max="21" step="1" value="0" oninput="updateDupr(this.value)" style="--pct:0%"/>
@@ -536,15 +536,17 @@
       <div class="hint">Your self-assessed playing level · Increments of 0.25</div>
     </div>
     <div class="divider"></div>
-
     <div class="field">
-      <label>Are you hoping to improve?</label>
-      <div style="display:flex;gap:10px;margin-top:8px;">
-        <button id="improveYesBtn" class="chip" onclick="selectImproveGoal('improve')" style="flex:1;padding:13px 8px;font-size:13px;font-weight:700;line-height:1.3;white-space:normal;">Yes, I want to improve</button>
-        <button id="improveFunBtn" class="chip" onclick="selectImproveGoal('fun')" style="flex:1;padding:13px 8px;font-size:13px;font-weight:700;line-height:1.3;white-space:normal;">I play just for fun</button>
+      <label>Play Style</label>
+      <div class="chips" id="playStyleChips">
+        <button class="chip" onclick="selChip('playStyleChips',this,'playStyle')">Just for fun 😄</button>
+        <button class="chip" onclick="selChip('playStyleChips',this,'playStyle')">Competitive 🏆</button>
+        <button class="chip on" onclick="selChip('playStyleChips',this,'playStyle')">All-Around</button>
       </div>
     </div>
-    <!-- Goal rating — shown only if wants to improve -->
+    <div class="divider"></div>
+
+    <!-- Goal rating — shown only when Play Style = Competitive -->
     <div class="field" id="goalRatingField" style="display:none;">
       <label>Target Rating in the Next Year</label>
       <div style="padding:4px 0 8px">
@@ -573,27 +575,6 @@
           <span id="vizTargetVal" style="font-size:12px;font-weight:800;color:#1a7a3a;width:30px;text-align:right;">—</span>
         </div>
         <div style="font-size:11px;color:#059669;font-weight:600;text-align:center;margin-top:10px;">We'll check in on your progress quarterly 🎯</div>
-      </div>
-    </div>
-    <!-- Lesson questions — shown if wants to improve -->
-    <div id="lessonSection" style="display:none;">
-      <div class="divider"></div>
-      <div class="field">
-        <label>Have you ever had a pickleball lesson?</label>
-        <div class="chips" id="lessonChips">
-          <button class="chip" onclick="selChip('lessonChips',this,'hasHadLesson');toggleLessonOffer(this.textContent)">Yes</button>
-          <button class="chip" onclick="selChip('lessonChips',this,'hasHadLesson');toggleLessonOffer(this.textContent)">No</button>
-        </div>
-      </div>
-      <div id="lessonOfferSection" style="display:none;">
-        <div class="field">
-          <label>Would you like to set up a lesson in the next 30 days?</label>
-          <div class="chips" id="lessonOfferChips">
-            <button class="chip" onclick="selChip('lessonOfferChips',this,'wantsLesson');onLessonOfferAnswer(this.textContent)">Yes</button>
-            <button class="chip" onclick="selChip('lessonOfferChips',this,'wantsLesson');onLessonOfferAnswer(this.textContent)">No</button>
-          </div>
-        </div>
-        <div id="lessonMessage" style="display:none;"></div>
       </div>
     </div>
     <div class="divider"></div>

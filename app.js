@@ -560,6 +560,11 @@ function selChip(gid,el,key){
   }
   if(key==='gender') chk1();
   if(key==='skill')  chk2();
+  if(key==='playStyle'){
+    const goalField = document.getElementById('goalRatingField');
+    if(goalField) goalField.style.display = val==='Competitive' ? 'block' : 'none';
+    if(val!=='Competitive'){ S.goalRating=null; }
+  }
 }
 
 // ── Schedule ──────────────────────────────────────────
@@ -805,9 +810,6 @@ function populateSummary(){
   set('sumDupr',   dupr  || 'Not set');
   if(goal){ show('sumGoalRow',true); set('sumGoal', goal); }
   else show('sumGoalRow',false);
-  set('sumImprove',      improve || '—');
-  set('sumLesson',       S.hasHadLesson  || '—');
-  set('sumWantsLesson',  S.wantsLesson   || '—');
 }
 
 
@@ -1012,9 +1014,6 @@ function showProfileDiff(){
     {label:'Skill Level',   old:String(player.skill_level||''),       nw:String(S.skill||player.skill_level||'')},
     {label:'DUPR Rating',   old:String(player.dupr_rating||''),       nw:String(S.duprVal||'')},
     {label:'Target Level',  old:String(player.goal_rating||''),       nw:String(S.goalRating||'')},
-    {label:'Wants to Improve', old:player.wants_to_improve||'',      nw:S.wantsToImprove||''},
-    {label:'Had a Lesson',  old:player.has_had_lesson||'',            nw:S.hasHadLesson||''},
-    {label:'Wants Lesson',  old:player.wants_lesson||'',              nw:S.wantsLesson||''},
     {label:'Wkdy Mornings', old:String(!!(player.avail_weekday_morning)),   nw:String(!!S.availWeekdayMorning)},
     {label:'Wkdy Afternoons',old:String(!!(player.avail_weekday_afternoon)),nw:String(!!S.availWeekdayAfternoon)},
     {label:'Wkdy Evenings', old:String(!!(player.avail_weekday_evening)),   nw:String(!!S.availWeekdayEvening)},
@@ -1147,10 +1146,7 @@ async function doSaveProfile(){
       avatar_emoji:        S.avatarEmoji || '🎾',
       play_venues:         S.venuePref   || null,
       playing_since:       S.playingSince || null,
-      wants_to_improve:    S.wantsToImprove || null,
       goal_rating:         S.goalRating || null,
-      has_had_lesson:      S.hasHadLesson || null,
-      wants_lesson:        S.wantsLesson || null,
       avail_weekday_morning:   !!S.availWeekdayMorning,
       avail_weekday_afternoon: !!S.availWeekdayAfternoon,
       avail_weekday_evening:   !!S.availWeekdayEvening,
@@ -2474,6 +2470,24 @@ function afterRegistration(){
 }
 
 // ── Photo drag & drop ─────────────────────────────────
+document.addEventListener('DOMContentLoaded', ()=>{
+  // Pre-select defaults for new users (no session yet)
+  if(!SESSION_PLAYER){
+    document.querySelectorAll('#venuePrefChips .chip').forEach(c=>{
+      if(c.textContent.trim()==='Both'){ c.classList.add('on'); S.venuePref='Both'; }
+    });
+    document.querySelectorAll('#playFormatChips .chip').forEach(c=>{
+      if(c.textContent.trim()==='Both'){ c.classList.add('on'); S.playFormat='Both'; }
+    });
+    document.querySelectorAll('#matchGenderPrefChips .chip').forEach(c=>{
+      if(c.textContent.trim()==='Both'){ c.classList.add('on'); S.matchGenderPref='Both'; }
+    });
+    document.querySelectorAll('#playStyleChips .chip').forEach(c=>{
+      if(c.textContent.trim()==='All-Around'){ c.classList.add('on'); S.playStyle='All-Around'; }
+    });
+  }
+});
+
 document.addEventListener('DOMContentLoaded', ()=>{
   const area = document.getElementById('photoUploadArea');
   if(!area) return;
@@ -6487,14 +6501,11 @@ function restoreProfileForm(player){
   S.matchGenderPref=player.match_gender_pref||'Both';
   restoreChip('matchGenderPrefChips',player.match_gender_pref||'Both');
   onMatchGenderPrefChange(S.matchGenderPref);
-  restoreChip('lessonChips',player.has_had_lesson);
   S.gender=player.gender||''; S.handedness=player.handedness||'';
   S.venuePref=player.play_venues||''; S.playStyle=player.play_style||'';
-  S.hasHadLesson=player.has_had_lesson||''; S.wantsLesson=player.wants_lesson||'';
-  // Restore improve/fun goal selection (supports old 'Yes'/'No' and new 'improve'/'fun')
-  const rawImprove=player.wants_to_improve||'';
-  const improveVal=(rawImprove==='Yes'||rawImprove==='improve')?'improve':(rawImprove==='No'||rawImprove==='fun')?'fun':'';
-  if(improveVal) selectImproveGoal(improveVal); else S.wantsToImprove='';
+  // Show goal rating field if play style is Competitive
+  const goalField = document.getElementById('goalRatingField');
+  if(goalField) goalField.style.display = (S.playStyle==='Competitive') ? 'block' : 'none';
 
   if(player.skill_level){
     const idx=DUPR_VALS.findIndex(v=>String(v)===String(player.skill_level));
@@ -6653,9 +6664,6 @@ function startChangeDetection(){
       S.playFormat!==(p.play_format||'Both')||
       S.playStyle!==(p.play_style||'')||
       S.venuePref!==(p.play_venues||'')||
-      (()=>{const raw=p.wants_to_improve||'';const stored=(raw==='Yes'||raw==='improve')?'improve':(raw==='No'||raw==='fun')?'fun':'';return (S.wantsToImprove||'')!==stored;})()||
-      S.hasHadLesson!==(p.has_had_lesson||'')||
-      S.wantsLesson!==(p.wants_lesson||'')||
       !!S.availWeekdayMorning!==!!(p.avail_weekday_morning)||
       !!S.availWeekdayAfternoon!==!!(p.avail_weekday_afternoon)||
       !!S.availWeekdayEvening!==!!(p.avail_weekday_evening)||
