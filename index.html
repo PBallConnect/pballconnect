@@ -109,21 +109,6 @@
         <span class="nav-icon">✅</span><span class="nav-label">Confirmed Matches</span>
         <span id="confirmedMatchesBadge" style="display:inline-flex;min-width:20px;height:20px;border-radius:50%;background:rgba(76,175,125,0.2);color:rgba(76,175,125,0.5);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;">0></span>
       </button>
-
-      <!-- Separator -->
-      <div style="height:1px;background:var(--border);margin:6px 20px;opacity:0.5;"></div>
-
-      <button class="nav-item" onclick="showPage('myInvites')" id="nav-myInvites" title="My Match Invites — pending matches you organized">
-        <span class="nav-icon">📤</span><span class="nav-label">My Match Invites</span>
-        <span id="myInvitesBadge" style="display:inline-flex;min-width:18px;height:18px;border-radius:999px;background:rgba(239,68,68,0.3);color:rgba(255,255,255,0.5);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;">0></span>
-      </button>
-      <button class="nav-item" onclick="showPage('invitedByOthers')" id="nav-invitedByOthers" title="Match Invites from Others — matches needing your response">
-        <span class="nav-icon">📥</span><span class="nav-label">Match Invites from Others</span>
-        <span id="invitedByOthersBadge" style="display:inline-flex;min-width:18px;height:18px;border-radius:999px;background:rgba(59,130,246,0.3);color:rgba(255,255,255,0.5);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;">0></span>
-      </button>
-      <button class="nav-item" onclick="showPage('setupMatch')" id="nav-setupMatch" title="Set Up A Match">
-        <span class="nav-icon">🎯</span><span class="nav-label">Set Up A Match</span>
-      </button>
       <button class="nav-item" onclick="showPage('findPlayers')" id="nav-findPlayers" title="Players Wanting to Play">
         <span class="nav-icon">🔍</span><span class="nav-label">Players Wanting to Play</span>
       </button>
@@ -141,20 +126,32 @@
       </button>
       <button class="nav-item" onclick="showPage('innerCircle')" id="nav-innerCircle" title="Inner Circle">
         <span class="nav-icon">👥</span><span class="nav-label">Inner Circle</span>
-        <span id="icNavGreenBadge" class="nav-circle-badge nav-circle-green placeholder" style="cursor:pointer;opacity:0.4;" onclick="closeNav();showIcView('members')" title="Approved members">0</span>
-        <span id="icNavYellowBadge" class="nav-circle-badge nav-circle-yellow placeholder" style="cursor:pointer;opacity:0.4;" onclick="closeNav();showIcView('invited')" title="Invites sent">0</span>
-        <span id="icNavPurpleBadge" class="nav-circle-badge nav-circle-purple placeholder" style="cursor:pointer;" onclick="closeNav();showIcView('incoming')" title="Requests to you">0</span>
       </button>
-      <button class="nav-item" onclick="showPage('myCourts')" id="nav-myCourts" title="My Courts">
+      <button class="nav-item" onclick="showPage('myCourts')" id="nav-myCourts" title="My Courts" style="flex-wrap:wrap;align-items:flex-start;">
         <span class="nav-icon">🏟️</span><span class="nav-label">My Courts</span>
-        <span id="navCourtPrivate" title="Private Courts" style="display:none;margin-left:2px;min-width:20px;height:20px;border-radius:4px;background:rgba(140,100,255,0.2);border:1px solid rgba(140,100,255,0.4);color:#a78bfa;font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 5px;cursor:default;"></span>
-        <span id="navCourtPublic" title="Public Courts" style="display:none;margin-left:3px;min-width:20px;height:20px;border-radius:4px;background:rgba(76,175,125,0.2);border:1px solid rgba(76,175,125,0.4);color:var(--green);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 5px;cursor:default;"></span>
+        <div style="width:100%;padding-left:32px;margin-top:4px;display:flex;gap:6px;" id="navCourtsBadges">
+          <span id="navCourtPrivate" title="Private Courts" style="display:none;flex-direction:column;align-items:center;gap:1px;">
+            <span style="min-width:20px;height:18px;border-radius:4px;background:rgba(140,100,255,0.2);border:1px solid rgba(140,100,255,0.4);color:#a78bfa;font-size:10px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;padding:0 5px;" id="navCourtPrivateNum"></span>
+            <span style="font-size:8px;font-weight:700;color:#a78bfa;letter-spacing:.03em;">Private</span>
+          </span>
+          <span id="navCourtPublic" title="Public Courts" style="display:none;flex-direction:column;align-items:center;gap:1px;">
+            <span style="min-width:20px;height:18px;border-radius:4px;background:rgba(76,175,125,0.2);border:1px solid rgba(76,175,125,0.4);color:var(--green);font-size:10px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;padding:0 5px;" id="navCourtPublicNum"></span>
+            <span style="font-size:8px;font-weight:700;color:var(--green);letter-spacing:.03em;">Public</span>
+          </span>
+        </div>
       </button>
 
       <!-- ── Organizer (shown only when is_organizer = true) ── -->
       <div id="organizerNav" style="display:none;">
         <div style="height:1px;background:var(--border);margin:6px 20px;opacity:0.5;"></div>
         <div class="nav-section-label">Organizer</div>
+        <button class="nav-item" onclick="showPage('setupMatch')" id="nav-setupMatch" title="Set Up A Match">
+          <span class="nav-icon">🎯</span><span class="nav-label">Set Up A Match</span>
+        </button>
+        <button class="nav-item" onclick="showPage('myInvites')" id="nav-myInvites" title="My Match Invites — pending matches you organized">
+          <span class="nav-icon">📤</span><span class="nav-label">My Match Invites</span>
+          <span id="myInvitesBadge" style="display:inline-flex;min-width:18px;height:18px;border-radius:999px;background:rgba(239,68,68,0.3);color:rgba(255,255,255,0.5);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;">0></span>
+        </button>
         <button class="nav-item" onclick="showPage('myGroups')" id="nav-myGroups" title="My Groups">
           <span class="nav-icon">🗂️</span><span class="nav-label">My Groups</span>
           <span id="navGroupsBadge" style="display:none;margin-left:auto;min-width:20px;height:20px;border-radius:4px;background:rgba(76,175,125,0.2);border:1px solid rgba(76,175,125,0.4);color:var(--green);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 5px;"></span>
@@ -235,7 +232,7 @@
               style="flex:1;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #ea580c;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;"
               onmouseover="this.style.background='#fff7ed'" onmouseout="this.style.background='#ffffff'">
               <div id="dashSqMyInvites" style="font-size:26px;font-weight:800;color:#7c2d12;line-height:1;">0</div>
-              <div style="font-size:7px;font-weight:700;color:#7c2d12;margin-top:5px;line-height:1.5;">My Match Invites<br/>to Others<br/>───────➜</div>
+              <div style="font-size:7px;font-weight:700;color:#7c2d12;margin-top:5px;line-height:1.4;">My Match Invites<br/>to Others</div>
               <div id="dashTileMyInvites" style="display:none;"></div>
             </button>
 
@@ -244,7 +241,7 @@
               style="flex:1;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #2563eb;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;"
               onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='#ffffff'">
               <div id="dashSqInvited" style="font-size:26px;font-weight:800;color:#1e3a8a;line-height:1;">0</div>
-              <div style="font-size:7px;font-weight:700;color:#1e3a8a;margin-top:5px;line-height:1.5;">Me from Other's<br/>Match Invites<br/>←───────</div>
+              <div style="font-size:7px;font-weight:700;color:#1e3a8a;margin-top:5px;line-height:1.4;">Match Invites<br/>from Others</div>
               <div id="dashTileInvited" style="display:none;"></div>
             </button>
 
@@ -257,27 +254,27 @@
           <div style="display:flex;gap:8px;">
 
             <!-- Green: My Inner Circle -->
-            <button onclick="showPage('innerCircle')"
+            <button onclick="showPage('innerCircle');setTimeout(()=>showIcView('members'),200)"
               style="flex:1;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #16a34a;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;"
               onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='#ffffff'">
               <div id="dashIcMemberCount" style="font-size:26px;font-weight:800;color:#14532d;line-height:1;">0</div>
-              <div style="font-size:9px;font-weight:700;color:#14532d;margin-top:5px;line-height:1.4;">👥 My IC</div>
+              <div style="font-size:7px;font-weight:700;color:#14532d;margin-top:5px;line-height:1.4;">👥 My IC</div>
             </button>
 
-            <!-- Amber: Invites From Me → Others -->
+            <!-- Amber: My Invites to Others -->
             <button onclick="showPage('innerCircle');setTimeout(()=>showIcView('invited'),200)"
               style="flex:1;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #d97706;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;"
               onmouseover="this.style.background='#fffbeb'" onmouseout="this.style.background='#ffffff'">
               <div id="dashIcSentCount" style="font-size:26px;font-weight:800;color:#78350f;line-height:1;">0</div>
-              <div style="font-size:7px;font-weight:700;color:#78350f;margin-top:5px;line-height:1.5;">My Invites<br/>to Others<br/>──────➜</div>
+              <div style="font-size:7px;font-weight:700;color:#78350f;margin-top:5px;line-height:1.4;">My Invites<br/>to Others</div>
             </button>
 
-            <!-- Purple: Invites to Me ← Others -->
+            <!-- Purple: Others Invites to Me -->
             <button onclick="showPage('innerCircle');setTimeout(()=>showIcView('incoming'),200)"
               style="flex:1;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #7c3aed;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;"
               onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background='#ffffff'">
               <div id="dashIcIncomingCount" style="font-size:26px;font-weight:800;color:#4c1d95;line-height:1;">0</div>
-              <div style="font-size:7px;font-weight:700;color:#4c1d95;margin-top:5px;line-height:1.5;">Me from Other's<br/>Invites<br/>←──────</div>
+              <div style="font-size:7px;font-weight:700;color:#4c1d95;margin-top:5px;line-height:1.4;">Others Invites<br/>to Me</div>
             </button>
 
           </div>

@@ -7066,14 +7066,14 @@ function updateNavCourtBadges(publicCount, privateCount){
   const pub = document.getElementById('navCourtPublic');
   const prv = document.getElementById('navCourtPrivate');
   if(pub){
-    pub.textContent = publicCount;
+    const numEl = document.getElementById('navCourtPublicNum');
+    if(numEl) numEl.textContent = publicCount;
     pub.style.display = publicCount > 0 ? 'inline-flex' : 'none';
-    pub.title = publicCount + ' Public Court' + (publicCount !== 1 ? 's' : '');
   }
   if(prv){
-    prv.textContent = privateCount;
+    const numEl = document.getElementById('navCourtPrivateNum');
+    if(numEl) numEl.textContent = privateCount;
     prv.style.display = privateCount > 0 ? 'inline-flex' : 'none';
-    prv.title = privateCount + ' Private Court' + (privateCount !== 1 ? 's' : '');
   }
 }
 
