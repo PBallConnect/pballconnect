@@ -376,7 +376,7 @@
         <input type="tel" id="phone" placeholder="(555) 000-0000" autocomplete="off" oninput="formatPhone(this)" maxlength="14"/>
       </div>
       <div class="field">
-        <label>Age as of Jan 1 this year</label>
+        <label>Age Range as of Jan 1 this Year</label>
         <select id="playerAge" oninput="chk1()" onchange="chk1()" style="width:100%;padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:#f9fafb;color:#111;font-size:14px;font-family:'DM Sans',sans-serif;">
           <option value="">Select Age Range…</option>
           <option value="Under 18">Under 18</option>
@@ -417,27 +417,26 @@
       <div class="chips" id="handednessChips">
         <button class="chip" onclick="selChip('handednessChips',this,'handedness')">🤚 Right-Handed</button>
         <button class="chip" onclick="selChip('handednessChips',this,'handedness')">🤚 Left-Handed</button>
-        <button class="chip" onclick="selChip('handednessChips',this,'handedness')">🤲 Ambidextrous</button>
       </div>
     </div>
 
     <div class="divider"></div>
 
-    <!-- LOCATION — city/state/zip only -->
+    <!-- LOCATION — zip only; city/state derived automatically -->
     <div class="field">
       <label>Location</label>
       <div style="font-size:11px;color:var(--dim);margin-bottom:10px;line-height:1.5;">
-        🔒 We use your city and zip to find nearby players and courts. We never store your street address.
+        🔒 Enter your zip code — we'll look up your city and state automatically to find nearby players and courts.
       </div>
-    </div>
-    <div class="grid2">
-      <div class="field"><label>City</label><input type="text" id="addrCity" oninput="onManualAddress();chk1()" placeholder="City" autocomplete="off"/></div>
-      <div class="field"><label>State</label><input type="text" id="addrState" oninput="this.value=this.value.replace(/[^a-zA-Z]/g,'').toUpperCase().substring(0,2);onManualAddress();chk1()" onblur="this.value=this.value.replace(/[^a-zA-Z]/g,'').toUpperCase().substring(0,2)" placeholder="NH" autocomplete="new-password" maxlength="2"/></div>
     </div>
     <div class="field" style="max-width:160px;">
       <label>Zip Code</label>
-      <input type="text" id="addrZip" oninput="onManualAddress();chk1()" placeholder="03842" autocomplete="off" maxlength="10"/>
+      <input type="text" id="addrZip" oninput="onZipChange(this.value)" placeholder="03842" autocomplete="off" maxlength="10"/>
+      <div id="zipGeoStatus" style="font-size:11px;color:var(--dim);margin-top:6px;min-height:16px;"></div>
     </div>
+    <!-- Hidden fields so downstream JS can read city/state without changes -->
+    <input type="hidden" id="addrCity" value=""/>
+    <input type="hidden" id="addrState" value=""/>
 
     <div class="divider"></div>
 
@@ -486,26 +485,6 @@
   <div class="card" id="step2" style="display:none">
     <h2>Player Profile</h2>
     <div class="field">
-      <label>DUPR Rating</label>
-      <div style="padding:4px 0 8px">
-        <div class="dupr-display" id="duprDisplay">-- <span>not set — slide to choose</span></div>
-        <input type="range" id="duprSlider" min="0" max="21" step="1" value="0" oninput="updateDupr(this.value)" style="--pct:0%"/>
-        <div class="dupr-ticks" id="duprTicks"></div>
-      </div>
-      <div class="hint">Increments of 0.25 · Leave at start if unknown</div>
-    </div>
-    <div class="divider"></div>
-    <div class="field">
-      <label>Personal Skill Rating <span style="color:#dc2626;font-weight:700;">*</span></label>
-      <div style="padding:4px 0 8px">
-        <div class="dupr-display" id="personalRatingDisplay">-- <span>not set — slide to choose</span></div>
-        <input type="range" id="personalRatingSlider" min="0" max="21" step="1" value="0" oninput="updatePersonalRating(this.value)" style="--pct:0%"/>
-        <div class="dupr-ticks" id="personalRatingTicks"></div>
-      </div>
-      <div class="hint">Your self-assessed playing level · Increments of 0.25</div>
-    </div>
-    <div class="divider"></div>
-    <div class="field">
       <label>Play Style</label>
       <div class="chips" id="playStyleChips">
         <button class="chip" onclick="selChip('playStyleChips',this,'playStyle')">Just for fun 😄</button>
@@ -535,6 +514,28 @@
         ⚠️ Selecting only "<span id="matchGenderPrefWarnType"></span>" will restrict your playing opportunities. Consider selecting <strong>Both</strong> to maximize your matches.
       </div>
     </div>
+
+    <div class="divider"></div>
+    <div class="field">
+      <label>DUPR Rating</label>
+      <div style="padding:4px 0 8px">
+        <div class="dupr-display" id="duprDisplay">-- <span>not set — slide to choose</span></div>
+        <input type="range" id="duprSlider" min="0" max="21" step="1" value="0" oninput="updateDupr(this.value)" style="--pct:0%"/>
+        <div class="dupr-ticks" id="duprTicks"></div>
+      </div>
+      <div class="hint">Increments of 0.25 · Leave at start if unknown</div>
+    </div>
+    <div class="divider"></div>
+    <div class="field">
+      <label>Personal Skill Rating <span style="color:#dc2626;font-weight:700;">*</span></label>
+      <div style="padding:4px 0 8px">
+        <div class="dupr-display" id="personalRatingDisplay">-- <span>not set — slide to choose</span></div>
+        <input type="range" id="personalRatingSlider" min="0" max="21" step="1" value="0" oninput="updatePersonalRating(this.value)" style="--pct:0%"/>
+        <div class="dupr-ticks" id="personalRatingTicks"></div>
+      </div>
+      <div class="hint">Your self-assessed playing level · Increments of 0.25</div>
+    </div>
+    <div class="divider"></div>
 
     <div class="field">
       <label>Are you hoping to improve?</label>
@@ -596,14 +597,6 @@
       </div>
     </div>
     <div class="divider"></div>
-    <div class="field">
-      <label>T-Shirt Size</label>
-      <select id="shirtSize" onchange="chk2()">
-        <option value="">Select size</option>
-        <option>XS</option><option>S</option><option>M</option>
-        <option>L</option><option>XL</option><option>2XL</option><option>3XL</option>
-      </select>
-    </div>
     <div class="field">
       <label>Playing Since <span style="color:#dc2626;font-weight:700;">*</span> <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— what year did you start playing?</span></label>
       <select id="playingSince" onchange="S.playingSince=this.value;chk2()">

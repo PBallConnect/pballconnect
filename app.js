@@ -724,10 +724,9 @@ function populateSummary(){
   const phone     = document.getElementById('phone')?.value?.trim()     || '';
   const ageRange  = document.getElementById('playerAge')?.value         || S.dob   || '';
   const gender    = S.gender    || '';
-  const city      = document.getElementById('addrCity')?.value?.trim()  || S.city  || '';
-  const state     = document.getElementById('addrState')?.value?.trim() || S.state || '';
+  const city      = S.city  || '';
+  const state     = S.state || '';
   const zip       = document.getElementById('addrZip')?.value?.trim()   || S.zip   || '';
-  const shirt     = document.getElementById('shirtSize')?.value         || '';
   const since     = document.getElementById('playingSince')?.value?.trim() || S.playingSince || '';
   const hand      = S.handedness || '';
   const format    = S.playFormat || '';
@@ -773,7 +772,6 @@ function populateSummary(){
   set('sumCity',   city     || '—');
   set('sumState',  state    || '—');
   set('sumZip',    zip      || '—');
-  set('sumShirt',  shirt    || '—');
 
   // — Player info rows —
   set('sumSince',     since  || '—');
@@ -1004,11 +1002,8 @@ function showProfileDiff(){
     {label:'First Name',    old:player.first_name||'',               nw:v('firstName')},
     {label:'Nickname',      old:player.nickname||'',                  nw:v('nickname')},
     {label:'Age Range',     old:player.dob||'',                       nw:document.getElementById('playerAge')?.value||''},
-    {label:'City',          old:player.city||'',                      nw:v('addrCity')},
-    {label:'State',         old:player.state||'',                     nw:stateAbbr(v('addrState'))},
     {label:'Zip',           old:player.zip_code||'',                  nw:v('addrZip')},
     {label:'Phone',         old:decodePhone(player.phone||''),         nw:(v('phone')||'').replace(/\D/g,'')},
-    {label:'T-Shirt',       old:player.shirt_size||'',                nw:v('shirtSize')},
     {label:'Gender',        old:player.gender||'',                    nw:S.gender||''},
     {label:'Handedness',    old:player.handedness||'',                nw:S.handedness||''},
     {label:'Play Format',   old:player.play_format||'Both',           nw:S.playFormat||player.play_format||'Both'},
@@ -1090,22 +1085,36 @@ async function doSaveProfile(){
     schedStr = [...S.schedule].join(', ');
   }
 
-  // If no lat/lon from autocomplete, try to geocode city+state before saving
-  if(!S.addrLat || !S.addrLon){
-    const city = document.getElementById('addrCity')?.value?.trim();
-    const state = document.getElementById('addrState')?.value?.trim();
-    if(city && state){
-      try{
-        const gRes = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city+', '+state+', USA')}&format=json&limit=1`,
-          {headers:{'Accept-Language':'en','User-Agent':'PickleballRegistry/1.0'}}
-        );
-        if(gRes.ok){
-          const gData = await gRes.json();
-          if(gData.length){ S.addrLat=parseFloat(gData[0].lat); S.addrLon=parseFloat(gData[0].lon); }
+  // Geocode from zip code — derive city, state, lat/lon via Nominatim
+  const zipVal = v('addrZip')?.trim();
+  if(zipVal && (!S.addrLat || !S.addrLon || !S.city)){
+    try{
+      const statusEl = document.getElementById('zipGeoStatus');
+      if(statusEl) statusEl.textContent = '🔍 Looking up location…';
+      const gRes = await fetch(
+        `https://nominatim.openstreetmap.org/search?postalcode=${encodeURIComponent(zipVal)}&country=us&format=json&limit=1&addressdetails=1`,
+        {headers:{'Accept-Language':'en','User-Agent':'PBallConnect/1.0'}}
+      );
+      if(gRes.ok){
+        const gData = await gRes.json();
+        if(gData.length){
+          const addr = gData[0].address || {};
+          S.city    = addr.city || addr.town || addr.village || addr.hamlet || addr.county || '';
+          S.state   = addr.state || '';
+          S.addrLat = parseFloat(gData[0].lat);
+          S.addrLon = parseFloat(gData[0].lon);
+          // Also write to hidden fields so downstream reads work
+          const cityEl = document.getElementById('addrCity');
+          const stateEl = document.getElementById('addrState');
+          if(cityEl) cityEl.value = S.city;
+          if(stateEl) stateEl.value = S.state.length > 2
+            ? (Object.values(STATE_INFO).find(([a,n])=>n&&n.toLowerCase()===S.state.toLowerCase())?.[0] || S.state)
+            : S.state.toUpperCase();
+          S.state = stateEl?.value || S.state;
+          if(statusEl) statusEl.textContent = S.city ? `📍 ${S.city}, ${S.state}` : '';
         }
-      }catch(e){ console.warn('Geocode on save failed:',e); }
-    }
+      }
+    }catch(e){ console.warn('Zip geocode failed:',e); }
   }
 
   // Save to Supabase via direct REST call
@@ -1118,21 +1127,13 @@ async function doSaveProfile(){
       phone:               (v('phone')||'').replace(/\D/g,''),
       dob:                 document.getElementById('playerAge')?.value||S.dob||'',
       gender:              S.gender,
-      city:                v('addrCity')||S.city,
-      state:               (()=>{ 
-        const st = v('addrState')||S.state||'';
-        if(!st) return '';
-        if(st.length===2) return st.toUpperCase();
-        // Convert full state name to abbreviation
-        const found = Object.values(STATE_INFO).find(([abbr,name])=>name&&name.toLowerCase()===st.toLowerCase());
-        return found ? found[0] : st;
-      })(),
+      city:                S.city || '',
+      state:               S.state || '',
       zip_code:            v('addrZip'),
       county:              S.county,
       court_name:          S.courtName || null,
       skill_level:         S.skill || SESSION_PLAYER?.skill_level || null,
       dupr_rating:         S.duprVal || null,
-      shirt_size:          v('shirtSize'),
       schedule:            schedStr,
       anytime:             S.anytime,
       photo_url:           uploadedPhotoUrl || SESSION_PLAYER?.photo_url || null,
@@ -1196,15 +1197,10 @@ async function doSaveProfile(){
       SESSION_PLAYER.skill_level  = _savedSkill;
       SESSION_PLAYER.playing_since = _savedSince;
       // Explicitly update address fields so Edit Profile shows new values
-      SESSION_PLAYER.city     = v('addrCity')       || SESSION_PLAYER.city;
+      SESSION_PLAYER.city     = S.city              || SESSION_PLAYER.city;
+      SESSION_PLAYER.state    = S.state             || SESSION_PLAYER.state;
       SESSION_PLAYER.zip_code = v('addrZip')        || SESSION_PLAYER.zip_code;
       SESSION_PLAYER.county   = S.county            || SESSION_PLAYER.county;
-      const rawState = v('addrState') || SESSION_PLAYER.state || '';
-      if(rawState.length===2) SESSION_PLAYER.state = rawState.toUpperCase();
-      else {
-        const found = Object.values(STATE_INFO).find(([a,n])=>n&&n.toLowerCase()===rawState.toLowerCase());
-        SESSION_PLAYER.state = found ? found[0] : rawState;
-      }
       if(S.addrLat) SESSION_PLAYER.lat = S.addrLat;
       if(S.addrLon) SESSION_PLAYER.lon = S.addrLon;
     }
@@ -1287,8 +1283,8 @@ function resetForm(){
   document.getElementById('confirmOverlay').style.display='none';
   Object.assign(S,{gender:'',skill:'',schedule:new Set(),anytime:false,partner:false,waiver:false,photoSrc:null,state:'',stateFips:'',county:'',city:'',court:'',courtName:'',duprVal:null,venues:new Set(),driveDistance:'25 miles',playStyle:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null});
 
-  ['firstName','lastName','nickname','email','phone','dob','addrCity','addrState','addrZip'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  const shirtEl=document.getElementById('shirtSize');if(shirtEl)shirtEl.value='';
+  ['firstName','lastName','nickname','email','phone','dob','addrZip','addrCity','addrState'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const zipStatus=document.getElementById('zipGeoStatus');if(zipStatus)zipStatus.textContent='';
   const sl=document.getElementById('duprSlider');if(sl){sl.value=0;sl.style.setProperty('--pct','0%');}
   const prs=document.getElementById('personalRatingSlider');if(prs){prs.value=0;prs.style.setProperty('--pct','0%');}
   const prd=document.getElementById('personalRatingDisplay');if(prd) prd.innerHTML='-- <span>not set — slide to choose</span>';
@@ -2002,11 +1998,11 @@ function isGenericCourtName(name){
 }
 
 async function loadMyCourts(){
-  // Need lat/lon from profile city — stored in S
-  const addrCity=(document.getElementById('addrCity')?.value||S.city||'').trim();
-  const addrState=(document.getElementById('addrState')?.value||S.state||'').trim();
+  // Need lat/lon from profile location — stored in S after zip geocode
+  const addrCity  = (S.city  || SESSION_PLAYER?.city  || '').trim();
+  const addrState = (S.state || SESSION_PLAYER?.state || '').trim();
   if(!addrCity && !addrState){
-    document.getElementById('privateCourtsBody').innerHTML='<div class="courts-loading-msg">⚠️ Please enter your city and state in your Player Profile first, then come back here.</div>';
+    document.getElementById('privateCourtsBody').innerHTML='<div class="courts-loading-msg">⚠️ Please enter your zip code in your Player Profile first, then come back here.</div>';
     document.getElementById('publicCourtsBody').innerHTML='<div class="courts-loading-msg"></div>';
     return;
   }
@@ -2157,25 +2153,22 @@ async function loadMyCourts(){
 }
 
 function getCityLatLon(){
-  // Use lat/lon captured from address autocomplete selection
-  if(S.addrLat&&S.addrLon) return {lat:S.addrLat,lon:S.addrLon};
-  const cityName=(document.getElementById('addrCity')?.value||S.city||'').trim();
-  const stateInput=(document.getElementById('addrState')?.value||S.state||'').trim();
-  // Handle both abbreviation (NH) and full name (New Hampshire)
+  // Prefer geocoded lat/lon already in S (populated by onZipChange or restoreProfileForm)
+  if(S.addrLat && S.addrLon) return {lat:S.addrLat, lon:S.addrLon};
+  // Fall back to city lookup in embedded dataset
+  const cityName  = (S.city  || '').trim();
+  const stateInput= (S.state || '').trim();
   let abbr='';
   if(stateInput.length===2){
-    // It's an abbreviation - find matching entry
     abbr=Object.values(STATE_INFO).find(v=>v[0]===stateInput.toUpperCase())?.[0]||stateInput.toUpperCase();
   } else {
-    // It's a full name
     abbr=Object.entries(STATE_INFO).find(([k,v])=>v[1].toLowerCase()===stateInput.toLowerCase())?.[1]?.[0]||'';
   }
   const cities=CITIES_BY_STATE[abbr]||[];
-  // Try exact match first, then partial
   let found=cities.find(c=>c[0].toLowerCase()===cityName.toLowerCase());
   if(!found) found=cities.find(c=>c[0].toLowerCase().includes(cityName.toLowerCase())||cityName.toLowerCase().includes(c[0].toLowerCase()));
   if(found) return {lat:found[1],lon:found[2]};
-  // Last resort: use state center coordinates
+  // State center fallback
   const stateCenters={'NH':{lat:43.5,lon:-71.5},'MA':{lat:42.2,lon:-71.5},'ME':{lat:44.5,lon:-69.0},
     'VT':{lat:44.0,lon:-72.7},'CT':{lat:41.6,lon:-72.7},'RI':{lat:41.7,lon:-71.5},
     'NY':{lat:42.9,lon:-75.5},'NJ':{lat:40.1,lon:-74.5},'PA':{lat:40.9,lon:-77.8},
@@ -2415,12 +2408,12 @@ function selectAddress(idx){
   const a = r.address || {};
   // Fill in fields
   const street = [a.house_number, a.road].filter(Boolean).join(' ');
-  document.getElementById('addrCity').value = a.city || a.town || a.village || a.hamlet || '';
-  document.getElementById('addrState').value = a.state || '';
-  document.getElementById('addrZip').value = a.postcode || '';
-  // Update S
-  S.city = document.getElementById('addrCity').value;
-  S.state = document.getElementById('addrState').value;
+  S.city  = a.city || a.town || a.village || a.hamlet || '';
+  const rawSt = a.state || '';
+  S.state = Object.values(STATE_INFO).find(([ab,n])=>n&&n.toLowerCase()===rawSt.toLowerCase())?.[0] || rawSt;
+  const cityEl=document.getElementById('addrCity'); if(cityEl) cityEl.value=S.city;
+  const stateEl=document.getElementById('addrState'); if(stateEl) stateEl.value=S.state;
+  const zipEl=document.getElementById('addrZip'); if(zipEl) zipEl.value=a.postcode||'';
   S.county = (a.county||'').replace(' County','');
   S.addrLat = parseFloat(r.lat);
   S.addrLon = parseFloat(r.lon);
@@ -2497,11 +2490,32 @@ document.addEventListener('DOMContentLoaded', ()=>{
   });
 });
 
-// ── Manual address fallback ────────────────────────────
-function onManualAddress(){
-  S.city = document.getElementById('addrCity')?.value||'';
-  S.state = document.getElementById('addrState')?.value||'';
+// ── Zip-code live geocode ──────────────────────────────
+function onManualAddress(){ chk1(); } // kept for any legacy calls
+function onZipChange(val){
   chk1();
+  const zip = (val||'').trim();
+  if(zip.length < 5) return;
+  const statusEl = document.getElementById('zipGeoStatus');
+  if(statusEl) statusEl.textContent = '🔍 Looking up…';
+  fetch(`https://nominatim.openstreetmap.org/search?postalcode=${encodeURIComponent(zip)}&country=us&format=json&limit=1&addressdetails=1`,
+    {headers:{'Accept-Language':'en','User-Agent':'PBallConnect/1.0'}})
+  .then(r=>r.ok?r.json():[])
+  .then(data=>{
+    if(!data.length){ if(statusEl) statusEl.textContent='⚠️ Zip not found'; return; }
+    const addr = data[0].address || {};
+    S.city    = addr.city || addr.town || addr.village || addr.hamlet || addr.county || '';
+    const rawState = addr.state || '';
+    S.state   = Object.values(STATE_INFO).find(([a,n])=>n&&n.toLowerCase()===rawState.toLowerCase())?.[0] || rawState;
+    S.addrLat = parseFloat(data[0].lat);
+    S.addrLon = parseFloat(data[0].lon);
+    const cityEl = document.getElementById('addrCity');
+    const stateEl = document.getElementById('addrState');
+    if(cityEl) cityEl.value = S.city;
+    if(stateEl) stateEl.value = S.state;
+    if(statusEl) statusEl.textContent = S.city ? `📍 ${S.city}, ${S.state}` : '';
+  })
+  .catch(()=>{ if(statusEl) statusEl.textContent='⚠️ Location lookup failed'; });
 }
 
 // ── Schedule column select all ─────────────────────────
@@ -6304,10 +6318,9 @@ function openProfileMenu(){
   menu.id='profileQuickMenu'; menu.className='profile-quick-menu';
   const fields=[
     {label:'✏️ Name & Nickname',field:'nickname'},
-    {label:'📍 Location',field:'addrCity'},
+    {label:'📍 Zip Code',field:'addrZip'},
     {label:'⭐ Skill Rating',field:'personalRatingSlider'},
     {label:'📅 Playing Since',field:'playingSince'},
-    {label:'📏 T-Shirt Size',field:'shirtSize'},
     {label:'🏟 Venue Preference',field:'venuePrefChips'},
   ];
   const header=document.createElement('div');
@@ -6443,17 +6456,26 @@ function restoreProfileForm(player){
     nickname:player.nickname||S.nickname||"",email:player.email,
     phone:player.phone?formatPhoneDisplay(player.phone):'',
     dob:player.dob,
+    addrZip:player.zip_code,
     addrCity:player.city,
     addrState:(()=>{const st=player.state||'';if(st.length===2)return st.toUpperCase();const found=Object.values(STATE_INFO).find(([a,n])=>n&&n.toLowerCase()===st.toLowerCase());return found?found[0]:st;})(),
-    addrZip:player.zip_code,
   };
+  // Restore S city/state from DB so getCityLatLon and courts work on load
+  if(player.city)  S.city  = player.city;
+  if(player.state) S.state = player.state;
+  if(player.lat)   S.addrLat = player.lat;
+  if(player.lon)   S.addrLon = player.lon;
+  // Show derived location below zip field
+  if(player.city && player.state){
+    const zipStatus = document.getElementById('zipGeoStatus');
+    if(zipStatus) zipStatus.textContent = `📍 ${player.city}, ${player.state}`;
+  }
   Object.entries(textFields).forEach(([id,val])=>{
     const el=document.getElementById(id);
     if(el && (val || val==='')) el.value = val||''; // always restore, even empty string clears the field
   });
 
   if(player.playing_since){const el=document.getElementById('playingSince');if(el)el.value=player.playing_since;}
-  if(player.shirt_size){const el=document.getElementById('shirtSize');if(el)el.value=player.shirt_size;}
 
   document.querySelectorAll('.chip,.chip-rect').forEach(c=>c.classList.remove('on'));
   restoreChip('genderChips',player.gender);
@@ -6624,9 +6646,7 @@ function startChangeDetection(){
     const changed=
       v('firstName')!==(p.first_name||'')||
       v('nickname')!==(p.nickname||'')||
-      v('addrCity')!==(p.city||'')||
       v('addrZip')!==(p.zip_code||'')||
-      v('shirtSize')!==(p.shirt_size||'')||
       (v('phone')||'').replace(/\D/g,'')!==decodePhone(p.phone||'')||
       S.gender!==(p.gender||'')||
       S.handedness!==(p.handedness||'')||
