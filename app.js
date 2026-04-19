@@ -1398,6 +1398,7 @@ function showPage(page){
   if(page!=='playerProfile'){stopChangeDetection();_editModeActive=false;}
   closeNav();
   setTimeout(closeNav, 50); // catch any async re-opens
+  window.scrollTo(0,0); // always open pages at the top
   // Remove existing back button, show on all pages except dashboard
   document.getElementById('backToDashBtn')?.remove();
   if(page !== 'dashboard') showBackToDashboard();
@@ -1411,7 +1412,7 @@ function showPage(page){
   if(page==='myCourts')    loadMyCourts();
   if(page==='lessons')     renderCoachingPage();
   if(page==='myLessons')   renderLessonsPage();
-  if(page==='innerCircle'){ loadInnerCircle(); loadNearbyPlayers(); setTimeout(updateColStickyTop,300); }
+  if(page==='innerCircle'){ loadInnerCircle(); /* loadNearbyPlayers runs lazily when Find section is opened */ }
   if(page==='playerProfile'){
     if(SESSION_PLAYER){
       setTimeout(()=>restoreProfileForm(SESSION_PLAYER), 200);
@@ -6801,9 +6802,14 @@ function renderInnerCircleList(){
   const list = document.getElementById('icApprovedList');
   const badge = document.getElementById('icApprovedBadge');
   if(badge) badge.textContent = IC_MEMBERS.length||'';
+  // Sync new IC page tab counter and count label
+  const tabCount = document.getElementById('icTabMemberCount');
+  if(tabCount) tabCount.textContent = IC_MEMBERS.length || '0';
+  const countLabel = document.getElementById('icMemberCountLabel');
+  if(countLabel) countLabel.textContent = IC_MEMBERS.length ? '('+IC_MEMBERS.length+')' : '';
   if(!list) return;
   if(!IC_MEMBERS.length){
-    list.innerHTML='<div class="ic-empty">Your Inner Circle is empty.<br>Use the Find Players grid above to add players.</div>';
+    list.innerHTML='<div style="padding:32px;text-align:center;color:#9ca3af;font-size:14px;">Your Inner Circle is empty.<br><span style="font-size:13px;color:#1a7a3a;cursor:pointer;font-weight:700;" onclick="showIcSection(\'invite\')">Invite someone to get started →</span></div>';
     return;
   }
   list.innerHTML='';
@@ -6814,56 +6820,70 @@ function renderInnerCircleList(){
 }
 
 function buildIcMemberCard(player, conn, myEmail, lastPlayed){
-  const card = document.createElement('div');
-  card.className='ic-member-card';
-  const name=((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim();
+  const row = document.createElement('div');
+  row.className='ic-member-card';
+  // Compact one-line grid row: avatar | name | nickname | skill | fav
+  row.style.cssText='display:flex;align-items:center;gap:10px;padding:9px 12px;'+
+    'border-bottom:1px solid rgba(0,0,0,0.06);cursor:pointer;transition:background .12s;';
+  row.onmouseover=()=>row.style.background='#f0fdf4';
+  row.onmouseout=()=>row.style.background='';
+
+  const name=((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim()||'—';
   const initials=name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
   const emoji=player.avatar_emoji||null;
-  const avatarEl = document.createElement('div');
-  avatarEl.className = 'ic-member-avatar';
+
+  // Avatar (small)
+  const avatarEl=document.createElement('div');
+  avatarEl.style.cssText='width:32px;height:32px;border-radius:50%;background:#d1fae5;'+
+    'display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;'+
+    'color:#1a7a3a;flex-shrink:0;overflow:hidden;';
   if(player.photo_url){
-    avatarEl.style.cssText='overflow:hidden;padding:0;background:none;';
-    avatarEl.innerHTML=`<img src="${player.photo_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`;
+    avatarEl.innerHTML=`<img src="${player.photo_url}" style="width:100%;height:100%;object-fit:cover;"/>`;
   } else {
-    avatarEl.textContent = emoji||initials;
+    avatarEl.textContent=emoji||initials;
   }
-  avatarEl.onclick = ()=>openPlayerCard(player,conn,myEmail);
 
-  const mainEl = document.createElement('div');
-  mainEl.className = 'ic-member-main';
-  mainEl.style.cursor = 'pointer';
-  mainEl.innerHTML =
-    '<div class="ic-member-name">'+name+'</div>'+
-    (player.nickname?'<div class="ic-member-nick">"'+player.nickname+'"</div>':'')+
-    '<div class="ic-member-details">'+
-      (player.skill_level?'<span class="ic-member-tag ic-tag-skill">⭐ '+player.skill_level+'</span>':'')+
-      (player.court_name?'<span class="ic-member-tag ic-tag-court">🏟 '+player.court_name+'</span>':'')+
-    '</div>';
-  mainEl.onclick = ()=>openPlayerCard(player,conn,myEmail);
+  // Name (flex-grow so it takes available space)
+  const nameEl=document.createElement('div');
+  nameEl.style.cssText='flex:1.8;min-width:0;font-size:14px;font-weight:700;color:#111;'+
+    'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+  nameEl.textContent=name;
 
-  const actEl = document.createElement('div');
-  actEl.className = 'ic-member-actions';
-  // Favorite star button
-  const favBtn = document.createElement('button');
-  const pEmail = (player.email||'').toLowerCase();
-  const isFav  = IC_FAVORITES.has(pEmail);
-  favBtn.textContent = isFav ? '⭐' : '☆';
-  favBtn.title = isFav ? 'Remove from favorites' : 'Add to favorites';
-  favBtn.style.cssText = 'background:none;border:none;font-size:24px;cursor:pointer;padding:0 6px;color:'+(isFav?'#fbbf24':'#9ca3af')+';transition:all .15s;';
-  favBtn.onclick = (e)=>{ e.stopPropagation(); toggleFavorite(pEmail, favBtn); };
+  // Nickname
+  const nickEl=document.createElement('div');
+  nickEl.style.cssText='flex:1.2;min-width:0;font-size:12px;color:#6b7280;font-style:italic;'+
+    'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+  nickEl.textContent=player.nickname?'"'+player.nickname+'"':'—';
 
-  const playBtn2 = document.createElement('button');
-  playBtn2.className='ic-member-btn ic-mem-btn-play';
-  playBtn2.textContent='🎾 Play';
-  playBtn2.onclick=()=>showPage('setupMatch');
-  const remBtn = document.createElement('button');
-  remBtn.className='ic-member-btn ic-mem-btn-remove';
-  remBtn.textContent='Remove';
-  remBtn.onclick=()=>removeFromCircle(conn?.id||'',remBtn);
-  actEl.appendChild(favBtn); actEl.appendChild(playBtn2); actEl.appendChild(remBtn);
+  // Skill level pill
+  const skillEl=document.createElement('div');
+  skillEl.style.cssText='flex-shrink:0;font-size:12px;font-weight:700;color:#1a7a3a;'+
+    'background:#d1fae5;border-radius:20px;padding:3px 10px;white-space:nowrap;';
+  skillEl.textContent=player.skill_level?'⭐ '+player.skill_level:'—';
 
-  card.appendChild(avatarEl); card.appendChild(mainEl); card.appendChild(actEl);
-    return card;
+  // Favorite star
+  const pEmail=(player.email||'').toLowerCase();
+  const isFav=IC_FAVORITES.has(pEmail);
+  const favBtn=document.createElement('button');
+  favBtn.style.cssText='background:none;border:none;font-size:20px;cursor:pointer;padding:0 4px;'+
+    'color:'+(isFav?'#fbbf24':'#d1d5db')+';flex-shrink:0;transition:color .15s;';
+  favBtn.textContent=isFav?'⭐':'☆';
+  favBtn.title=isFav?'Remove from favorites':'Add to favorites';
+  favBtn.onclick=(e)=>{e.stopPropagation();toggleFavorite(pEmail,favBtn);};
+
+  // Click row → open player card
+  const openCard=()=>openPlayerCard(player,conn,myEmail);
+  avatarEl.onclick=openCard;
+  nameEl.onclick=openCard;
+  nickEl.onclick=openCard;
+  skillEl.onclick=openCard;
+
+  row.appendChild(avatarEl);
+  row.appendChild(nameEl);
+  row.appendChild(nickEl);
+  row.appendChild(skillEl);
+  row.appendChild(favBtn);
+  return row;
 }
 
 async function removeFromCircle(connId, btn){
@@ -7084,6 +7104,13 @@ function updateNavCircleBadges(memberCount,pendingCount,incomingCount){
   if(dashSentEl) dashSentEl.textContent=pendingCount;
   const dashIncomingEl=document.getElementById('dashIcIncomingCount');
   if(dashIncomingEl) dashIncomingEl.textContent=incomingCount||0;
+  // Sync the IC page 3-button container counts
+  const tabSentEl=document.getElementById('icTabSentCount');
+  if(tabSentEl) tabSentEl.textContent=pendingCount||'0';
+  const tabRequestEl=document.getElementById('icTabRequestCount');
+  if(tabRequestEl) tabRequestEl.textContent=incomingCount||'0';
+  const tabMemberEl=document.getElementById('icTabMemberCount');
+  if(tabMemberEl) tabMemberEl.textContent=memberCount||'0';
 }
 
 function updateNavCourtBadges(publicCount, privateCount){
@@ -7686,261 +7713,63 @@ let IC_LIST_VISIBLE=false;
 
 function showIcView(mode){
   IC_VIEW_MODE=mode;
+  // Map legacy modes to new section-based navigation
+  const sectionMap={members:'members',invited:'invite',incoming:'requests',all:'members'};
+  const section=sectionMap[mode]||'members';
   const icPageActive=document.getElementById('page-innerCircle')?.classList.contains('active');
   if(!icPageActive){
     showPage('innerCircle');
     let attempts=0;
     const tryApply=()=>{
       attempts++;
-      const ready=document.getElementById('icApprovedCard') && (IC_MEMBERS.length>0 || IC_INCOMING_COUNT>0 || attempts>8);
-      if(ready){ applyIcViewMode(mode); }
+      const ready=document.getElementById('icSectionMembers') && (IC_MEMBERS.length>0 || IC_INCOMING_COUNT>0 || attempts>8);
+      if(ready){ showIcSection(section); }
       else if(attempts<12){ setTimeout(tryApply, 200); }
-      else { applyIcViewMode(mode); }
+      else { showIcSection(section); }
     };
     setTimeout(tryApply, 350);
   } else {
-    applyIcViewMode(mode);
+    showIcSection(section);
   }
 }
 
+// ── IC Section switcher (new tab-based navigation) ─────
+function showIcSection(section){
+  ['Members','Invite','Requests','Find'].forEach(s=>{
+    const el=document.getElementById('icSection'+s);
+    if(el) el.style.display='none';
+  });
+  const cap=section.charAt(0).toUpperCase()+section.slice(1);
+  const target=document.getElementById('icSection'+cap);
+  if(target) target.style.display='block';
+  // Load data on demand
+  if(section==='find')     loadNearbyPlayers();
+  if(section==='invite')   loadIcInvites();
+  if(section==='requests') loadIcPending();
+  window.scrollTo(0,0);
+}
+
+// applyIcViewMode — replaced by showIcSection(). Stub kept so stray callers don't throw.
 function applyIcViewMode(mode){
-  const existing=document.getElementById('icViewToolbar');
-  if(existing) existing.remove();
-  document.getElementById('icFilterPill')?.remove();
-  const els={
-    stats:document.getElementById('icStatsDashboard'),
-    search:document.querySelector('.ic-search-card'),
-    approved:document.getElementById('icApprovedCard'),
-    invites:document.getElementById('icInvitesCard'),
-    pending:document.getElementById('icPendingCard'),
-  };
-  if(mode==='all'){
-    if(els.stats) els.stats.style.display='';
-    if(els.search) els.search.style.display='';
-    if(els.approved) els.approved.style.display='';
-    if(els.invites) els.invites.style.display=IC_PENDING_PLAYERS?.length>0?'block':'none';
-    if(els.pending) els.pending.style.display=IC_INCOMING_COUNT>0?'block':'none';
-    window.scrollTo(0,0); return;
-  }
-  const configs={
-    members:{label:'✅ Active Members',cls:'green',target:'icApprovedCard'},
-    invited:{label:'⏳ Awaiting Acceptance',cls:'yellow',target:'icInvitesCard'},
-    incoming:{label:'🟣 Requests to You',cls:'purple',target:'icPendingCard'},
-  };
-  const cfg=configs[mode];
-  const toolbar=document.createElement('div');
-  toolbar.id='icViewToolbar'; toolbar.className='ic-view-toolbar';
-  const title=document.createElement('span');
-  title.className='ic-view-toolbar-title '+cfg.cls; title.textContent=cfg.label;
-  const backBtn=document.createElement('button');
-  backBtn.className='ic-back-btn'; backBtn.innerHTML='← Back';
-  backBtn.onclick=()=>{IC_VIEW_MODE='all'; renderInnerCircleList(); applyIcViewMode('all');};
-  toolbar.appendChild(title); toolbar.appendChild(backBtn);
-  const pageHeader=document.getElementById('page-innerCircle')?.querySelector('.page-header');
-  // IC page has no page-header now, insert after stats dashboard
-  const dash=document.getElementById('icStatsDashboard');
-  if(dash) dash.after(toolbar);
-  if(els.stats) els.stats.style.display='none';
-  if(els.search) els.search.style.display='none';
-  if(els.approved) els.approved.style.display=mode==='members'?'block':'none';
-  if(els.invites) els.invites.style.display=mode==='invited'?'block':'none';
-  if(els.pending) els.pending.style.display=mode==='incoming'?'block':'none';
-  const target=document.getElementById(cfg.target);
-  if(target) setTimeout(()=>target.scrollIntoView({behavior:'smooth',block:'start'}),150);
+  const sectionMap={members:'members',invited:'invite',incoming:'requests',all:'members'};
+  showIcSection(sectionMap[mode]||'members');
 }
 
-function toggleIcListView(){
-  IC_LIST_VISIBLE=!IC_LIST_VISIBLE;
-  const panel=document.getElementById('icInlineList');
-  const btn=document.getElementById('icListToggleBtn');
-  if(IC_LIST_VISIBLE){
-    if(panel) panel.style.display='block';
-    if(btn){btn.textContent='✕ Hide Circle List';btn.classList.add('active');}
-    renderInlineCircleList();
-  } else {
-    if(panel) panel.style.display='none';
-    if(btn){btn.textContent='📋 See Current Inner Circle List';btn.classList.remove('active');}
-  }
-}
+// toggleIcListView / renderInlineCircleList — inline 5-col list removed from new IC design. Stubs kept.
+function toggleIcListView(){ /* no-op — replaced by showIcSection */ }
+function renderInlineCircleList(){ /* no-op — inline list panel removed */ }
+// switchCircleView / renderCircleSkillColumns — skill column view removed from new IC design. Stubs kept.
+function switchCircleView(view){ /* no-op — new IC page uses compact list only */ }
+function renderCircleSkillColumns(){ /* no-op */ }
 
-function renderInlineCircleList(){
-  const mySkill=S.skill||SESSION_PLAYER?.skill_level||'';
-  const skills=mySkill?getAdjacentSkills(mySkill):null;
-  const myVal=parseFloat(mySkill||0);
-
-  const setEl=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
-  setEl('inlineFarBelowLabel', myVal>0?('≤'+(myVal-0.5).toFixed(2)):'--');
-  setEl('inlineBelowLabel',    skills?.below??'--');
-  setEl('inlineColMyLabel',    skills?.my??'--');
-  setEl('inlineAboveLabel',    skills?.above??'--');
-  setEl('inlineFarAboveLabel', myVal>0?('≥'+(myVal+0.5).toFixed(2)):'--');
-
-  const cols={farBelow:[],below:[],my:[],above:[],farAbove:[]};
-  IC_MEMBERS.forEach(({player})=>{
-    const ps=parseFloat(player.skill_level||0);
-    const diff=parseFloat((ps-myVal).toFixed(4));
-    if(diff<=-0.5)              cols.farBelow.push(player);
-    else if(Math.abs(diff+0.25)<0.01) cols.below.push(player);
-    else if(Math.abs(diff)<0.01)      cols.my.push(player);
-    else if(Math.abs(diff-0.25)<0.01) cols.above.push(player);
-    else if(diff>=0.5)                cols.farAbove.push(player);
-    else                              cols.my.push(player);
-  });
-
-  setEl('inlineFarBelowCount', cols.farBelow.length||'0');
-  setEl('inlineBelowCount',    cols.below.length||'0');
-  setEl('inlineMyCount',       cols.my.length||'0');
-  setEl('inlineAboveCount',    cols.above.length||'0');
-  setEl('inlineFarAboveCount', cols.farAbove.length||'0');
-
-  const colMap=[
-    {key:'farBelow',elId:'inlineColFarBelow'},
-    {key:'below',   elId:'inlineColBelow'},
-    {key:'my',      elId:'inlineColMy'},
-    {key:'above',   elId:'inlineColAbove'},
-    {key:'farAbove',elId:'inlineColFarAbove'},
-  ];
-  colMap.forEach(({key,elId})=>{
-    const colEl=document.getElementById(elId);
-    if(!colEl) return;
-    colEl.innerHTML='';
-    if(!cols[key].length){colEl.innerHTML='<div class="ic-col-empty">None</div>';return;}
-    cols[key].sort((a,b)=>((a.first_name||'')+(a.last_name||'')).localeCompare((b.first_name||'')+(b.last_name||'')));
-    cols[key].forEach(player=>{
-      const card=document.createElement('div');
-      card.className='ic-name-card';
-      const name=((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim();
-      card.innerHTML=
-        '<div class="ic-name-card-name">'+(player.avatar_emoji||'\uD83D\uDC64')+' '+name+'</div>'+
-        (player.nickname?'<div class="ic-name-card-nick">"'+player.nickname+'"</div>':'')+
-        '<div style="font-size:10px;color:var(--dim);">'+(player.skill_level||'?')+'</div>';
-      card.onclick=()=>openPlayerCard(player,null,getMyEmail());
-      colEl.appendChild(card);
-    });
-  });
-}
-function switchCircleView(view){
-  const lv=document.getElementById('icCircleListView');
-  const cv=document.getElementById('icCircleColumnsView');
-  const tl=document.getElementById('viewTabList');
-  const tc=document.getElementById('viewTabColumns');
-  if(view==='list'){
-    if(lv)lv.style.display='block';if(cv)cv.style.display='none';
-    if(tl)tl.classList.add('active');if(tc)tc.classList.remove('active');
-  } else {
-    if(lv)lv.style.display='none';if(cv)cv.style.display='block';
-    if(tl)tl.classList.remove('active');if(tc)tc.classList.add('active');
-    renderCircleSkillColumns();
-  }
-}
-
-function renderCircleSkillColumns(){
-  const mySkill=S.skill||SESSION_PLAYER?.skill_level||'';
-  if(!mySkill){ document.getElementById('icCircleColumnsView').innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;">Set your personal rating in your profile to use the skill view.</div>'; return; }
-  const skills=getAdjacentSkills(mySkill);
-  const myVal=parseFloat(mySkill);
-  const setEl=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
-  setEl('circleColFarBelowLabel', myVal>0?('≤'+(myVal-0.5).toFixed(2)):'—');
-  setEl('circleColBelowLabel',    skills.below!==null?skills.below:'—');
-  setEl('circleColMyLabel',       skills.my!==null?skills.my:'—');
-  setEl('circleColAboveLabel',    skills.above!==null?skills.above:'—');
-  setEl('circleColFarAboveLabel', myVal>0?('≥'+(myVal+0.5).toFixed(2)):'—');
-
-  const buckets={farBelow:[],below:[],my:[],above:[],farAbove:[]};
-  IC_MEMBERS.forEach(({player,conn})=>{
-    const ps=parseFloat(player.skill_level||0);
-    if(!ps){ buckets.my.push({player,conn}); return; } // no rating → show in My Level
-    if(Math.abs(ps-myVal)<0.13)                          buckets.my.push({player,conn});
-    else if(skills.below!==null&&Math.abs(ps-skills.below)<0.13) buckets.below.push({player,conn});
-    else if(skills.above!==null&&Math.abs(ps-skills.above)<0.13) buckets.above.push({player,conn});
-    else if(ps<myVal)                                    buckets.farBelow.push({player,conn});
-    else                                                 buckets.farAbove.push({player,conn});
-  });
-
-  const colMap=[
-    {key:'farBelow',colId:'circleColFarBelow',countId:'circleColFarBelowCount'},
-    {key:'below',   colId:'circleColBelow',   countId:'circleColBelowCount'},
-    {key:'my',      colId:'circleColMy',      countId:'circleColMyCount'},
-    {key:'above',   colId:'circleColAbove',   countId:'circleColAboveCount'},
-    {key:'farAbove',colId:'circleColFarAbove',countId:'circleColFarAboveCount'},
-  ];
-  colMap.forEach(({key,colId,countId})=>{
-    const col=document.getElementById(colId);
-    const cnt=document.getElementById(countId);
-    if(cnt) cnt.textContent=buckets[key].length||'0';
-    if(!col) return;
-    col.innerHTML='';
-    if(!buckets[key].length){col.innerHTML='<div class="ic-col-empty">None</div>';return;}
-    buckets[key].sort((a,b)=>((a.player.first_name||'')+(a.player.last_name||'')).localeCompare((b.player.first_name||'')+(b.player.last_name||'')));
-    buckets[key].forEach(({player,conn})=>{
-      const card=buildIcMemberCard(player,conn,getMyEmail(),null);
-      col.appendChild(card);
-    });
-  });
-  updateColStickyTop();
-}
-
+// showFilteredList — stat tables removed from new IC design. Redirects to members section.
 function showFilteredList(type, value, status){
   if(!document.getElementById('page-innerCircle')?.classList.contains('active')){
     showPage('innerCircle');
     setTimeout(()=>showFilteredList(type, value, status), 500);
     return;
   }
-  const mode = status==='invited' ? 'invited' : status==='pending' ? 'incoming' : 'members';
-  applyIcViewMode(mode);
-  if(mode==='members' && IC_MEMBERS.length){
-    const mySkill = S.skill || SESSION_PLAYER?.skill_level || '';
-    const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
-    const myEmail = getMyEmail();
-    let filtered;
-    let filterLabel = '';
-    if(type==='gender'){
-      if(value==='All'){ filtered=IC_MEMBERS; filterLabel=''; }
-      else {
-        const gLow=value.toLowerCase();
-        filtered=IC_MEMBERS.filter(({player})=>{
-          const g=(player.gender||'').toLowerCase();
-          if(value==='Other') return g!=='male' && g!=='female';
-          return g===gLow;
-        });
-        filterLabel=(value==='Male'?'♂ Male':value==='Female'?'♀ Female':'⚪ Private')+' members';
-      }
-    } else if(type==='level'){
-      if(value==='All'){ filtered=IC_MEMBERS; filterLabel=''; }
-      else if(!skills){ filtered=IC_MEMBERS; filterLabel=''; }
-      else {
-        filtered=IC_MEMBERS.filter(({player})=>{
-          const ps=parseFloat(player.skill_level||0);
-          if(value==='Below')  return skills.below!==null && Math.abs(ps-skills.below)<0.13;
-          if(value==='My')     return Math.abs(ps-skills.my)<0.13;
-          if(value==='Above')  return skills.above!==null && Math.abs(ps-skills.above)<0.13;
-          return true;
-        });
-        filterLabel=(value==='Below'?'🟡 Below my level':value==='My'?'🟢 My level':'🟣 Above my level')+' members';
-      }
-    } else {
-      filtered=IC_MEMBERS;
-    }
-    const list=document.getElementById('icApprovedList');
-    if(list){
-      list.innerHTML='';
-      if(!filtered.length){
-        list.innerHTML='<div class="ic-col-empty" style="padding:24px;text-align:center;color:var(--dim);">No members match this filter</div>';
-      } else {
-        filtered.forEach(({player,conn})=>list.appendChild(buildIcMemberCard(player,conn,myEmail,null)));
-      }
-      const existingPill=document.getElementById('icFilterPill');
-      if(existingPill) existingPill.remove();
-      if(filterLabel){
-        const pill=document.createElement('div');
-        pill.id='icFilterPill';
-        pill.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 12px;margin-bottom:10px;background:rgba(76,175,125,0.12);border:1px solid rgba(76,175,125,0.35);border-radius:20px;font-size:12px;font-weight:700;color:var(--green);';
-        pill.innerHTML='<span>Filtered: '+filterLabel+' ('+filtered.length+')</span>'+
-          '<button onclick="showFilteredList(\'gender\',\'All\',\'member\')" style="margin-left:auto;background:none;border:none;color:var(--dim);font-size:14px;cursor:pointer;padding:0 2px;line-height:1;" title="Clear filter">✕</button>';
-        list.parentElement.insertBefore(pill, list);
-      }
-    }
-  }
+  showIcSection('members');
 }
 
 function sortInnerCircle(by){
@@ -8011,12 +7840,8 @@ async function loadCommunitySnapshot(){
   finally{if(loading)loading.style.display='none';}
 }
 
-// ── Sticky col top ─────────────────────────────────────
-function updateColStickyTop(){
-  const dash=document.getElementById('icStatsDashboard');
-  const dashH=dash?dash.offsetHeight:0;
-  document.documentElement.style.setProperty('--col-sticky-top',(52+dashH+10)+'px');
-}
+// updateColStickyTop — stats dashboard removed from new IC design. No-op stub kept.
+function updateColStickyTop(){ /* no-op */ }
 
 // ── IC invite system ───────────────────────────────────
 function toggleInviteForm(){
