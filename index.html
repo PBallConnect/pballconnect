@@ -1370,10 +1370,9 @@
 
       <!-- Container 1: Match Type -->
       <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
-        <div style="font-size:10px;font-weight:800;color:#d97706;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;">Step 1</div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
           <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
-          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;">Match Type</span>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 1</span> · Match Type</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div id="smFmtDoubles" onclick="selectMatchFormat('doubles',this)"
@@ -1391,12 +1390,11 @@
         </div>
       </div>
 
-      <!-- Container 2: Courts & Players -->
+      <!-- Container 2: Number of Courts -->
       <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
-        <div style="font-size:10px;font-weight:800;color:#d97706;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;">Step 2</div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
           <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div>
-          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;">Courts &amp; Players</span>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 2</span> · Number of Courts</span>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:8px;">
           <button id="smCourtsBtn1" onclick="selectNumCourts(1)"
@@ -1417,10 +1415,9 @@
 
       <!-- Container 3: Play Structure -->
       <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
-        <div style="font-size:10px;font-weight:800;color:#d97706;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;">Step 3</div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
           <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div>
-          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;">Play Structure</span>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 3</span> · Play Structure</span>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;">
           <div id="smGenderEither" onclick="selectMatchGender('either',this)"
@@ -1438,15 +1435,21 @@
             <span style="font-size:20px;">👤</span>
             <div><div style="font-size:13px;font-weight:700;color:#111;">Same Gender</div><div style="font-size:11px;color:#6b7280;">Men only or women only</div></div>
           </div>
+          <div id="smGenderGroup" onclick="selectMatchGender('group',this)"
+            style="padding:12px 16px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;display:flex;align-items:center;gap:12px;">
+            <span style="font-size:20px;">📋</span>
+            <div><div style="font-size:13px;font-weight:700;color:#111;">One of my Set Groups</div><div style="font-size:11px;color:#6b7280;">Use a saved group as your invite list</div></div>
+          </div>
         </div>
+        <!-- Group picker for Step 3 -->
+        <div id="smGenderGroupWrap" style="display:none;margin-top:10px;"></div>
       </div>
 
       <!-- Container 4: Date & Time -->
       <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
-        <div style="font-size:10px;font-weight:800;color:#d97706;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;">Step 4</div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
           <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">4</div>
-          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;">Date &amp; Time</span>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 4</span> · Date &amp; Time</span>
         </div>
         <div style="margin-bottom:12px;">
           <input type="date" id="matchDate"
@@ -1484,10 +1487,9 @@
 
       <!-- Container 5: Court -->
       <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
-        <div style="font-size:10px;font-weight:800;color:#d97706;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;">Step 5</div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
           <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">5</div>
-          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;">Court</span>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 5</span> · Court</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
           <button id="smCourtTypePublic" onclick="smSetCourtType('public')"
@@ -1506,10 +1508,9 @@
 
       <!-- Container 6: Invite -->
       <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
-        <div style="font-size:10px;font-weight:800;color:#d97706;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;">Step 6</div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
           <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">6</div>
-          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;">Invite</span>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 6</span> · Invite</span>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
           <div id="smInviteAll" onclick="smSelectInvite('all')"
@@ -1560,10 +1561,9 @@
 
       <!-- Container 7: Review & Send -->
       <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:24px;">
-        <div style="font-size:10px;font-weight:800;color:#d97706;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;">Step 7</div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
           <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">7</div>
-          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;">Review &amp; Send</span>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 7</span> · Review &amp; Send</span>
         </div>
         <div id="smSummaryRows" style="margin-bottom:16px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;"></div>
         <div style="margin-bottom:16px;">

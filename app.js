@@ -2685,18 +2685,76 @@ function onMatchGenderPrefChange(val){
 
 // ── Gender preference (Set Up A Match Container 3) ────
 function selectMatchGender(pref, el){
-  MS.genderPref = pref;
-  ['smGenderEither','smGenderMixed','smGenderSame'].forEach(id=>{
+  MS.genderPref = pref === 'group' ? 'either' : pref; // group uses 'either' for slot math
+  ['smGenderEither','smGenderMixed','smGenderSame','smGenderGroup'].forEach(id=>{
     const d = document.getElementById(id);
     if(d){ d.style.border='1px solid #e5e7eb'; d.style.background='#fff'; }
   });
   if(el){ el.style.border='2px solid #1a7a3a'; el.style.background='#f0fdf4'; }
+
+  // Show/hide group picker
+  const wrap = document.getElementById('smGenderGroupWrap');
+  if(pref === 'group'){
+    if(wrap){
+      wrap.style.display = 'block';
+      smRenderStep3GroupPicker(wrap);
+    }
+  } else {
+    if(wrap) wrap.style.display = 'none';
+  }
+
   // Re-render specific picker if open
   if(MS.inviteMode==='specific') buildSpecificPicker();
   smUpdateNeededGrid();
   smUpdateSummary();
   smUpdateProgress(3);
 }
+
+async function smRenderStep3GroupPicker(wrap){
+  // Fetch groups if not yet loaded
+  if(!_groups || !_groups.length){
+    const myEmail = getMyEmail();
+    if(myEmail){
+      try{
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/player_groups?organizer_email=eq.${encodeURIComponent(myEmail)}&order=created_at.asc`,
+          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+        );
+        if(res.ok) _groups = await res.json();
+      }catch(e){}
+    }
+  }
+
+  if(!_groups || !_groups.length){
+    wrap.innerHTML = '<div style="padding:12px 14px;border-radius:10px;background:#fef3c7;border:1px solid #fbbf24;font-size:13px;color:#92400e;line-height:1.5;">' +
+      '⚠️ You don\'t have any saved groups yet. ' +
+      '<span onclick="showPage(\'myGroups\')" style="color:#1a7a3a;font-weight:700;cursor:pointer;text-decoration:underline;">Go to My Groups to set one up.</span>' +
+      '</div>';
+    return;
+  }
+
+  const currentVal = MS.group && MS.group.startsWith('named_') ? MS.group.replace('named_','') : '';
+  wrap.innerHTML = '<select id="smStep3GroupSel" onchange="window.smOnStep3GroupSelect(this.value)" ' +
+    'style="width:100%;padding:10px 14px;border-radius:10px;border:2px solid #1a7a3a;background:#fff;color:#111;font-size:14px;font-family:\'DM Sans\',sans-serif;outline:none;">' +
+    '<option value="">Select a group…</option>' +
+    _groups.map(g=>'<option value="'+g.id+'"'+(g.id==currentVal?' selected':'')+'>'+g.name+'</option>').join('') +
+    '</select>';
+}
+
+window.smOnStep3GroupSelect = function(value){
+  if(!value){ MS.selectedGroups=new Set(); MS.group=null; }
+  else {
+    MS.selectedGroups = new Set(['named_'+value]);
+    MS.group = 'named_'+value;
+    // Mirror into Step 6 group picker so they stay in sync
+    smSelectInvite('group');
+    const sel6 = document.getElementById('smGroupSelect');
+    if(sel6) sel6.value = value;
+  }
+  smUpdateNeededGrid();
+  smUpdateSummary();
+  smUpdateSendBtn();
+};
 
 // ── Multi-court selector ──────────────────────────────
 function selectNumCourts(n){
@@ -5218,7 +5276,7 @@ document.addEventListener('click', function(e){
 // ══════════════════════════════════════════════════════
 
 // ── Set Up a Match: progress bar ─────────────────────
-const _smStepLabels = ['Match Type','Courts','Play Structure','Date & Time','Court','Invite','Review & Send'];
+const _smStepLabels = ['Match Type','Number of Courts','Play Structure','Date & Time','Court','Invite','Review & Send'];
 let _smCurrentStep = 1;
 let _smInitializing = false;
 
@@ -5593,10 +5651,12 @@ function initSetupMatch(){
   selectNumCourts(1);
 
   // Gender buttons
-  const ge=document.getElementById('smGenderEither'), gm=document.getElementById('smGenderMixed'), gs=document.getElementById('smGenderSame');
+  const ge=document.getElementById('smGenderEither'), gm=document.getElementById('smGenderMixed'), gs=document.getElementById('smGenderSame'), gg=document.getElementById('smGenderGroup');
   if(ge){ ge.style.border='2px solid #1a7a3a'; ge.style.background='#f0fdf4'; }
   if(gm){ gm.style.border='1px solid #e5e7eb'; gm.style.background='#fff'; }
   if(gs){ gs.style.border='1px solid #e5e7eb'; gs.style.background='#fff'; }
+  if(gg){ gg.style.border='1px solid #e5e7eb'; gg.style.background='#fff'; }
+  const gw=document.getElementById('smGenderGroupWrap'); if(gw){ gw.style.display='none'; gw.innerHTML=''; }
 
   // Invite mode buttons
   const ia=document.getElementById('smInviteAll'), isp=document.getElementById('smInviteSpecific'), ig=document.getElementById('smInviteGroup');
