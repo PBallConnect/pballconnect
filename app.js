@@ -6560,7 +6560,8 @@ function restoreProfileForm(player){
     if(removeBtn) removeBtn.style.display='inline-block';
   }
 
-  if(improveVal==='improve'&&player.goal_rating){
+  // Restore goal rating if Competitive play style
+  if(S.playStyle==='Competitive'&&player.goal_rating){
     S.goalRating=player.goal_rating;
     const goalIdx=DUPR_VALS.findIndex(v=>String(v)===String(player.goal_rating));
     if(goalIdx>=0){
