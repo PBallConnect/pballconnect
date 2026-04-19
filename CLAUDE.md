@@ -45,6 +45,8 @@ Loaded in `index.html`: Supabase JS client, D3.js, TopoJSON, and Google Fonts.
 ### Navigation
 `showPage(page)` is the sole navigation function. It toggles `.active` on `.page-section` elements and fires a page-specific loader. Page IDs: `dashboard`, `playerProfile`, `findPlayers`, `playerStats`, `innerCircle`, `myCourts`, `myGroups`, `lessons`, `myLessons`, `setupMatch`, `confirmedMatches`, `recordScores`, `myInvites`, `invitedByOthers`, `recurringMatches`.
 
+`showPage()` also manages the floating "← Dashboard" pill button: it removes any existing instance on every navigation, then calls `showBackToDashboard()` for any page other than `dashboard`. The button removes itself on click and calls `showPage('dashboard')`.
+
 ### Auth
 Supabase magic link (`_supabase.auth.signInWithOtp`). On sign-in, `restoreSession(email)` fetches the player row from `registrations` and populates `SESSION_PLAYER`. Email is also persisted to `localStorage('pb_email')`.
 
@@ -91,30 +93,94 @@ The `app_invite` email uses a white-card template (light background, green logo,
 State and county selection use D3 + TopoJSON with data from `us-atlas` CDN. County-level bounding boxes are computed from GeoJSON coordinates and stored in `S.countyBbox` for proximity filtering. City lookup uses the Overpass API with an embedded fallback dataset.
 
 ### PWA
-The app registers as an installable PWA. The manifest is injected inline at runtime (top of `app.js`) and also exists as `manifest.json`.
+The app registers as an installable PWA. The manifest is injected inline at runtime (top of `app.js`) and also exists as `manifest.json`. Service worker cache key: `pb-registry-v4`.
 
 ## Key patterns
 
 - **Supabase anon key is public** — security is enforced by RLS policies in `supabase_rls_policies.sql`, not by hiding the key.
 - **All Supabase queries use REST** — PostGIS RPC functions (`rpc/courts_near`) are called for geo queries; plain REST filters are used otherwise.
 - **Phone numbers are obfuscated** — `encodePhone`/`decodePhone` functions in `app.js` apply a simple transform before storage.
-- **Profile edit mode** — `lockProfileForm()` / `unlockProfileForm()` toggle whether profile fields are editable. Change detection runs on an interval (`startChangeDetection`) and enables the save button only when a diff is detected. New fields must be added to BOTH `startChangeDetection` AND `showProfileDiff` to work correctly.
+- **Profile edit mode** — `lockProfileForm()` / `unlockProfileForm()` toggle whether profile fields are editable. `_editModeActive` flag gates `lockProfileForm` (no-op when active). Change detection runs on an interval (`startChangeDetection`) and enables the save button only when a diff is detected. New fields must be added to BOTH `startChangeDetection` AND `showProfileDiff` to work correctly.
 - **Match status** — determined client-side by comparing `match_date`/`time_end` to `Date.now()` via `isMatchPast()`.
 - **Inline onclick handlers** in dynamically generated HTML run in global scope — they cannot access closure-scoped variables or functions. Always expose handlers as `window.functionName` (e.g., `window._gTogglePlayer`, `window._rmSetHour`).
 - **`confirmUninvite`** sets a removed player's `match_responses.response` to `'out'`. This appears as "Declined / Removed" on the invitee's Invited by Others page. The IBO badge counts only `pending` responses.
 
 ## Registration / Profile (Step 2)
 
-The schedule grid was removed. Availability is now stored as 4 boolean columns on `registrations`:
+### Active profile fields (as of current session)
+Fields present in the profile form:
+- **Step 1:** Email (readonly), First Name, Last Name, Phone, Zip Code (→ geocodes to city/state/lat/lon via Nominatim)
+- **Step 2:** Match Type Preference, DUPR Rating (with "What's DUPR?" tooltip), Personal Skill Rating, Play Style chips, Goal Rating (conditional), Age Range, Gender, Playing Hand (Right/Left only — Ambidextrous removed), Playing Since, Availability toggles
+
+### Removed profile fields
+The following fields were removed and must NOT be re-added:
+- **T-Shirt Size** — removed from form, DB payload, registration summary, `startChangeDetection`, and `showProfileDiff`
+- **City / State inputs** — replaced by Zip Code field (see Location below)
+- **Address / Street** — `addressSearch` autocomplete and `addrCounty` removed entirely
+- **Ambidextrous** — removed from Playing Hand chip group
+- **Had a Lesson / Wants a Lesson** — `lessonSection`, `lessonChips`, `lessonOfferSection` removed
+- **Wants to Improve buttons** (`improveYesBtn`, `improveFunBtn`) — replaced by Play Style chips
+
+### Location (zip-only)
+Location is captured as a single **Zip Code** field (`addrZip`). On input (5+ digits), `onZipChange(val)` calls Nominatim:
+```
+https://nominatim.openstreetmap.org/search?postalcode=ZIP&country=us&format=json&limit=1&addressdetails=1
+```
+Stores city (`S.city`), state abbreviation (`S.state`), lat (`S.addrLat`), lon (`S.addrLon`) in `S`. Also writes to hidden `#addrCity` / `#addrState` fields for downstream JS compatibility. Status shown in `#zipGeoStatus` element (e.g. "📍 Phoenix, AZ").
+
+`doSaveProfile` geocodes zip before save if `S.addrLat`/`S.addrLon` are missing. DB payload uses `S.city` / `S.state` (not DOM values).
+
+`getCityLatLon()` reads `S.addrLat` / `S.addrLon` first, then falls back to embedded `CITIES_BY_STATE` dataset, then state center.
+
+`loadMyCourts()` reads `S.city` / `S.state` directly (not DOM `addrCity` / `addrState`).
+
+### Play Style chips
+Three chips replacing the old "Wants to Improve" buttons:
+- **Just for Fun** — maps to `S.playStyle = 'Fun'`
+- **Competitive** — maps to `S.playStyle = 'Competitive'`
+- **Both** — maps to `S.playStyle = 'Both'` (pre-selected default)
+
+Implemented as `<span>` elements matching Play Format structure. Handled in `selChip(gid, el, key)` via `key === 'playStyle'` branch.
+
+**Goal Rating field** shows when `S.playStyle === 'Competitive'` OR `S.playStyle === 'Both'`. Hidden for 'Fun'. `restoreProfileForm` uses `(S.playStyle==='Competitive'||S.playStyle==='Both')` check (not the old `improveVal` variable, which no longer exists).
+
+### Field order (Step 2)
+1. Match Type Preference
+2. DUPR Rating (with tooltip)
+3. Personal Skill Rating
+4. Play Style chips
+5. Goal Rating (conditional on Play Style)
+6. Age Range
+7. Gender
+8. Playing Hand
+9. Playing Since
+10. Availability toggles
+
+### Availability
+Stored as 4 boolean columns on `registrations`:
 - `avail_weekday_morning`, `avail_weekday_afternoon`, `avail_weekday_evening`, `avail_weekends`
 
 State keys in `S`: `availWeekdayMorning`, `availWeekdayAfternoon`, `availWeekdayEvening`, `availWeekends`.
 
 UI functions: `toggleAvail(key)`, `updateAvailToggles()`.
 
-The "wants to improve" field stores `'improve'` or `'fun'` (old DB values `'Yes'`/`'No'` are normalized on restore). UI: `selectImproveGoal(val)`, `updateGoalGapViz()`.
-
 "Personal Rating" was renamed to "Personal Skill Rating".
+
+## Navigation structure
+
+### Left nav sections
+- **MATCHES:** Confirmed Matches, Players Wanting to Play, Recurring Matches
+- **ORGANIZER:** Set Up a Match, My Match Invites, My Groups, Recurring Matches
+- **INNER CIRCLE:** (no badge numbers — removed)
+- **MY COURTS:** Private (with `#navCourtPrivate` wrapper, `#navCourtPrivateNum` inner span) and Public (with `#navCourtPublic` wrapper, `#navCourtPublicNum` inner span). Labels "Private" and "Public" appear below the badge number.
+
+`updateNavCourtBadges(publicCount, privateCount)` writes to the inner `*Num` spans, not the wrapper elements. The wrappers are hidden when count = 0.
+
+### Dashboard containers
+- **Matches container:** "My Match Invites to Others" (orange) and "Match Invites from Others" (blue) — no arrows
+- **Inner Circle container:** "My IC" (green, calls `showIcView('members')`), "My Invites to Others" (amber), "Others Invites to Me" (purple)
+
+`applyIcViewMode(mode)` hides/shows IC sections based on mode. Called from dashboard IC buttons.
 
 ## Organizer / Court Captain tier
 
@@ -125,8 +191,7 @@ The "wants to improve" field stores `'improve'` or `'fun'` (old DB values `'Yes'
 - `is_organizer` is only set `true` after a full profile is completed
 
 `registrations.wants_organizer` (boolean) is the pre-organizer signal:
-- Set `true` when a Quick Connect user answers "Yes — I organize matches!" in `showOrganizerQuestion()`
-- Set `false` when they answer "No — just here to play"
+- Set `true` when a user indicates they organize matches
 - Triggers `showCourtCaptainNudge()` which prompts them to complete their full profile
 - `updateNavForUserType()` reads both flags to gray/unlock nav items
 
@@ -182,20 +247,11 @@ New users arrive via `invite.html?token=TOKEN` (linked from the `app_invite` ema
 ### Phase 3 — Registration choice
 **Full Profile** (`_inviteChoiceFull`): navigates to the standard `playerProfile` form (Steps 1–4).
 
-**Quick Connect** (`showQuickConnectForm`): minimal overlay — email (readonly), first name, phone, skill slider, age, playing since, waivers. On save:
-- POSTs to `registrations` (no `quick_connect` column — that field does not exist).
+**Quick Connect** (`showQuickConnectForm`): minimal overlay — email (readonly), first name, phone, zip code, skill slider, age, playing since, waivers. On save:
+- POSTs to `registrations` (no `quick_connect` column — that field does not exist). Payload includes `zip_code`.
 - Calls `restoreSession` → sets `SESSION_PLAYER` from DB row, falls back to `{ email, first_name }` minimal object if needed.
 - Calls `updateOrganizerNav()`, `updateNavForUserType()`, and `loadAllMatchBadges()`.
-- Shows `showOrganizerQuestion()` instead of navigating directly to dashboard.
-
-### Phase 4 — Organizer question (Quick Connect only)
-`showOrganizerQuestion(email, inv)` — white overlay card asking "Do you plan on organizing matches?"
-- **Yes** → saves `wants_organizer: true` → calls `showCourtCaptainNudge(email)`
-- **No** → saves `wants_organizer: false` → navigates to dashboard with welcome toast
-
-`showCourtCaptainNudge(email)` — follow-up overlay explaining that organizing tools require a full profile:
-- **"Complete Full Profile"** → removes overlay, navigates to `playerProfile`, calls `unlockProfileForm()` + `goTo(1)`, focuses first name field
-- **"I'll do it later"** → removes overlay, navigates to dashboard with toast explaining Court Captain tools can be unlocked any time
+- Navigates directly to dashboard with a welcome toast. **No organizer question shown.**
 
 ### Key `checkInviteToken()` behavior
 - Always sets `PENDING_INVITE` when a valid token is found.
@@ -253,7 +309,7 @@ Conflict is detected using proper time-range overlap: `start1 < end2 AND start2 
 - **Same-day non-overlap** → yellow advisory only, Send not blocked
 - The conflict modal (`showConflictConfirm`) also appears when accepting an invite if the player already has a committed match that overlaps. It fetches `court_name` and `court_address` for the new invite row so the court column never shows "TBD".
 
-**KNOWN BUG (next session):** `smCheckConflict()` currently uses date-only matching rather than the proper time-range formula. Fix: `start1 < end2 AND end1 > start2` using `'HH:MM'` string comparison.
+**KNOWN BUG:** `smCheckConflict()` currently uses date-only matching rather than the proper time-range formula. Fix: `start1 < end2 AND end1 > start2` using `'HH:MM'` string comparison.
 
 ## Countdown color logic
 
@@ -267,9 +323,12 @@ Conflict is detected using proper time-range overlap: `start1 < end2 AND start2 
 
 - **Players must be in PBallConnect to join a group.** No placeholder members. PWA barrier is zero — "If you want to play ball, click a link."
 - **Schedule grid removed** — too heavy, goes stale. Replaced with 4 availability toggles + quarterly check-in nudge.
-- **"I play just for fun"** replaces "Not really" as the non-improvement goal option.
+- **Play Style chips are "Just for Fun" / "Competitive" / "Both".** "Both" is the pre-selected default. Goal Rating is shown only when Competitive or Both is selected.
 - **Phone number stays in registration Step 1.**
-- **Playing since, goal rating, t-shirt size kept** in profile.
+- **T-shirt size removed from profile.** Field is gone from form, payload, summary, and change detection.
+- **Zip-only location.** City, State, and street address inputs removed. Zip geocodes via Nominatim on input.
+- **Ambidextrous removed** from Playing Hand chip group.
+- **Had a Lesson / Wants a Lesson / Wants to Improve removed** from profile form and registration summary.
 - **Transactional email only** — no Twilio/SMS yet. Web push notifications are next.
 - **Organizer always plays** — "I'll be playing" checkbox removed from Set Up a Match. `matchMaxNeeded()` always subtracts 1 from total slots.
 - **Non-organizers see grayed nav** — organizer-only items at 40% opacity with tooltips explaining the Court Captain path.
@@ -279,7 +338,9 @@ Conflict is detected using proper time-range overlap: `start1 < end2 AND start2 
 - **Recurring Matches belongs under MATCHES** not ORGANIZER in the nav — visible to all users, grayed for non-organizers.
 - **Portrait mode is primary mobile orientation.**
 - **Match invite popup removed** — `checkMatchToken()` now navigates directly to `invitedByOthers` page. `showMatchResponseBanner()` has been deleted.
-- **Quick Connect users asked if they organize** — forks to Court Captain path (`wants_organizer=true`) or plain dashboard (`wants_organizer=false`).
+- **Quick Connect goes directly to dashboard** — no organizer question shown after Quick Connect save. Welcome toast shown instead.
+- **Set Up a Match and My Match Invites are in the Organizer nav section** — not the Matches section.
+- **IC badge numbers removed from left nav** — Inner Circle nav items show no count badges.
 
 ## Competitive context
 
@@ -293,16 +354,15 @@ PBallConnect differentiators vs PlayTime Scheduler (market leader, free), Pickle
 
 1. **Scheduling conflict detection incorrectly flags same-day non-overlapping matches.** `smCheckConflict()` uses date-only matching. Fix: proper overlap formula `start1 < end2 AND end1 > start2` using `'HH:MM'` string comparison.
 2. **Dashboard "Invited" box count can diverge from nav badge.** `loadDashTileCounts()` still fetches its own count for the subtitle text line — the `dashSq*` count elements are now driven by `loadAllMatchBadges()` only, but the subtitle (e.g. "2 invites waiting") uses a separate unfiltered fetch. Verify subtitle also filters past matches and self-organized.
-3. **Quick Connect save not redirecting to dashboard in all edge cases** — investigate `showOrganizerQuestion` path when `inv` is null.
 
 ## Next to build
 
 1. **Fix scheduling conflict overlap detection** — `smCheckConflict()` proper time-range formula
-2. **Dashboard redesign** — mobile first, max ~600px, vertical container layout, rename boxes to "Invites From Me" and "Invites To Me", add Inner Circle container with 3 buttons
+2. **Profile complete flag** — set `profile_complete = true` on `registrations` when full profile is saved via `doSaveProfile()`
 3. **Court Captain celebration moment** — toast/overlay when full profile is saved and `is_organizer` becomes true
-4. **Profile complete flag** — set `profile_complete = true` on `registrations` when full profile is saved via `doSaveProfile()`
-5. **Quick Connect → Full Profile pre-fill** — when a `wants_organizer` user completes full profile, pre-fill name/phone/skill from their Quick Connect data
-6. **Drip email for `wants_organizer` users** — send after 24h if `profile_complete` is still false
+4. **Quick Connect → Full Profile pre-fill** — when a `wants_organizer` user completes full profile, pre-fill name/phone/skill/zip from their Quick Connect data
+5. **Drip email for `wants_organizer` users** — send after 24h if `profile_complete` is still false
+6. **Dashboard redesign** — mobile first, max ~600px, vertical container layout
 7. **Group edit notifications** — player added/removed gets notified
 8. **Smart gap alerts** — "Still need 1 for tomorrow"
 9. **Web push notifications**
