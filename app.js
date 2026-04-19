@@ -2746,10 +2746,15 @@ window.smOnStep3GroupSelect = function(value){
   else {
     MS.selectedGroups = new Set(['named_'+value]);
     MS.group = 'named_'+value;
-    // Mirror into Step 6 group picker so they stay in sync
-    smSelectInvite('group');
+    // Ensure Step 6 dropdown is populated from cache then mirror selection
     const sel6 = document.getElementById('smGroupSelect');
+    if(sel6 && _groups && _groups.length && sel6.options.length <= 1){
+      sel6.innerHTML = '<option value="">Select a group…</option>'+
+        _groups.map(g=>'<option value="'+g.id+'">'+g.name+(g.max_players?' ('+g.max_players+' players)':'')+' </option>').join('');
+    }
     if(sel6) sel6.value = value;
+    // Switch Step 6 to group mode
+    smSelectInvite('group');
   }
   smUpdateNeededGrid();
   smUpdateSummary();
@@ -5360,7 +5365,7 @@ function smUpdateSummary(){
   const vs='color:#111;font-weight:600;text-align:right;max-width:60%;';
   rows.innerHTML=
     '<div style="'+rs+'"><span style="'+ls+'">Format</span><span style="'+vs+'">'+formatStr+'</span></div>'+
-    '<div style="'+rs+'"><span style="'+ls+'">Date</span><span style="'+vs+'">'+dateTimeStr+'</span></div>'+
+    '<div style="'+rs+'"><span style="'+ls+'">Date &amp; Time</span><span style="'+vs+'">'+dateTimeStr+'</span></div>'+
     '<div style="'+rs+'"><span style="'+ls+'">Court</span><span style="'+vs+'">'+courtStr+'</span></div>'+
     '<div style="'+rs+'border-bottom:none;"><span style="'+ls+'">Inviting</span><span style="'+vs+'">'+invLbl+'</span></div>';
 }
@@ -5461,6 +5466,52 @@ async function smCheckConflict(){
   smUpdateSendBtn();
 }
 
+function smUpdateCourtPickerView(){
+  const chip    = document.getElementById('smSelectedCourtChip');
+  const savedLbl= document.getElementById('smSavedCourtsLabel');
+  const savedEl = document.getElementById('smSavedCourts');
+  const otherLbl= document.getElementById('smOtherCourtsLabel');
+  const otherEl = document.getElementById('smOtherCourts');
+  const hasSel  = MS.selectedCourts && MS.selectedCourts.size > 0;
+  if(hasSel){
+    let court; MS.selectedCourts.forEach(c=>{ court=c; });
+    if(chip){
+      chip.style.display='block';
+      chip.innerHTML=
+        '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;border:2px solid #1a7a3a;background:#f0fdf4;">'+
+          '<span style="font-size:20px;flex-shrink:0;">✅</span>'+
+          '<div style="flex:1;min-width:0;">'+
+            '<div style="font-size:13px;font-weight:700;color:#1a7a3a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+court.name+'</div>'+
+            '<div style="font-size:11px;color:#6b7280;">'+(court.isPrivate?'Private':'Public')+
+              (court.address?' · '+court.address:'')+
+            '</div>'+
+          '</div>'+
+          '<button onclick="smChangeCourt()" style="font-size:12px;font-weight:700;color:#6b7280;background:#fff;border:1.5px solid #d1d5db;border-radius:8px;padding:6px 12px;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">Change</button>'+
+        '</div>';
+    }
+    if(savedLbl) savedLbl.style.display='none';
+    if(savedEl)  savedEl.style.display='none';
+    if(otherLbl) otherLbl.style.display='none';
+    if(otherEl)  otherEl.style.display='none';
+  } else {
+    if(chip){ chip.style.display='none'; chip.innerHTML=''; }
+    if(savedLbl) savedLbl.style.display='';
+    if(savedEl)  savedEl.style.display='';
+    if(otherLbl) otherLbl.style.display='';
+    if(otherEl)  otherEl.style.display='';
+  }
+}
+
+window.smChangeCourt = function(){
+  MS.selectedCourts.clear();
+  MS.courtId=null; MS.courtName=null; MS.isPrivate=false;
+  smUpdateCourtPickerView();
+  smLoadCourts();
+  renderCourtCapacityWarning();
+  smUpdateSendBtn();
+  smUpdateSummary();
+};
+
 function smSetCourtType(type){
   MS.courtType = type;
   const pubBtn=document.getElementById('smCourtTypePublic');
@@ -5482,6 +5533,7 @@ function smSetCourtType(type){
   // Clear selection when switching types
   MS.selectedCourts.clear();
   MS.courtId=null; MS.courtName=null; MS.isPrivate=false;
+  smUpdateCourtPickerView();
   smLoadCourts();
 }
 
@@ -5574,7 +5626,7 @@ function _smRenderCourtRow(court, container, showSaveBtn){
     renderCourtCapacityWarning();
     smUpdateSendBtn();
     smUpdateSummary();
-    smLoadCourts();
+    smUpdateCourtPickerView();
   };
   container.appendChild(row);
 }
