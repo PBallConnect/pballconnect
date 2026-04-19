@@ -352,13 +352,11 @@ PBallConnect differentiators vs PlayTime Scheduler (market leader, free), Pickle
 
 ## Known bugs (fix next session)
 
-1. **Scheduling conflict detection incorrectly flags same-day non-overlapping matches.** `smCheckConflict()` uses date-only matching. Fix: proper overlap formula `start1 < end2 AND end1 > start2` using `'HH:MM'` string comparison.
-2. **Dashboard "Invited" box count can diverge from nav badge.** `loadDashTileCounts()` still fetches its own count for the subtitle text line — the `dashSq*` count elements are now driven by `loadAllMatchBadges()` only, but the subtitle (e.g. "2 invites waiting") uses a separate unfiltered fetch. Verify subtitle also filters past matches and self-organized.
+1. **Dashboard "Invited" box count can diverge from nav badge.** `loadDashTileCounts()` still fetches its own count for the subtitle text line — the `dashSq*` count elements are now driven by `loadAllMatchBadges()` only, but the subtitle (e.g. "2 invites waiting") uses a separate unfiltered fetch. Verify subtitle also filters past matches and self-organized.
 
 ## Next to build
 
-1. **Fix scheduling conflict overlap detection** — `smCheckConflict()` proper time-range formula
-2. **Profile complete flag** — set `profile_complete = true` on `registrations` when full profile is saved via `doSaveProfile()`
+1. **Profile complete flag** — set `profile_complete = true` on `registrations` when full profile is saved via `doSaveProfile()`
 3. **Court Captain celebration moment** — toast/overlay when full profile is saved and `is_organizer` becomes true
 4. **Quick Connect → Full Profile pre-fill** — when a `wants_organizer` user completes full profile, pre-fill name/phone/skill/zip from their Quick Connect data
 5. **Drip email for `wants_organizer` users** — send after 24h if `profile_complete` is still false
