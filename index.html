@@ -1348,8 +1348,29 @@
       <div id="matchSteps" style="display:none;">
       </div>
 
+      <!-- Sticky Progress Bar -->
+      <div id="smProgressBar" style="position:sticky;top:52px;z-index:100;background:#fef9c3;border-bottom:2px solid #eab308;padding:10px 16px 6px;">
+        <div style="display:flex;align-items:center;justify-content:center;">
+          <div id="smStep1" style="width:32px;height:32px;border-radius:50%;border:2px solid #eab308;background:#fef9c3;color:#713f12;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">1</div>
+          <div style="flex:1;height:1px;background:#d97706;max-width:20px;"></div>
+          <div id="smStep2" style="width:28px;height:28px;border-radius:50%;border:2px solid #d97706;background:#fff;color:#78350f;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">2</div>
+          <div style="flex:1;height:1px;background:#d97706;max-width:20px;"></div>
+          <div id="smStep3" style="width:28px;height:28px;border-radius:50%;border:2px solid #d97706;background:#fff;color:#78350f;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">3</div>
+          <div style="flex:1;height:1px;background:#d97706;max-width:20px;"></div>
+          <div id="smStep4" style="width:28px;height:28px;border-radius:50%;border:2px solid #d97706;background:#fff;color:#78350f;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">4</div>
+          <div style="flex:1;height:1px;background:#d97706;max-width:20px;"></div>
+          <div id="smStep5" style="width:28px;height:28px;border-radius:50%;border:2px solid #d97706;background:#fff;color:#78350f;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">5</div>
+          <div style="flex:1;height:1px;background:#d97706;max-width:20px;"></div>
+          <div id="smStep6" style="width:28px;height:28px;border-radius:50%;border:2px solid #d97706;background:#fff;color:#78350f;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">6</div>
+          <div style="flex:1;height:1px;background:#d97706;max-width:20px;"></div>
+          <div id="smStep7" style="width:28px;height:28px;border-radius:50%;border:2px solid #d97706;background:#fff;color:#78350f;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">7</div>
+        </div>
+        <div id="smProgressLabel" style="text-align:center;font-size:11px;font-weight:700;color:#713f12;margin-top:5px;">Step 1 · Match Type</div>
+      </div>
+
       <!-- Container 1: Match Type -->
       <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
+        <div style="font-size:10px;font-weight:800;color:#d97706;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;">Step 1</div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
           <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
           <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;">Match Type</span>
@@ -1370,13 +1391,14 @@
         </div>
       </div>
 
-      <!-- Container 2: How many courts? -->
+      <!-- Container 2: Courts & Players -->
       <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
+        <div style="font-size:10px;font-weight:800;color:#d97706;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;">Step 2</div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
           <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div>
-          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;">How Many Courts?</span>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;">Courts &amp; Players</span>
         </div>
-        <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
           <button id="smCourtsBtn1" onclick="selectNumCourts(1)"
             style="padding:8px 20px;border-radius:999px;border:1.5px solid #1a7a3a;background:#1a7a3a;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">1</button>
           <button id="smCourtsBtn2" onclick="selectNumCourts(2)"
@@ -1386,6 +1408,7 @@
           <button id="smCourtsBtn4" onclick="selectNumCourts(4)"
             style="padding:8px 20px;border-radius:999px;border:1.5px solid #d1d5db;background:#f3f4f6;color:#374151;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">4</button>
         </div>
+        <div id="smCourtHelperLine" style="font-size:13px;color:#1a7a3a;font-weight:600;text-align:center;margin-bottom:12px;">1 court · 4 players total · 3 spots open</div>
         <div style="background:#fee2e2;border:1px solid #f87171;border-radius:10px;padding:8px 14px;display:inline-flex;align-items:center;gap:6px;">
           <span style="font-size:13px;color:#991b1b;font-weight:600;">Players needed (including you):</span>
           <span id="smNeededNum" style="font-size:20px;font-weight:800;color:#991b1b;">3</span>
@@ -1394,6 +1417,7 @@
 
       <!-- Container 3: Play Structure -->
       <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
+        <div style="font-size:10px;font-weight:800;color:#d97706;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;">Step 3</div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
           <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div>
           <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;">Play Structure</span>
@@ -1419,6 +1443,7 @@
 
       <!-- Container 4: Date & Time -->
       <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
+        <div style="font-size:10px;font-weight:800;color:#d97706;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;">Step 4</div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
           <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">4</div>
           <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;">Date &amp; Time</span>
@@ -1459,6 +1484,7 @@
 
       <!-- Container 5: Court -->
       <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
+        <div style="font-size:10px;font-weight:800;color:#d97706;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;">Step 5</div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
           <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">5</div>
           <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;">Court</span>
@@ -1480,6 +1506,7 @@
 
       <!-- Container 6: Invite -->
       <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
+        <div style="font-size:10px;font-weight:800;color:#d97706;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;">Step 6</div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
           <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">6</div>
           <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;">Invite</span>
@@ -1533,6 +1560,7 @@
 
       <!-- Container 7: Review & Send -->
       <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:24px;">
+        <div style="font-size:10px;font-weight:800;color:#d97706;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;">Step 7</div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
           <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">7</div>
           <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;">Review &amp; Send</span>

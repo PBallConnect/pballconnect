@@ -309,6 +309,7 @@
 
     /* ── Page padding ── */
     .page-section{padding:16px 14px 100px;}
+    #smProgressBar{margin:-16px -14px 12px;}
     .page-header h1{font-size:22px;}
     .page-header p{font-size:12px;}
 
@@ -395,6 +396,7 @@
   /* ── Extra small phones (< 390px) ── */
   @media(max-width:390px){
     .page-section{padding:12px 10px 100px;}
+    #smProgressBar{margin:-12px -10px 10px;}
     .card{padding:14px 12px;}
     .chip{padding:6px 10px;font-size:11px;}
     .ic-skill-grid-wrap,.ic-skill-grid-5col{grid-template-columns:1fr;}
@@ -405,9 +407,10 @@
   /* ── Main content ─────────────────────────────────── */
   .right-column{margin-left:240px;display:flex;flex-direction:column;min-height:100vh;position:relative;flex:1;}
   @media(max-width:768px){.right-column{margin-left:0;} .main-content{padding-bottom:80px;}}
-  .main-content{flex:1;background:#ffffff;min-height:calc(100vh - 52px);overflow-x:hidden;}
+  .main-content{flex:1;background:#ffffff;min-height:calc(100vh - 52px);overflow-x:hidden;max-width:600px;margin-left:auto;margin-right:auto;}
   .page-section{display:none;padding:32px 32px 80px;}
   .page-section.active{display:block;}
+  #smProgressBar{margin:-32px -32px 16px;}
 
   /* ── Page headers ─────────────────────────────────── */
   .page-header{margin-bottom:28px;}

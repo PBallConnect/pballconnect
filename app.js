@@ -2666,6 +2666,7 @@ function selectMatchFormat(fmt, el){
   renderCourtCapacityWarning();
   smUpdateNeededGrid();
   smUpdateSummary();
+  smUpdateProgress(1);
 }
 
 // ── Match type preference (Profile) ───────────────────
@@ -2694,6 +2695,7 @@ function selectMatchGender(pref, el){
   if(MS.inviteMode==='specific') buildSpecificPicker();
   smUpdateNeededGrid();
   smUpdateSummary();
+  smUpdateProgress(3);
 }
 
 // ── Multi-court selector ──────────────────────────────
@@ -2712,6 +2714,7 @@ function selectNumCourts(n){
   renderCourtCapacityWarning();
   smUpdateNeededGrid();
   smUpdateSummary();
+  if(!_smInitializing) smUpdateProgress(2);
 }
 
 function toggleOrganizerPlaying(checked){
@@ -2902,6 +2905,7 @@ function buildTimeSelect(selectId, startHH, endHH){
 
 function onMatchStartTimeChange(startVal){
   MS.timeStart = startVal;
+  if(startVal) smUpdateProgress(4);
   if(!startVal) return;
   // Auto-set end time = start + duration
   const [h,m] = startVal.split(':').map(Number);
@@ -3537,6 +3541,7 @@ async function loadMatchCourts(){
 function updateMatchCourtsNext(){
   smUpdateSendBtn();
   smUpdateSummary();
+  if(MS.selectedCourts && MS.selectedCourts.size > 0) smUpdateProgress(5);
 }
 
 function updateMatchCourtsSummary(){
@@ -5212,9 +5217,40 @@ document.addEventListener('click', function(e){
 // SINGLE-SCROLL MATCH SETUP HELPERS (sm*)
 // ══════════════════════════════════════════════════════
 
+// ── Set Up a Match: progress bar ─────────────────────
+const _smStepLabels = ['Match Type','Courts','Play Structure','Date & Time','Court','Invite','Review & Send'];
+let _smCurrentStep = 1;
+let _smInitializing = false;
+
+function smUpdateProgress(step){
+  if(_smInitializing) return;
+  _smCurrentStep = Math.max(_smCurrentStep, step);
+  for(let i=1;i<=7;i++){
+    const el=document.getElementById('smStep'+i);
+    if(!el) continue;
+    if(i < _smCurrentStep){
+      el.style.background='#16a34a'; el.style.borderColor='#16a34a'; el.style.color='#fff';
+      el.style.width='28px'; el.style.height='28px';
+    } else if(i===_smCurrentStep){
+      el.style.background='#fef9c3'; el.style.borderColor='#eab308'; el.style.color='#713f12';
+      el.style.width='32px'; el.style.height='32px';
+    } else {
+      el.style.background='#fff'; el.style.borderColor='#d97706'; el.style.color='#78350f';
+      el.style.width='28px'; el.style.height='28px';
+    }
+  }
+  const lbl=document.getElementById('smProgressLabel');
+  if(lbl) lbl.textContent='Step '+_smCurrentStep+' · '+_smStepLabels[_smCurrentStep-1];
+}
+
 function smUpdateNeededBox(){
   const el = document.getElementById('smNeededNum');
   if(el) el.textContent = matchMaxNeeded();
+  const total = matchTotalSlots();
+  const courts = MS.numCourts || 1;
+  const open = total - 1;
+  const helper = document.getElementById('smCourtHelperLine');
+  if(helper) helper.textContent = courts+' court'+(courts>1?'s':'')+' · '+total+' players total · '+open+' spot'+(open!==1?'s':'')+' open';
 }
 
 function smUpdateSendBtn(){
@@ -5227,6 +5263,7 @@ function smUpdateSendBtn(){
   btn.disabled = !ok;
   btn.style.opacity  = ok ? '1' : '0.4';
   btn.style.cursor   = ok ? 'pointer' : 'not-allowed';
+  if(ok) smUpdateProgress(7);
 }
 
 function smUpdateSummary(){
@@ -5486,6 +5523,7 @@ function _smRenderCourtRow(court, container, showSaveBtn){
 
 function smSelectInvite(mode){
   MS.inviteMode = mode;
+  smUpdateProgress(6);
   ['all','specific','group'].forEach(m=>{
     const cap = m.charAt(0).toUpperCase()+m.slice(1);
     const el = document.getElementById('smInvite'+cap);
@@ -5536,6 +5574,7 @@ function smOnGroupSelect(value){
 }
 
 function initSetupMatch(){
+  _smInitializing = true;
   // Reset MS state
   MS.format='doubles'; MS.numCourts=1; MS.group=null;
   MS.specificPlayers=new Set(); MS.extraGroups=new Set(); MS.selectedGroups=new Set(['all']);
@@ -5603,6 +5642,10 @@ function initSetupMatch(){
   // IC count badge
   const countEl=document.getElementById('smInviteAllCount');
   if(countEl) countEl.textContent=IC_MEMBERS.length ? IC_MEMBERS.length+' players' : '';
+
+  _smInitializing = false;
+  _smCurrentStep = 1;
+  smUpdateProgress(1);
 
   applyPendingMatchInvitee();
 }
