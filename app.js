@@ -8440,6 +8440,10 @@ function showQuickConnectForm(email, inv){
         '<input id="qcPhone" type="tel" placeholder="(555) 555-5555" maxlength="14" style="'+inp+'" oninput="window._qcUpdateBtn()"/>'+
       '</div>'+
       '<div style="margin-bottom:16px;">'+
+        '<label style="'+lbl+'">Zip Code <span style="color:#dc2626;">*</span></label>'+
+        '<input id="qcZip" type="tel" placeholder="e.g. 03842" maxlength="5" style="'+inp+'" oninput="window._qcUpdateBtn()"/>'+
+      '</div>'+
+      '<div style="margin-bottom:16px;">'+
         '<label style="'+lbl+'">Personal Skill Rating <span style="color:#dc2626;">*</span></label>'+
         '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'+
           '<input id="qcSkillSlider" type="range" min="0" max="21" value="8" style="flex:1;" oninput="document.getElementById(\'qcSkillVal\').textContent=DUPR_VALS[+this.value]||\'4.0\';window._qcUpdateBtn()"/>'+
@@ -8483,8 +8487,8 @@ function showQuickConnectForm(email, inv){
   window._qcUpdateBtn = function(){
     const fn  = document.getElementById('qcFirstName')?.value?.trim() || '';
     const ph  = (document.getElementById('qcPhone')?.value||'').replace(/\D/g,'');
-    // slider always has a value (default 8), so just need fn + phone + both checkboxes
-    const ok  = fn.length > 0 && ph.length >= 10 && _qcPrivacyOn && _qcRiskOn;
+    const zip = (document.getElementById('qcZip')?.value||'').replace(/\D/g,'');
+    const ok  = fn.length > 0 && ph.length >= 10 && zip.length === 5 && _qcPrivacyOn && _qcRiskOn;
     const btn = document.getElementById('qcSaveBtn');
     if(btn){
       btn.disabled    = !ok;
@@ -8517,11 +8521,13 @@ function showQuickConnectForm(email, inv){
     if(errEl) errEl.style.display='none';
     if(btn){ btn.disabled=true; btn.textContent='Saving…'; btn.style.background='#9ca3af'; btn.style.cursor='not-allowed'; }
 
+    const zip = document.getElementById('qcZip')?.value?.trim() || null;
     try{
       await saveRegistration({
         email:             email.toLowerCase(),
         first_name:        fn,
         phone:             encodePhone(ph),
+        zip_code:          zip,
         skill_level:       skill,
         dob:               age   || null,
         playing_since:     since || null,
@@ -8537,8 +8543,8 @@ function showQuickConnectForm(email, inv){
       updateOrganizerNav();
       updateNavForUserType();
       loadAllMatchBadges();
-      // Show organizer question before going to dashboard
-      showOrganizerQuestion(email.toLowerCase(), inv);
+      showPage('dashboard');
+      showToast('Welcome to PBallConnect! 🎾','#1a7a3a');
     }catch(e){
       if(btn){ btn.disabled=false; btn.textContent='Save & Join PBallConnect 🏓'; btn.style.background='#1a7a3a'; btn.style.cursor='pointer'; }
       if(errEl){ errEl.textContent='Save failed: '+(e.message||'Unknown error'); errEl.style.display='block'; }
