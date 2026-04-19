@@ -7666,21 +7666,9 @@ async function loadIcInvites(){
           };
           row.appendChild(cancelBtn);
         }
-        // For accepted invites — offer to send a reverse request (only if not already in IC)
-        const alreadyInIC = IC_MEMBERS.some(({player})=>(player.email||'').toLowerCase()===(conn.recipient_email||'').toLowerCase());
-        if(conn.status==='approved' && !alreadyInIC){
-          const addBackBtn=document.createElement('button');
-          addBackBtn.style.cssText='margin-left:8px;padding:4px 10px;font-size:11px;border-radius:6px;'+
-            'border:1px solid rgba(76,175,125,0.4);background:rgba(76,175,125,0.1);color:var(--green);cursor:pointer;white-space:nowrap;';
-          addBackBtn.textContent='+ Add to my IC';
-          addBackBtn.title='Send '+name+' a request to join your Inner Circle';
-          addBackBtn.onclick=async function(){
-            addBackBtn.disabled=true; addBackBtn.textContent='Sending…';
-            await icSendRequest(conn.recipient_email, conn.recipient_name||name, addBackBtn);
-            addBackBtn.textContent='✅ Sent!';
-          };
-          row.appendChild(addBackBtn);
-        }
+        // NOTE: No "+ Add to my IC" button here — these are YOUR outbound requests.
+        // If they accepted (status==='approved'), they are already in your IC.
+        // The mutual connection is established the moment they accept your request.
         list.appendChild(row);
       });
     };
@@ -7698,13 +7686,27 @@ let IC_LIST_VISIBLE=false;
 
 function showIcView(mode){
   IC_VIEW_MODE=mode;
-  if(document.getElementById('page-innerCircle')?.classList.contains('active')) applyIcViewMode(mode);
-  else{ showPage('innerCircle'); setTimeout(()=>applyIcViewMode(mode),400); }
+  const icPageActive=document.getElementById('page-innerCircle')?.classList.contains('active');
+  if(!icPageActive){
+    showPage('innerCircle');
+    let attempts=0;
+    const tryApply=()=>{
+      attempts++;
+      const ready=document.getElementById('icApprovedCard') && (IC_MEMBERS.length>0 || IC_INCOMING_COUNT>0 || attempts>8);
+      if(ready){ applyIcViewMode(mode); }
+      else if(attempts<12){ setTimeout(tryApply, 200); }
+      else { applyIcViewMode(mode); }
+    };
+    setTimeout(tryApply, 350);
+  } else {
+    applyIcViewMode(mode);
+  }
 }
 
 function applyIcViewMode(mode){
   const existing=document.getElementById('icViewToolbar');
   if(existing) existing.remove();
+  document.getElementById('icFilterPill')?.remove();
   const els={
     stats:document.getElementById('icStatsDashboard'),
     search:document.querySelector('.ic-search-card'),
@@ -7732,7 +7734,7 @@ function applyIcViewMode(mode){
   title.className='ic-view-toolbar-title '+cfg.cls; title.textContent=cfg.label;
   const backBtn=document.createElement('button');
   backBtn.className='ic-back-btn'; backBtn.innerHTML='← Back';
-  backBtn.onclick=()=>{IC_VIEW_MODE='all';applyIcViewMode('all');};
+  backBtn.onclick=()=>{IC_VIEW_MODE='all'; renderInnerCircleList(); applyIcViewMode('all');};
   toolbar.appendChild(title); toolbar.appendChild(backBtn);
   const pageHeader=document.getElementById('page-innerCircle')?.querySelector('.page-header');
   // IC page has no page-header now, insert after stats dashboard
@@ -7879,21 +7881,66 @@ function renderCircleSkillColumns(){
 }
 
 function showFilteredList(type, value, status){
-  // Navigate to IC page and filter to the relevant section
   if(!document.getElementById('page-innerCircle')?.classList.contains('active')){
     showPage('innerCircle');
     setTimeout(()=>showFilteredList(type, value, status), 500);
     return;
   }
-
-  // Map status to IC view mode
   const mode = status==='invited' ? 'invited' : status==='pending' ? 'incoming' : 'members';
-  showIcView(mode);
-
-  // Show a descriptive toast
-  const statusLabel = status==='invited'?'invited':status==='pending'?'requesting':status==='approved'?'members':'players';
-  const valueLabel = value==='All'?'all':value;
-  showToast('Showing '+valueLabel+' '+statusLabel,'#4CAF7D');
+  applyIcViewMode(mode);
+  if(mode==='members' && IC_MEMBERS.length){
+    const mySkill = S.skill || SESSION_PLAYER?.skill_level || '';
+    const skills  = mySkill ? getAdjacentSkills(mySkill) : null;
+    const myEmail = getMyEmail();
+    let filtered;
+    let filterLabel = '';
+    if(type==='gender'){
+      if(value==='All'){ filtered=IC_MEMBERS; filterLabel=''; }
+      else {
+        const gLow=value.toLowerCase();
+        filtered=IC_MEMBERS.filter(({player})=>{
+          const g=(player.gender||'').toLowerCase();
+          if(value==='Other') return g!=='male' && g!=='female';
+          return g===gLow;
+        });
+        filterLabel=(value==='Male'?'♂ Male':value==='Female'?'♀ Female':'⚪ Private')+' members';
+      }
+    } else if(type==='level'){
+      if(value==='All'){ filtered=IC_MEMBERS; filterLabel=''; }
+      else if(!skills){ filtered=IC_MEMBERS; filterLabel=''; }
+      else {
+        filtered=IC_MEMBERS.filter(({player})=>{
+          const ps=parseFloat(player.skill_level||0);
+          if(value==='Below')  return skills.below!==null && Math.abs(ps-skills.below)<0.13;
+          if(value==='My')     return Math.abs(ps-skills.my)<0.13;
+          if(value==='Above')  return skills.above!==null && Math.abs(ps-skills.above)<0.13;
+          return true;
+        });
+        filterLabel=(value==='Below'?'🟡 Below my level':value==='My'?'🟢 My level':'🟣 Above my level')+' members';
+      }
+    } else {
+      filtered=IC_MEMBERS;
+    }
+    const list=document.getElementById('icApprovedList');
+    if(list){
+      list.innerHTML='';
+      if(!filtered.length){
+        list.innerHTML='<div class="ic-col-empty" style="padding:24px;text-align:center;color:var(--dim);">No members match this filter</div>';
+      } else {
+        filtered.forEach(({player,conn})=>list.appendChild(buildIcMemberCard(player,conn,myEmail,null)));
+      }
+      const existingPill=document.getElementById('icFilterPill');
+      if(existingPill) existingPill.remove();
+      if(filterLabel){
+        const pill=document.createElement('div');
+        pill.id='icFilterPill';
+        pill.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 12px;margin-bottom:10px;background:rgba(76,175,125,0.12);border:1px solid rgba(76,175,125,0.35);border-radius:20px;font-size:12px;font-weight:700;color:var(--green);';
+        pill.innerHTML='<span>Filtered: '+filterLabel+' ('+filtered.length+')</span>'+
+          '<button onclick="showFilteredList(\'gender\',\'All\',\'member\')" style="margin-left:auto;background:none;border:none;color:var(--dim);font-size:14px;cursor:pointer;padding:0 2px;line-height:1;" title="Clear filter">✕</button>';
+        list.parentElement.insertBefore(pill, list);
+      }
+    }
+  }
 }
 
 function sortInnerCircle(by){

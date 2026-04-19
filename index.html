@@ -254,7 +254,7 @@
           <div style="display:flex;gap:8px;">
 
             <!-- Green: My Inner Circle -->
-            <button onclick="showPage('innerCircle');setTimeout(()=>showIcView('members'),200)"
+            <button onclick="showPage('innerCircle');setTimeout(()=>showIcView('members'),450)"
               style="flex:1;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #16a34a;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;"
               onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='#ffffff'">
               <div id="dashIcMemberCount" style="font-size:26px;font-weight:800;color:#14532d;line-height:1;">0</div>
@@ -262,7 +262,7 @@
             </button>
 
             <!-- Amber: My Invites to Others -->
-            <button onclick="showPage('innerCircle');setTimeout(()=>showIcView('invited'),200)"
+            <button onclick="showPage('innerCircle');setTimeout(()=>showIcView('invited'),450)"
               style="flex:1;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #d97706;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;"
               onmouseover="this.style.background='#fffbeb'" onmouseout="this.style.background='#ffffff'">
               <div id="dashIcSentCount" style="font-size:26px;font-weight:800;color:#78350f;line-height:1;">0</div>
@@ -270,7 +270,7 @@
             </button>
 
             <!-- Purple: Others Invites to Me -->
-            <button onclick="showPage('innerCircle');setTimeout(()=>showIcView('incoming'),200)"
+            <button onclick="showPage('innerCircle');setTimeout(()=>showIcView('incoming'),450)"
               style="flex:1;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #7c3aed;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;"
               onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background='#ffffff'">
               <div id="dashIcIncomingCount" style="font-size:26px;font-weight:800;color:#4c1d95;line-height:1;">0</div>
@@ -1094,30 +1094,7 @@
 
         <div class="ic-two-grids">
 
-          <!-- Grid 1: Gender (Members only) -->
-          <div class="ic-grid-card" style="border:2px solid #d1d5db !important;">
-            <div class="ic-grid-title">By Gender</div>
-            <table class="ic-stat-table">
-              <thead>
-                <tr>
-                  <th class="ic-th-male">♂ Male</th>
-                  <th class="ic-th-female">♀ Female</th>
-                  <th class="ic-th-other">⚪ Private</th>
-                  <th class="ic-th-total">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td class="ic-th-male ic-clickable-cell" id="gMaleMember" onclick="showFilteredList('gender','Male','member')" title="Click to see players">0</td>
-                  <td class="ic-th-female ic-clickable-cell" id="gFemaleMember" onclick="showFilteredList('gender','Female','member')" title="Click to see players">0</td>
-                  <td class="ic-th-other ic-clickable-cell" id="gOtherMember" onclick="showFilteredList('gender','Other','member')" title="Click to see players">0</td>
-                  <td class="ic-th-total ic-clickable-cell" id="gTotalMember" onclick="showFilteredList('gender','All','members')" title="Click to see all members">0</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Grid 2: Playing Levels (Members only) -->
+          <!-- Grid 1: Playing Levels (Members only) -->
           <div class="ic-grid-card" style="border:2px solid #d1d5db !important;">
             <div class="ic-grid-title">By Skill Level</div>
             <table class="ic-stat-table">
@@ -1135,6 +1112,29 @@
                   <td class="ic-th-my ic-clickable-cell" id="lMyMember" onclick="showFilteredList('level','My','member')" title="Click to see players">0</td>
                   <td class="ic-th-above ic-clickable-cell" id="lAboveMember" onclick="showFilteredList('level','Above','member')" title="Click to see players">0</td>
                   <td class="ic-th-total ic-clickable-cell" id="lTotalMember" onclick="showFilteredList('level','All','members')" title="Click to see all members">0</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Grid 2: Gender (Members only) -->
+          <div class="ic-grid-card" style="border:2px solid #d1d5db !important;">
+            <div class="ic-grid-title">By Gender</div>
+            <table class="ic-stat-table">
+              <thead>
+                <tr>
+                  <th class="ic-th-male">♂ Male</th>
+                  <th class="ic-th-female">♀ Female</th>
+                  <th class="ic-th-other">⚪ Private</th>
+                  <th class="ic-th-total">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="ic-th-male ic-clickable-cell" id="gMaleMember" onclick="showFilteredList('gender','Male','member')" title="Click to see players">0</td>
+                  <td class="ic-th-female ic-clickable-cell" id="gFemaleMember" onclick="showFilteredList('gender','Female','member')" title="Click to see players">0</td>
+                  <td class="ic-th-other ic-clickable-cell" id="gOtherMember" onclick="showFilteredList('gender','Other','member')" title="Click to see players">0</td>
+                  <td class="ic-th-total ic-clickable-cell" id="gTotalMember" onclick="showFilteredList('gender','All','members')" title="Click to see all members">0</td>
                 </tr>
               </tbody>
             </table>
