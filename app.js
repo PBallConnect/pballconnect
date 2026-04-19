@@ -5426,6 +5426,18 @@ async function smCheckConflict(){
   const date = document.getElementById('matchDate')?.value;
   const timeStart = MS.timeStart || document.getElementById('matchTimeStart')?.value;
   if(!date||!timeStart) return;
+
+  // Check if the selected date+time is already in the past
+  if(new Date(date+'T'+timeStart) < new Date()){
+    MS.hasOverlapConflict = true;
+    warnBox.style.display='block';
+    warnBox.innerHTML='<div style="background:#7f1d1d;border-radius:10px;padding:10px 14px;margin-top:8px;">'+
+      '<div style="color:#fff;font-weight:700;font-size:13px;margin-bottom:4px;">This time has already passed</div>'+
+      '<div style="color:#fca5a5;font-size:12px;line-height:1.5;">Please choose a future date and time for your match.</div>'+
+      '</div>';
+    smUpdateSendBtn();
+    return;
+  }
   const toMins = t=>{ if(!t) return 0; const [h,m]=t.split(':').map(Number); return h*60+m; };
   const newStart = toMins(timeStart);
   const newEnd   = newStart + Math.round(MS.duration * 60);
