@@ -715,10 +715,11 @@
         <div class="summary-row"><span>Phone</span><span id="sumPhone">—</span></div>
         <div class="summary-row"><span>Age Range</span><span id="sumDob">—</span></div>
         <div class="summary-row"><span>Gender</span><span id="sumGender">—</span></div>
-        <div class="summary-row"><span>City</span><span id="sumCity">—</span></div>
-        <div class="summary-row"><span>State</span><span id="sumState">—</span></div>
         <div class="summary-row"><span>Zip</span><span id="sumZip">—</span></div>
-        <div class="summary-row"><span>T-Shirt Size</span><span id="sumShirt">—</span></div>
+        <!-- Hidden compat spans for populateSummary -->
+        <span id="sumCity" style="display:none"></span>
+        <span id="sumState" style="display:none"></span>
+        <span id="sumShirt" style="display:none"></span>
         <div class="summary-row" id="sumClubRow" style="display:none"><span>Club Member</span><span id="sumClub" style="color:#4CAF7D;">—</span></div>
         <!-- Keep hidden fields for JS compatibility -->
         <span id="sumName" style="display:none"></span>
@@ -762,9 +763,10 @@
         <div class="summary-row"><span>Skill Level</span><span id="sumSkill">—</span></div>
         <div class="summary-row" id="sumDuprRow" style="display:none"><span>DUPR Rating</span><span id="sumDupr">—</span></div>
         <div class="summary-row" id="sumGoalRow" style="display:none"><span>Target Level</span><span id="sumGoal">—</span></div>
-        <div class="summary-row"><span>Wants to Improve</span><span id="sumImprove">—</span></div>
-        <div class="summary-row"><span>Had a Lesson</span><span id="sumLesson">—</span></div>
-        <div class="summary-row"><span>Wants a Lesson</span><span id="sumWantsLesson">—</span></div>
+        <!-- Hidden compat spans -->
+        <span id="sumImprove" style="display:none"></span>
+        <span id="sumLesson" style="display:none"></span>
+        <span id="sumWantsLesson" style="display:none"></span>
       </div>
     </div>
     <div class="btn-row">
