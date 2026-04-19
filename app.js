@@ -1118,7 +1118,6 @@ async function doSaveProfile(){
       phone:               (v('phone')||'').replace(/\D/g,''),
       dob:                 document.getElementById('playerAge')?.value||S.dob||'',
       gender:              S.gender,
-      address:             v('addressSearch'),
       city:                v('addrCity')||S.city,
       state:               (()=>{ 
         const st = v('addrState')||S.state||'';
@@ -1129,7 +1128,7 @@ async function doSaveProfile(){
         return found ? found[0] : st;
       })(),
       zip_code:            v('addrZip'),
-      county:              v('addrCounty')||S.county,
+      county:              S.county,
       court_name:          S.courtName || null,
       skill_level:         S.skill || SESSION_PLAYER?.skill_level || null,
       dupr_rating:         S.duprVal || null,
@@ -1197,10 +1196,9 @@ async function doSaveProfile(){
       SESSION_PLAYER.skill_level  = _savedSkill;
       SESSION_PLAYER.playing_since = _savedSince;
       // Explicitly update address fields so Edit Profile shows new values
-      SESSION_PLAYER.address  = v('addressSearch') || SESSION_PLAYER.address;
       SESSION_PLAYER.city     = v('addrCity')       || SESSION_PLAYER.city;
       SESSION_PLAYER.zip_code = v('addrZip')        || SESSION_PLAYER.zip_code;
-      SESSION_PLAYER.county   = v('addrCounty')     || SESSION_PLAYER.county;
+      SESSION_PLAYER.county   = S.county            || SESSION_PLAYER.county;
       const rawState = v('addrState') || SESSION_PLAYER.state || '';
       if(rawState.length===2) SESSION_PLAYER.state = rawState.toUpperCase();
       else {
@@ -1289,7 +1287,7 @@ function resetForm(){
   document.getElementById('confirmOverlay').style.display='none';
   Object.assign(S,{gender:'',skill:'',schedule:new Set(),anytime:false,partner:false,waiver:false,photoSrc:null,state:'',stateFips:'',county:'',city:'',court:'',courtName:'',duprVal:null,venues:new Set(),driveDistance:'25 miles',playStyle:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null});
 
-  ['firstName','lastName','nickname','email','phone','dob','addressSearch','addrCity','addrState','addrZip','addrCounty'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['firstName','lastName','nickname','email','phone','dob','addrCity','addrState','addrZip'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const shirtEl=document.getElementById('shirtSize');if(shirtEl)shirtEl.value='';
   const sl=document.getElementById('duprSlider');if(sl){sl.value=0;sl.style.setProperty('--pct','0%');}
   const prs=document.getElementById('personalRatingSlider');if(prs){prs.value=0;prs.style.setProperty('--pct','0%');}
@@ -2417,15 +2415,13 @@ function selectAddress(idx){
   const a = r.address || {};
   // Fill in fields
   const street = [a.house_number, a.road].filter(Boolean).join(' ');
-  document.getElementById('addressSearch').value = street || r.display_name.split(',')[0];
   document.getElementById('addrCity').value = a.city || a.town || a.village || a.hamlet || '';
   document.getElementById('addrState').value = a.state || '';
   document.getElementById('addrZip').value = a.postcode || '';
-  document.getElementById('addrCounty').value = (a.county||'').replace(' County','');
   // Update S
   S.city = document.getElementById('addrCity').value;
   S.state = document.getElementById('addrState').value;
-  S.county = document.getElementById('addrCounty').value;
+  S.county = (a.county||'').replace(' County','');
   S.addrLat = parseFloat(r.lat);
   S.addrLon = parseFloat(r.lon);
   box.innerHTML=''; box.style.display='none';
@@ -2505,7 +2501,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
 function onManualAddress(){
   S.city = document.getElementById('addrCity')?.value||'';
   S.state = document.getElementById('addrState')?.value||'';
-  S.county = document.getElementById('addrCounty')?.value||'';
   chk1();
 }
 
@@ -6447,10 +6442,10 @@ function restoreProfileForm(player){
     firstName:player.first_name,lastName:player.last_name,
     nickname:player.nickname||S.nickname||"",email:player.email,
     phone:player.phone?formatPhoneDisplay(player.phone):'',
-    dob:player.dob,addressSearch:player.address,
+    dob:player.dob,
     addrCity:player.city,
     addrState:(()=>{const st=player.state||'';if(st.length===2)return st.toUpperCase();const found=Object.values(STATE_INFO).find(([a,n])=>n&&n.toLowerCase()===st.toLowerCase());return found?found[0]:st;})(),
-    addrZip:player.zip_code,addrCounty:player.county,
+    addrZip:player.zip_code,
   };
   Object.entries(textFields).forEach(([id,val])=>{
     const el=document.getElementById(id);
