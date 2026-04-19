@@ -3387,6 +3387,8 @@ function buildSpecificPicker(){
           buildSpecificPicker();
           checkMatchStep4();
           updateInviteCounter();
+          smUpdateNeededGrid();
+          smUpdateSummary();
         };
       }
       colEl.appendChild(card);
@@ -5356,9 +5358,9 @@ function smUpdateSummary(){
       if(!seen.has(e)){ seen.add(e); invitedCount++; }
     });
   });
-  if(allGroups.has('specific')) MS.specificPlayers.forEach(e=>{ if(!seen.has(e)){ seen.add(e); invitedCount++; } });
+  MS.specificPlayers.forEach(e=>{ if(!seen.has(e)){ seen.add(e); invitedCount++; } });
   const invLbl = MS.inviteMode==='all'  ? invitedCount+' players from inner circle' :
-                 MS.inviteMode==='specific' ? invitedCount+' specific players' :
+                 MS.inviteMode==='specific' ? invitedCount+' specific player'+(invitedCount!==1?'s':'') :
                  invitedCount+' players from group';
   const rs='display:flex;align-items:center;justify-content:space-between;padding:9px 12px;font-size:13px;border-bottom:1px solid #f3f4f6;';
   const ls='color:#6b7280;font-weight:600;';
@@ -5413,6 +5415,19 @@ function smUpdateNeededGrid(){
     rows.innerHTML=
       '<div style="'+rs+'"><div style="'+lb+'">Men</div><div style="'+cn+';color:#dc2626;">'+nMen+'</div><div style="'+cn+';color:#1a7a3a;">'+invMen+'</div></div>'+
       '<div style="'+ls+'"><div style="'+lb+'">Women</div><div style="'+cn+';color:#dc2626;">'+nWom+'</div><div style="'+cn+';color:#1a7a3a;">'+invWomen+'</div></div>';
+  }
+
+  const overInvited = invTotal > needed + 1; // +1 because organizer is already counted in invTotal
+  const warn = document.getElementById('smOverInviteWarning');
+  if(warn){
+    if(overInvited){
+      const extra = invTotal - needed;
+      warn.style.display = 'block';
+      warn.textContent = '⚡ '+invTotal+' players invited for '+needed+' spots — first to respond fill the slots. '+
+        extra+' player'+(extra!==1?'s go':'goes')+' to the waitlist.';
+    } else {
+      warn.style.display = 'none';
+    }
   }
 }
 

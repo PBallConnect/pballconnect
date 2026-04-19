@@ -1524,6 +1524,19 @@
           <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">6</div>
           <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 6</span> · Invite</span>
         </div>
+        <!-- Needed / Invited grid — sticky so it stays visible while scrolling the picker -->
+        <div style="position:sticky;top:52px;z-index:20;background:#fff;padding-bottom:8px;border-bottom:2px solid #e5e7eb;margin-bottom:12px;">
+          <div id="smNeededGrid" style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+            <div style="display:grid;grid-template-columns:1fr 72px 72px;background:#f9fafb;padding:8px 12px;border-bottom:1px solid #e5e7eb;">
+              <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;"></div>
+              <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;text-align:center;">Needed</div>
+              <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;text-align:center;">Invited</div>
+            </div>
+            <div id="smNeededGridRows"></div>
+          </div>
+          <div id="smOverInviteWarning" style="display:none;background:#fef9c3;border:1px solid #eab308;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:600;color:#713f12;margin-top:8px;"></div>
+        </div>
+        <!-- Invite mode selector -->
         <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
           <div id="smInviteAll" onclick="smSelectInvite('all')"
             style="padding:12px 16px;border:2px solid #1a7a3a;border-radius:12px;background:#f0fdf4;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
@@ -1559,15 +1572,6 @@
             style="width:100%;padding:10px 14px;border-radius:10px;border:2px solid #d1d5db;background:#fff;color:#111;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;">
             <option value="">Select a group…</option>
           </select>
-        </div>
-        <!-- Needed / Invited grid -->
-        <div id="smNeededGrid" style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
-          <div style="display:grid;grid-template-columns:1fr 72px 72px;background:#f9fafb;padding:8px 12px;border-bottom:1px solid #e5e7eb;">
-            <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;"></div>
-            <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;text-align:center;">Needed</div>
-            <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;text-align:center;">Invited</div>
-          </div>
-          <div id="smNeededGridRows"></div>
         </div>
       </div>
 
