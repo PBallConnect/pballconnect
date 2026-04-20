@@ -6284,8 +6284,8 @@ async function doLogin(){
 
   // Update modal headline and button to reflect new vs. returning user
   if(isNewUser){
-    if(titleEl) titleEl.textContent = 'Create Your Account';
-    if(subEl)   subEl.textContent   = "Enter your email — we'll send a magic link to get you started";
+    if(titleEl) titleEl.textContent = 'Welcome to PBallConnect 🎾';
+    if(subEl)   subEl.textContent   = "Enter your email — we'll send you a link to sign in or create your account";
     if(submitBtn) submitBtn.textContent = 'Create Account →';
   } else {
     if(titleEl) titleEl.textContent = 'Welcome Back';
@@ -6307,7 +6307,7 @@ async function doLogin(){
     if(successEl) successEl.style.display='block';
     if(detailEl){
       detailEl.textContent = isNewUser
-        ? 'Welcome! We sent you a magic link — click it to create your account.'
+        ? 'We sent a magic link to your email. Click it to sign in — if you\'re new, it\'ll get you set up in minutes.'
         : 'We sent a magic link to '+email+'. Click it to sign in.';
     }
   }catch(e){
