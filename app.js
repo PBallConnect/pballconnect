@@ -8049,6 +8049,84 @@ function validateInviteForm(){
 }
 
 
+// ── IC Invite: generate token + 3 action functions ────────────────────
+async function icGenerateInviteToken(){
+  const myEmail = getMyEmail();
+  const myName  = SESSION_PLAYER?.first_name
+                  ? (SESSION_PLAYER.first_name+' '+(SESSION_PLAYER.last_name||'')).trim()
+                  : (myEmail||'A fellow player');
+  // Generate token client-side (same pattern as sendInvite)
+  let token;
+  try{
+    const _c = window.crypto || window.msCrypto;
+    const _a = new Uint8Array(12);
+    _c.getRandomValues(_a);
+    token = Array.from(_a).map(b=>b.toString(36)).join('').substring(0,16);
+  }catch(_e){ token = Math.random().toString(36).slice(2); }
+
+  const res = await fetch(SUPABASE_URL+'/rest/v1/invites', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': 'Bearer '+SUPABASE_ACCESS_TOKEN,
+      'Prefer': 'return=representation'
+    },
+    body: JSON.stringify({
+      inviter_email: myEmail,
+      inviter_name:  myName,
+      invitee_email: null,
+      invite_method: 'ic',
+      invite_token:  token
+    })
+  });
+  if(!res.ok) throw new Error('Could not generate invite link');
+  const rows = await res.json();
+  const savedToken = rows[0]?.invite_token || token;
+  return {
+    token: savedToken,
+    url:   'https://pballconnect.com/invite.html?token='+savedToken,
+    name:  myName
+  };
+}
+window.icGenerateInviteToken = icGenerateInviteToken;
+
+async function smIcInviteText(){
+  try{
+    const { url, name } = await icGenerateInviteToken();
+    const msg = encodeURIComponent(
+      'Hey! '+name+' invited you to join their Inner Circle on PBallConnect 🎾 '+
+      'Click to set up your free account: '+url
+    );
+    window.open('sms:?body='+msg, '_self');
+  }catch(e){ showToast('Could not generate invite link','#f87171'); }
+}
+window.smIcInviteText = smIcInviteText;
+
+async function smIcInviteEmail(){
+  try{
+    const { url, name } = await icGenerateInviteToken();
+    const subject = encodeURIComponent(name+' invited you to PBallConnect 🎾');
+    const body = encodeURIComponent(
+      'Hey!\n\n'+name+' wants you to join their Inner Circle on PBallConnect — '+
+      'the app for finding pickleball players near you.\n\n'+
+      'Click here to set up your free account:\n'+url+
+      '\n\nSee you on the court! 🏓'
+    );
+    window.open('mailto:?subject='+subject+'&body='+body, '_self');
+  }catch(e){ showToast('Could not generate invite link','#f87171'); }
+}
+window.smIcInviteEmail = smIcInviteEmail;
+
+async function smIcInviteLink(){
+  try{
+    const { url } = await icGenerateInviteToken();
+    await navigator.clipboard.writeText(url);
+    showToast('✅ Invite link copied!','#4CAF7D');
+  }catch(e){ showToast('Could not copy link','#f87171'); }
+}
+window.smIcInviteLink = smIcInviteLink;
+
 async function sendInvite(method){
   const myEmail = getMyEmail();
   const myName  = getMyName() || 'A fellow pickleball player';
