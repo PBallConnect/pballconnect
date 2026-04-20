@@ -7904,6 +7904,16 @@ function showIcView(mode){
 
 // ── IC Section switcher (new tab-based navigation) ─────
 function showIcSection(section){
+  // Sync tab counts from live data before rendering
+  const tabMember = document.getElementById('dashIcMemberCount');
+  const tabSent   = document.getElementById('dashIcSentCount');
+  const tabReq    = document.getElementById('dashIcIncomingCount');
+  if(tabMember) tabMember.textContent = IC_MEMBERS.length || '0';
+  if(tabSent)   tabSent.textContent   = IC_PENDING_PLAYERS?.length || '0';
+  if(tabReq)    tabReq.textContent    = IC_INCOMING_COUNT || '0';
+  const lbl = document.getElementById('icMemberCountLabel');
+  if(lbl) lbl.textContent = IC_MEMBERS.length ? '('+IC_MEMBERS.length+')' : '';
+
   ['Members','Invite','Requests','Find'].forEach(s=>{
     const el=document.getElementById('icSection'+s);
     if(el) el.style.display='none';
@@ -8447,7 +8457,7 @@ async function getMyInviteUrl(){
       body:JSON.stringify({inviter_email:myEmail,inviter_name:myName,invite_token:token,invite_method:'link'})
     });
   }catch(e){}
-  return window.location.origin+window.location.pathname+'?invite='+token;
+  return 'https://pballconnect.com/invite.html?token='+token;
 }
 
 async function openQuickInvite(method){
