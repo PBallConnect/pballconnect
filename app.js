@@ -8093,35 +8093,62 @@ window.icGenerateInviteToken = icGenerateInviteToken;
 
 async function smIcInviteText(){
   try{
-    const { url, name } = await icGenerateInviteToken();
-    const msg = encodeURIComponent(
-      'Hey! '+name+' invited you to join their Inner Circle on PBallConnect 🎾 '+
-      'Click to set up your free account: '+url
-    );
-    window.open('sms:?body='+msg, '_self');
+    const url = await getMyInviteUrl();
+    const myName = getMyName() || 'A fellow player';
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if(isMobile){
+      const msg = encodeURIComponent(
+        'Hey! '+myName+' invited you to join their Inner Circle on PBallConnect 🎾 '+
+        'Click to set up your free account: '+url
+      );
+      window.open('sms:?body='+msg, '_self');
+    } else {
+      try{
+        await navigator.clipboard.writeText(url);
+      }catch(_){
+        const inp = document.createElement('input');
+        inp.value = url;
+        document.body.appendChild(inp);
+        inp.select();
+        document.execCommand('copy');
+        document.body.removeChild(inp);
+      }
+      showToast('📋 Link copied — paste it into a text message!','#4CAF7D');
+    }
   }catch(e){ showToast('Could not generate invite link','#f87171'); }
 }
 window.smIcInviteText = smIcInviteText;
 
 async function smIcInviteEmail(){
   try{
-    const { url, name } = await icGenerateInviteToken();
-    const subject = encodeURIComponent(name+' invited you to PBallConnect 🎾');
+    const url = await getMyInviteUrl();
+    const myName = getMyName() || 'A fellow player';
+    const subject = encodeURIComponent(myName+' invited you to PBallConnect 🎾');
     const body = encodeURIComponent(
-      'Hey!\n\n'+name+' wants you to join their Inner Circle on PBallConnect — '+
-      'the app for finding pickleball players near you.\n\n'+
-      'Click here to set up your free account:\n'+url+
+      'Hey!\n\n'+myName+' wants you to join their Inner Circle on PBallConnect '+
+      '— the free app for finding pickleball players near you.\n\n'+
+      'Set up your profile here (takes 2 min):\n'+url+
       '\n\nSee you on the court! 🏓'
     );
-    window.open('mailto:?subject='+subject+'&body='+body, '_self');
+    window.location.href = 'mailto:?subject='+subject+'&body='+body;
+    showToast('✉️ Email app opened!','#4CAF7D');
   }catch(e){ showToast('Could not generate invite link','#f87171'); }
 }
 window.smIcInviteEmail = smIcInviteEmail;
 
 async function smIcInviteLink(){
   try{
-    const { url } = await icGenerateInviteToken();
-    await navigator.clipboard.writeText(url);
+    const url = await getMyInviteUrl();
+    try{
+      await navigator.clipboard.writeText(url);
+    }catch(_){
+      const inp = document.createElement('input');
+      inp.value = url;
+      document.body.appendChild(inp);
+      inp.select();
+      document.execCommand('copy');
+      document.body.removeChild(inp);
+    }
     showToast('✅ Invite link copied!','#4CAF7D');
   }catch(e){ showToast('Could not copy link','#f87171'); }
 }
