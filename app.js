@@ -6945,6 +6945,7 @@ function unlockProfileForm(){
 
 let IC_MEMBERS = [];
 let IC_FAVORITES = new Set(); // emails of favorited members
+let _icCurrentView = 'alpha'; // 'alpha' | 'favorites' | 'grid'
 let IC_PENDING_PLAYERS = [];
 let IC_INVITED_PLAYERS = []; // players you've invited who haven't accepted yet
 let IC_INCOMING_COUNT = 0;
@@ -6983,7 +6984,6 @@ async function loadInnerCircle(){
 }
 
 function renderInnerCircleList(){
-  const list = document.getElementById('icApprovedList');
   const badge = document.getElementById('icApprovedBadge');
   if(badge) badge.textContent = IC_MEMBERS.length||'';
   // Sync IC page (and dashboard) member count
@@ -6991,16 +6991,8 @@ function renderInnerCircleList(){
   if(tabCount) tabCount.textContent = IC_MEMBERS.length || '0';
   const countLabel = document.getElementById('icMemberCountLabel');
   if(countLabel) countLabel.textContent = IC_MEMBERS.length ? '('+IC_MEMBERS.length+')' : '';
-  if(!list) return;
-  if(!IC_MEMBERS.length){
-    list.innerHTML='<div style="padding:32px;text-align:center;color:#9ca3af;font-size:14px;">Your Inner Circle is empty.<br><span style="font-size:13px;color:#1a7a3a;cursor:pointer;font-weight:700;" onclick="showIcSection(\'invite\')">Invite someone to get started →</span></div>';
-    return;
-  }
-  list.innerHTML='';
-  IC_MEMBERS.forEach(({player,conn})=>{
-    const card = buildIcMemberCard(player, conn, getMyEmail(), null);
-    list.appendChild(card);
-  });
+  // Reset to A–Z view on data reload
+  switchIcMemberView('alpha');
 }
 
 function buildIcMemberCard(player, conn, myEmail, lastPlayed){
@@ -7935,9 +7927,142 @@ function applyIcViewMode(mode){
 // toggleIcListView / renderInlineCircleList — inline 5-col list removed from new IC design. Stubs kept.
 function toggleIcListView(){ /* no-op — replaced by showIcSection */ }
 function renderInlineCircleList(){ /* no-op — inline list panel removed */ }
-// switchCircleView / renderCircleSkillColumns — skill column view removed from new IC design. Stubs kept.
-function switchCircleView(view){ /* no-op — new IC page uses compact list only */ }
+// switchCircleView / renderCircleSkillColumns — kept as stubs for any legacy call sites.
+function switchCircleView(view){ /* no-op */ }
 function renderCircleSkillColumns(){ /* no-op */ }
+
+// ── IC member view toggle (A–Z / Favorites / Level Grid) ──────────────────
+function switchIcMemberView(view){
+  _icCurrentView = view;
+
+  const inactiveCSS = 'padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;background:#f1f5f9;border:1.5px solid #d1d5db;color:#374151;font-family:inherit;';
+  const activeCSS   = 'padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;background:#1a7a3a;border:1.5px solid #1a7a3a;color:#fff;font-family:inherit;';
+  ['icViewGrid','icViewFavorites','icViewAlpha'].forEach(id=>{
+    const b=document.getElementById(id); if(b) b.style.cssText=inactiveCSS;
+  });
+  const activeId = view==='grid'?'icViewGrid':view==='favorites'?'icViewFavorites':'icViewAlpha';
+  const activeBtn = document.getElementById(activeId);
+  if(activeBtn) activeBtn.style.cssText = activeCSS;
+
+  const list       = document.getElementById('icApprovedList');
+  const colHeaders = document.getElementById('icColHeaders');
+  const grid       = document.getElementById('icLevelGrid');
+
+  if(view === 'grid'){
+    if(list)       list.style.display       = 'none';
+    if(colHeaders) colHeaders.style.display = 'none';
+    if(grid)       grid.style.display       = 'block';
+    _buildIcLevelGrid();
+    return;
+  }
+
+  // List views (alpha / favorites)
+  if(list)       list.style.display       = '';
+  if(colHeaders) colHeaders.style.display = '';
+  if(grid)       grid.style.display       = 'none';
+  if(!list) return;
+  list.innerHTML = '';
+
+  if(view === 'favorites'){
+    const favs = IC_MEMBERS.filter(({player})=>IC_FAVORITES.has((player.email||'').toLowerCase()));
+    if(!favs.length){
+      list.innerHTML='<div style="padding:32px;text-align:center;color:#9ca3af;font-size:14px;">No favorites yet — tap ☆ on any member to add them</div>';
+      return;
+    }
+    favs.sort((a,b)=>((a.player.first_name||'')+(a.player.last_name||'')).localeCompare((b.player.first_name||'')+(b.player.last_name||'')));
+    favs.forEach(({player,conn})=>list.appendChild(buildIcMemberCard(player,conn,getMyEmail(),null)));
+    return;
+  }
+
+  // alpha (default)
+  if(!IC_MEMBERS.length){
+    list.innerHTML='<div style="padding:32px;text-align:center;color:#9ca3af;font-size:14px;">Your Inner Circle is empty.<br><span style="font-size:13px;color:#1a7a3a;cursor:pointer;font-weight:700;" onclick="showIcSection(\'invite\')">Invite someone to get started →</span></div>';
+    return;
+  }
+  const sorted=[...IC_MEMBERS].sort((a,b)=>((a.player.first_name||'')+(a.player.last_name||'')).localeCompare((b.player.first_name||'')+(b.player.last_name||'')));
+  sorted.forEach(({player,conn})=>list.appendChild(buildIcMemberCard(player,conn,getMyEmail(),null)));
+}
+window.switchIcMemberView = switchIcMemberView;
+
+function _buildIcLevelGrid(){
+  const grid = document.getElementById('icLevelGrid');
+  if(!grid) return;
+
+  const myLevel = parseFloat(S.skill || SESSION_PLAYER?.skill_level || 0);
+  if(!myLevel){
+    grid.innerHTML='<div style="padding:24px;text-align:center;color:#9ca3af;font-size:13px;">Add your skill level to your profile to see the Level Grid.</div>';
+    return;
+  }
+
+  const fmt = v => parseFloat(v.toFixed(2));
+  const cols = [
+    { label:'Far Below', rating: fmt(myLevel-0.50), prefix:'≤' },
+    { label:'Below',     rating: fmt(myLevel-0.25), prefix:''  },
+    { label:'My Level',  rating: fmt(myLevel),      prefix:'',  center:true },
+    { label:'Above',     rating: fmt(myLevel+0.25), prefix:''  },
+    { label:'Far Above', rating: fmt(myLevel+0.50), prefix:'≥' },
+  ];
+
+  // Bucket members into 5 columns by ±0.125 tolerance bands
+  const buckets = [[],[],[],[],[]];
+  IC_MEMBERS.forEach(({player})=>{
+    const s = parseFloat(player.skill_level||0);
+    if(!s) return;
+    const diff = s - myLevel;
+    if     (diff <= -0.375) buckets[0].push(player);
+    else if(diff <= -0.125) buckets[1].push(player);
+    else if(diff <=  0.125) buckets[2].push(player);
+    else if(diff <=  0.375) buckets[3].push(player);
+    else                    buckets[4].push(player);
+  });
+
+  const table = document.createElement('table');
+  table.style.cssText = 'width:100%;border-collapse:separate;border-spacing:3px 0;table-layout:fixed;';
+
+  // Header row
+  const thead = document.createElement('thead');
+  const hrow  = document.createElement('tr');
+  cols.forEach(col=>{
+    const th = document.createElement('th');
+    th.style.cssText = 'border-radius:8px;padding:6px 4px;text-align:center;'
+      +(col.center
+        ? 'background:#d1fae5;color:#1a7a3a;font-weight:800;'
+        : 'background:#f1f5f9;color:#374151;font-weight:700;');
+    th.innerHTML = `<div style="font-size:11px;">${col.label}</div>`
+      +`<div style="font-size:10px;color:#6b7280;margin-top:1px;">${col.prefix}${col.rating}</div>`;
+    hrow.appendChild(th);
+  });
+  thead.appendChild(hrow);
+  table.appendChild(thead);
+
+  // Body rows
+  const tbody   = document.createElement('tbody');
+  const maxRows = Math.max(...buckets.map(b=>b.length), 1);
+  for(let r=0; r<maxRows; r++){
+    const tr = document.createElement('tr');
+    buckets.forEach((bucket, ci)=>{
+      const td = document.createElement('td');
+      td.style.cssText = 'text-align:center;vertical-align:top;padding:3px 2px;';
+      const player = bucket[r];
+      if(player){
+        const name = (((player.first_name||'')+' '+(player.last_name||'')).trim())||'—';
+        td.style.cssText += 'font-size:12px;font-weight:600;color:#111;cursor:pointer;';
+        td.textContent = name;
+        const match = IC_MEMBERS.find(m=>(m.player.email||'')===(player.email||''));
+        if(match) td.onclick = ()=>openPlayerCard(match.player, match.conn, getMyEmail());
+      } else if(r===0){
+        td.style.cssText += 'font-size:10px;color:#9ca3af;';
+        td.textContent = '—';
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+
+  grid.innerHTML = '';
+  grid.appendChild(table);
+}
 
 // showFilteredList — stat tables removed from new IC design. Redirects to members section.
 function showFilteredList(type, value, status){
@@ -7952,13 +8077,17 @@ function showFilteredList(type, value, status){
 function sortInnerCircle(by){
   if(by==='name') IC_MEMBERS.sort((a,b)=>((a.player.first_name||'')+(a.player.last_name||'')).localeCompare((b.player.first_name||'')+(b.player.last_name||'')));
   else if(by==='skill') IC_MEMBERS.sort((a,b)=>parseFloat(b.player.skill_level||0)-parseFloat(a.player.skill_level||0));
-  renderInnerCircleList();
+  switchIcMemberView(_icCurrentView);
 }
 
 function filterInnerCircle(q){
   const list=document.getElementById('icApprovedList');
   if(!list) return;
   if(!q){ renderInnerCircleList(); return; }
+  // Ensure list view is visible when searching
+  const colHeaders=document.getElementById('icColHeaders');
+  const grid=document.getElementById('icLevelGrid');
+  list.style.display=''; if(colHeaders) colHeaders.style.display=''; if(grid) grid.style.display='none';
   const filtered=IC_MEMBERS.filter(({player})=>{
     const name=((player.first_name||'')+(player.last_name||'')).toLowerCase();
     const nick=(player.nickname||'').toLowerCase();

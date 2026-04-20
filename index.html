@@ -1090,19 +1090,28 @@
           </div>
 
           <!-- Member list header -->
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:0 2px;">
-            <div style="font-size:12px;font-weight:800;color:#1a7a3a;text-transform:uppercase;letter-spacing:.08em;flex:1;">
+          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:8px;padding:0 2px;">
+            <div style="font-size:12px;font-weight:800;color:#1a7a3a;text-transform:uppercase;letter-spacing:.08em;flex:1;min-width:0;">
               ✅ My Inner Circle <span id="icMemberCountLabel" style="font-weight:600;color:#6b7280;"></span>
             </div>
+            <button id="icViewGrid" onclick="switchIcMemberView('grid')"
+              style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;background:#f1f5f9;border:1.5px solid #d1d5db;color:#374151;font-family:inherit;">📊 Level Grid</button>
+            <button id="icViewFavorites" onclick="switchIcMemberView('favorites')"
+              style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;background:#f1f5f9;border:1.5px solid #d1d5db;color:#374151;font-family:inherit;">⭐ Favorites</button>
+            <button id="icViewAlpha" onclick="switchIcMemberView('alpha')"
+              style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;background:#1a7a3a;border:1.5px solid #1a7a3a;color:#fff;font-family:inherit;">A–Z</button>
             <select id="icCircleSort" onchange="sortInnerCircle(this.value)"
               style="padding:5px 8px;border-radius:8px;border:1.5px solid #d1d5db;background:#f9fafb;color:#374151;font-size:11px;font-family:'DM Sans',sans-serif;cursor:pointer;">
-              <option value="name">A–Z</option>
               <option value="skill">By Rating</option>
+              <option value="name">A–Z</option>
             </select>
           </div>
 
-          <!-- Column headers -->
-          <div style="display:flex;align-items:center;gap:10px;padding:6px 12px;background:#f1f5f9;border-radius:8px;margin-bottom:4px;">
+          <!-- Level grid — shown in grid view, hidden otherwise -->
+          <div id="icLevelGrid" style="display:none;overflow-x:auto;margin-bottom:8px;"></div>
+
+          <!-- Column headers — shown in list views, hidden in grid view -->
+          <div id="icColHeaders" style="display:flex;align-items:center;gap:10px;padding:6px 12px;background:#f1f5f9;border-radius:8px;margin-bottom:4px;">
             <div style="width:32px;flex-shrink:0;"></div>
             <div style="flex:1.8;font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">Name</div>
             <div style="flex:1.2;font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">Nickname</div>
