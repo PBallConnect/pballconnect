@@ -178,9 +178,10 @@ UI functions: `toggleAvail(key)`, `updateAvailToggles()`.
 
 ### Dashboard containers
 - **Matches container:** "My Match Invites to Others" (orange) and "Match Invites from Others" (blue) — no arrows
-- **Inner Circle container:** "My IC" (green, calls `showIcView('members')`), "My Invites to Others" (amber), "Others Invites to Me" (purple)
+- **Inner Circle container:** "My IC" (green), "My Inner Circle Invites to Others" (amber), "Others Inner Circle Invites to Me" (purple). Dashboard buttons call `showPage('innerCircle')` then `showIcView(section)` after a 450ms delay.
 
-`applyIcViewMode(mode)` hides/shows IC sections based on mode. Called from dashboard IC buttons.
+### IC page navigation
+`showIcSection(section)` is the sole navigation function for the Inner Circle page. It shows/hides the three IC content sections (`icSectionMembers`, `icSectionInvite`, `icSectionRequests`) and highlights the active button. `applyIcViewMode(mode)` is now a stub — do not call it for IC navigation. The IC page 3-button container uses the same element IDs as the dashboard (`dashIcMemberCount`, `dashIcSentCount`, `dashIcIncomingCount`) so count updates cover both simultaneously.
 
 ## Organizer / Court Captain tier
 
@@ -309,8 +310,6 @@ Conflict is detected using proper time-range overlap: `start1 < end2 AND start2 
 - **Same-day non-overlap** → yellow advisory only, Send not blocked
 - The conflict modal (`showConflictConfirm`) also appears when accepting an invite if the player already has a committed match that overlaps. It fetches `court_name` and `court_address` for the new invite row so the court column never shows "TBD".
 
-**KNOWN BUG:** `smCheckConflict()` currently uses date-only matching rather than the proper time-range formula. Fix: `start1 < end2 AND end1 > start2` using `'HH:MM'` string comparison.
-
 ## Countdown color logic
 
 `getCountdown(matchDate, timeStart)` returns `{text, urgent, urgency}`:
@@ -333,7 +332,7 @@ Conflict is detected using proper time-range overlap: `start1 < end2 AND start2 
 - **Organizer always plays** — "I'll be playing" checkbox removed from Set Up a Match. `matchMaxNeeded()` always subtracts 1 from total slots.
 - **Non-organizers see grayed nav** — organizer-only items at 40% opacity with tooltips explaining the Court Captain path.
 - **`wants_organizer=true`** shows Court Captain nudge to complete full profile. `is_organizer` is only set after full profile is completed.
-- **Scheduling conflicts block Send Invites** — only for true time-range overlaps. Same-day non-overlapping matches show a yellow advisory only.
+- **Scheduling conflicts block Send Invites** — only for true time-range overlaps. Same-day non-overlapping matches show a yellow advisory with specific times. Past date/time shows a "This time has already passed" error and blocks Send.
 - **Court picker defaults to Public.** Public/Private toggle filters the saved courts list.
 - **Recurring Matches belongs under MATCHES** not ORGANIZER in the nav — visible to all users, grayed for non-organizers.
 - **Portrait mode is primary mobile orientation.**
@@ -341,6 +340,14 @@ Conflict is detected using proper time-range overlap: `start1 < end2 AND start2 
 - **Quick Connect goes directly to dashboard** — no organizer question shown after Quick Connect save. Welcome toast shown instead.
 - **Set Up a Match and My Match Invites are in the Organizer nav section** — not the Matches section.
 - **IC badge numbers removed from left nav** — Inner Circle nav items show no count badges.
+- **All pages scroll to top on navigation.** `showPage()` scrolls `window` to 0,0 on every navigation.
+- **Inner Circle page uses tab-based section navigation** — `showIcSection('members'|'invite'|'requests')` replaces the old sticky stats dashboard. No persistent header stats bar.
+- **IC member list is a compact one-line row** — avatar initial, name, nickname, skill pill, favorite star. No Play button. Play is initiated from Set Up a Match.
+- **Set Up a Match has a sticky yellow→green progress bar** tracking completion across all 7 containers.
+- **IC invite uses native device channels** — `sms:` URI for Text (mobile) / clipboard copy (desktop), `mailto:` for Email, clipboard for Copy Link. No forms or backend calls at invite time.
+- **Desktop layout capped at 600px centered.** All pages use `max-width:600px;margin:0 auto`.
+- **Group types: Set vs Random.** Set groups = fixed priority roster + named subs (organizer controls who plays). Random groups = first to respond fills spots. Group type is defined at creation time and controls how invites are sent.
+- **Over-invite notification in Step 6** — when invited count exceeds available spots, a warning banner shows how many players will go to the waitlist.
 
 ## Competitive context
 
@@ -356,12 +363,8 @@ PBallConnect differentiators vs PlayTime Scheduler (market leader, free), Pickle
 
 ## Next to build
 
-1. **Profile complete flag** — set `profile_complete = true` on `registrations` when full profile is saved via `doSaveProfile()`
-3. **Court Captain celebration moment** — toast/overlay when full profile is saved and `is_organizer` becomes true
-4. **Quick Connect → Full Profile pre-fill** — when a `wants_organizer` user completes full profile, pre-fill name/phone/skill/zip from their Quick Connect data
-5. **Drip email for `wants_organizer` users** — send after 24h if `profile_complete` is still false
-6. **Dashboard redesign** — mobile first, max ~600px, vertical container layout
-7. **Group edit notifications** — player added/removed gets notified
-8. **Smart gap alerts** — "Still need 1 for tomorrow"
-9. **Web push notifications**
-10. **Terms of Service + How We Protect You pages** in `index.html`
+1. **Bite 2: "My Groups" as invite mode in Set Up a Match** — add Named Group as a third invite mode in Container 6. Implement Set vs Random group logic: Set groups send invites to the priority roster in order; Random groups send to all and first-to-respond fills spots. Sub list auto-activates when a primary declines.
+2. **Recurring matches refinement** — Set vs Random group logic in recurring match scheduler; sub list auto-activation when a primary declines or doesn't respond before the gap alert threshold.
+3. **Find Players / Browse Nearby on IC page** — currently stubbed. Build out the section to surface nearby players not yet in the user's IC, with add/invite actions.
+4. **Profile complete flag + Court Captain celebration** — set `profile_complete = true` on `registrations` when full profile is saved via `doSaveProfile()`; show a celebration toast/overlay when `is_organizer` first becomes true.
+5. **Web push notifications** — browser push for match invites, IC requests, and gap alerts.
