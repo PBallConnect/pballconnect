@@ -6986,8 +6986,8 @@ function renderInnerCircleList(){
   const list = document.getElementById('icApprovedList');
   const badge = document.getElementById('icApprovedBadge');
   if(badge) badge.textContent = IC_MEMBERS.length||'';
-  // Sync new IC page tab counter and count label
-  const tabCount = document.getElementById('icTabMemberCount');
+  // Sync IC page (and dashboard) member count
+  const tabCount = document.getElementById('dashIcMemberCount');
   if(tabCount) tabCount.textContent = IC_MEMBERS.length || '0';
   const countLabel = document.getElementById('icMemberCountLabel');
   if(countLabel) countLabel.textContent = IC_MEMBERS.length ? '('+IC_MEMBERS.length+')' : '';
@@ -7288,13 +7288,6 @@ function updateNavCircleBadges(memberCount,pendingCount,incomingCount){
   if(dashSentEl) dashSentEl.textContent=pendingCount;
   const dashIncomingEl=document.getElementById('dashIcIncomingCount');
   if(dashIncomingEl) dashIncomingEl.textContent=incomingCount||0;
-  // Sync the IC page 3-button container counts
-  const tabSentEl=document.getElementById('icTabSentCount');
-  if(tabSentEl) tabSentEl.textContent=pendingCount||'0';
-  const tabRequestEl=document.getElementById('icTabRequestCount');
-  if(tabRequestEl) tabRequestEl.textContent=incomingCount||'0';
-  const tabMemberEl=document.getElementById('icTabMemberCount');
-  if(tabMemberEl) tabMemberEl.textContent=memberCount||'0';
 }
 
 function updateNavCourtBadges(publicCount, privateCount){
