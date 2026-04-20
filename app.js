@@ -6218,7 +6218,7 @@ function openLoginModal(){
       const btnEl   = document.getElementById('loginSubmitBtn');
       if(titleEl) titleEl.textContent = 'Welcome! 🎾';
       if(subEl)   subEl.textContent   = 'Enter your email to get started';
-      if(btnEl)   btnEl.textContent   = 'Sign Up / Sign In →';
+      if(btnEl)   btnEl.textContent   = 'Send Magic Link →';
     }
     setTimeout(()=>document.getElementById('loginEmail')?.focus(), 100);
   }
@@ -6240,7 +6240,7 @@ function closeLoginModal(){
   if(success) success.style.display='none';
   if(error) error.style.display='none';
   if(emailEl) emailEl.value='';
-  if(btn){ btn.disabled=false; btn.textContent='Continue →'; }
+  if(btn){ btn.disabled=false; btn.textContent='Send Magic Link →'; }
   if(titleEl) titleEl.textContent='Sign In';
   if(subEl)   subEl.textContent="Enter your email — we'll send you a magic link to sign in";
 }
@@ -6286,11 +6286,11 @@ async function doLogin(){
   if(isNewUser){
     if(titleEl) titleEl.textContent = 'Welcome to PBallConnect 🎾';
     if(subEl)   subEl.textContent   = "Enter your email — we'll send you a link to sign in or create your account";
-    if(submitBtn) submitBtn.textContent = 'Create Account →';
+    if(submitBtn) submitBtn.textContent = 'Send Magic Link →';
   } else {
     if(titleEl) titleEl.textContent = 'Welcome Back';
     if(subEl)   subEl.textContent   = "We'll send a magic link to your inbox";
-    if(submitBtn) submitBtn.textContent = 'Sign In →';
+    if(submitBtn) submitBtn.textContent = 'Send Magic Link →';
   }
 
   // Step 2: Send magic link
@@ -6313,7 +6313,7 @@ async function doLogin(){
   }catch(e){
     if(loadingEl) loadingEl.style.display='none';
     if(formEl) formEl.style.display='block';
-    if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent=isNewUser?'Create Account →':'Sign In →'; }
+    if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent='Send Magic Link →'; }
     if(errorEl){ errorEl.textContent='Could not send link: '+e.message; errorEl.style.display='block'; }
   }
 }
