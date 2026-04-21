@@ -2707,7 +2707,7 @@ function selectMatchGender(pref, el){
   if(MS.inviteMode==='specific') buildSpecificPicker();
   smUpdateNeededGrid();
   smUpdateSummary();
-  smUpdateProgress(3);
+  smUpdateProgress(5); // Play Structure is now Step 5
 }
 
 async function smRenderStep3GroupPicker(wrap){
@@ -2968,7 +2968,7 @@ function buildTimeSelect(selectId, startHH, endHH){
 
 function onMatchStartTimeChange(startVal){
   MS.timeStart = startVal;
-  if(startVal) smUpdateProgress(4);
+  if(startVal) smUpdateProgress(3); // Date & Time is now Step 3
   if(!startVal) return;
   // Auto-set end time = start + duration
   const [h,m] = startVal.split(':').map(Number);
@@ -3606,7 +3606,7 @@ async function loadMatchCourts(){
 function updateMatchCourtsNext(){
   smUpdateSendBtn();
   smUpdateSummary();
-  if(MS.selectedCourts && MS.selectedCourts.size > 0) smUpdateProgress(5);
+  if(MS.selectedCourts && MS.selectedCourts.size > 0) smUpdateProgress(4); // Court is now Step 4
 }
 
 function updateMatchCourtsSummary(){
@@ -5283,7 +5283,7 @@ document.addEventListener('click', function(e){
 // ══════════════════════════════════════════════════════
 
 // ── Set Up a Match: progress bar ─────────────────────
-const _smStepLabels = ['Match Type','Number of Courts','Play Structure','Date & Time','Court','Invite','Review & Send'];
+const _smStepLabels = ['Match Type','Number of Courts','Date & Time','Court','Play Structure','Invite','Review & Send'];
 let _smCurrentStep = 1;
 let _smInitializing = false;
 

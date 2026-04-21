@@ -1435,48 +1435,16 @@
         </div>
         <div id="smCourtHelperLine" style="font-size:13px;color:#1a7a3a;font-weight:600;text-align:center;margin-bottom:12px;">1 court · 4 players total · 3 spots open</div>
         <div style="background:#fee2e2;border:1px solid #f87171;border-radius:10px;padding:8px 14px;display:inline-flex;align-items:center;gap:6px;">
-          <span style="font-size:13px;color:#991b1b;font-weight:600;">Players needed (including you):</span>
+          <span style="font-size:13px;color:#991b1b;font-weight:600;">Players needed (you're in):</span>
           <span id="smNeededNum" style="font-size:20px;font-weight:800;color:#991b1b;">3</span>
         </div>
       </div>
 
-      <!-- Container 3: Play Structure -->
+      <!-- Container 3: Date & Time -->
       <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
           <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div>
-          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 3</span> · Play Structure</span>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          <div id="smGenderEither" onclick="selectMatchGender('either',this)"
-            style="padding:12px 16px;border:2px solid #1a7a3a;border-radius:12px;background:#f0fdf4;cursor:pointer;display:flex;align-items:center;gap:12px;">
-            <span style="font-size:20px;">👥</span>
-            <div><div style="font-size:13px;font-weight:700;color:#111;">Open</div><div style="font-size:11px;color:#6b7280;">Any gender welcome</div></div>
-          </div>
-          <div id="smGenderMixed" onclick="selectMatchGender('mixed',this)"
-            style="padding:12px 16px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;display:flex;align-items:center;gap:12px;">
-            <span style="font-size:20px;">🤝</span>
-            <div><div style="font-size:13px;font-weight:700;color:#111;">Mixed</div><div style="font-size:11px;color:#6b7280;">Even number of men and women</div></div>
-          </div>
-          <div id="smGenderSame" onclick="selectMatchGender('same',this)"
-            style="padding:12px 16px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;display:flex;align-items:center;gap:12px;">
-            <span style="font-size:20px;">👤</span>
-            <div><div style="font-size:13px;font-weight:700;color:#111;">Same Gender</div><div style="font-size:11px;color:#6b7280;">Men only or women only</div></div>
-          </div>
-          <div id="smGenderGroup" onclick="selectMatchGender('group',this)"
-            style="padding:12px 16px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;display:flex;align-items:center;gap:12px;">
-            <span style="font-size:20px;">📋</span>
-            <div><div style="font-size:13px;font-weight:700;color:#111;">One of my Set Groups</div><div style="font-size:11px;color:#6b7280;">Use a saved group as your invite list</div></div>
-          </div>
-        </div>
-        <!-- Group picker for Step 3 -->
-        <div id="smGenderGroupWrap" style="display:none;margin-top:10px;"></div>
-      </div>
-
-      <!-- Container 4: Date & Time -->
-      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-          <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">4</div>
-          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 4</span> · Date &amp; Time</span>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 3</span> · Date &amp; Time</span>
         </div>
         <div style="margin-bottom:12px;">
           <input type="date" id="matchDate"
@@ -1512,11 +1480,11 @@
         <div id="smConflictBox" style="display:none;"></div>
       </div>
 
-      <!-- Container 5: Court -->
+      <!-- Container 4: Court -->
       <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-          <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">5</div>
-          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 5</span> · Court</span>
+          <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">4</div>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 4</span> · Court</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
           <button id="smCourtTypePublic" onclick="smSetCourtType('public')"
@@ -1533,6 +1501,38 @@
         <div id="matchCourtCapacityWarn" style="display:none;margin-bottom:10px;padding:10px 12px;border-radius:10px;border:1.5px solid;font-size:12px;font-weight:600;line-height:1.5;"></div>
         <button onclick="showPage('myCourts')"
           style="width:100%;padding:10px;border-radius:10px;border:1.5px dashed #d1d5db;background:#f9fafb;color:#6b7280;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">+ Add a new court</button>
+      </div>
+
+      <!-- Container 5: Play Structure -->
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">5</div>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 5</span> · Play Structure</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div id="smGenderEither" onclick="selectMatchGender('either',this)"
+            style="padding:12px 16px;border:2px solid #1a7a3a;border-radius:12px;background:#f0fdf4;cursor:pointer;display:flex;align-items:center;gap:12px;">
+            <span style="font-size:20px;">👥</span>
+            <div><div style="font-size:13px;font-weight:700;color:#111;">Open</div><div style="font-size:11px;color:#6b7280;">Any gender welcome</div></div>
+          </div>
+          <div id="smGenderMixed" onclick="selectMatchGender('mixed',this)"
+            style="padding:12px 16px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;display:flex;align-items:center;gap:12px;">
+            <span style="font-size:20px;">🤝</span>
+            <div><div style="font-size:13px;font-weight:700;color:#111;">Mixed</div><div style="font-size:11px;color:#6b7280;">Even number of men and women</div></div>
+          </div>
+          <div id="smGenderSame" onclick="selectMatchGender('same',this)"
+            style="padding:12px 16px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;display:flex;align-items:center;gap:12px;">
+            <span style="font-size:20px;">👤</span>
+            <div><div style="font-size:13px;font-weight:700;color:#111;">Same Gender</div><div style="font-size:11px;color:#6b7280;">Men only or women only</div></div>
+          </div>
+          <div id="smGenderGroup" onclick="selectMatchGender('group',this)"
+            style="padding:12px 16px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;display:flex;align-items:center;gap:12px;">
+            <span style="font-size:20px;">📋</span>
+            <div><div style="font-size:13px;font-weight:700;color:#111;">One of my Set Groups</div><div style="font-size:11px;color:#6b7280;">Use a saved group as your invite list</div></div>
+          </div>
+        </div>
+        <!-- Group picker for Step 5 -->
+        <div id="smGenderGroupWrap" style="display:none;margin-top:10px;"></div>
       </div>
 
       <!-- Container 6: Invite -->
