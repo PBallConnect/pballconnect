@@ -5685,9 +5685,31 @@ function _smRenderCourtRow(court, container, showSaveBtn){
     sv.onclick=async(e)=>{
       e.stopPropagation();
       try{
+        const myEmail = getMyEmail();
+        // Duplicate check: fetch saved court IDs, then names, compare normalized
+        const pcRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(myEmail)}&select=court_id`,
+          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+        );
+        const pcRows = pcRes.ok ? await pcRes.json() : [];
+        const savedIds = pcRows.map(r=>r.court_id).filter(Boolean);
+        let savedCourts = [];
+        if(savedIds.length){
+          const scRes = await fetch(
+            `${SUPABASE_URL}/rest/v1/courts?id=in.(${savedIds.join(',')})&select=id,name`,
+            {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+          );
+          savedCourts = scRes.ok ? await scRes.json() : [];
+        }
+        const normalizedNew = normalizeCourtName(court.name);
+        const existingMatch = savedCourts.find(c=>normalizeCourtName(c.name)===normalizedNew);
+        if(existingMatch){
+          showToast('📍 You already have "'+existingMatch.name+'" saved — looks like the same court.','#d97706');
+          return;
+        }
         await fetch(`${SUPABASE_URL}/rest/v1/player_courts`,{method:'POST',
           headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
-          body:JSON.stringify({player_email:getMyEmail(),court_id:court.id})});
+          body:JSON.stringify({player_email:myEmail,court_id:court.id})});
         smLoadCourts();
       }catch(e2){}
     };
