@@ -951,7 +951,7 @@ function showBackToDashboard(){
   document.body.appendChild(btn);
 }
 // ── Secure email sender — Cloudflare Pages Function ──────────────────
-async function sendEmail({ to_email, type, personal_note, invite_url, subject, inviter_name }){
+async function sendEmail({ to_email, type, personal_note, invite_url, subject, inviter_name, match_date_str }){
   if(!to_email || !to_email.includes('@')) return;
   // Skip obvious test/fake addresses — plus-addressed test emails, example.com, etc.
   const lower = to_email.toLowerCase();
@@ -969,6 +969,7 @@ async function sendEmail({ to_email, type, personal_note, invite_url, subject, i
         site_url: window.location.origin,
         subject: subject||null,
         inviter_name: inviter_name||null,
+        match_date_str: match_date_str||null,
       })
     });
     if(!res.ok) console.warn('sendEmail failed:', res.status);
@@ -3911,7 +3912,7 @@ async function submitMatch(){
       if(player.email){
         const matchUrl=window.location.origin+window.location.pathname+'?match='+matchId;
         const subNote = isSub ? ' · You are listed as a SUBSTITUTE — you may be called up if a primary player cannot make it.' : '';
-        sendEmail({ to_email:player.email, type:'match_invite', personal_note:(MS.format==='doubles'?'Doubles':'Singles')+' · '+dateStr+' '+timeStr+(MS.courtName?' @ '+MS.courtName:'')+(note?' · Note: '+note:'')+weatherNote+subNote, invite_url:matchUrl });
+        sendEmail({ to_email:player.email, type:'match_invite', personal_note:(MS.format==='doubles'?'Doubles':'Singles')+' · '+dateStr+' '+timeStr+(MS.courtName?' @ '+MS.courtName:'')+(note?' · Note: '+note:'')+weatherNote+subNote, invite_url:matchUrl, inviter_name:((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim(), match_date_str:dateStr });
       }
     }
     showToast('🎾 Match invite sent to '+invitees.length+' players!','#4CAF7D');

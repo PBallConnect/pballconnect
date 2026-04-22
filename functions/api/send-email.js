@@ -8,7 +8,7 @@ export async function onRequestPost(context) {
 
   try {
     const body = await context.request.json();
-    const { to_email, subject, personal_note, invite_url, site_url, type, inviter_name } = body;
+    const { to_email, subject, personal_note, invite_url, site_url, type, inviter_name, match_date_str } = body;
 
     if (!to_email || !to_email.includes('@')) {
       return new Response(JSON.stringify({ error: 'Invalid email address' }), {
@@ -23,8 +23,18 @@ export async function onRequestPost(context) {
       });
     }
 
+    // Build dynamic match_invite subject: "[FirstName] invited you to play pickleball on [Day], [Month] [Date]"
+    let matchInviteSubject = '🎾 You\'ve been invited to play pickleball!';
+    if (type === 'match_invite') {
+      const firstName = (inviter_name || '').split(' ')[0] || 'Someone';
+      const datePart  = match_date_str || '';
+      matchInviteSubject = datePart
+        ? `${firstName} invited you to play pickleball on ${datePart}`
+        : `${firstName} invited you to play pickleball!`;
+    }
+
     const emailSubject = subject || (
-      type === 'match_invite'  ? '🎾 You\'ve been invited to a PBallConnect match!' :
+      type === 'match_invite'  ? matchInviteSubject :
       type === 'match_update'  ? '🎾 Your PBallConnect match has been updated' :
       type === 'match_decline' ? '🎾 A player declined your match invite' :
       type === 'ic_invite'     ? '🎾 Someone wants to join your Inner Circle!' :
