@@ -1042,26 +1042,23 @@
           <div style="display:flex;gap:8px;">
 
             <!-- Green: My Inner Circle -->
-            <button onclick="showIcSection('members')"
-              style="flex:1;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #16a34a;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;"
-              onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='#ffffff'">
-              <div id="dashIcMemberCount" style="font-size:26px;font-weight:800;color:#14532d;line-height:1;">0</div>
+            <button id="icTabMembers" onclick="showIcSection('members')"
+              style="flex:1;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #16a34a;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;">
+              <div id="icTabMemberCount" style="font-size:26px;font-weight:800;color:#14532d;line-height:1;">0</div>
               <div style="font-size:12px;font-weight:700;color:#14532d;margin-top:5px;line-height:1.4;">👥 My IC</div>
             </button>
 
             <!-- Amber: My Invites to Others -->
-            <button onclick="showIcSection('invite')"
-              style="flex:1;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #d97706;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;"
-              onmouseover="this.style.background='#fffbeb'" onmouseout="this.style.background='#ffffff'">
-              <div id="dashIcSentCount" style="font-size:26px;font-weight:800;color:#78350f;line-height:1;">0</div>
+            <button id="icTabInvite" onclick="showIcSection('invite')"
+              style="flex:1;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #d97706;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;">
+              <div id="icTabSentCount" style="font-size:26px;font-weight:800;color:#78350f;line-height:1;">0</div>
               <div style="font-size:12px;font-weight:700;color:#78350f;margin-top:5px;line-height:1.4;">My Inner Circle<br/>Invites to Others</div>
             </button>
 
             <!-- Purple: Others Invites to Me -->
-            <button onclick="showIcSection('requests')"
-              style="flex:1;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #7c3aed;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;"
-              onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background='#ffffff'">
-              <div id="dashIcIncomingCount" style="font-size:26px;font-weight:800;color:#4c1d95;line-height:1;">0</div>
+            <button id="icTabRequests" onclick="showIcSection('requests')"
+              style="flex:1;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #7c3aed;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;">
+              <div id="icTabRequestCount" style="font-size:26px;font-weight:800;color:#4c1d95;line-height:1;">0</div>
               <div style="font-size:12px;font-weight:700;color:#4c1d95;margin-top:5px;line-height:1.4;">Others Inner Circle<br/>Invites to Me</div>
             </button>
 

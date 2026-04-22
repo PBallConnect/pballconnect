@@ -7951,15 +7951,58 @@ function showIcView(mode){
 
 // ── IC Section switcher (new tab-based navigation) ─────
 function showIcSection(section){
-  // Sync tab counts from live data before rendering
-  const tabMember = document.getElementById('dashIcMemberCount');
-  const tabSent   = document.getElementById('dashIcSentCount');
-  const tabReq    = document.getElementById('dashIcIncomingCount');
+  // FIX 1 — Sync IC page tab counts from live data
+  const tabMember = document.getElementById('icTabMemberCount');
+  const tabSent   = document.getElementById('icTabSentCount');
+  const tabReq    = document.getElementById('icTabRequestCount');
   if(tabMember) tabMember.textContent = IC_MEMBERS.length || '0';
   if(tabSent)   tabSent.textContent   = IC_PENDING_PLAYERS?.length || '0';
   if(tabReq)    tabReq.textContent    = IC_INCOMING_COUNT || '0';
+  // Also sync shared dashboard count IDs
+  const dashMember = document.getElementById('dashIcMemberCount');
+  const dashSent   = document.getElementById('dashIcSentCount');
+  const dashReq    = document.getElementById('dashIcIncomingCount');
+  if(dashMember) dashMember.textContent = IC_MEMBERS.length || '0';
+  if(dashSent)   dashSent.textContent   = IC_PENDING_PLAYERS?.length || '0';
+  if(dashReq)    dashReq.textContent    = IC_INCOMING_COUNT || '0';
   const lbl = document.getElementById('icMemberCountLabel');
   if(lbl) lbl.textContent = IC_MEMBERS.length ? '('+IC_MEMBERS.length+')' : '';
+
+  // FIX 2 — Tab button highlight: reset all to inactive, then activate current
+  const membersBtn  = document.getElementById('icTabMembers');
+  const inviteBtn   = document.getElementById('icTabInvite');
+  const requestsBtn = document.getElementById('icTabRequests');
+  if(membersBtn){
+    membersBtn.style.background = '#ffffff';
+    const ct = document.getElementById('icTabMemberCount');
+    const lb = membersBtn.querySelectorAll('div')[1];
+    if(ct) ct.style.color = '#14532d';
+    if(lb) lb.style.color = '#14532d';
+  }
+  if(inviteBtn){
+    inviteBtn.style.background = '#ffffff';
+    const ct = document.getElementById('icTabSentCount');
+    const lb = inviteBtn.querySelectorAll('div')[1];
+    if(ct) ct.style.color = '#78350f';
+    if(lb) lb.style.color = '#78350f';
+  }
+  if(requestsBtn){
+    requestsBtn.style.background = '#ffffff';
+    const ct = document.getElementById('icTabRequestCount');
+    const lb = requestsBtn.querySelectorAll('div')[1];
+    if(ct) ct.style.color = '#4c1d95';
+    if(lb) lb.style.color = '#4c1d95';
+  }
+  const activeMap = {
+    members:  { btn: membersBtn,  bg: '#16a34a' },
+    invite:   { btn: inviteBtn,   bg: '#d97706' },
+    requests: { btn: requestsBtn, bg: '#7c3aed' },
+  };
+  const active = activeMap[section];
+  if(active?.btn){
+    active.btn.style.background = active.bg;
+    active.btn.querySelectorAll('div').forEach(d => d.style.color = '#fff');
+  }
 
   ['Members','Invite','Requests','Find'].forEach(s=>{
     const el=document.getElementById('icSection'+s);
