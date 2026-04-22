@@ -2667,7 +2667,7 @@ function selectMatchFormat(fmt, el){
   renderCourtCapacityWarning();
   smUpdateNeededGrid();
   smUpdateSummary();
-  smUpdateProgress(1);
+  smUpdateProgress(2);
 }
 
 // ── Match type preference (Profile) ───────────────────
@@ -2708,7 +2708,7 @@ function selectMatchGender(pref, el){
   if(MS.inviteMode==='specific') buildSpecificPicker();
   smUpdateNeededGrid();
   smUpdateSummary();
-  smUpdateProgress(5); // Play Structure is now Step 5
+  smUpdateProgress(1); // Play Structure is now Step 1
 }
 
 async function smRenderStep3GroupPicker(wrap){
@@ -2778,7 +2778,7 @@ function selectNumCourts(n){
   renderCourtCapacityWarning();
   smUpdateNeededGrid();
   smUpdateSummary();
-  if(!_smInitializing) smUpdateProgress(2);
+  if(!_smInitializing) smUpdateProgress(3);
 }
 
 function toggleOrganizerPlaying(checked){
@@ -2969,7 +2969,7 @@ function buildTimeSelect(selectId, startHH, endHH){
 
 function onMatchStartTimeChange(startVal){
   MS.timeStart = startVal;
-  if(startVal) smUpdateProgress(3); // Date & Time is now Step 3
+  if(startVal) smUpdateProgress(4); // Date & Time is now Step 4
   if(!startVal) return;
   // Auto-set end time = start + duration
   const [h,m] = startVal.split(':').map(Number);
@@ -3607,7 +3607,7 @@ async function loadMatchCourts(){
 function updateMatchCourtsNext(){
   smUpdateSendBtn();
   smUpdateSummary();
-  if(MS.selectedCourts && MS.selectedCourts.size > 0) smUpdateProgress(4); // Court is now Step 4
+  if(MS.selectedCourts && MS.selectedCourts.size > 0) smUpdateProgress(5); // Court is now Step 5
 }
 
 function updateMatchCourtsSummary(){
@@ -5322,7 +5322,7 @@ document.addEventListener('click', function(e){
 // ══════════════════════════════════════════════════════
 
 // ── Set Up a Match: progress bar ─────────────────────
-const _smStepLabels = ['Match Type','Number of Courts','Date & Time','Court','Play Structure','Invite','Review & Send'];
+const _smStepLabels = ['Play Structure','Match Type','Number of Courts','Date & Time','Court','Invite','Review & Send'];
 let _smCurrentStep = 1;
 let _smInitializing = false;
 
