@@ -29,7 +29,7 @@
 const S={gender:'',skill:'',schedule:new Set(),anytime:false,partner:false,
   waiver:false,photoSrc:null,state:'',stateFips:'',county:'',city:'',email:'',
   court:'',courtName:'',duprVal:null,venues:new Set(),driveDistance:'25 miles',
-  playStyle:'',playFormat:'Both',matchGenderPref:'Both',handedness:'',avatarEmoji:'🎾',venuePref:'',playingSince:'',nickname:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null,_privacyConsent:false,_riskConsent:false,isCoach:'',coachCerts:new Set(),coachLessonTypes:new Set(),coachFormats:new Set(),isOrganizer:'',
+  playStyle:'',playFormat:'Both',matchGenderPref:'Both',handedness:'',avatarEmoji:'🎾',venuePref:'',playingSince:'',nickname:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null,_tosConsent:false,_privacyConsent:false,_riskConsent:false,isCoach:'',coachCerts:new Set(),coachLessonTypes:new Set(),coachFormats:new Set(),isOrganizer:'',
   availWeekdayMorning:false,availWeekdayAfternoon:false,availWeekdayEvening:false,availWeekends:false};
 
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -680,11 +680,12 @@ function updateGoalGapViz(){
 }
 function togglePartner(){S.partner=!S.partner;const pt=document.getElementById('partnerTrack');if(pt)pt.classList.toggle('on',S.partner);}
 function toggleConsent(type){
-  if(type==='privacy'){S._privacyConsent=!S._privacyConsent;document.getElementById('checkBoxPrivacy')?.classList.toggle('on',S._privacyConsent);}
+  if(type==='tos'){S._tosConsent=!S._tosConsent;document.getElementById('checkBoxTos')?.classList.toggle('on',S._tosConsent);}
+  else if(type==='privacy'){S._privacyConsent=!S._privacyConsent;document.getElementById('checkBoxPrivacy')?.classList.toggle('on',S._privacyConsent);}
   else{S._riskConsent=!S._riskConsent;document.getElementById('checkBoxRisk')?.classList.toggle('on',S._riskConsent);}
-  // Always gate the submit button on consent — covers new-user mid-flow and profile edit
+  // Gate the submit button on BOTH checkboxes (ToS/Privacy + Waiver)
   const submitBtn=document.getElementById('btnSubmit');
-  if(submitBtn) submitBtn.disabled=!(S._privacyConsent&&S._riskConsent);
+  if(submitBtn) submitBtn.disabled=!(S._tosConsent&&S._riskConsent);
 }
 function toggleWaiver(){toggleConsent('risk');}
 
@@ -713,7 +714,7 @@ function goTo(n){
   if(n===3){
     populateSummary();
     const submitBtn=document.getElementById('btnSubmit');
-    if(submitBtn) submitBtn.disabled=!(S._privacyConsent&&S._riskConsent);
+    if(submitBtn) submitBtn.disabled=!(S._tosConsent&&S._riskConsent);
   }
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1248,11 +1249,11 @@ async function doSaveProfile(){
     document.getElementById('editModeBanner')?.remove();
     document.getElementById('readOnlyBanner')?.remove();
     // Ensure consent stays checked — once agreed, always agreed
+    S._tosConsent = true;
     S._privacyConsent = true;
     S._riskConsent = true;
     SESSION_PLAYER.waiver_agreed = true;
-    const cbp = document.getElementById('checkBoxPrivacy');
-    if(cbp) cbp.classList.add('on');
+    document.getElementById('checkBoxTos')?.classList.add('on');
     const cbr = document.getElementById('checkBoxRisk');
     if(cbr) cbr.classList.add('on');
     // Re-lock the form
@@ -6908,10 +6909,10 @@ function restoreProfileForm(player){
   }
 
   // Restore consent checkboxes — once a player has agreed, always keep checked
-  S._privacyConsent = !!(player.waiver_agreed || player.privacy_consent || SESSION_PLAYER);
+  S._tosConsent     = !!(player.waiver_agreed || player.privacy_consent || SESSION_PLAYER);
+  S._privacyConsent = S._tosConsent;
   S._riskConsent    = !!(player.waiver_agreed || player.risk_consent    || SESSION_PLAYER);
-  const cbp=document.getElementById('checkBoxPrivacy');
-  if(cbp) cbp.classList.toggle('on', S._privacyConsent);
+  document.getElementById('checkBoxTos')?.classList.toggle('on', S._tosConsent);
   const cbr=document.getElementById('checkBoxRisk');
   if(cbr) cbr.classList.toggle('on', S._riskConsent);
 
@@ -7044,7 +7045,7 @@ function lockProfileForm(){
   });
   const btn=document.getElementById('btnSubmit');if(btn){btn.disabled=true;btn.classList.remove('has-changes');}
   // Consent checkboxes must always remain interactive — never locked
-  ['checkBoxPrivacy','checkBoxRisk'].forEach(id=>{
+  ['checkBoxTos','checkBoxRisk'].forEach(id=>{
     const cb=document.getElementById(id);
     if(cb){ cb.style.pointerEvents=''; cb.style.opacity=''; }
     const row=cb?.closest('.check-row');
@@ -8845,8 +8846,8 @@ function showInviteLandingChoice(email, inv){
     overlay.remove();
     const emailEl = document.getElementById('email'); if(emailEl) emailEl.value = email;
     showPage('playerProfile'); unlockProfileForm(); goTo(1);
-    S._privacyConsent=false; S._riskConsent=false;
-    document.getElementById('checkBoxPrivacy')?.classList.remove('on');
+    S._tosConsent=false; S._privacyConsent=false; S._riskConsent=false;
+    document.getElementById('checkBoxTos')?.classList.remove('on');
     document.getElementById('checkBoxRisk')?.classList.remove('on');
     const sb=document.getElementById('btnSubmit'); if(sb) sb.disabled=true;
     document.getElementById('lessonSection') && (document.getElementById('lessonSection').style.display='none');
@@ -9029,9 +9030,10 @@ function showQuickConnectForm(email, inv){
     document.getElementById('quickConnectOverlay')?.remove();
     const emailEl = document.getElementById('email');
     if(emailEl) emailEl.value = email;
+    S._tosConsent = false;
     S._privacyConsent = false;
     S._riskConsent = false;
-    document.getElementById('checkBoxPrivacy')?.classList.remove('on');
+    document.getElementById('checkBoxTos')?.classList.remove('on');
     document.getElementById('checkBoxRisk')?.classList.remove('on');
     const sb = document.getElementById('btnSubmit');
     if(sb) sb.disabled = true;
@@ -9208,8 +9210,8 @@ function startNewRegistration(email){
   showPage('playerProfile');
   unlockProfileForm();
   goTo(1);
-  S._privacyConsent = false; S._riskConsent = false;
-  document.getElementById('checkBoxPrivacy')?.classList.remove('on');
+  S._tosConsent = false; S._privacyConsent = false; S._riskConsent = false;
+  document.getElementById('checkBoxTos')?.classList.remove('on');
   document.getElementById('checkBoxRisk')?.classList.remove('on');
   const sb = document.getElementById('btnSubmit'); if(sb) sb.disabled = true;
   document.getElementById('lessonSection') && (document.getElementById('lessonSection').style.display='none');
