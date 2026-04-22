@@ -8391,7 +8391,9 @@ async function icGenerateInviteToken(){
       inviter_name:  myName,
       invitee_email: null,
       invite_method: 'ic',
-      invite_token:  token
+      invite_token:  token,
+      invite_type:   'single',
+      is_used:       false
     })
   });
   if(!res.ok) throw new Error('Could not generate invite link');
@@ -8500,7 +8502,9 @@ async function sendInvite(method){
           inviter_name:  myName,
           invitee_email: inviteeEmail,
           invite_method: 'email',
-          invite_token:  newToken
+          invite_token:  newToken,
+          invite_type:   'single',
+          is_used:       false
         })
       });
       const freshRows = freshInvite.ok ? await freshInvite.json() : [];
@@ -8548,31 +8552,23 @@ async function openQrModal(){
   const myEmail = getMyEmail();
   if(!myEmail){ openLoginModal(); return; }
 
-  // Get or create an invite token for this user
-  let token = '';
-  try{
-    // Check for existing invite token
-    const existing = await fetch(
-      `${SUPABASE_URL}/rest/v1/invites?inviter_email=eq.${encodeURIComponent(myEmail)}&order=created_at.desc&limit=1`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
-    );
-    const rows = existing.ok ? await existing.json() : [];
-    if(rows.length && rows[0].invite_token){
-      token = rows[0].invite_token;
-    } else {
-      // Create a permanent invite token for this user
-      const myName = ((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim()||'A fellow player';
-      const created = await fetch(`${SUPABASE_URL}/rest/v1/invites`,{
-        method:'POST',
-        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=representation'},
-        body:JSON.stringify({inviter_email:myEmail,inviter_name:myName,invite_method:'qr'})
-      });
-      const newRows = created.ok ? await created.json() : [];
-      token = newRows[0]?.invite_token || Math.random().toString(36).slice(2);
-    }
-  }catch(e){ token = Math.random().toString(36).slice(2); }
+  // Get or generate a permanent QR invite ID stored on this user's profile
+  let qrId = SESSION_PLAYER?.qr_invite_id || null;
 
-  const inviteUrl = window.location.origin + window.location.pathname + '?invite=' + token;
+  if(!qrId){
+    // Generate a new permanent ID and save it to registrations
+    qrId = 'qr_' + myEmail.split('@')[0].replace(/[^a-z0-9]/gi,'') + '_' + Math.random().toString(36).slice(2,10);
+    try{
+      await fetch(`${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(myEmail)}`,{
+        method:'PATCH',
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+        body:JSON.stringify({qr_invite_id:qrId})
+      });
+      if(SESSION_PLAYER) SESSION_PLAYER.qr_invite_id = qrId;
+    }catch(e){ /* non-fatal — QR still works this session */ }
+  }
+
+  const inviteUrl = 'https://pballconnect.com/invite.html?qr=' + encodeURIComponent(qrId);
   _qrInviteUrl = inviteUrl;
 
   // Fill player info
@@ -8599,6 +8595,57 @@ async function openQrModal(){
 
 function closeQrModal(){
   document.getElementById('qrModal').style.display = 'none';
+}
+
+async function resetQrCode(){
+  const myEmail = getMyEmail();
+  if(!myEmail) return;
+
+  // Show inline confirmation
+  const existing = document.getElementById('qrResetConfirm');
+  if(existing){ existing.remove(); return; }
+
+  const confirmDiv = document.createElement('div');
+  confirmDiv.id = 'qrResetConfirm';
+  confirmDiv.style.cssText = 'margin-top:14px;padding:14px;background:rgba(255,255,255,0.06);border:1px solid rgba(220,38,38,0.4);border-radius:12px;text-align:center;';
+  confirmDiv.innerHTML =
+    '<div style="font-size:13px;color:#fca5a5;margin-bottom:12px;line-height:1.5;">This will invalidate your current QR code.<br>Anyone with the old link won\'t be able to use it.</div>'+
+    '<div style="display:flex;gap:8px;justify-content:center;">'+
+      '<button id="qrResetYes" style="padding:8px 20px;border-radius:8px;border:none;background:#dc2626;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Yes, Reset</button>'+
+      '<button onclick="document.getElementById(\'qrResetConfirm\').remove()" style="padding:8px 20px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Cancel</button>'+
+    '</div>';
+
+  // Insert just above the Close button
+  const closeBtn = document.querySelector('#qrModal button[onclick="closeQrModal()"]');
+  if(closeBtn) closeBtn.parentNode.insertBefore(confirmDiv, closeBtn);
+
+  document.getElementById('qrResetYes').onclick = async()=>{
+    const btn = document.getElementById('qrResetYes');
+    if(btn){ btn.disabled=true; btn.textContent='Resetting…'; }
+
+    const newQrId = 'qr_' + myEmail.split('@')[0].replace(/[^a-z0-9]/gi,'') + '_' + Math.random().toString(36).slice(2,10);
+    try{
+      await fetch(`${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(myEmail)}`,{
+        method:'PATCH',
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+        body:JSON.stringify({qr_invite_id:newQrId})
+      });
+      if(SESSION_PLAYER) SESSION_PLAYER.qr_invite_id = newQrId;
+
+      const newUrl = 'https://pballconnect.com/invite.html?qr=' + encodeURIComponent(newQrId);
+      _qrInviteUrl = newUrl;
+      document.getElementById('qrInviteUrl').textContent = newUrl;
+
+      const canvas = document.getElementById('qrCanvas');
+      await QRCode.toCanvas(canvas, newUrl, {width:240,margin:1,color:{dark:'#000000',light:'#ffffff'}});
+
+      confirmDiv.remove();
+      showToast('✅ QR code reset — old links are now invalid','#4CAF7D');
+    }catch(e){
+      showToast('Could not reset QR code','#f87171');
+      if(btn){ btn.disabled=false; btn.textContent='Yes, Reset'; }
+    }
+  };
 }
 
 async function shareInviteLink(){
@@ -8636,7 +8683,7 @@ async function getMyInviteUrl(){
     await fetch(`${SUPABASE_URL}/rest/v1/invites`,{
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
-      body:JSON.stringify({inviter_email:myEmail,inviter_name:myName,invite_token:token,invite_method:'link'})
+      body:JSON.stringify({inviter_email:myEmail,inviter_name:myName,invite_token:token,invite_method:'link',invite_type:'single',is_used:false})
     });
   }catch(e){}
   return 'https://pballconnect.com/invite.html?token='+token;
@@ -8710,6 +8757,28 @@ let PENDING_INVITE = null;
 
 function checkInviteToken(){
   const params=new URLSearchParams(window.location.search);
+
+  // Handle QR invite param (?qr=QR_ID) — fetch owner and set PENDING_INVITE
+  const qrId = params.get('qr');
+  if(qrId){
+    const isNewUserReturn = params.get('newuser') === '1';
+    fetch(`${SUPABASE_URL}/rest/v1/public_profiles?qr_invite_id=eq.${encodeURIComponent(qrId)}&select=email,first_name,last_name,avatar_emoji`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
+    .then(r=>r.json()).then(rows=>{
+      if(!rows.length) return;
+      const owner=rows[0];
+      const ownerName=((owner.first_name||'')+(owner.last_name?' '+owner.last_name:'')).trim()||'A fellow player';
+      const inv={invite_type:'qr',qr_id:qrId,inviter_email:owner.email,inviter_name:ownerName,avatar_emoji:owner.avatar_emoji||'🎾'};
+      PENDING_INVITE=inv;
+      window._pendingInviteRef=inv;
+      if(!isNewUserReturn){
+        setTimeout(()=>{ if(!SESSION_PLAYER?.id) showInviteBanner(inv); }, 300);
+        setTimeout(()=>{ if(!SESSION_PLAYER?.id && !document.getElementById('inviteBanner')) showInviteBanner(inv); }, 800);
+      }
+    }).catch(()=>{});
+    return;
+  }
+
   const token=params.get('invite');
   if(!token) return;
   // newuser=1 means the user just returned from the invite.html magic link.
@@ -9189,6 +9258,24 @@ function startNewRegistration(email){
   const _urlParams = new URLSearchParams(window.location.search);
   const _isNewUserReturn = _urlParams.get('newuser') === '1';
   const _returnToken = _urlParams.get('invite');
+  const _returnQrId  = _urlParams.get('qr');
+
+  if(_isNewUserReturn && _returnQrId && !PENDING_INVITE){
+    // Coming back from magic link via QR invite — look up owner by qr_invite_id
+    fetch(`${SUPABASE_URL}/rest/v1/public_profiles?qr_invite_id=eq.${encodeURIComponent(_returnQrId)}&select=email,first_name,last_name`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
+    .then(r=>r.json()).then(rows=>{
+      if(rows.length){
+        const owner=rows[0];
+        const ownerName=((owner.first_name||'')+(owner.last_name?' '+owner.last_name:'')).trim()||'A fellow player';
+        PENDING_INVITE={invite_type:'qr',qr_id:_returnQrId,inviter_email:owner.email,inviter_name:ownerName};
+      } else {
+        PENDING_INVITE={invite_type:'qr',qr_id:_returnQrId,inviter_name:'A fellow player'};
+      }
+      showInviteLandingChoice(email, PENDING_INVITE);
+    }).catch(()=>{ showInviteLandingChoice(email, null); });
+    return;
+  }
   if(_isNewUserReturn && _returnToken && !PENDING_INVITE){
     // Coming back from magic link via invite.html — fetch invite data then show choice
     fetch(`https://dltiirdjfbjtydazrmvr.supabase.co/rest/v1/invite_tokens?invite_token=eq.${_returnToken}`,
@@ -9229,12 +9316,29 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
   const inv = PENDING_INVITE;
   PENDING_INVITE = null;
 
-  // Mark invite as registered
-  fetch(`${SUPABASE_URL}/rest/v1/invites?invite_token=eq.${inv.invite_token}`,{
-    method:'PATCH',
-    headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
-    body:JSON.stringify({status:'registered'})
-  }).catch(()=>{});
+  if(inv.invite_type === 'qr'){
+    // QR multi-use: create a new invite row for this specific registration
+    fetch(`${SUPABASE_URL}/rest/v1/invites`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+      body:JSON.stringify({
+        inviter_email: inv.inviter_email,
+        inviter_name:  inv.inviter_name,
+        invitee_email: newPlayerEmail,
+        invite_method: 'qr',
+        invite_type:   'qr',
+        is_used:       true,
+        status:        'registered'
+      })
+    }).catch(()=>{});
+  } else {
+    // Single-use token: mark as used + registered
+    fetch(`${SUPABASE_URL}/rest/v1/invites?invite_token=eq.${inv.invite_token}`,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+      body:JSON.stringify({status:'registered', is_used:true})
+    }).catch(()=>{});
+  }
 
   const inviterName = inv.inviter_name || 'Your inviter';
   const shortName   = inviterName.split(' ')[0];
