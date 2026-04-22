@@ -8407,66 +8407,131 @@ async function icGenerateInviteToken(){
 }
 window.icGenerateInviteToken = icGenerateInviteToken;
 
-async function smIcInviteText(){
+// ── Recipient validation helper ───────────────────────
+function icGetRecipient(){
+  const name  = document.getElementById('icRecipientName')?.value?.trim();
+  const email = document.getElementById('icRecipientEmail')?.value?.trim();
+  if(!name){
+    const el = document.getElementById('icRecipientName');
+    if(el){
+      el.style.borderColor = '#dc2626';
+      el.focus();
+      el.classList.add('ic-shake');
+      setTimeout(()=>el.classList.remove('ic-shake'), 600);
+    }
+    showToast('Please enter their name first','#f59e0b');
+    return null;
+  }
+  return { name, email: email||null };
+}
+window.icGetRecipient = icGetRecipient;
+
+// ── Single-use invite token creator ──────────────────
+async function icCreateSingleUseInvite(recipient, method){
+  const myEmail = getMyEmail();
+  const myName  = getMyName();
+  const arr = new Uint8Array(16);
+  window.crypto.getRandomValues(arr);
+  const token = Array.from(arr).map(b=>b.toString(36)).join('').substring(0,20);
+  const url = 'https://pballconnect.com/invite.html?token='+token;
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/invites`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+    body:JSON.stringify({
+      inviter_email: myEmail,
+      inviter_name:  myName,
+      invitee_name:  recipient.name,
+      invitee_email: recipient.email||null,
+      invite_method: method,
+      invite_token:  token,
+      invite_type:   'single',
+      is_used:       false
+    })
+  });
+  if(!res.ok) throw new Error('Failed to save invite');
+  return { token, url };
+}
+
+// ── Clipboard helper with fallback ────────────────────
+async function icCopyToClipboard(text){
   try{
-    const url = await getMyInviteUrl();
-    const myName = getMyName() || 'A fellow player';
+    await navigator.clipboard.writeText(text);
+  }catch(e){
+    const inp = document.createElement('input');
+    inp.value = text;
+    document.body.appendChild(inp);
+    inp.select();
+    document.execCommand('copy');
+    document.body.removeChild(inp);
+  }
+}
+
+// ── Clear recipient form after successful invite ──────
+function icClearRecipientForm(){
+  const nameEl  = document.getElementById('icRecipientName');
+  const emailEl = document.getElementById('icRecipientEmail');
+  if(nameEl){ nameEl.value=''; nameEl.style.borderColor='#9ca3af'; }
+  if(emailEl) emailEl.value='';
+}
+window.icClearRecipientForm = icClearRecipientForm;
+
+// ── IC invite channel functions ───────────────────────
+async function smIcInviteText(){
+  const recipient = icGetRecipient();
+  if(!recipient) return;
+  try{
+    const {url} = await icCreateSingleUseInvite(recipient, 'text');
+    const myName = (getMyName()||'Someone').split(' ')[0];
+    const body = encodeURIComponent(
+      myName+' invited you to their Inner Circle on PBallConnect! '+
+      'Set up your free player profile: '+url+' (takes 2 min) 🎾'
+    );
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     if(isMobile){
-      const msg = encodeURIComponent(
-        'Hey! '+myName+' invited you to join their Inner Circle on PBallConnect 🎾 '+
-        'Click to set up your free account: '+url
-      );
-      window.open('sms:?body='+msg, '_self');
+      window.open('sms:?body='+body, '_self');
+      showToast('💬 Text opened for '+recipient.name,'#60a5fa');
     } else {
-      try{
-        await navigator.clipboard.writeText(url);
-      }catch(_){
-        const inp = document.createElement('input');
-        inp.value = url;
-        document.body.appendChild(inp);
-        inp.select();
-        document.execCommand('copy');
-        document.body.removeChild(inp);
-      }
-      showToast('📋 Link copied — paste it into a text message!','#4CAF7D');
+      await icCopyToClipboard(decodeURIComponent(body));
+      showToast('📋 Message copied — paste into a text to '+recipient.name,'#60a5fa');
     }
-  }catch(e){ showToast('Could not generate invite link','#f87171'); }
+    icClearRecipientForm();
+    loadIcInvites();
+  }catch(e){ showToast('Could not create invite','#f87171'); }
 }
 window.smIcInviteText = smIcInviteText;
 
 async function smIcInviteEmail(){
+  const recipient = icGetRecipient();
+  if(!recipient) return;
   try{
-    const url = await getMyInviteUrl();
-    const myName = getMyName() || 'A fellow player';
+    const {url} = await icCreateSingleUseInvite(recipient, 'email');
+    const myName = (getMyName()||'Someone').split(' ')[0];
     const subject = encodeURIComponent(myName+' invited you to PBallConnect 🎾');
     const body = encodeURIComponent(
-      'Hey!\n\n'+myName+' wants you to join their Inner Circle on PBallConnect '+
+      'Hey '+recipient.name+'!\n\n'+
+      myName+' wants you to join their Inner Circle on PBallConnect '+
       '— the free app for finding pickleball players near you.\n\n'+
-      'Set up your profile here (takes 2 min):\n'+url+
+      'Click here to set up your free profile:\n'+url+
       '\n\nSee you on the court! 🏓'
     );
-    window.location.href = 'mailto:?subject='+subject+'&body='+body;
-    showToast('✉️ Email app opened!','#4CAF7D');
-  }catch(e){ showToast('Could not generate invite link','#f87171'); }
+    window.location.href = 'mailto:'+(recipient.email||'')+'?subject='+subject+'&body='+body;
+    showToast('✉️ Email opened for '+recipient.name,'#4CAF7D');
+    icClearRecipientForm();
+    loadIcInvites();
+  }catch(e){ showToast('Could not create invite','#f87171'); }
 }
 window.smIcInviteEmail = smIcInviteEmail;
 
 async function smIcInviteLink(){
+  const recipient = icGetRecipient();
+  if(!recipient) return;
   try{
-    const url = await getMyInviteUrl();
-    try{
-      await navigator.clipboard.writeText(url);
-    }catch(_){
-      const inp = document.createElement('input');
-      inp.value = url;
-      document.body.appendChild(inp);
-      inp.select();
-      document.execCommand('copy');
-      document.body.removeChild(inp);
-    }
-    showToast('✅ Invite link copied!','#4CAF7D');
-  }catch(e){ showToast('Could not copy link','#f87171'); }
+    const {url} = await icCreateSingleUseInvite(recipient, 'link');
+    await icCopyToClipboard(url);
+    showToast('✅ Link copied for '+recipient.name+' — paste it anywhere!','#4CAF7D');
+    icClearRecipientForm();
+    loadIcInvites();
+  }catch(e){ showToast('Could not create invite','#f87171'); }
 }
 window.smIcInviteLink = smIcInviteLink;
 
@@ -8548,26 +8613,27 @@ async function sendInvite(method){
 
 let _qrInviteUrl = '';
 
+// ── Permanent QR ID — get cached or generate new ─────
+async function getOrCreateQrId(){
+  if(SESSION_PLAYER?.qr_invite_id) return SESSION_PLAYER.qr_invite_id;
+  const myEmail = getMyEmail();
+  const arr = new Uint8Array(12);
+  window.crypto.getRandomValues(arr);
+  const qrId = 'qr_'+Array.from(arr).map(b=>b.toString(36)).join('').substring(0,16);
+  await fetch(`${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(myEmail)}`,{
+    method:'PATCH',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+    body:JSON.stringify({qr_invite_id:qrId})
+  });
+  if(SESSION_PLAYER) SESSION_PLAYER.qr_invite_id = qrId;
+  return qrId;
+}
+
 async function openQrModal(){
   const myEmail = getMyEmail();
   if(!myEmail){ openLoginModal(); return; }
 
-  // Get or generate a permanent QR invite ID stored on this user's profile
-  let qrId = SESSION_PLAYER?.qr_invite_id || null;
-
-  if(!qrId){
-    // Generate a new permanent ID and save it to registrations
-    qrId = 'qr_' + myEmail.split('@')[0].replace(/[^a-z0-9]/gi,'') + '_' + Math.random().toString(36).slice(2,10);
-    try{
-      await fetch(`${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(myEmail)}`,{
-        method:'PATCH',
-        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
-        body:JSON.stringify({qr_invite_id:qrId})
-      });
-      if(SESSION_PLAYER) SESSION_PLAYER.qr_invite_id = qrId;
-    }catch(e){ /* non-fatal — QR still works this session */ }
-  }
-
+  const qrId = await getOrCreateQrId();
   const inviteUrl = 'https://pballconnect.com/invite.html?qr=' + encodeURIComponent(qrId);
   _qrInviteUrl = inviteUrl;
 
@@ -8598,55 +8664,29 @@ function closeQrModal(){
 }
 
 async function resetQrCode(){
-  const myEmail = getMyEmail();
-  if(!myEmail) return;
+  if(!confirm(
+    'This will invalidate your current QR code.\n'+
+    'Anyone with the old link will not be able to use it.\n\nContinue?'
+  )) return;
 
-  // Show inline confirmation
-  const existing = document.getElementById('qrResetConfirm');
-  if(existing){ existing.remove(); return; }
+  // Clear cached value to force regeneration
+  if(SESSION_PLAYER) SESSION_PLAYER.qr_invite_id = null;
 
-  const confirmDiv = document.createElement('div');
-  confirmDiv.id = 'qrResetConfirm';
-  confirmDiv.style.cssText = 'margin-top:14px;padding:14px;background:rgba(255,255,255,0.06);border:1px solid rgba(220,38,38,0.4);border-radius:12px;text-align:center;';
-  confirmDiv.innerHTML =
-    '<div style="font-size:13px;color:#fca5a5;margin-bottom:12px;line-height:1.5;">This will invalidate your current QR code.<br>Anyone with the old link won\'t be able to use it.</div>'+
-    '<div style="display:flex;gap:8px;justify-content:center;">'+
-      '<button id="qrResetYes" style="padding:8px 20px;border-radius:8px;border:none;background:#dc2626;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Yes, Reset</button>'+
-      '<button onclick="document.getElementById(\'qrResetConfirm\').remove()" style="padding:8px 20px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Cancel</button>'+
-    '</div>';
+  try{
+    const newId  = await getOrCreateQrId();
+    const newUrl = 'https://pballconnect.com/invite.html?qr=' + encodeURIComponent(newId);
+    _qrInviteUrl = newUrl;
+    document.getElementById('qrInviteUrl').textContent = newUrl;
 
-  // Insert just above the Close button
-  const closeBtn = document.querySelector('#qrModal button[onclick="closeQrModal()"]');
-  if(closeBtn) closeBtn.parentNode.insertBefore(confirmDiv, closeBtn);
+    const canvas = document.getElementById('qrCanvas');
+    await QRCode.toCanvas(canvas, newUrl, {width:240,margin:1,color:{dark:'#000000',light:'#ffffff'}});
 
-  document.getElementById('qrResetYes').onclick = async()=>{
-    const btn = document.getElementById('qrResetYes');
-    if(btn){ btn.disabled=true; btn.textContent='Resetting…'; }
-
-    const newQrId = 'qr_' + myEmail.split('@')[0].replace(/[^a-z0-9]/gi,'') + '_' + Math.random().toString(36).slice(2,10);
-    try{
-      await fetch(`${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(myEmail)}`,{
-        method:'PATCH',
-        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
-        body:JSON.stringify({qr_invite_id:newQrId})
-      });
-      if(SESSION_PLAYER) SESSION_PLAYER.qr_invite_id = newQrId;
-
-      const newUrl = 'https://pballconnect.com/invite.html?qr=' + encodeURIComponent(newQrId);
-      _qrInviteUrl = newUrl;
-      document.getElementById('qrInviteUrl').textContent = newUrl;
-
-      const canvas = document.getElementById('qrCanvas');
-      await QRCode.toCanvas(canvas, newUrl, {width:240,margin:1,color:{dark:'#000000',light:'#ffffff'}});
-
-      confirmDiv.remove();
-      showToast('✅ QR code reset — old links are now invalid','#4CAF7D');
-    }catch(e){
-      showToast('Could not reset QR code','#f87171');
-      if(btn){ btn.disabled=false; btn.textContent='Yes, Reset'; }
-    }
-  };
+    showToast('✅ QR code reset — old links are now invalid','#4CAF7D');
+  }catch(e){
+    showToast('Could not reset QR code','#f87171');
+  }
 }
+window.resetQrCode = resetQrCode;
 
 async function shareInviteLink(){
   if(!_qrInviteUrl) return;

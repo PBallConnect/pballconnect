@@ -1035,3 +1035,12 @@
   /* ── Match time chips ─────────────────────────────── */
   .match-time-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
   .match-next-btn:disabled{opacity:0.35;cursor:not-allowed;}
+  /* ── IC recipient shake animation ─────────────────── */
+  @keyframes ic-shake {
+    0%,100%{ transform:translateX(0); }
+    20%{ transform:translateX(-6px); }
+    40%{ transform:translateX(6px); }
+    60%{ transform:translateX(-4px); }
+    80%{ transform:translateX(4px); }
+  }
+  .ic-shake { animation: ic-shake 0.5s ease; }
