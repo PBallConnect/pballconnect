@@ -5605,6 +5605,10 @@ function smSetCourtType(type){
   smLoadCourts();
 }
 
+function normalizeCourtName(name){
+  return (name||'').toLowerCase().replace(/[^a-z0-9]/g,'').trim();
+}
+
 async function smLoadCourts(){
   const myEmail=getMyEmail();
   if(!myEmail) return;
@@ -5636,16 +5640,21 @@ async function smLoadCourts(){
       savedCourts.forEach(c=>_smRenderCourtRow(c, savedEl, false));
     }
     if(otherEl){
-      // Exclude saved courts at API level (by ID); dedup client-side by ID and name as safety net
-      const savedCourtIdSet  = new Set(savedCourts.map(c=>c.id));
-      const savedCourtNameSet = new Set(savedCourts.map(c=>(c.name||'').trim().toLowerCase()).filter(Boolean));
+      // Build saved-court dedup sets (ID + fuzzy normalized name)
+      const savedCourtIdSet      = new Set(savedCourts.map(c=>c.id));
+      const savedCourtNormalized = new Set(savedCourts.map(c=>normalizeCourtName(c.court_name||c.name)));
       const allExcludeIds = [...new Set([...allSavedIds, ...savedCourtIdSet])];
       let q=`${SUPABASE_URL}/rest/v1/courts?is_private=eq.${isPrivate}&select=id,name,address,city,is_private,num_courts&limit=12`;
       if(allExcludeIds.length) q+=`&id=not.in.(${allExcludeIds.join(',')})`;
       const oRes = await fetch(q,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+      // FIX 1: fuzzy dedup against saved list; FIX 2: dedup within nearby list itself
+      const seenNormalized = new Set();
       const otherCourts = (oRes.ok ? await oRes.json() : []).filter(c=>{
         if(savedCourtIdSet.has(c.id)) return false;
-        if(c.name && savedCourtNameSet.has(c.name.trim().toLowerCase())) return false;
+        const norm = normalizeCourtName(c.name);
+        if(savedCourtNormalized.has(norm)) return false;
+        if(seenNormalized.has(norm)) return false;
+        seenNormalized.add(norm);
         return true;
       });
       otherEl.innerHTML='';
