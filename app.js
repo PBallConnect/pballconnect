@@ -3790,8 +3790,22 @@ function isMatchPast(match, graceHours=2){
 function getMatchStatusDisplay(match){
   const past = isMatchPast(match);
   if(past){
-    if(match.status==='full') return {label:'✅ Played',       color:'#16a34a', bg:'#f0fdf4', border:'#16a34a'};
-    return                          {label:'⏰ Needs Score',   color:'#d97706', bg:'#fffbeb', border:'#d97706'};
+    if(match.status==='full') return {label:'✅ Played',     color:'#16a34a', bg:'#f0fdf4', border:'#16a34a'};
+    return                          {label:'⏰ Needs Score', color:'#d97706', bg:'#fffbeb', border:'#d97706'};
+  }
+  // FIX 3: In Progress — current time is between match start and end
+  if(match.match_date && match.time_start && match.time_end){
+    const now = new Date();
+    const mStart = new Date(match.match_date+'T'+match.time_start);
+    const mEnd   = new Date(match.match_date+'T'+match.time_end);
+    if(now >= mStart && now <= mEnd)
+      return {label:'🎾 In Progress', color:'#16a34a', bg:'#f0fdf4', border:'#16a34a', inProgress:true};
+  }
+  // FIX 2: "Open" should never show after match end time has passed (within grace window)
+  if(match.status==='open' && match.match_date){
+    const endStr = match.time_end || match.time_start || '23:59';
+    if(new Date(match.match_date+'T'+endStr) < new Date())
+      return {label:'Ended', color:'#6b7280', bg:'#f9fafb', border:'#d1d5db'};
   }
   if(match.status==='full')      return {label:'🟢 Confirmed', color:'#16a34a', bg:'#f0fdf4', border:'#16a34a'};
   if(match.status==='open')      return {label:'🔴 Open',      color:'#dc2626', bg:'#fff1f2', border:'#dc2626'};
@@ -4296,8 +4310,16 @@ async function loadConfirmedMatches(){
         : resolvedCourtName ? mapsBase+encodeURIComponent(resolvedCourtName) : null;
 
       const isOrganizer = (m.organizer_email||'').toLowerCase() === myEmail.toLowerCase();
+      // FIX 3: In Progress detection for confirmed matches
+      const _now = new Date();
+      const _mStart = m.match_date && m.time_start ? new Date(m.match_date+'T'+m.time_start) : null;
+      const _mEnd   = m.match_date && m.time_end   ? new Date(m.match_date+'T'+m.time_end)   : null;
+      const inProgress = _mStart && _mEnd && _now >= _mStart && _now <= _mEnd;
       const card = document.createElement('div');
-      card.style.cssText='background:#ffffff;border:2px solid #1a7a3a;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(26,122,58,0.1);';
+      card.style.cssText=(inProgress
+        ? 'background:#f0fdf4;border:3px solid #16a34a;'
+        : 'background:#ffffff;border:2px solid #1a7a3a;')
+        +'border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(26,122,58,0.1);';
       card.innerHTML=
         // Header
         '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">'+
@@ -4309,7 +4331,9 @@ async function loadConfirmedMatches(){
             (isOrganizer?'<div style="font-size:11px;color:#1a7a3a;font-weight:700;margin-top:2px;">Organized by '+(((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim()||'You')+'</div>':
               '<div style="font-size:10px;color:#555;font-weight:600;margin-top:2px;">Organized by '+((m.organizer_name||'').split(' ')[0]||'Unknown')+'</div>')+
           '</div>'+
-          (urgency==='TODAY'||urgency==='TOMORROW'?'<div style="padding:3px 10px;border-radius:999px;background:#fee2e2;border:2px solid #dc2626;color:#dc2626;font-size:10px;font-weight:800;white-space:nowrap;">'+urgency+'</div>':urgency?'<div style="padding:3px 10px;border-radius:999px;background:#d1fae5;border:2px solid #1a7a3a;color:#1a7a3a;font-size:10px;font-weight:800;white-space:nowrap;">'+urgency+'</div>':'')+
+          (inProgress?'<div style="display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;background:#d1fae5;border:2px solid #16a34a;color:#166534;font-size:10px;font-weight:800;white-space:nowrap;"><span class="pb-pulse-green"></span>In Progress</div>':
+            urgency==='TODAY'||urgency==='TOMORROW'?'<div style="padding:3px 10px;border-radius:999px;background:#fee2e2;border:2px solid #dc2626;color:#dc2626;font-size:10px;font-weight:800;white-space:nowrap;">'+urgency+'</div>':
+            urgency?'<div style="padding:3px 10px;border-radius:999px;background:#d1fae5;border:2px solid #1a7a3a;color:#1a7a3a;font-size:10px;font-weight:800;white-space:nowrap;">'+urgency+'</div>':'')+
         '</div>'+
         // Court row
         '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:#f0fdf4;border:1px solid #d1fae5;border-radius:10px;margin-bottom:10px;">'+
@@ -4888,7 +4912,7 @@ async function loadMyInvitesPage(){
       } else {
         const remaining = Math.max(0, maxNeeded - inP.length);
         bottom=
-          // 5-column grid: In | Pending | Waitlist | Out | Remaining — each pill is clickable
+          // 5-column grid: In | Pending | Waitlist | Out | Remaining — tap any pill to see names
           '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:5px;margin-top:10px;">'+
             makeResponsePill('In',inP,'#1a7a3a',''+m.id,'in')+
             makeResponsePill('Pending',pend,'#b45309',''+m.id,'pending')+
@@ -4896,8 +4920,10 @@ async function loadMyInvitesPage(){
             makeResponsePill('Out',out,'#f87171',''+m.id,'out')+
             makeRemainingPill(remaining, maxNeeded)+
           '</div>'+
-          // Expandable player panel — shown on pill click
-          '<div id="miPanel-'+m.id+'" data-active-status="" style="display:none;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-top:8px;"></div>'+
+          buildPillNamesPanel(''+m.id,'in',inP)+
+          buildPillNamesPanel(''+m.id,'pending',pend)+
+          buildPillNamesPanel(''+m.id,'waitlist',wait)+
+          buildPillNamesPanel(''+m.id,'out',out)+
           '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e5e7eb;">'+
             '<button onclick="openEditMatchModal(\''+m.id+'\')" style="padding:7px 14px;border-radius:8px;border:2px solid #1a7a3a;background:#f0fdf4;color:#1a7a3a;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">&#9998; Edit Match</button>'+
           '</div>';
@@ -4923,7 +4949,7 @@ async function loadMyInvitesPage(){
           (!isPast?renderCountdown(m.match_date,m.time_start):'')+
         '</div>'+
         '<div style="text-align:right;flex-shrink:0;">'+
-          '<div style="font-size:12px;font-weight:700;color:'+sd.color+';">'+sd.label+'</div>'+
+          '<div style="font-size:12px;font-weight:700;color:'+sd.color+';">'+(sd.inProgress?'<span class="pb-pulse-green"></span>':'')+sd.label+'</div>'+
           (!isPast?'<div style="font-size:10px;color:#6b7280;">'+inP.length+'/'+maxNeeded+' confirmed</div>':'')+ 
           (!isPast&&m.match_date?'<div id="'+weatherId+'" style="font-size:10px;color:#6b7280;margin-top:4px;text-align:right;max-width:110px;line-height:1.4;"></div>':'')+
         '</div></div>'+bottom;
@@ -5057,45 +5083,43 @@ function togglePill(el){
 // Response data cache keyed by matchId — populated by loadMyInvitesPage, read by toggleInvitePanel
 const _miResponseCache = {};
 
-function toggleInvitePanel(matchId, status){
-  const panel = document.getElementById('miPanel-'+matchId);
+function togglePillNames(matchId, status){
+  ['in','pending','waitlist','out'].forEach(s=>{
+    if(s===status) return;
+    const el=document.getElementById('pillNames-'+matchId+'-'+s);
+    if(el) el.style.display='none';
+  });
+  const panel=document.getElementById('pillNames-'+matchId+'-'+status);
   if(!panel) return;
-  // Collapse if same status already showing
-  if(panel.style.display!=='none' && panel.dataset.activeStatus===status){
-    panel.style.display='none'; panel.dataset.activeStatus=''; return;
-  }
-  const data = _miResponseCache[matchId];
-  if(!data) return;
-  const cfg = {
-    in:       {emoji:'✅', label:'In',       color:'#16a34a', players:data.in},
-    pending:  {emoji:'⏳', label:'Pending',  color:'#d97706', players:data.pending},
-    waitlist: {emoji:'👥', label:'Waitlist', color:'#2563eb', players:data.waitlist},
-    out:      {emoji:'❌', label:'Out',      color:'#dc2626', players:data.out}
-  }[status];
-  if(!cfg) return;
-  let html='<div style="font-size:12px;font-weight:800;color:'+cfg.color+';margin-bottom:6px;">'+cfg.emoji+' '+cfg.label+'</div>';
-  if(!cfg.players.length){
-    html+='<div style="font-size:13px;color:#9ca3af;padding:4px 0;">No players yet</div>';
-  } else {
-    cfg.players.forEach(p=>{
-      const name=p.player_name||p.player_email||'—';
-      html+='<div style="font-size:13px;font-weight:600;color:#111;padding:4px 0;">'+name+'</div>';
-    });
-  }
-  panel.innerHTML=html;
-  panel.dataset.activeStatus=status;
-  panel.style.display='block';
+  panel.style.display = panel.style.display==='none' ? 'block' : 'none';
 }
+window.togglePillNames = togglePillNames;
+
+// Keep toggleInvitePanel as a stub so any legacy call sites don't throw
+function toggleInvitePanel(matchId, status){ togglePillNames(matchId, status); }
 window.toggleInvitePanel = toggleInvitePanel;
 
+function buildPillNamesPanel(matchId, status, players){
+  const icons = {in:'✅', pending:'⏳', waitlist:'👥', out:'❌'};
+  const icon = icons[status]||'';
+  let html='<div id="pillNames-'+matchId+'-'+status+'" style="display:none;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:10px 14px;margin-top:6px;">';
+  if(!players.length){
+    html+='<div style="font-size:13px;color:#9ca3af;">None yet</div>';
+  } else {
+    players.forEach(p=>{
+      const name=p.player_name||p.player_email||'—';
+      html+='<div style="font-size:13px;font-weight:600;color:#111;padding:3px 0;">'+icon+' '+name+'</div>';
+    });
+  }
+  return html+'</div>';
+}
+
 function makeResponsePill(label, players, color, matchId, status){
-  const clickable = players.length > 0;
   if(matchId && status){
-    // Panel-based expand: no inline names inside the pill
-    return '<div '+(clickable?'onclick="toggleInvitePanel(\''+matchId+'\',\''+status+'\')" ':'')
-      +'style="text-align:center;padding:8px 4px;border-radius:8px;background:#f9fafb;border:2px solid '+(clickable?'#6b7280':'#d1d5db')+';'+(clickable?'cursor:pointer;':'')+'">'+
+    return '<div onclick="togglePillNames(\''+matchId+'\',\''+status+'\')" '+
+      'style="text-align:center;padding:8px 4px;border-radius:8px;background:#f9fafb;border:2px solid '+color+';cursor:pointer;">'+
       '<div style="font-size:16px;font-weight:800;color:'+color+';">'+players.length+'</div>'+
-      '<div style="font-size:9px;color:#444;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">'+label+(clickable?' &#9660;':'')+'</div>'+
+      '<div style="font-size:9px;color:#444;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">'+label+' &#9660;</div>'+
     '</div>';
   }
   // Legacy inline-expand (togglePill) — used by other callers
