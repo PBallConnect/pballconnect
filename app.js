@@ -2820,10 +2820,10 @@ function renderCourtCapacityWarning(){
   MS.selectedCourts.forEach(court=>{ courtName=court.name; courtNumCourts=court.numCourts??null; });
   const n = MS.numCourts||1;
   const base = 'display:block;margin-top:10px;padding:10px 12px;border-radius:10px;font-size:12px;font-weight:600;line-height:1.5;';
-  if(courtNumCourts===null||courtNumCourts===undefined){
+  if(courtNumCourts===null||courtNumCourts===undefined||courtNumCourts===0){
     el.style.cssText = base+'border:1.5px solid #d1d5db;background:#f3f4f6;color:#6b7280;';
     el.style.animation = '';
-    el.textContent='⚠️ We don\'t have court count data for '+courtName+'. Please confirm availability before inviting players.';
+    el.textContent='Court count not on file — verify availability';
   } else if(n > courtNumCourts){
     el.style.cssText = base+'border:1.5px solid #f87171;background:#fff1f2;color:#dc2626;';
     el.style.animation='pb-card-pulse 1.4s ease-in-out infinite';
@@ -4876,6 +4876,8 @@ async function loadMyInvitesPage(){
       const cdUrgent = !isPast && getCountdown(m.match_date,m.time_start)?.urgent;
       card.style.cssText='border:3px solid '+sd.border+';border-radius:16px;padding:16px;margin-bottom:12px;background:'+sd.bg+';'+(isPast?'opacity:0.85;':'');
       if(cdUrgent) card.classList.add('pb-card-urgent');
+      // Cache response data for toggleInvitePanel
+      _miResponseCache[m.id] = {in:inP, pending:pend, waitlist:wait, out:out};
       let bottom='';
       if(isPast){
         bottom='<div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:rgba(76,175,125,0.08);border:1px solid rgba(76,175,125,0.2);border-radius:10px;">'+
@@ -4885,24 +4887,16 @@ async function loadMyInvitesPage(){
       } else {
         const remaining = Math.max(0, maxNeeded - inP.length);
         bottom=
-          // 5-column grid: In | Pending | Waitlist | Out | Remaining
+          // 5-column grid: In | Pending | Waitlist | Out | Remaining — each pill is clickable
           '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:5px;margin-top:10px;">'+
-            makeResponsePill('In',inP,'#1a7a3a')+
-            makeResponsePill('Pending',pend,'#b45309')+
-            makeResponsePill('Waitlist',wait,'#f59e0b')+
-            makeResponsePill('Out',out,'#f87171')+
+            makeResponsePill('In',inP,'#1a7a3a',''+m.id,'in')+
+            makeResponsePill('Pending',pend,'#b45309',''+m.id,'pending')+
+            makeResponsePill('Waitlist',wait,'#f59e0b',''+m.id,'waitlist')+
+            makeResponsePill('Out',out,'#f87171',''+m.id,'out')+
             makeRemainingPill(remaining, maxNeeded)+
           '</div>'+
-          // Player name lists
-          (inP.length?'<div style="font-size:11px;color:#1a7a3a;font-weight:700;margin-top:8px;">'+
-            '✅ '+inP.map(p=>{const n=p.player_name||p.player_email;return n.split(' ')[0];}).join(' · ')+
-          '</div>':'')+
-          (pend.length?'<div style="font-size:11px;color:#374151;font-weight:600;margin-top:3px;">'+
-            '⏳ Awaiting: '+pend.map(p=>{const n=p.player_name||p.player_email;return n.split(' ')[0];}).join(' · ')+
-          '</div>':'')+
-          (wait.length?'<div style="font-size:11px;color:#b45309;font-weight:600;margin-top:3px;">'+
-            '⌛ Waitlist: '+wait.map(p=>{const n=p.player_name||p.player_email;return n.split(' ')[0];}).join(' · ')+
-          '</div>':'')+
+          // Expandable player panel — shown on pill click
+          '<div id="miPanel-'+m.id+'" data-active-status="" style="display:none;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-top:8px;"></div>'+
           '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e5e7eb;">'+
             '<button onclick="openEditMatchModal(\''+m.id+'\')" style="padding:7px 14px;border-radius:8px;border:2px solid #1a7a3a;background:#f0fdf4;color:#1a7a3a;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">&#9998; Edit Match</button>'+
           '</div>';
@@ -5059,15 +5053,59 @@ function togglePill(el){
 
 
 
-function makeResponsePill(label, players, color){
+// Response data cache keyed by matchId — populated by loadMyInvitesPage, read by toggleInvitePanel
+const _miResponseCache = {};
+
+function toggleInvitePanel(matchId, status){
+  const panel = document.getElementById('miPanel-'+matchId);
+  if(!panel) return;
+  // Collapse if same status already showing
+  if(panel.style.display!=='none' && panel.dataset.activeStatus===status){
+    panel.style.display='none'; panel.dataset.activeStatus=''; return;
+  }
+  const data = _miResponseCache[matchId];
+  if(!data) return;
+  const cfg = {
+    in:       {emoji:'✅', label:'In',       color:'#16a34a', players:data.in},
+    pending:  {emoji:'⏳', label:'Pending',  color:'#d97706', players:data.pending},
+    waitlist: {emoji:'👥', label:'Waitlist', color:'#2563eb', players:data.waitlist},
+    out:      {emoji:'❌', label:'Out',      color:'#dc2626', players:data.out}
+  }[status];
+  if(!cfg) return;
+  let html='<div style="font-size:12px;font-weight:800;color:'+cfg.color+';margin-bottom:6px;">'+cfg.emoji+' '+cfg.label+'</div>';
+  if(!cfg.players.length){
+    html+='<div style="font-size:13px;color:#9ca3af;padding:4px 0;">No players yet</div>';
+  } else {
+    cfg.players.forEach(p=>{
+      const name=p.player_name||p.player_email||'—';
+      html+='<div style="font-size:13px;font-weight:600;color:#111;padding:4px 0;">'+name+'</div>';
+    });
+  }
+  panel.innerHTML=html;
+  panel.dataset.activeStatus=status;
+  panel.style.display='block';
+}
+window.toggleInvitePanel = toggleInvitePanel;
+
+function makeResponsePill(label, players, color, matchId, status){
+  const clickable = players.length > 0;
+  if(matchId && status){
+    // Panel-based expand: no inline names inside the pill
+    return '<div '+(clickable?'onclick="toggleInvitePanel(\''+matchId+'\',\''+status+'\')" ':'')
+      +'style="text-align:center;padding:8px 4px;border-radius:8px;background:#f9fafb;border:2px solid '+(clickable?'#6b7280':'#d1d5db')+';'+(clickable?'cursor:pointer;':'')+'">'+
+      '<div style="font-size:16px;font-weight:800;color:'+color+';">'+players.length+'</div>'+
+      '<div style="font-size:9px;color:#444;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">'+label+(clickable?' &#9660;':'')+'</div>'+
+    '</div>';
+  }
+  // Legacy inline-expand (togglePill) — used by other callers
   const names = players.map(p=>(p.player_name||p.player_email||'').split(' ')[0]).filter(Boolean).join(', ');
-  const clickable = players.length > 0 && names;
-  const nameList = clickable
+  const legacyClickable = players.length > 0 && names;
+  const nameList = legacyClickable
     ? '<div class="pill-names" style="display:none;font-size:9px;color:'+color+';margin-top:4px;line-height:1.5;border-top:1px solid #e5e7eb;padding-top:4px;">'+names.split(', ').join('<br>')+'</div>'
     : '';
-  return '<div '+(clickable?'onclick="togglePill(this)" ':'')+'style="text-align:center;padding:8px 4px;border-radius:8px;background:#f9fafb;border:2px solid '+(clickable?'#6b7280':'#d1d5db')+';'+(clickable?'cursor:pointer;':'')+'">'+
+  return '<div '+(legacyClickable?'onclick="togglePill(this)" ':'')+'style="text-align:center;padding:8px 4px;border-radius:8px;background:#f9fafb;border:2px solid '+(legacyClickable?'#6b7280':'#d1d5db')+';'+(legacyClickable?'cursor:pointer;':'')+'">'+
     '<div style="font-size:16px;font-weight:800;color:'+color+';">'+players.length+'</div>'+
-    '<div style="font-size:9px;color:#444;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">'+label+(clickable?' &#9660;':'')+'</div>'+
+    '<div style="font-size:9px;color:#444;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">'+label+(legacyClickable?' &#9660;':'')+'</div>'+
     nameList+
   '</div>';
 }
@@ -5597,10 +5635,13 @@ async function smLoadCourts(){
       savedCourts.forEach(c=>_smRenderCourtRow(c, savedEl, false));
     }
     if(otherEl){
-      let q=`${SUPABASE_URL}/rest/v1/courts?is_private=eq.${isPrivate}&select=id,name,address,city,is_private,num_courts&limit=8`;
-      if(allSavedIds.length) q+=`&id=not.in.(${allSavedIds.join(',')})`;
+      // Exclude all saved court IDs at the API level; also dedup client-side as a safety net
+      const savedCourtIdSet = new Set(savedCourts.map(c=>c.id));
+      const allExcludeIds = [...new Set([...allSavedIds, ...savedCourtIdSet])];
+      let q=`${SUPABASE_URL}/rest/v1/courts?is_private=eq.${isPrivate}&select=id,name,address,city,is_private,num_courts&limit=12`;
+      if(allExcludeIds.length) q+=`&id=not.in.(${allExcludeIds.join(',')})`;
       const oRes = await fetch(q,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
-      const otherCourts = oRes.ok ? await oRes.json() : [];
+      const otherCourts = (oRes.ok ? await oRes.json() : []).filter(c=>!savedCourtIdSet.has(c.id));
       otherEl.innerHTML='';
       if(!otherCourts.length){
         otherEl.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:4px 0;font-style:italic;">No other '+(isPrivate?'private':'public')+' courts found.</div>';
