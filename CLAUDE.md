@@ -38,6 +38,7 @@ Loaded in `index.html`: Supabase JS client, D3.js, TopoJSON, and Google Fonts.
 - **`SESSION_PLAYER`** — the authenticated player's database row, set after login/session restore. `null` if not logged in.
 - **`SUPABASE_ACCESS_TOKEN`** — JWT from Supabase auth, used in every REST API call as `Authorization: Bearer`.
 - **`IC_MEMBERS`** — Inner Circle members array; only populated when IC page is visited. Group/match modals fetch on demand if empty.
+- **`_icCurrentView`** — tracks the active IC member list view: `'alpha'` (default), `'favorites'`, or `'grid'`.
 - **`_groups`** — organizer's named groups; loaded by `loadMyGroups()` and `loadRecurringMatches()`.
 - **`PENDING_INVITE`** — set by `checkInviteToken()` when `?invite=TOKEN` is in the URL. Holds the invite row from `invite_tokens`. Consumed by `startNewRegistration()` to show `showInviteLandingChoice()` instead of the bare profile form.
 - **`window._pendingInviteRef`** — parallel reference to `PENDING_INVITE` for use in inline onclick handlers in dynamically generated HTML.
@@ -47,8 +48,12 @@ Loaded in `index.html`: Supabase JS client, D3.js, TopoJSON, and Google Fonts.
 
 `showPage()` also manages the floating "← Dashboard" pill button: it removes any existing instance on every navigation, then calls `showBackToDashboard()` for any page other than `dashboard`. The button removes itself on click and calls `showPage('dashboard')`.
 
+`showPage()` calls `window.scrollTo(0, 0)` on every navigation — all pages scroll to top.
+
 ### Auth
 Supabase magic link (`_supabase.auth.signInWithOtp`). On sign-in, `restoreSession(email)` fetches the player row from `registrations` and populates `SESSION_PLAYER`. Email is also persisted to `localStorage('pb_email')`.
+
+Login modal title: "Welcome to PBallConnect". Magic link button label: "Send Magic Link →" (all states). Success state: "Check your inbox!"
 
 ### Supabase integration
 All DB access uses the Supabase REST API via direct `fetch` calls (not the Supabase JS query builder). Every request includes:
@@ -85,9 +90,11 @@ Supabase join syntax (`table(col,col)`) only works when FK relationships are con
 | `invite_tokens` | Anonymous-safe invite link reads |
 
 ### Email
-`sendEmail({to_email, type, personal_note, invite_url, inviter_name})` in `app.js` calls `POST /api/send-email`, which is the Cloudflare Pages Function. Email types: `match_invite`, `match_update`, `match_decline`, `ic_invite`, `app_invite`.
+`sendEmail({to_email, type, personal_note, invite_url, inviter_name, match_date_str})` in `app.js` calls `POST /api/send-email`, which is the Cloudflare Pages Function. Email types: `match_invite`, `match_update`, `match_decline`, `ic_invite`, `app_invite`.
 
-The `app_invite` email uses a white-card template (light background, green logo, inviter name, personal note box, green CTA). All other types use the dark-card template. The `app_invite` CTA button href points to `https://pballconnect.com/invite.html?token=TOKEN` (not the main app URL).
+- The `app_invite` email uses a white-card template (light background, green logo, inviter name, personal note box, green CTA). All other types use the dark-card template. The `app_invite` CTA button href points to `https://pballconnect.com/invite.html?token=TOKEN` (not the main app URL).
+- `match_invite` emails use a dynamic personal subject: `"[FirstName] invited you to play pickleball on [Day], [Month] [Date]"`. The `match_date_str` param carries the pre-formatted date string (e.g. "Sun, Apr 20") from the call site.
+- `sendEmail()` is called with `await` in the match invite send loop to prevent dropped emails from Resend rate limiting. Each call is wrapped in a per-email try/catch with a failure toast.
 
 ### Maps
 State and county selection use D3 + TopoJSON with data from `us-atlas` CDN. County-level bounding boxes are computed from GeoJSON coordinates and stored in `S.countyBbox` for proximity filtering. City lookup uses the Overpass API with an embedded fallback dataset.
@@ -104,6 +111,7 @@ The app registers as an installable PWA. The manifest is injected inline at runt
 - **Match status** — determined client-side by comparing `match_date`/`time_end` to `Date.now()` via `isMatchPast()`.
 - **Inline onclick handlers** in dynamically generated HTML run in global scope — they cannot access closure-scoped variables or functions. Always expose handlers as `window.functionName` (e.g., `window._gTogglePlayer`, `window._rmSetHour`).
 - **`confirmUninvite`** sets a removed player's `match_responses.response` to `'out'`. This appears as "Declined / Removed" on the invitee's Invited by Others page. The IBO badge counts only `pending` responses.
+- **Invite polling** runs every 30 seconds via `startInvitePolling()`. Supabase Realtime is not used — polling is sufficient for current scale.
 
 ## Registration / Profile (Step 2)
 
@@ -181,7 +189,19 @@ UI functions: `toggleAvail(key)`, `updateAvailToggles()`.
 - **Inner Circle container:** "My IC" (green), "My Inner Circle Invites to Others" (amber), "Others Inner Circle Invites to Me" (purple). Dashboard buttons call `showPage('innerCircle')` then `showIcView(section)` after a 450ms delay.
 
 ### IC page navigation
-`showIcSection(section)` is the sole navigation function for the Inner Circle page. It shows/hides the three IC content sections (`icSectionMembers`, `icSectionInvite`, `icSectionRequests`) and highlights the active button. `applyIcViewMode(mode)` is now a stub — do not call it for IC navigation. The IC page 3-button container uses the same element IDs as the dashboard (`dashIcMemberCount`, `dashIcSentCount`, `dashIcIncomingCount`) so count updates cover both simultaneously.
+`showIcSection(section)` is the sole navigation function for the Inner Circle page. Sections: `members`, `invite`, `requests`, `find`. It shows/hides the corresponding IC content sections and highlights the active button. `showIcView(mode)` maps legacy dashboard mode strings to `showIcSection()` and is kept only for backward compatibility — do not call `applyIcViewMode` directly.
+
+The IC page 3-button container uses the same element IDs as the dashboard (`dashIcMemberCount`, `dashIcSentCount`, `dashIcIncomingCount`) so count updates cover both simultaneously. `showIcSection()` syncs these counts eagerly at the top of the function.
+
+`loadNearbyPlayers()` is lazy — only fires when `showIcSection('find')` is called, not on every IC page load.
+
+### IC member list views
+`switchIcMemberView(view)` is the sole toggle function. Views:
+- **`'alpha'`** (default) — compact one-line rows sorted A–Z: avatar initial, name, nickname, skill pill, favorite star. No Play button.
+- **`'favorites'`** — same rows, filtered to starred members only.
+- **`'grid'`** — Level Grid: 5-column skill bucketing table (Far Below / Below / My Level / Above / Far Above), names only, clickable via `openPlayerCard()`. ±0.125 tolerance. Center column ("My Level") has green header.
+
+`_icCurrentView` persists across sort/filter operations. `sortInnerCircle()` calls `switchIcMemberView(_icCurrentView)` to re-render in the current view without resetting to alpha.
 
 ## Organizer / Court Captain tier
 
@@ -262,6 +282,8 @@ New users arrive via `invite.html?token=TOKEN` (linked from the `app_invite` ema
 ### Email invite creation (`sendInvite`)
 Every `app_invite` email creates a **fresh invite row** with `invitee_email` stored. Never reuses an existing token. Uses `Prefer: return=representation` to get the DB-assigned token back. This ensures `invite_tokens` view returns the correct `invitee_email` when the recipient lands on `invite.html`.
 
+`getMyInviteUrl()` handles all invite token generation for IC invite channels. Returns `'https://pballconnect.com/invite.html?token='+token`.
+
 ### `invite.html` implementation notes
 - No app.js, no shared state, no Supabase session logic.
 - Only external dependency: Supabase JS CDN for the OTP call.
@@ -272,16 +294,18 @@ Every `app_invite` email creates a **fresh invite row** with `invitee_email` sto
 
 The 5-step wizard has been replaced with a **single-scroll 7-container page** (`page-setupMatch`). No step indicators, no Next/Back buttons.
 
-### Containers
+### Containers (current step order)
 1. **Match Type** — Doubles / Singles pills
-2. **How Many Courts?** — 1–4 pills + red "needed players" box. Organizer always plays; `matchMaxNeeded()` always subtracts 1. The "I'll be playing" checkbox has been removed.
-3. **Play Structure** — Open / Mixed / Same Gender (full-width rows)
-4. **Date & Time** — date picker + start time + duration (+/− in 15-min steps, 0.5h–4h) + read-only end time display. Inline conflict detection:
+2. **Courts & Players** — 1–4 pills + red "needed players" box. Label: "Players needed (you're in):". Organizer always plays; `matchMaxNeeded()` always subtracts 1. The "I'll be playing" checkbox has been removed.
+3. **Date & Time** — date picker + start time + duration (+/− in 15-min steps, 0.5h–4h) + read-only end time display. Inline conflict detection:
    - **Overlap conflict** → dark red box (`background:#7f1d1d`), Send button disabled
    - **Same-day non-overlap** → yellow advisory, Send button not blocked
-5. **Court** — Public/Private toggle + saved courts list + other courts + "+ Add a new court" button
+4. **Court** — Public/Private toggle + saved courts list + other courts + "+ Add a new court" button
+5. **Play Structure** — Open / Mixed / Same Gender (full-width rows)
 6. **Invite** — three modes: Entire IC / Specific Players / Named Group. Live Needed/Invited grid (gender-aware rows for Mixed/Same).
 7. **Review & Send** — live summary rows + note textarea + Send button (disabled until date + time + court + no overlap conflict)
+
+Progress bar step labels: `['Match Type','Number of Courts','Date & Time','Court','Play Structure','Invite','Review & Send']`
 
 ### State object (`MS`)
 ```js
@@ -305,10 +329,13 @@ const MS = {
 - `smLoadGroupSelect()` — loads `player_groups` into group dropdown
 
 ### Scheduling conflict detection (`checkMatchConflict` / `smCheckConflict`)
-Conflict is detected using proper time-range overlap: `start1 < end2 AND start2 < end1`.
-- **Overlap** → `MS.hasOverlapConflict = true`, dark red warning box in Container 4, Send button disabled
+Conflict is detected using proper time-range overlap via `toMins()` conversion: `start1 < end2 AND start2 < end1`.
+- **Overlap** → `MS.hasOverlapConflict = true`, dark red warning box in Container 3, Send button disabled
 - **Same-day non-overlap** → yellow advisory only, Send not blocked
 - The conflict modal (`showConflictConfirm`) also appears when accepting an invite if the player already has a committed match that overlaps. It fetches `court_name` and `court_address` for the new invite row so the court column never shows "TBD".
+
+### Court count validation
+Only show a red capacity warning if `court_count` is a confirmed positive number AND it is less than `MS.numCourts`. If `court_count` is `null`, `0`, or `undefined` — treat as unknown and show a neutral gray note ("Court count not on file — verify availability") instead of a red error.
 
 ## Countdown color logic
 
@@ -332,7 +359,7 @@ Conflict is detected using proper time-range overlap: `start1 < end2 AND start2 
 - **Organizer always plays** — "I'll be playing" checkbox removed from Set Up a Match. `matchMaxNeeded()` always subtracts 1 from total slots.
 - **Non-organizers see grayed nav** — organizer-only items at 40% opacity with tooltips explaining the Court Captain path.
 - **`wants_organizer=true`** shows Court Captain nudge to complete full profile. `is_organizer` is only set after full profile is completed.
-- **Scheduling conflicts block Send Invites** — only for true time-range overlaps. Same-day non-overlapping matches show a yellow advisory with specific times. Past date/time shows a "This time has already passed" error and blocks Send.
+- **Scheduling conflicts block Send Invites** — only for true time-range overlaps (`toMins()` formula). Same-day non-overlapping matches show a yellow advisory with specific times. Past date/time shows a "This time has already passed" error and blocks Send.
 - **Court picker defaults to Public.** Public/Private toggle filters the saved courts list.
 - **Recurring Matches belongs under MATCHES** not ORGANIZER in the nav — visible to all users, grayed for non-organizers.
 - **Portrait mode is primary mobile orientation.**
@@ -340,14 +367,21 @@ Conflict is detected using proper time-range overlap: `start1 < end2 AND start2 
 - **Quick Connect goes directly to dashboard** — no organizer question shown after Quick Connect save. Welcome toast shown instead.
 - **Set Up a Match and My Match Invites are in the Organizer nav section** — not the Matches section.
 - **IC badge numbers removed from left nav** — Inner Circle nav items show no count badges.
-- **All pages scroll to top on navigation.** `showPage()` scrolls `window` to 0,0 on every navigation.
-- **Inner Circle page uses tab-based section navigation** — `showIcSection('members'|'invite'|'requests')` replaces the old sticky stats dashboard. No persistent header stats bar.
-- **IC member list is a compact one-line row** — avatar initial, name, nickname, skill pill, favorite star. No Play button. Play is initiated from Set Up a Match.
+- **All pages scroll to top on navigation.** `showPage()` calls `window.scrollTo(0,0)` on every navigation.
+- **Inner Circle page uses tab-based section navigation** — `showIcSection('members'|'invite'|'requests'|'find')` replaces the old sticky stats dashboard. `applyIcViewMode()` is now a stub that delegates to `showIcSection()`.
+- **IC member list is a compact one-line row** — avatar initial, name, nickname, skill pill, favorite star. No Play button. Play is set up from Set Up a Match.
+- **IC member views: Level Grid, Favorites, A–Z (default).** `switchIcMemberView(view)` is the sole toggle. `_icCurrentView` persists across sort/filter operations.
 - **Set Up a Match has a sticky yellow→green progress bar** tracking completion across all 7 containers.
+- **Step order in Set Up a Match (current):** 1: Match Type, 2: Courts & Players, 3: Date & Time, 4: Court, 5: Play Structure, 6: Invite, 7: Review & Send.
+- **Step 2 label says "Players needed (you're in)"** to clarify that the organizer occupies one spot.
 - **IC invite uses native device channels** — `sms:` URI for Text (mobile) / clipboard copy (desktop), `mailto:` for Email, clipboard for Copy Link. No forms or backend calls at invite time.
+- **Invite URLs use `invite.html`** — `https://pballconnect.com/invite.html?token=TOKEN`. The main app URL is not used for invite landing.
 - **Desktop layout capped at 600px centered.** All pages use `max-width:600px;margin:0 auto`.
-- **Group types: Set vs Random.** Set groups = fixed priority roster + named subs (organizer controls who plays). Random groups = first to respond fills spots. Group type is defined at creation time and controls how invites are sent.
+- **Group types: Set vs Random.** Set groups = fixed priority roster + named subs (organizer controls who plays). Random groups = first to respond fills spots. Group type is defined at creation time in My Groups.
 - **Over-invite notification in Step 6** — when invited count exceeds available spots, a warning banner shows how many players will go to the waitlist.
+- **Match invite emails use personal subject line** — `"[FirstName] invited you to play pickleball on [Day], [Month] [Date]"`. `match_date_str` is passed from the send-invites call site and constructed in the Cloudflare Pages Function.
+- **Login modal says "Welcome to PBallConnect".** Magic link button label is always "Send Magic Link →". Success state shows "Check your inbox!".
+- **Court count validation: null/0/undefined = unknown** — show neutral gray note only. Only show red capacity warning if `court_count` is a confirmed positive number AND less than `MS.numCourts`.
 
 ## Competitive context
 
@@ -361,10 +395,30 @@ PBallConnect differentiators vs PlayTime Scheduler (market leader, free), Pickle
 
 1. **Dashboard "Invited" box count can diverge from nav badge.** `loadDashTileCounts()` still fetches its own count for the subtitle text line — the `dashSq*` count elements are now driven by `loadAllMatchBadges()` only, but the subtitle (e.g. "2 invites waiting") uses a separate unfiltered fetch. Verify subtitle also filters past matches and self-organized.
 
+2. **Court count shows false error when `court_count` is null.** A partial fix landed (null/0 treated as unknown → gray neutral note). Confirm the fix is live and that `renderCourtCapacityWarning()` no longer fires the red error for null values.
+
+3. **Duplicate courts in "Other Public Courts Nearby".** Courts already in the player's saved list can reappear in the nearby section. Double-dedup fix was applied (API `id=not.in.(allExcludeIds)` + client-side `.filter`). Confirm no regressions with empty saved list.
+
 ## Next to build
 
-1. **Bite 2: "My Groups" as invite mode in Set Up a Match** — add Named Group as a third invite mode in Container 6. Implement Set vs Random group logic: Set groups send invites to the priority roster in order; Random groups send to all and first-to-respond fills spots. Sub list auto-activates when a primary declines.
-2. **Recurring matches refinement** — Set vs Random group logic in recurring match scheduler; sub list auto-activation when a primary declines or doesn't respond before the gap alert threshold.
-3. **Find Players / Browse Nearby on IC page** — currently stubbed. Build out the section to surface nearby players not yet in the user's IC, with add/invite actions.
-4. **Profile complete flag + Court Captain celebration** — set `profile_complete = true` on `registrations` when full profile is saved via `doSaveProfile()`; show a celebration toast/overlay when `is_organizer` first becomes true.
-5. **Web push notifications** — browser push for match invites, IC requests, and gap alerts.
+1. **Play Structure reorder (Bite 2)** — make Play Structure the first container, with branching logic: Set Group path auto-calculates courts from group size; Open/Mixed/Same Gender path runs the full 7-container wizard. This is the highest-leverage UX change.
+2. **Set Group vs Random Group implementation** — group type defined at group creation in My Groups. Set groups send invites to priority roster in order; Random groups send to all and first-to-respond fills spots. Sub list auto-activates when a primary declines.
+3. **My Match Invites: click status box to see player name list** — In/Pending/Waitlist/Out boxes are tappable to reveal a panel with player names for that status. `_miResponseCache` and `toggleInvitePanel()` are already scaffolded.
+4. **Find Players / Browse Nearby on IC page** — `showIcSection('find')` and `loadNearbyPlayers()` are stubbed. Build out the section to surface nearby players not yet in the user's IC, with add/invite actions.
+5. **Profile complete flag + Court Captain celebration** — set `profile_complete = true` on `registrations` when full profile is saved via `doSaveProfile()`; show a celebration toast/overlay when `is_organizer` first becomes true.
+6. **Landing page at pballconnect.com** — marketing page, not the app. App moves to `pballconnect.com/app` or a subdomain. Google indexing updated to point to landing page.
+7. **Terms of Service + Privacy Policy + Waiver pages** — required before public launch.
+8. **Web push notifications** — browser push for match invites, IC requests, and gap alerts.
+9. **Post-match invite prompt** — "Now invite someone YOU want to play with" shown after confirming attendance or recording scores.
+
+## Pre-launch checklist
+
+- [ ] Terms of Service page
+- [ ] Privacy Policy page
+- [ ] Liability waiver with real legal language at registration
+- [ ] LLC formation
+- [ ] Insurance (General Liability, E&O, Cyber)
+- [ ] SPF + DKIM + DMARC fully configured in Resend
+- [ ] Landing page at pballconnect.com
+- [ ] App moved to pballconnect.com/app or subdomain
+- [ ] Google indexing updated to landing page, not app
