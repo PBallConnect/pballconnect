@@ -2756,6 +2756,23 @@ window.smOnStep3GroupSelect = function(value){
     if(sel6) sel6.value = value;
     // Switch Step 6 to group mode
     smSelectInvite('group');
+    // FIX 4: Auto-set format and courts from group's match_type / max_players
+    const grp = _groups && _groups.find(g=>String(g.id)===String(value));
+    if(grp){
+      const fmt = grp.match_type === 'singles' ? 'singles' : 'doubles';
+      const playersPerCourt = fmt === 'singles' ? 2 : 4;
+      const suggestedCourts = Math.max(1, Math.ceil(((grp.max_players||4) - 1) / playersPerCourt));
+      const cappedCourts = Math.min(4, suggestedCourts);
+      // Update MS and UI
+      MS.format = fmt;
+      const fmtDbl = document.getElementById('smFmtDoubles');
+      const fmtSgl = document.getElementById('smFmtSingles');
+      if(fmtDbl){ fmtDbl.style.border='1px solid #e5e7eb'; fmtDbl.style.background='#fff'; }
+      if(fmtSgl){ fmtSgl.style.border='1px solid #e5e7eb'; fmtSgl.style.background='#fff'; }
+      const activeBtn = fmt === 'singles' ? fmtSgl : fmtDbl;
+      if(activeBtn){ activeBtn.style.border='2px solid #1a7a3a'; activeBtn.style.background='#f0fdf4'; }
+      selectNumCourts(cappedCourts);
+    }
   }
   smUpdateNeededGrid();
   smUpdateSummary();
@@ -3151,6 +3168,25 @@ function toggleMatchGroup(group, el){
     if(group==='group_subs'){
       const picker = document.getElementById('matchGroupSubsPicker');
       if(picker){ picker.style.display='block'; buildGroupSubPicker(); }
+    }
+    // FIX 4: Auto-set format and courts from named group's match_type / max_players
+    if(group.startsWith('named_')){
+      const gId = group.replace('named_','');
+      const grp = _groups && _groups.find(g=>String(g.id)===String(gId));
+      if(grp){
+        const fmt = grp.match_type === 'singles' ? 'singles' : 'doubles';
+        const playersPerCourt = fmt === 'singles' ? 2 : 4;
+        const suggestedCourts = Math.max(1, Math.ceil(((grp.max_players||4) - 1) / playersPerCourt));
+        const cappedCourts = Math.min(4, suggestedCourts);
+        MS.format = fmt;
+        const fmtDbl = document.getElementById('smFmtDoubles');
+        const fmtSgl = document.getElementById('smFmtSingles');
+        if(fmtDbl){ fmtDbl.style.border='1px solid #e5e7eb'; fmtDbl.style.background='#fff'; }
+        if(fmtSgl){ fmtSgl.style.border='1px solid #e5e7eb'; fmtSgl.style.background='#fff'; }
+        const activeBtn = fmt === 'singles' ? fmtSgl : fmtDbl;
+        if(activeBtn){ activeBtn.style.border='2px solid #1a7a3a'; activeBtn.style.background='#f0fdf4'; }
+        selectNumCourts(cappedCourts);
+      }
     }
   }
 
@@ -10198,24 +10234,46 @@ async function loadMyGroups(){
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
     );
     const allMembers = mRes.ok ? await mRes.json() : [];
+
+    // Batch-fetch public_profiles for any member emails not already in IC_MEMBERS
+    const icEmailSet = new Set(IC_MEMBERS.map(({player})=>(player.email||'').toLowerCase()));
+    const missingEmails = [...new Set(allMembers.map(m=>m.player_email).filter(e=>e && !icEmailSet.has(e.toLowerCase())))];
+    let profileMap = {};
+    if(missingEmails.length){
+      try{
+        const pRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/public_profiles?email=in.(${missingEmails.map(e=>encodeURIComponent(e)).join(',')})&select=email,first_name,last_name,gender`,
+          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+        );
+        if(pRes.ok){
+          (await pRes.json()).forEach(p=>{ profileMap[(p.email||'').toLowerCase()] = p; });
+        }
+      }catch(_){}
+    }
+
     container.innerHTML = '';
     groups.forEach(g=>{
       const members = allMembers.filter(m=>m.group_id===g.id);
-      container.appendChild(buildGroupCard(g, members));
+      container.appendChild(buildGroupCard(g, members, profileMap));
     });
   }catch(e){
     container.innerHTML = '<div style="color:#f87171;font-size:13px;padding:20px 0;">Error loading groups.</div>';
   }
 }
 
-function buildGroupCard(group, members){
+function buildGroupCard(group, members, profileMap){
+  profileMap = profileMap || {};
+  const myEmail   = (getMyEmail()||'').toLowerCase();
   const primaries = members.filter(m=>m.role==='primary');
   const subs      = members.filter(m=>m.role==='sub');
 
-  // Gender breakdown of primary members via IC_MEMBERS lookup
+  // Gender breakdown of primary members via IC_MEMBERS lookup + profileMap fallback
   const priGenders = primaries.map(m=>{
-    const ic = IC_MEMBERS.find(({player})=>(player.email||'').toLowerCase()===(m.email||'').toLowerCase());
-    return ic ? (ic.player.gender||'').toLowerCase() : '';
+    const email = (m.player_email||'').toLowerCase();
+    const ic = IC_MEMBERS.find(({player})=>(player.email||'').toLowerCase()===email);
+    if(ic) return (ic.player.gender||'').toLowerCase();
+    const prof = profileMap[email];
+    return prof ? (prof.gender||'').toLowerCase() : '';
   });
   const priMen   = priGenders.filter(g=>g==='male').length;
   const priWomen = priGenders.filter(g=>g==='female'||g==='woman').length;
@@ -10228,13 +10286,20 @@ function buildGroupCard(group, members){
       '</div>'
     : '';
 
+  // FIX 4: Type badge
+  const gType = group.group_type || 'set';
+  const mType = group.match_type || 'doubles';
+  const typeIcon  = gType === 'random' ? '🎲' : '🎯';
+  const typeLabel = typeIcon + ' ' + (gType === 'random' ? 'Random' : 'Set') + ' · ' + (mType === 'singles' ? 'Singles' : 'Doubles');
+  const typeBadge = '<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#f3f4f6;border:1px solid #d1d5db;font-size:10px;font-weight:700;color:#374151;margin-top:4px;">'+typeLabel+'</span>';
+
   const card = document.createElement('div');
   card.style.cssText = 'background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,0.05);';
   card.innerHTML =
     '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">' +
       '<div>' +
         '<div style="font-size:16px;font-weight:800;color:#111;">'+group.name+'</div>' +
-        '<div style="font-size:11px;color:var(--dim);margin-top:2px;">'+group.max_players+'-player group</div>' +
+        '<div style="font-size:11px;color:var(--dim);margin-top:2px;">'+group.max_players+'-player group &nbsp;'+typeBadge+'</div>' +
         genderBreakdown +
       '</div>' +
       '<div style="display:flex;gap:6px;">' +
@@ -10242,7 +10307,15 @@ function buildGroupCard(group, members){
         '<button onclick="deleteGroup(\''+group.id+'\')" style="padding:6px 12px;border-radius:8px;border:1px solid #fecaca;background:#fff1f2;color:#dc2626;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">✕</button>' +
       '</div>' +
     '</div>' +
-    (primaries.length ? '<div style="margin-bottom:6px;"><span style="font-size:10px;font-weight:700;color:#1a7a3a;text-transform:uppercase;letter-spacing:.05em;">Primary ('+primaries.length+')</span><div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;">'+primaries.map(m=>'<span style="padding:3px 9px;border-radius:999px;background:#d1fae5;border:1px solid #6ee7b7;font-size:11px;color:#065f46;font-weight:600;">'+m.player_name+'</span>').join('')+'</div></div>' : '') +
+    // FIX 2: Organizer gets red chip; others get green
+    (primaries.length ? '<div style="margin-bottom:6px;"><span style="font-size:10px;font-weight:700;color:#1a7a3a;text-transform:uppercase;letter-spacing:.05em;">Primary ('+primaries.length+')</span><div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;">'+primaries.map(m=>{
+      const isOrg = (m.player_email||'').toLowerCase() === myEmail;
+      const chipBg     = isOrg ? '#fee2e2' : '#d1fae5';
+      const chipBorder = isOrg ? '#fca5a5' : '#6ee7b7';
+      const chipColor  = isOrg ? '#991b1b' : '#065f46';
+      const chipLabel  = isOrg ? '👑 ' + (m.player_name||'Organizer') : (m.player_name||m.player_email||'—');
+      return '<span style="padding:3px 9px;border-radius:999px;background:'+chipBg+';border:1px solid '+chipBorder+';font-size:11px;color:'+chipColor+';font-weight:600;">'+chipLabel+'</span>';
+    }).join('')+'</div></div>' : '') +
     (subs.length ? '<div><span style="font-size:10px;font-weight:700;color:#d97706;text-transform:uppercase;letter-spacing:.05em;">Sub Pool ('+subs.length+')</span><div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;">'+subs.map(m=>'<span style="padding:3px 9px;border-radius:999px;background:#fef3c7;border:1px solid #fde68a;font-size:11px;color:#92400e;font-weight:600;">'+m.player_name+(m.sub_category?' · '+m.sub_category:'')+'</span>').join('')+'</div></div>' : '') +
     (group.notes ? '<div style="margin-top:8px;font-size:12px;color:var(--dim);">'+group.notes+'</div>' : '');
   return card;
@@ -10298,7 +10371,9 @@ function _openGroupModal(group, members){
   const myName   = ((myPlayer?.first_name||'')+(myPlayer?.last_name?' '+myPlayer.last_name:'')).trim()||myEmail;
 
   // Initialize size state once
-  window.gModalSize = group?.max_players || 4;
+  window.gModalSize      = group?.max_players  || 4;
+  window.gModalType      = group?.group_type   || 'set';
+  window.gModalMatchType = group?.match_type   || 'doubles';
 
   // selected = IC member emails chosen as primary players (organizer is implicit, always slot 1)
   const selected = new Set(
@@ -10337,12 +10412,38 @@ function _openGroupModal(group, members){
       '</div>' +
 
       // Group size chips
-      '<div style="margin-bottom:20px;">' +
+      '<div style="margin-bottom:16px;">' +
         '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Group Size</label>' +
         '<div style="display:flex;gap:8px;margin-top:8px;">' +
           [4,8,12,16].map(n=>{
             const on = (window.gModalSize === n);
             return '<button onclick="window.gModalSize='+n+';window._gRender()" style="flex:1;padding:10px 0;border-radius:10px;border:2px solid '+(on?'#1a7a3a':'#d1d5db')+';background:'+(on?'#d1fae5':'#f9fafb')+';color:'+(on?'#1a7a3a':'#6b7280')+';font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;">'+n+'</button>';
+          }).join('') +
+        '</div>' +
+      '</div>' +
+
+      // Group Type (Set / Random)
+      '<div style="margin-bottom:16px;">' +
+        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Group Type</label>' +
+        '<div style="display:flex;gap:8px;margin-top:8px;">' +
+          ['set','random'].map(t=>{
+            const on = (window.gModalType === t);
+            const icon = t==='set' ? '🎯' : '🎲';
+            const lbl  = t==='set' ? 'Set' : 'Random';
+            return '<button onclick="window.gModalType=\''+t+'\';window._gRender()" style="flex:1;padding:10px 0;border-radius:10px;border:2px solid '+(on?'#1a7a3a':'#d1d5db')+';background:'+(on?'#d1fae5':'#f9fafb')+';color:'+(on?'#1a7a3a':'#6b7280')+';font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">'+icon+' '+lbl+'</button>';
+          }).join('') +
+        '</div>' +
+        '<div style="font-size:11px;color:#9ca3af;margin-top:5px;">'+(window.gModalType==='random'?'🎲 First to respond fills spots. Great for open rec play.':'🎯 Fixed roster — you control who plays each time.')+'</div>' +
+      '</div>' +
+
+      // Match Type (Doubles / Singles)
+      '<div style="margin-bottom:16px;">' +
+        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Match Type</label>' +
+        '<div style="display:flex;gap:8px;margin-top:8px;">' +
+          ['doubles','singles'].map(t=>{
+            const on = (window.gModalMatchType === t);
+            const lbl = t==='doubles' ? '2v2 Doubles' : '1v1 Singles';
+            return '<button onclick="window.gModalMatchType=\''+t+'\';window._gRender()" style="flex:1;padding:10px 0;border-radius:10px;border:2px solid '+(on?'#1a7a3a':'#d1d5db')+';background:'+(on?'#d1fae5':'#f9fafb')+';color:'+(on?'#1a7a3a':'#6b7280')+';font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">'+lbl+'</button>';
           }).join('') +
         '</div>' +
       '</div>' +
@@ -10374,7 +10475,8 @@ function _openGroupModal(group, members){
         ) +
       '</div>' +
 
-      // Sub Pool
+      // Sub Pool — hidden for Random groups (first-to-respond fills spots)
+      (window.gModalType !== 'random' ?
       '<div style="margin-bottom:20px;">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
           '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Sub Pool <span style="font-weight:400;text-transform:none;color:#9ca3af;">— optional backups</span></label>' +
@@ -10394,7 +10496,8 @@ function _openGroupModal(group, members){
             : '<span style="color:#6b7280;font-size:12px;padding:4px 0;">All IC members are already in the primary group.</span>'
           ) +
         '</div>' +
-      '</div>' +
+      '</div>'
+      : '') +
 
       // Notes
       '<div style="margin-bottom:20px;">' +
@@ -10441,7 +10544,7 @@ function _openGroupModal(group, members){
         await fetch(`${SUPABASE_URL}/rest/v1/player_groups?id=eq.${existingId}`,{
           method:'PATCH',
           headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
-          body:JSON.stringify({name, max_players:window.gModalSize, notes:document.getElementById('gModalNotes')?.value?.trim()||null})
+          body:JSON.stringify({name, max_players:window.gModalSize, group_type:window.gModalType, match_type:window.gModalMatchType, notes:document.getElementById('gModalNotes')?.value?.trim()||null})
         });
         await fetch(`${SUPABASE_URL}/rest/v1/player_group_members?group_id=eq.${existingId}`,{
           method:'DELETE',
@@ -10451,7 +10554,7 @@ function _openGroupModal(group, members){
         const cr = await fetch(`${SUPABASE_URL}/rest/v1/player_groups`,{
           method:'POST',
           headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=representation'},
-          body:JSON.stringify({organizer_email:myEmail, name, max_players:window.gModalSize, notes:document.getElementById('gModalNotes')?.value?.trim()||null})
+          body:JSON.stringify({organizer_email:myEmail, name, max_players:window.gModalSize, group_type:window.gModalType, match_type:window.gModalMatchType, notes:document.getElementById('gModalNotes')?.value?.trim()||null})
         });
         const newGroup = await cr.json();
         groupId = newGroup[0]?.id || newGroup?.id;
