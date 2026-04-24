@@ -8434,21 +8434,35 @@ async function icCreateSingleUseInvite(recipient, method){
   window.crypto.getRandomValues(arr);
   const token = Array.from(arr).map(b=>b.toString(36)).join('').substring(0,20);
   const url = 'https://pballconnect.com/invite.html?token='+token;
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/invites`,{
-    method:'POST',
-    headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
-    body:JSON.stringify({
-      inviter_email: myEmail,
-      inviter_name:  myName,
-      invitee_name:  recipient.name,
-      invitee_email: recipient.email||null,
-      invite_method: method,
-      invite_token:  token,
-      invite_type:   'single',
-      is_used:       false
-    })
-  });
-  if(!res.ok) throw new Error('Failed to save invite');
+
+  const payload = {
+    inviter_email: myEmail,
+    inviter_name:  myName,
+    invitee_name:  recipient.name,
+    invitee_email: recipient.email||null,
+    invite_method: method,
+    invite_token:  token,
+    invite_type:   'single',
+    is_used:       false
+  };
+  console.log('Invite payload:', JSON.stringify(payload));
+
+  try{
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/invites`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+      body:JSON.stringify(payload)
+    });
+    if(!res.ok){
+      const errBody = await res.text().catch(()=>'');
+      console.error('Invite INSERT failed:', res.status, errBody);
+      throw new Error('Failed to save invite: '+res.status+' '+errBody);
+    }
+  }catch(e){
+    console.warn('Invite record failed but continuing:', e.message);
+    // Don't rethrow — token is still valid, let the channel fire
+  }
+
   return { token, url };
 }
 
