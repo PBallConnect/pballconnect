@@ -952,7 +952,7 @@ function showBackToDashboard(){
   document.body.appendChild(btn);
 }
 // ── Secure email sender — Cloudflare Pages Function ──────────────────
-async function sendEmail({ to_email, type, personal_note, invite_url, subject, inviter_name, match_date_str }){
+async function sendEmail({ to_email, type, personal_note, invite_url, subject, inviter_name, invitee_name, match_date_str }){
   if(!to_email || !to_email.includes('@')) return;
   // Skip obvious test/fake addresses — plus-addressed test emails, example.com, etc.
   const lower = to_email.toLowerCase();
@@ -970,6 +970,7 @@ async function sendEmail({ to_email, type, personal_note, invite_url, subject, i
         site_url: window.location.origin,
         subject: subject||null,
         inviter_name: inviter_name||null,
+        invitee_name: invitee_name||null,
         match_date_str: match_date_str||null,
       })
     });
@@ -8485,13 +8486,11 @@ function icClearRecipientForm(){
   const nameEl  = document.getElementById('icRecipientName');
   const emailEl = document.getElementById('icRecipientEmail');
   const nudgeEl = document.getElementById('icEmailNudge');
-  const textPanel  = document.getElementById('icTextDesktopPanel');
-  const emailPanel = document.getElementById('icEmailDesktopPanel');
+  const textPanel = document.getElementById('icTextDesktopPanel');
   if(nameEl){ nameEl.value=''; nameEl.style.borderColor='#9ca3af'; }
   if(emailEl){ emailEl.value=''; emailEl.style.borderColor='#9ca3af'; }
   if(nudgeEl) nudgeEl.style.display='none';
   if(textPanel) textPanel.style.display='none';
-  if(emailPanel) emailPanel.style.display='none';
 }
 window.icClearRecipientForm = icClearRecipientForm;
 
@@ -8557,58 +8556,31 @@ async function smIcInviteEmail(){
   const recipient = icGetRecipient();
   if(!recipient) return;
 
-  // Nudge (non-blocking) if email is empty
+  // Email is required for this channel
   if(!recipient.email){
     const emailEl = document.getElementById('icRecipientEmail');
     const nudgeEl = document.getElementById('icEmailNudge');
     if(emailEl){ emailEl.style.borderColor='#d97706'; emailEl.focus(); }
     if(nudgeEl) nudgeEl.style.display='block';
-    // Still proceed — nudge only, not a block
+    showToast('Please enter their email address to send directly','#f59e0b');
+    return;
   }
 
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  const panel = document.getElementById('icEmailDesktopPanel');
-
   try{
-    const {url} = await icCreateSingleUseInvite(recipient, 'email');
-    const myName = (getMyName()||'Someone').split(' ')[0];
-    const subject = encodeURIComponent(myName+' invited you to PBallConnect 🎾');
-    const body = encodeURIComponent(
-      'Hey '+recipient.name+'!\n\n'+
-      myName+' wants you to join their Inner Circle on PBallConnect '+
-      '— the free app for finding pickleball players near you.\n\n'+
-      'Click here to set up your free profile:\n'+url+
-      '\n\nSee you on the court! 🏓'
-    );
-    const mailto = 'mailto:'+(recipient.email||'')+'?subject='+subject+'&body='+body;
-
-    // Always try mailto first
-    window.location.href = mailto;
-    showToast('✉️ Email opened for '+recipient.name,'#4CAF7D');
+    const {token} = await icCreateSingleUseInvite(recipient, 'email');
+    const url = 'https://pballconnect.com/invite.html?token='+token;
+    await sendEmail({
+      to_email:     recipient.email,
+      type:         'ic_invite',
+      inviter_name: getMyName(),
+      invitee_name: recipient.name,
+      personal_note: null,
+      invite_url:   url
+    });
+    showToast('✅ Invite sent to '+recipient.name+'!','#4CAF7D');
     icClearRecipientForm();
     loadIcInvites();
-
-    // On desktop: show fallback panel 300ms later
-    if(!isMobile && panel){
-      setTimeout(function(){
-        const gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1&su='+subject+'&body='+body;
-        const outlookUrl = 'https://outlook.live.com/mail/0/deeplink/compose?subject='+subject+'&body='+body;
-        panel.innerHTML =
-          '<div style="font-size:12px;color:#6b7280;margin-bottom:8px;">Email app didn\'t open?</div>'+
-          '<div style="display:flex;gap:8px;flex-wrap:wrap;">'+
-            '<button onclick="window.open(\''+gmailUrl+'\',\'_blank\');document.getElementById(\'icEmailDesktopPanel\').style.display=\'none\';"'+
-              ' style="flex:1;min-width:140px;padding:10px 12px;background:#fef2f2;border:1px solid #ef4444;border-radius:8px;color:#991b1b;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">'+
-              '📧 Open Gmail'+
-            '</button>'+
-            '<button onclick="window.open(\''+outlookUrl+'\',\'_blank\');document.getElementById(\'icEmailDesktopPanel\').style.display=\'none\';"'+
-              ' style="flex:1;min-width:140px;padding:10px 12px;background:#eff6ff;border:1px solid #2563eb;border-radius:8px;color:#1e3a8a;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">'+
-              '📧 Open Outlook'+
-            '</button>'+
-          '</div>';
-        panel.style.display = 'block';
-      }, 300);
-    }
-  }catch(e){ showToast('Could not create invite','#f87171'); }
+  }catch(e){ showToast('Could not send invite','#f87171'); }
 }
 window.smIcInviteEmail = smIcInviteEmail;
 
