@@ -8470,8 +8470,10 @@ async function icCopyToClipboard(text){
 function icClearRecipientForm(){
   const nameEl  = document.getElementById('icRecipientName');
   const emailEl = document.getElementById('icRecipientEmail');
+  const nudgeEl = document.getElementById('icEmailNudge');
   if(nameEl){ nameEl.value=''; nameEl.style.borderColor='#9ca3af'; }
-  if(emailEl) emailEl.value='';
+  if(emailEl){ emailEl.value=''; emailEl.style.borderColor='#9ca3af'; }
+  if(nudgeEl) nudgeEl.style.display='none';
 }
 window.icClearRecipientForm = icClearRecipientForm;
 
@@ -8503,6 +8505,16 @@ window.smIcInviteText = smIcInviteText;
 async function smIcInviteEmail(){
   const recipient = icGetRecipient();
   if(!recipient) return;
+
+  // Nudge (non-blocking) if email is empty
+  if(!recipient.email){
+    const emailEl = document.getElementById('icRecipientEmail');
+    const nudgeEl = document.getElementById('icEmailNudge');
+    if(emailEl){ emailEl.style.borderColor='#d97706'; emailEl.focus(); }
+    if(nudgeEl) nudgeEl.style.display='block';
+    // Still proceed — nudge only, not a block
+  }
+
   try{
     const {url} = await icCreateSingleUseInvite(recipient, 'email');
     const myName = (getMyName()||'Someone').split(' ')[0];
