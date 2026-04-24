@@ -24,6 +24,15 @@
     <a href="https://pballconnect.com" style="display:inline-block;padding:12px 28px;background:#1a7a3a;color:#fff;font-size:14px;font-weight:700;text-decoration:none;border-radius:10px;">← Back to PBallConnect</a>
   </div>
 
+  <!-- Success Card (shown when session is already established = registration complete) -->
+  <div id="successCard" style="display:none;background:#d1fae5;border-radius:16px;padding:32px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+    <div style="font-size:48px;margin-bottom:12px;">🎾</div>
+    <div style="font-size:24px;font-weight:800;color:#14532d;margin-bottom:8px;">You're all set!</div>
+    <div id="successSubtitle" style="font-size:15px;color:#1a7a3a;margin-top:8px;margin-bottom:12px;"></div>
+    <div id="successBody" style="font-size:13px;color:#374151;line-height:1.6;margin-top:12px;margin-bottom:16px;"></div>
+    <div style="font-size:11px;color:#6b7280;margin-top:16px;">Taking you there…</div>
+  </div>
+
   <!-- Invite Card -->
   <div id="inviteCard" style="display:none;background:#ffffff;border-radius:20px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
 
@@ -40,11 +49,6 @@
       <h2 id="headline" style="color:#111;font-size:19px;font-weight:800;margin:0;line-height:1.35;"></h2>
       <!-- QR badge -->
       <div id="qrBadge" style="display:none;margin-top:8px;display:inline-block;padding:3px 10px;border-radius:999px;background:#f0fdf4;border:1px solid #d1fae5;color:#1a7a3a;font-size:11px;font-weight:700;">📱 QR Code Invite</div>
-    </div>
-
-    <!-- Personal note -->
-    <div id="noteBox" style="display:none;background:#f0fdf4;border:1px solid #d1fae5;border-radius:10px;padding:13px 15px;margin-bottom:20px;">
-      <p id="noteText" style="color:#1a5c32;font-style:italic;font-size:14px;line-height:1.6;margin:0;"></p>
     </div>
 
     <!-- Email label + input -->
@@ -65,15 +69,16 @@
       Send My Magic Link →
     </button>
 
-    <!-- Success -->
-    <div id="successMsg" style="display:none;text-align:center;padding:14px 0 6px;">
-      <div style="font-size:30px;margin-bottom:8px;">✅</div>
-      <p style="color:#111;font-size:16px;font-weight:700;margin:0 0 5px;">Check your inbox!</p>
-      <p style="color:#6b7280;font-size:13px;margin:0;">Click the magic link in your email to continue.</p>
+    <!-- Check email state (shown after OTP is sent) -->
+    <div id="checkEmailMsg" style="display:none;text-align:center;padding:14px 0 6px;">
+      <div style="font-size:30px;margin-bottom:10px;">✉️</div>
+      <p style="color:#111;font-size:16px;font-weight:700;margin:0 0 6px;">Check your email!</p>
+      <p style="color:#6b7280;font-size:13px;margin:0 0 18px;line-height:1.6;">We sent you a magic link to sign in to PBallConnect. Click it to continue.</p>
+      <a href="https://pballconnect.com" style="display:inline-block;width:100%;padding:13px;background:#1a7a3a;color:#fff;font-size:14px;font-weight:800;text-decoration:none;border-radius:12px;box-sizing:border-box;text-align:center;">Open PBallConnect →</a>
     </div>
 
     <!-- No password note -->
-    <p style="color:#9ca3af;font-size:12px;text-align:center;margin:4px 0 20px;">🔒 No password needed — ever.</p>
+    <p id="noPasswordNote" style="color:#9ca3af;font-size:12px;text-align:center;margin:4px 0 20px;">🔒 No password needed — ever.</p>
 
     <hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 16px;"/>
 
@@ -121,6 +126,20 @@
     pbShow('errorState');
   }
 
+  // Show the "You're all set!" success card and redirect after 2.5s
+  function pbShowSuccessAndRedirect(firstName){
+    pbHide('loadingState');
+    pbHide('inviteCard');
+    var subtitle = 'Welcome to PBallConnect' + (firstName ? ', ' + firstName : '') + '!';
+    var body = (_inviterName && _inviterName !== 'A fellow player')
+      ? 'You\u2019ve joined ' + _inviterName + '\u2019s Inner Circle. Head to your dashboard to explore.'
+      : 'Head to your dashboard to explore.';
+    document.getElementById('successSubtitle').textContent = subtitle;
+    document.getElementById('successBody').textContent = body;
+    pbShow('successCard');
+    setTimeout(function(){ window.location.href = 'https://pballconnect.com'; }, 2500);
+  }
+
   async function pbSendMagicLink(){
     var emailVal = (document.getElementById('emailInput').value || '').trim().toLowerCase();
     var errEl = document.getElementById('emailError');
@@ -153,104 +172,145 @@
       return;
     }
 
+    // Show "Check your email" state — hide input, button, password note
     pbHide('sendBtn');
     pbHide('emailInput');
+    pbHide('emailError');
+    pbHide('noPasswordNote');
     document.getElementById('emailLabel').style.display = 'none';
-    pbShow('successMsg');
+    pbShow('checkEmailMsg');
   }
 
   // ── PAGE INIT ───────────────────────────────────────────
 
-  if(!_token && !_qrId){
-    // Neither param present — show generic error
-    pbHide('loadingState');
-    pbShow('errorState');
+  (async function pbInit(){
 
-  } else if(_qrId){
-    // ── QR FLOW ─────────────────────────────────────────
-    _inviteType = 'qr';
-    _redirectParam = 'qr=' + encodeURIComponent(_qrId);
-
-    fetch(SUPABASE_URL + '/rest/v1/public_profiles?qr_invite_id=eq.' + encodeURIComponent(_qrId) + '&select=email,first_name,last_name,avatar_emoji', {
-      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY }
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(rows){
-      pbHide('loadingState');
-      if(!rows || !rows.length){
-        pbShowError('Invalid QR code.', 'This QR code was not found. Ask the organizer to share their current QR code.');
-        return;
-      }
-      var owner = rows[0];
-      _inviterName = ((owner.first_name||'') + (owner.last_name ? ' '+owner.last_name : '')).trim() || 'A fellow player';
-
-      document.getElementById('inviteEmoji').textContent = owner.avatar_emoji || '🎾';
-      document.getElementById('headline').textContent = _inviterName + ' wants you to join PBallConnect!';
-      document.getElementById('qrBadge').style.display = 'inline-block';
-      document.getElementById('footerNote').textContent = 'Scanned from ' + _inviterName + '\'s QR code. Each scan creates a fresh connection.';
-
-      pbShow('inviteCard');
-    })
-    .catch(function(){
+    if(!_token && !_qrId){
       pbHide('loadingState');
       pbShow('errorState');
-    });
+      return;
+    }
 
-  } else {
-    // ── SINGLE-USE TOKEN FLOW ────────────────────────────
-    _inviteType = 'single';
-    _redirectParam = 'invite=' + encodeURIComponent(_token);
+    // Check for active session in parallel with invite fetch
+    var sessionPromise = _sb.auth.getSession();
 
-    // Fetch from invites table directly to get is_used + invite data
-    fetch(SUPABASE_URL + '/rest/v1/invites?invite_token=eq.' + encodeURIComponent(_token) + '&select=invite_token,is_used,inviter_name,invitee_name,invite_type', {
-      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY }
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(rows){
-      pbHide('loadingState');
-      if(!rows || !rows.length){
-        // Fall back to invite_tokens view (anon-safe)
-        return fetch(SUPABASE_URL + '/rest/v1/invite_tokens?invite_token=eq.' + encodeURIComponent(_token), {
+    if(_qrId){
+      // ── QR FLOW ───────────────────────────────────────
+      _inviteType = 'qr';
+      _redirectParam = 'qr=' + encodeURIComponent(_qrId);
+
+      var qrOk = false;
+      try{
+        var r = await fetch(SUPABASE_URL + '/rest/v1/public_profiles?qr_invite_id=eq.' + encodeURIComponent(_qrId) + '&select=email,first_name,last_name,avatar_emoji', {
           headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY }
-        }).then(function(r){ return r.json(); }).then(function(viewRows){
-          if(!viewRows || !viewRows.length){
+        });
+        var rows = await r.json();
+        if(!rows || !rows.length){
+          pbHide('loadingState');
+          pbShowError('Invalid QR code.', 'This QR code was not found. Ask the organizer to share their current QR code.');
+          return;
+        }
+        var owner = rows[0];
+        _inviterName = ((owner.first_name||'') + (owner.last_name ? ' '+owner.last_name : '')).trim() || 'A fellow player';
+        document.getElementById('inviteEmoji').textContent = owner.avatar_emoji || '🎾';
+        document.getElementById('headline').textContent = _inviterName + ' wants you to join PBallConnect!';
+        document.getElementById('qrBadge').style.display = 'inline-block';
+        document.getElementById('footerNote').textContent = 'Scanned from ' + _inviterName + '\'s QR code. Each scan creates a fresh connection.';
+        qrOk = true;
+      }catch(e){
+        pbHide('loadingState');
+        pbShow('errorState');
+        return;
+      }
+
+      // Check session
+      var sessionResult = await sessionPromise;
+      var session = sessionResult.data && sessionResult.data.session;
+      if(session){
+        var firstName = await pbGetFirstName(session);
+        pbShowSuccessAndRedirect(firstName);
+        return;
+      }
+
+      pbHide('loadingState');
+      pbShow('inviteCard');
+
+    } else {
+      // ── SINGLE-USE TOKEN FLOW ─────────────────────────
+      _inviteType = 'single';
+      _redirectParam = 'invite=' + encodeURIComponent(_token);
+
+      var inv = null;
+      try{
+        var r = await fetch(SUPABASE_URL + '/rest/v1/invites?invite_token=eq.' + encodeURIComponent(_token) + '&select=invite_token,is_used,inviter_name,invitee_name,invite_type', {
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY }
+        });
+        var rows = await r.json();
+        if(!rows || !rows.length){
+          // Fall back to invite_tokens view (anon-safe)
+          var r2 = await fetch(SUPABASE_URL + '/rest/v1/invite_tokens?invite_token=eq.' + encodeURIComponent(_token), {
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY }
+          });
+          var rows2 = await r2.json();
+          if(!rows2 || !rows2.length){
+            pbHide('loadingState');
             pbShow('errorState');
             return;
           }
-          pbRenderTokenCard(viewRows[0]);
-        });
+          inv = rows2[0];
+        } else {
+          inv = rows[0];
+          // is_used check — single-use tokens only
+          if(inv.is_used === true && inv.invite_type !== 'qr'){
+            var inviterFirst = (inv.inviter_name||'Your friend').split(' ')[0];
+            pbShowError(
+              'This invite link has already been used.',
+              'Ask ' + inviterFirst + ' to send you a fresh one.'
+            );
+            return;
+          }
+        }
+        pbRenderTokenCard(inv);
+      }catch(e){
+        // RLS failure — fall back to view
+        try{
+          var r3 = await fetch(SUPABASE_URL + '/rest/v1/invite_tokens?invite_token=eq.' + encodeURIComponent(_token), {
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY }
+          });
+          var rows3 = await r3.json();
+          if(!rows3 || !rows3.length){ pbHide('loadingState'); pbShow('errorState'); return; }
+          pbRenderTokenCard(rows3[0]);
+        }catch(e2){
+          pbHide('loadingState');
+          pbShow('errorState');
+          return;
+        }
       }
 
-      var inv = rows[0];
-
-      // is_used check — single-use tokens only
-      if(inv.is_used === true && inv.invite_type !== 'qr'){
-        var inviterFirst = (inv.inviter_name||'Your friend').split(' ')[0];
-        pbShowError(
-          'This invite link has already been used.',
-          'Ask ' + inviterFirst + ' to send you a fresh one.'
-        );
+      // Check session (invite data already loaded / _inviterName set)
+      var sessionResult = await sessionPromise;
+      var session = sessionResult.data && sessionResult.data.session;
+      if(session){
+        var firstName = await pbGetFirstName(session);
+        pbShowSuccessAndRedirect(firstName);
         return;
       }
 
-      pbRenderTokenCard(inv);
-    })
-    .catch(function(){
-      // If direct invites table fetch fails (RLS), fall back to view
-      fetch(SUPABASE_URL + '/rest/v1/invite_tokens?invite_token=eq.' + encodeURIComponent(_token), {
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY }
-      })
-      .then(function(r){ return r.json(); })
-      .then(function(rows){
-        pbHide('loadingState');
-        if(!rows || !rows.length){ pbShow('errorState'); return; }
-        pbRenderTokenCard(rows[0]);
-      })
-      .catch(function(){
-        pbHide('loadingState');
-        pbShow('errorState');
+      pbHide('loadingState');
+      pbShow('inviteCard');
+    }
+
+  })();
+
+  // Fetch first_name for the authenticated user
+  async function pbGetFirstName(session){
+    try{
+      var r = await fetch(SUPABASE_URL + '/rest/v1/registrations?email=eq.' + encodeURIComponent(session.user.email) + '&select=first_name', {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + session.access_token }
       });
-    });
+      var rows = await r.json();
+      return (rows[0] && rows[0].first_name) || '';
+    }catch(e){ return ''; }
   }
 
   function pbRenderTokenCard(inv){
@@ -258,10 +318,7 @@
     _inviterName = inviterName;
 
     document.getElementById('headline').textContent = inviterName + ' has invited you to join PBallConnect!';
-
     document.getElementById('footerNote').textContent = 'You received this because ' + inviterName + ' invited you. If this was a mistake, simply ignore this page.';
-
-    pbShow('inviteCard');
   }
 </script>
 
