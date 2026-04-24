@@ -8798,6 +8798,7 @@ async function sendIcLinkInvite(){
     }
     if(nameEl){ nameEl.value=''; nameEl.style.borderColor='#9ca3af'; }
     loadIcInvites();
+    setTimeout(()=>{ icDoneInviting(); }, 3500);
   }catch(e){ showToast('Could not create invite','#f87171'); }
 }
 window.sendIcLinkInvite = sendIcLinkInvite;
