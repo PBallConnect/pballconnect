@@ -1184,29 +1184,19 @@
             </div>
           </div>
 
-          <!-- Sent invites history -->
-          <div class="ic-card ic-pending-invites-card" id="icInvitesCard" style="display:none;max-width:100%;margin-bottom:14px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-              <div class="ic-section-label" style="margin-bottom:0;">⏳ Invites Sent <span id="icInvitesBadge" class="ic-badge"></span></div>
-              <div style="font-size:11px;color:var(--dim);">Awaiting acceptance</div>
-            </div>
-            <div id="icInvitesList"></div>
-          </div>
-
-          <!-- Find Players link -->
-          <div onclick="showIcSection('find')" style="font-size:13px;color:#2563eb;cursor:pointer;margin-bottom:16px;">🔍 Find Players to add →</div>
-
-          <!-- Member list header -->
-          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:8px;padding:0 2px;">
-            <div style="font-size:12px;font-weight:800;color:#1a7a3a;text-transform:uppercase;letter-spacing:.08em;flex:1;min-width:0;">
-              ✅ My Inner Circle <span id="icMemberCountLabel" style="font-weight:600;color:#6b7280;"></span>
-            </div>
+          <!-- View toggle row -->
+          <div style="display:flex;gap:6px;margin-bottom:8px;padding:0 2px;">
             <button id="icViewGrid" onclick="switchIcMemberView('grid')"
               style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;background:#1a7a3a;border:1.5px solid #1a7a3a;color:#fff;font-family:inherit;">📊 Level Grid</button>
             <button id="icViewFavorites" onclick="switchIcMemberView('favorites')"
               style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;background:#f1f5f9;border:1.5px solid #d1d5db;color:#374151;font-family:inherit;">⭐ Favorites</button>
             <button id="icViewAlpha" onclick="switchIcMemberView('alpha')"
               style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;background:#f1f5f9;border:1.5px solid #d1d5db;color:#374151;font-family:inherit;">A–Z</button>
+          </div>
+
+          <!-- MY INNER CIRCLE label row -->
+          <div style="font-size:12px;font-weight:800;color:#1a7a3a;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;padding:0 2px;">
+            ✅ My Inner Circle <span id="icMemberCountLabel" style="font-weight:600;color:#6b7280;text-transform:none;letter-spacing:0;"></span>
           </div>
 
           <!-- Level grid — shown in grid view, hidden otherwise -->
@@ -1228,6 +1218,18 @@
               <span style="font-size:13px;color:#1a7a3a;cursor:pointer;font-weight:700;" onclick="toggleIcInvitePanel()">Invite someone to get started →</span>
             </div>
           </div>
+
+          <!-- Sent invites history -->
+          <div class="ic-card ic-pending-invites-card" id="icInvitesCard" style="display:none;max-width:100%;margin-top:14px;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+              <div class="ic-section-label" style="margin-bottom:0;">⏳ Invites Sent <span id="icInvitesBadge" class="ic-badge"></span></div>
+              <div style="font-size:11px;color:var(--dim);">Awaiting acceptance</div>
+            </div>
+            <div id="icInvitesList"></div>
+          </div>
+
+          <!-- Find Players link -->
+          <div onclick="showIcSection('find')" style="font-size:13px;color:#2563eb;cursor:pointer;margin-top:8px;">🔍 Find Players to add →</div>
         </div>
 
         <!-- ── SECTION: Invite New Members (legacy nav target) ── -->
