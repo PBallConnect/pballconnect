@@ -8639,6 +8639,19 @@ function selectIcChannel(channel){
   // Focus the first input in the selected group
   const firstInput = target && target.querySelector('input');
   if(firstInput) setTimeout(function(){ firstInput.focus(); }, 50);
+  // Email selected: hide other channel buttons and QR line for focus
+  const textBtn = document.getElementById('icChannelText');
+  const linkBtn = document.getElementById('icChannelLink');
+  const qrLine  = document.getElementById('icQrLine');
+  if(channel === 'email'){
+    if(textBtn) textBtn.style.display = 'none';
+    if(linkBtn) linkBtn.style.display = 'none';
+    if(qrLine)  qrLine.style.display  = 'none';
+  } else {
+    if(textBtn) textBtn.style.display = _icIsMobile ? 'flex' : 'none';
+    if(linkBtn) linkBtn.style.display = 'flex';
+    if(qrLine)  qrLine.style.display  = 'block';
+  }
 }
 window.selectIcChannel = selectIcChannel;
 
@@ -8653,6 +8666,13 @@ function resetIcChannelForm(){
   const conf2 = document.getElementById('icLinkConfirm');
   if(conf1) conf1.style.display = 'none';
   if(conf2) conf2.style.display = 'none';
+  // Restore all channel buttons and QR line to default visibility
+  const textBtn = document.getElementById('icChannelText');
+  const linkBtn = document.getElementById('icChannelLink');
+  const qrLine  = document.getElementById('icQrLine');
+  if(textBtn) textBtn.style.display = _icIsMobile ? 'flex' : 'none';
+  if(linkBtn) linkBtn.style.display = 'flex';
+  if(qrLine)  qrLine.style.display  = 'block';
 }
 window.resetIcChannelForm = resetIcChannelForm;
 
@@ -8692,6 +8712,17 @@ async function sendIcEmailInvite(){
     if(conf){
       conf.innerHTML = '✅ Invite sent to <strong>'+name+'</strong>!';
       conf.style.cssText = 'display:block;color:#14532d;font-size:13px;font-weight:600;margin-top:10px;padding:10px;background:#d1fae5;border-radius:8px;';
+      // After 1200ms append the "Send another?" prompt
+      setTimeout(function(){
+        if(conf.style.display === 'none') return; // user already dismissed
+        conf.innerHTML += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid #d1fae5;">'+
+          '<div style="font-size:13px;font-weight:700;color:#14532d;margin-bottom:10px;">Send another invite via PBallConnect?</div>'+
+          '<div style="display:flex;gap:8px;">'+
+            '<button onclick="icSendAnother()" style="flex:1;padding:10px;border-radius:10px;border:2px solid #16a34a;background:#d1fae5;color:#14532d;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;">✅ Yes, send another</button>'+
+            '<button onclick="icDoneInviting()" style="flex:1;padding:10px;border-radius:10px;border:2px solid #d1d5db;background:#f9fafb;color:#374151;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;">No, I\'m done</button>'+
+          '</div>'+
+        '</div>';
+      }, 1200);
     }
     if(nameEl){ nameEl.value=''; nameEl.style.borderColor='#9ca3af'; }
     if(emailEl){ emailEl.value=''; emailEl.style.borderColor='#9ca3af'; }
@@ -8703,6 +8734,29 @@ async function sendIcEmailInvite(){
   }
 }
 window.sendIcEmailInvite = sendIcEmailInvite;
+
+function icSendAnother(){
+  const conf = document.getElementById('icEmailConfirm');
+  if(conf) conf.style.display = 'none';
+  const nameEl  = document.getElementById('icFormName');
+  const emailEl = document.getElementById('icFormEmail');
+  if(nameEl){  nameEl.value='';  nameEl.style.borderColor='#9ca3af'; nameEl.focus(); }
+  if(emailEl){ emailEl.value=''; emailEl.style.borderColor='#9ca3af'; }
+  const btn = document.querySelector('#icEmailFields button');
+  if(btn){ btn.disabled=false; btn.textContent='Send Invite ✉️'; }
+}
+window.icSendAnother = icSendAnother;
+
+function icDoneInviting(){
+  const panel = document.getElementById('icInvitePanel');
+  if(panel) panel.style.display = 'none';
+  resetIcChannelForm();
+  loadIcInvites();
+  renderInnerCircleList();
+  window.scrollTo(0,0);
+  showToast('🎾 Invites sent! Check back to see who joins.','#4CAF7D');
+}
+window.icDoneInviting = icDoneInviting;
 
 async function sendIcTextInvite(){
   const nameEl = document.getElementById('icFormNameText');
