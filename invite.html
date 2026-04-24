@@ -202,7 +202,7 @@
     _redirectParam = 'invite=' + encodeURIComponent(_token);
 
     // Fetch from invites table directly to get is_used + invite data
-    fetch(SUPABASE_URL + '/rest/v1/invites?invite_token=eq.' + encodeURIComponent(_token) + '&select=invite_token,inviter_name,invitee_email,personal_note,is_used,invite_type', {
+    fetch(SUPABASE_URL + '/rest/v1/invites?invite_token=eq.' + encodeURIComponent(_token) + '&select=invite_token,is_used,inviter_name,invitee_name,invite_type', {
       headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY }
     })
     .then(function(r){ return r.json(); })
@@ -259,17 +259,7 @@
 
     document.getElementById('headline').textContent = inviterName + ' has invited you to join PBallConnect!';
 
-    if(inv.personal_note){
-      document.getElementById('noteText').textContent = '\u201c' + inv.personal_note + '\u201d';
-      pbShow('noteBox');
-    }
-
     document.getElementById('footerNote').textContent = 'You received this because ' + inviterName + ' invited you. If this was a mistake, simply ignore this page.';
-
-    if(inv.invitee_email){
-      document.getElementById('emailInput').value = inv.invitee_email;
-      pbUpdateBtn();
-    }
 
     pbShow('inviteCard');
   }

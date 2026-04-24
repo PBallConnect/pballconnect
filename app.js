@@ -8447,27 +8447,20 @@ window.icGetRecipient = icGetRecipient;
 async function icCreateSingleUseInvite(recipient, method){
   const myEmail = getMyEmail();
   const myName  = getMyName();
-  const arr = new Uint8Array(16);
-  window.crypto.getRandomValues(arr);
-  const token = Array.from(arr).map(b=>b.toString(36)).join('').substring(0,20);
-  const url = 'https://pballconnect.com/invite.html?token='+token;
 
   const payload = {
     inviter_email: myEmail,
     inviter_name:  myName,
     invitee_name:  recipient.name,
-    invitee_email: recipient.email||null,
+    invitee_email: recipient.email || null,
     invite_method: method,
-    invite_token:  token,
-    invite_type:   'single',
-    is_used:       false
+    invite_type:   'single'
   };
-  console.log('Invite payload:', JSON.stringify(payload));
 
   try{
     const res = await fetch(`${SUPABASE_URL}/rest/v1/invites`,{
       method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=representation'},
       body:JSON.stringify(payload)
     });
     if(!res.ok){
@@ -8475,12 +8468,16 @@ async function icCreateSingleUseInvite(recipient, method){
       console.error('Invite INSERT failed:', res.status, errBody);
       throw new Error('Failed to save invite: '+res.status+' '+errBody);
     }
+    const rows = await res.json();
+    const token = rows[0]?.invite_token;
+    if(!token) throw new Error('No invite_token returned from DB');
+    const url = 'https://pballconnect.com/invite.html?token=' + token;
+    return { token, url };
   }catch(e){
     console.warn('Invite record failed but continuing:', e.message);
-    // Don't rethrow — token is still valid, let the channel fire
+    // Don't rethrow — let the caller decide whether to surface the error
+    return { token: null, url: null };
   }
-
-  return { token, url };
 }
 
 // ── Clipboard helper with fallback ────────────────────
@@ -8525,7 +8522,8 @@ async function smIcInviteText(){
   }
 
   try{
-    const {url} = await icCreateSingleUseInvite(recipient, 'text');
+    const { url } = await icCreateSingleUseInvite(recipient, 'text');
+    if(!url) throw new Error('Invite creation failed');
     const myName = (getMyName()||'Someone').split(' ')[0];
     const message = myName+' invited you to their Inner Circle on PBallConnect! '+
       'Set up your free player profile: '+url+' (takes 2 min) 🎾';
@@ -8583,8 +8581,8 @@ async function smIcInviteEmail(){
   }
 
   try{
-    const {token} = await icCreateSingleUseInvite(recipient, 'email');
-    const url = 'https://pballconnect.com/invite.html?token='+token;
+    const { url } = await icCreateSingleUseInvite(recipient, 'email');
+    if(!url) throw new Error('Invite creation failed');
     await sendEmail({
       to_email:     recipient.email,
       type:         'ic_invite',
@@ -8604,7 +8602,8 @@ async function smIcInviteLink(){
   const recipient = icGetRecipient();
   if(!recipient) return;
   try{
-    const {url} = await icCreateSingleUseInvite(recipient, 'link');
+    const { url } = await icCreateSingleUseInvite(recipient, 'link');
+    if(!url) throw new Error('Invite creation failed');
     await icCopyToClipboard(url);
     showToast('✅ Link copied for '+recipient.name+' — paste it anywhere!','#4CAF7D');
     icClearRecipientForm();
@@ -8705,8 +8704,8 @@ async function sendIcEmailInvite(){
 
   try{
     const recipient = { name, email };
-    const { token } = await icCreateSingleUseInvite(recipient, 'email');
-    const url = 'https://pballconnect.com/invite.html?token=' + token;
+    const { url } = await icCreateSingleUseInvite(recipient, 'email');
+    if(!url) throw new Error('Invite creation failed');
     await sendEmail({
       to_email:     email,
       type:         'ic_invite',
@@ -8774,8 +8773,8 @@ async function sendIcTextInvite(){
     return;
   }
   try{
-    const { token } = await icCreateSingleUseInvite({ name, email:null }, 'text');
-    const url = 'https://pballconnect.com/invite.html?token=' + token;
+    const { url } = await icCreateSingleUseInvite({ name, email:null }, 'text');
+    if(!url) throw new Error('Invite creation failed');
     const myFirst = (getMyName()||'Someone').split(' ')[0];
     const msg = encodeURIComponent(myFirst+' invited you to their Inner Circle on PBallConnect! Set up your free player profile: '+url+' 🎾');
     window.open('sms:?body='+msg, '_self');
@@ -8795,8 +8794,8 @@ async function sendIcLinkInvite(){
     return;
   }
   try{
-    const { token } = await icCreateSingleUseInvite({ name, email:null }, 'link');
-    const url = 'https://pballconnect.com/invite.html?token=' + token;
+    const { url } = await icCreateSingleUseInvite({ name, email:null }, 'link');
+    if(!url) throw new Error('Invite creation failed');
     await icCopyToClipboard(url);
     const conf = document.getElementById('icLinkConfirm');
     if(conf){
@@ -8892,6 +8891,7 @@ let _qrInviteUrl = '';
 async function getOrCreateQrId(){
   if(SESSION_PLAYER?.qr_invite_id) return SESSION_PLAYER.qr_invite_id;
   const myEmail = getMyEmail();
+  const myName  = getMyName();
   const arr = new Uint8Array(12);
   window.crypto.getRandomValues(arr);
   const qrId = 'qr_'+Array.from(arr).map(b=>b.toString(36)).join('').substring(0,16);
@@ -8901,6 +8901,17 @@ async function getOrCreateQrId(){
     body:JSON.stringify({qr_invite_id:qrId})
   });
   if(SESSION_PLAYER) SESSION_PLAYER.qr_invite_id = qrId;
+  // Log QR creation as an invite row (fire-and-forget)
+  fetch(`${SUPABASE_URL}/rest/v1/invites`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+    body:JSON.stringify({
+      inviter_email: myEmail,
+      inviter_name:  myName,
+      invite_method: 'qr',
+      invite_type:   'qr'
+    })
+  }).catch(()=>{});
   return qrId;
 }
 
