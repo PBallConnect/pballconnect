@@ -1,6 +1,6 @@
 # CLAUDE.md — PBallConnect Reference
 
-_Last updated: April 22, 2026_
+_Last updated: April 23, 2026_
 
 ---
 
@@ -66,7 +66,7 @@ No tests, no linter, no build commands.
 | `match_results` / `match_scores` | Recorded scores | — |
 | `courts` | Court locations | `id`, `name`, `address`, `is_private`, `court_count`, `lat`, `lon` |
 | `player_courts` | Courts a player uses | `player_email`, `court_id` |
-| `invites` | App invite links | `invite_token`, `invite_type` ('single'/'qr'), `is_used`, `inviter_email`, `inviter_name`, `invitee_email`, `invitee_name`, `invite_method`, `status` |
+| `invites` | App invite links | `invite_token`, `invite_type` ('single'/'qr'), `is_used` (boolean, default false), `inviter_email`, `inviter_name`, `invitee_email`, `invitee_name`, `invite_method`, `status` |
 | `player_feedback` | Post-match feedback | — |
 | `player_groups` | Named groups | `id`, `organizer_email`, `name`, `max_players`, `group_type` ('set'/'random'), `match_type` ('singles'/'doubles') |
 | `player_group_members` | Group members | `group_id`, `player_email`, `role` ('primary'/'sub') |
@@ -107,7 +107,7 @@ Login modal: title "Welcome to PBallConnect", button "Send Magic Link →", succ
 | `SESSION_PLAYER` | Authenticated player's DB row. `null` if not logged in. |
 | `SUPABASE_ACCESS_TOKEN` | JWT from Supabase auth — included in every REST call |
 | `IC_MEMBERS` | Inner Circle array — populated on IC page visit, fetched on demand for modals |
-| `_icCurrentView` | Active IC list view: `'alpha'` (default), `'favorites'`, `'grid'` |
+| `_icCurrentView` | Active IC list view: `'grid'` (default), `'favorites'`, `'alpha'` |
 | `_groups` | Organizer's named groups — loaded by `loadMyGroups()` and `loadRecurringMatches()` |
 | `PENDING_INVITE` | Set by `checkInviteToken()` from `?invite=TOKEN` or `?qr=QR_ID`. Consumed by `startNewRegistration()`. |
 | `window._pendingInviteRef` | Parallel reference to `PENDING_INVITE` for inline onclick handlers in dynamic HTML |
@@ -129,14 +129,14 @@ Supabase join syntax (`table(col,col)`) only works when FK relationships are con
 
 ### Email
 
-`sendEmail({to_email, type, personal_note, invite_url, inviter_name, match_date_str})` in `app.js` calls `POST /api/send-email` (Cloudflare Pages Function).
+`sendEmail({to_email, type, personal_note, invite_url, inviter_name, invitee_name, match_date_str})` in `app.js` calls `POST /api/send-email` (Cloudflare Pages Function).
 
 Email types:
 - `app_invite` — white-card template, CTA points to `invite.html?token=TOKEN`
+- `ic_invite` — white-card template, personalized greeting using `invitee_name`, CTA "Join PBallConnect →" points to `invite.html?token=TOKEN`
 - `match_invite` — dark-card, dynamic subject: "[FirstName] invited you to play pickleball on [Day], [Month] [Date]"
 - `match_update` — dark-card
 - `match_decline` — dark-card
-- `ic_invite` — dark-card
 
 `sendEmail()` is called with `await` in match invite send loops to prevent Resend rate limit drops. Each call wrapped in per-email try/catch with a failure toast.
 
@@ -148,19 +148,22 @@ Email types:
 
 ## Two-Tier Invite System
 
+**Status: LIVE**
+
 ### Tier 1 — Single-Use Tokens
 
-- Created by `icCreateSingleUseInvite(recipient, method)` for Text/Email/Copy channel invites
+- Created by `icCreateSingleUseInvite(recipient, method)` — shared helper for all single-use channels (email, text, copy link)
 - Token: 20 chars from `crypto.getRandomValues(new Uint8Array(16))`
 - Written to `invites` table: `invite_type: 'single'`, `is_used: false`, `invitee_name`, `invitee_email`
 - URL: `https://pballconnect.com/invite.html?token=TOKEN`
 - On registration: PATCH token row with `is_used: true, status: 'registered'`
-- `invite.html` checks `is_used` before showing the card; shows "already used" error if true
+- `invite.html` checks `is_used` before showing the card; shows friendly "already used" error if true (asks user to request a fresh invite)
+- INSERT failure is caught silently — invite channels still fire even if DB write fails (fallback behavior)
 
 ### Tier 2 — Permanent QR Tokens
 
 - One per player, stored as `qr_invite_id` on `registrations` (and exposed via `public_profiles`)
-- Created lazily by `getOrCreateQrId()` — checks `SESSION_PLAYER.qr_invite_id`, generates via `crypto.getRandomValues` if null, PATCHes `registrations`
+- Created lazily by `getOrCreateQrId()` — checks `SESSION_PLAYER.qr_invite_id`, generates via `crypto.getRandomValues` if null, PATCHes `registrations`, caches on `SESSION_PLAYER`
 - URL: `https://pballconnect.com/invite.html?qr=QR_ID`
 - On registration: POST new row to `invites` with `invite_type: 'qr'`, `is_used: true` — original QR row is NOT mutated
 - Reset: `resetQrCode()` uses `confirm()` dialog, sets `SESSION_PLAYER.qr_invite_id = null`, calls `getOrCreateQrId()` for a new ID
@@ -187,7 +190,42 @@ No app.js dependency. Uses `var` + plain function declarations (no ES modules).
 7. `restoreSession` → no row found → `startNewRegistration(email)`
 8. `startNewRegistration` → `showInviteLandingChoice()` (Full Profile or Quick Connect)
 
-`icGetRecipient()` validates the recipient name input before invite creation — red border + `ic-shake` CSS animation if blank.
+### IC Invite UI Flow (in-app)
+
+The IC invite panel lives inside `icSectionMembers` (not a separate section).
+
+**Element order in icSectionMembers:**
+1. ✉️ **Send an Invite** button — full width, green, toggles `icInvitePanel`
+2. `icInvitePanel` — expandable, hidden by default
+3. View toggle row: `[📊 Level Grid][⭐ Favorites][A–Z]`
+4. MY INNER CIRCLE label row
+5. `icLevelGrid` — rendered here when grid view active
+6. `icColHeaders` — hidden in grid view
+7. `icApprovedList` — hidden in grid view
+8. `icInvitesCard` — shown below list when pending invites exist
+9. 🔍 Find Players to add → link
+
+**`icInvitePanel` contains 3 channel buttons:**
+- ✉️ **Email via PBallConnect** — always shown
+- 💬 **Send a Text** — mobile only (shown by JS on panel open)
+- 🔗 **Copy Invite Link** — always shown
+- "At the court? Show your QR code instead →" (`icQrLine`)
+
+**Channel behavior:**
+- `selectIcChannel('email')` — hides Text + Link buttons + QR line, shows `icEmailFields` (name + email inputs + Send button). Recipient name required; email required.
+  - `sendIcEmailInvite()` calls `icCreateSingleUseInvite()` + `sendEmail({type:'ic_invite'})` via Resend API directly (no email app). After success, shows inline confirm + "Send another?" prompt after 1200ms.
+  - `icSendAnother()` — clears fields, keeps panel open for batch inviting
+  - `icDoneInviting()` — closes panel, resets form, reloads IC page state, scrolls top, shows toast
+- `selectIcChannel('text')` — shows `icTextFields` (name input + Open Messages button). Recipient name required.
+  - `sendIcTextInvite()` generates token, opens `sms:` URI on mobile
+  - Desktop fallback: shows WhatsApp Web link + Copy Message Text panel
+- `selectIcChannel('link')` — shows `icLinkFields` (name input + Copy Link button). Recipient name required.
+  - `sendIcLinkInvite()` generates token, copies URL to clipboard, shows confirm, auto-calls `icDoneInviting()` after 3500ms
+- `resetIcChannelForm()` — restores all channel buttons, clears inputs, hides form, uses `_icIsMobile` to decide whether to show Text button
+
+**`icGetRecipient()` is REMOVED.** Each channel has its own inline form with its own input.
+
+**`_icIsMobile`** const: `/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)` — defined once, used in `toggleIcInvitePanel` and `resetIcChannelForm`.
 
 ---
 
@@ -273,15 +311,22 @@ Last updated: April 2026.
 - Inner Circle: "My IC" (green), "My IC Invites to Others" (amber), "Others IC Invites to Me" (purple)
 
 ### IC Page Navigation
+
 `showIcSection(section)` is the sole IC nav function. Sections: `members`, `invite`, `requests`, `find`.
 `showIcView(mode)` is kept for backward compatibility only — delegates to `showIcSection()`.
 `loadNearbyPlayers()` is lazy — only fires when `showIcSection('find')` is called.
 
+**`showIcSection('invite')` redirects immediately** — it hides all sections, shows `icSectionMembers`, opens `icInvitePanel` if closed, calls `switchIcMemberView('grid')`, and returns early. `icSectionInvite` is never shown; it is a legacy stub only.
+
 ### IC Member List Views
-`switchIcMemberView(view)` — sole toggle. `_icCurrentView` persists across sort/filter.
-- `'alpha'` (default) — A–Z compact rows: avatar, name, nickname, skill pill, favorite star. No Play button.
-- `'favorites'` — same rows, starred only
-- `'grid'` — Level Grid: 5 columns (Far Below / Below / My Level / Above / Far Above), ±0.125 tolerance
+
+`switchIcMemberView(view)` — sole toggle. `_icCurrentView` persists across sort/filter. **Default is `'grid'`** — both `renderInnerCircleList()` and `showIcSection('members')` call `switchIcMemberView('grid')`.
+
+- `'grid'` (default) — shows `icLevelGrid`, hides `icApprovedList` + `icColHeaders`. Calls `_buildIcLevelGrid()`. 5 columns by skill: Far Below / Below / My Level (center, green) / Above / Far Above. Names only — no cards, no avatars, no skill pills. Click → `openPlayerCard()`.
+- `'favorites'` — shows `icApprovedList` (filtered to `IC_FAVORITES`), hides `icLevelGrid`, shows `icColHeaders`
+- `'alpha'` — shows `icApprovedList` sorted A–Z, hides `icLevelGrid`, shows `icColHeaders`
+
+**Fixed IC sticky header** (`id="icStickyHeader"`): `position:fixed; top:52px; left:240px; right:0; z-index:100; background:#fff; border-bottom:2px solid #e5e7eb`. On mobile (`max-width:768px`): `left:0`. Inner centering div: `max-width:600px; margin:0 auto`. Spacer div below: `height:140px`.
 
 ---
 
@@ -381,13 +426,64 @@ Dynamically generated HTML runs in global scope. Always expose as `window.functi
 ### Profile Edit Mode
 `lockProfileForm()` / `unlockProfileForm()`. `_editModeActive` flag gates lock. `startChangeDetection` runs on interval — new fields must be added to BOTH `startChangeDetection` AND `showProfileDiff`.
 
+### Fixed IC Header
+```
+id="icStickyHeader"
+position:fixed; top:52px; left:240px; right:0; z-index:100
+background:#fff; padding:8px 16px
+border-bottom:2px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,0.06)
+Inner div: max-width:600px; margin:0 auto
+Mobile override: @media (max-width:768px) { #icStickyHeader { left:0 !important; } }
+Spacer below header: height:140px
+```
+
+### Level Grid (`_buildIcLevelGrid`)
+5-column skill table rendered into `id="icLevelGrid"`. Buckets IC members by `skill_level` relative to viewer's level (±0.125 tolerance bands):
+
+| Column | Threshold | Style |
+|---|---|---|
+| Far Below | diff ≤ −0.375 | bg `#f1f5f9`, color `#374151` |
+| Below | diff ≤ −0.125 | bg `#f1f5f9`, color `#374151` |
+| My Level | −0.125 < diff ≤ 0.125 | bg `#d1fae5`, color `#1a7a3a`, font-weight 800 |
+| Above | diff ≤ 0.375 | bg `#f1f5f9`, color `#374151` |
+| Far Above | diff > 0.375 | bg `#f1f5f9`, color `#374151` |
+
+Names only — no cards, no avatars, no skill pills. Click → `openPlayerCard()`. If viewer has no skill level set, shows "Add your skill level to your profile" message.
+
+### Send an Invite Button
+Full width, `background:#1a7a3a`, `color:#fff`, `font-size:16px`, `font-weight:800`, `border-radius:14px`, `padding:16px`. Hover: `#15652f`. Toggles `icInvitePanel` via `toggleIcInvitePanel()`.
+
+### Dashboard Container Styles
+- Green (My IC): `background:rgba(26,122,58,0.08); border:1.5px solid rgba(26,122,58,0.2)`
+- Amber (IC Invites to Others): `background:rgba(245,158,11,0.08); border:1.5px solid rgba(245,158,11,0.25)`
+- Purple (Others' IC Invites to Me): `background:rgba(124,58,237,0.08); border:1.5px solid rgba(124,58,237,0.2)`
+- Orange (My Match Invites to Others): `background:rgba(234,88,12,0.08); border:1.5px solid rgba(234,88,12,0.2)`
+- Blue (Match Invites from Others): `background:rgba(37,99,235,0.08); border:1.5px solid rgba(37,99,235,0.2)`
+
+### ic-shake Animation
+CSS class `ic-shake` applied to recipient input on validation failure (blank name before invite creation):
+```css
+@keyframes ic-shake {
+  0%,100% { transform: translateX(0); }
+  20%,60% { transform: translateX(-6px); }
+  40%,80% { transform: translateX(6px); }
+}
+.ic-shake { animation: ic-shake .35s ease; border-color: #dc2626 !important; }
+```
+Applied via JS: `el.classList.add('ic-shake'); setTimeout(()=>el.classList.remove('ic-shake'), 400);`
+
 ---
 
 ## Known Bugs
 
-1. **Dashboard "Invited" box count can diverge from nav badge.** `loadDashTileCounts()` fetches its own count for subtitle text — verify it also filters past matches and self-organized matches.
+1. **Dashboard "Invited" box count can occasionally diverge from nav badge.** `loadDashTileCounts()` fetches its own count — verify it filters past matches and self-organized matches consistently.
 
-2. **Duplicate courts in "Other Public Courts Nearby".** Double-dedup fix applied (API `id=not.in.(allExcludeIds)` + client-side `.filter`). Confirm no regressions with empty saved list.
+2. **`invites` table RLS INSERT policy may be missing.** `icCreateSingleUseInvite()` INSERT can fail silently (caught by try/catch). Invite channels still fire, but no DB record is created. Fix: add `CREATE POLICY "authenticated users can insert invites" ON invites FOR INSERT TO authenticated WITH CHECK (auth.uid() IS NOT NULL);` in Supabase SQL editor.
+
+**Resolved (do not re-introduce):**
+- ~~IC tab shows 0 on arrival from dashboard~~ — fixed by syncing counts in `showIcSection()`
+- ~~+ Add to my IC showing for existing IC members in outbound accepted group~~ — removed from that group
+- ~~Duplicate courts in nearby list~~ — `normalizeCourtName()` fuzzy match + double-dedup applied
 
 ---
 
@@ -396,13 +492,21 @@ Dynamically generated HTML runs in global scope. Always expose as `window.functi
 - [x] Terms of Service page
 - [x] Privacy Policy page
 - [x] Liability waiver with RSA 508:13 language at registration
+- [x] Two-tier invite system (single-use tokens + QR) live
+- [x] IC invite email via Resend API (no email app required)
+- [ ] **Fix `invites` table RLS INSERT policy** — invite records fail to save silently
+- [ ] **Test full invite flow end to end:**
+  - Single-use token → register → IC connection created
+  - QR token → register → IC connection created
+  - Reset QR → old link invalid → new QR works
 - [ ] LLC formation — replace `[OWNER NAME / LLC NAME]` and `[YOUR EMAIL ADDRESS]` placeholders in ToS
+- [ ] Attorney review of ToS + Liability Waiver
+- [ ] NH RSA 508:13 waiver language verified by NH attorney
 - [ ] Insurance (General Liability, E&O, Cyber)
 - [ ] SPF + DKIM + DMARC fully configured in Resend
 - [ ] Landing page at pballconnect.com (marketing, not the app)
 - [ ] App moved to pballconnect.com/app or subdomain
 - [ ] Google indexing updated to landing page
-- [ ] Liability waiver reviewed by actual attorney
 - [ ] GDPR / CCPA compliance review
 - [ ] Rate limiting on magic link sends
 - [ ] Rate limiting on /api/send-email
@@ -411,23 +515,21 @@ Dynamically generated HTML runs in global scope. Always expose as `window.functi
 - [ ] Backup / point-in-time recovery confirmed in Supabase
 - [ ] App tested on iOS Safari + Android Chrome
 - [ ] PWA install prompt tested
-- [ ] QR code invite flow end-to-end tested
-- [ ] Single-use token "already used" error state tested
 
 ---
 
 ## Next to Build
 
-1. **Play Structure reorder** — make Play Structure the first container; Set Group path auto-calculates courts; Open/Mixed/Same runs full 7-container wizard
-2. **Set Group vs Random Group send logic** — Set groups: priority roster in order, subs auto-activate on primary decline. Random groups: first-to-respond fills spots.
-3. **My Match Invites: tappable status boxes** — In/Pending/Waitlist/Out boxes reveal player name list. `_miResponseCache` and `toggleInvitePanel()` already scaffolded.
-4. **Find Players / Browse Nearby on IC page** — `showIcSection('find')` and `loadNearbyPlayers()` are stubbed. Surface nearby non-IC players with add/invite actions.
-5. **Profile complete flag + Court Captain celebration** — set `profile_complete = true` on `doSaveProfile()`; show celebration overlay when `is_organizer` first becomes true.
+1. **Fix `invites` table RLS INSERT policy** — single-use invite tokens fail to save silently. Add INSERT policy in Supabase so records are created correctly.
+2. **Play Structure as Step 1 with branching** — Set Group path auto-calculates courts and skips steps 2–3; Open/Mixed/Same runs full 7-container wizard.
+3. **My Groups UI** — organizer chip red/white, gender lookup fix (`player_email` not `email`), Set vs Random toggle in create modal.
+4. **Find Players (IC page)** — wire up Browse Nearby; `showIcSection('find')` and `loadNearbyPlayers()` are currently stubbed only.
+5. **Match Invites — status pill dropdowns** — In/Pending/Waitlist/Out boxes reveal player name list. `_miResponseCache` and `toggleInvitePanel()` already scaffolded.
 6. **Landing page at pballconnect.com** — marketing page. App moves to subdomain.
-7. **Web push notifications** — browser push for match invites, IC requests, gap alerts.
-8. **Post-match invite prompt** — "Now invite someone YOU want to play with" after confirming attendance or recording scores.
-9. **Recurring match gap alert delivery** — currently stored in DB; need a Cloudflare Cron Worker to fire alerts.
-10. **Match result / score recording UX** — `recordScores` page needs polish and post-match flow.
+7. **Onboarding flow for new users** — guided setup after first login.
+8. **Recurring matches v2** — gap alert delivery via Cloudflare Cron Worker.
+9. **Web push notifications** — browser push for match invites, IC requests, gap alerts.
+10. **Player statistics dashboard** — `playerStats` page needs data and UX.
 
 ---
 
@@ -439,6 +541,12 @@ Dynamically generated HTML runs in global scope. Always expose as `window.functi
 4. For Cloudflare Pages Function changes: edit `functions/api/send-email.js`. Environment variable `RESEND_API_KEY` is set in Cloudflare Pages dashboard.
 5. Deploy: `git push origin main` → Cloudflare Pages auto-deploys.
 6. Verify deploy at https://pballconnect.com — Cloudflare typically deploys within 60 seconds.
+
+### Session Handoff Pattern
+Design and planning happens in Claude.ai (claude.ai/code or chat). Implementation happens in Claude Code (CLI or desktop app). When handing off from a planning session:
+- Summarize the spec in a prompt and paste into Claude Code
+- Claude Code reads the relevant files, implements, commits, and pushes
+- Cloudflare Pages picks up the push and deploys automatically (~60s)
 
 ---
 
@@ -463,3 +571,21 @@ Dynamically generated HTML runs in global scope. Always expose as `window.functi
 9. **ToS/Waiver placeholders are intentional.** `[OWNER NAME / LLC NAME]` and `[YOUR EMAIL ADDRESS]` in ToS and Waiver are left blank until LLC formation. Do not fill them in.
 
 10. **Court count null = unknown.** `null`/`0`/`undefined` `court_count` → gray neutral note only. Only show red capacity error for confirmed positive number < `MS.numCourts`.
+
+11. **`icGetRecipient()` is gone.** Each IC invite channel has its own inline form. Do not recreate a shared recipient input or call `icGetRecipient()`.
+
+12. **`showIcSection('invite')` redirects to members.** `icSectionInvite` is a legacy stub — it is never shown. The invite panel lives in `icSectionMembers`.
+
+13. **Level Grid is the default IC view.** `switchIcMemberView('grid')` is called on every IC page load. Do not change the default to `'alpha'`.
+
+14. **Always `await sendEmail()`.** Never fire-and-forget. In loops (match invite sends), `await` each call sequentially to avoid Resend rate limit drops. Wrap in per-recipient try/catch with a failure toast — never let one failure abort the loop.
+
+15. **Call `smUpdateProgress()` after every user action in Set Up a Match.** Any change to format, courts, date, time, court selection, play structure, or invite mode must call `smUpdateProgress()` so the sticky progress bar stays in sync.
+
+16. **Single-use tokens: check `is_used` before allowing registration.** `invite.html` fetches the `invites` row and blocks with a friendly error if `is_used === true` and `invite_type !== 'qr'`. Never skip this check.
+
+17. **QR invites use `?qr=` not `?token=`.** The URL parameter for QR flow is `?qr=QR_ID`. Single-use token flow uses `?token=TOKEN`. These are distinct code paths — do not conflate them.
+
+18. **Never display raw token strings in any UI.** Tokens appear only in URLs (invite links). Never render the token value as visible text in the app or email body.
+
+19. **`_icIsMobile` detection is required before showing the Text channel.** The 💬 Send a Text button must only be shown on mobile devices. Use `_icIsMobile` (set once at module load) — never show the SMS button unconditionally.
