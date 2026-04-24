@@ -1077,23 +1077,117 @@
         <!-- ── SECTION: My Circle (Members) — default visible ── -->
         <div id="icSectionMembers">
 
-          <!-- Add New Member — 2 prominent CTA buttons -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
-            <button onclick="showIcSection('invite')"
-              style="padding:14px 10px;border-radius:14px;border:2px solid #d97706;background:#fffbeb;color:#78350f;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:4px;transition:background .15s;"
-              onmouseover="this.style.background='#fef3c7'" onmouseout="this.style.background='#fffbeb'">
-              <span style="font-size:22px;">✉️</span>
-              <span>Directly Invite Someone</span>
-              <span style="font-size:11px;font-weight:400;color:#92400e;">Text, email or link</span>
-            </button>
-            <button onclick="showIcSection('find')"
-              style="padding:14px 10px;border-radius:14px;border:2px solid #2563eb;background:#eff6ff;color:#1e3a8a;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:4px;transition:background .15s;"
-              onmouseover="this.style.background='#dbeafe'" onmouseout="this.style.background='#eff6ff'">
-              <span style="font-size:22px;">🔍</span>
-              <span>Find Players</span>
-              <span style="font-size:11px;font-weight:400;color:#1e40af;">Browse nearby players</span>
-            </button>
+          <!-- Send an Invite button -->
+          <button onclick="toggleIcInvitePanel()"
+            style="width:100%;padding:16px;background:#1a7a3a;color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:14px;transition:background .15s;"
+            onmouseover="this.style.background='#15652f'" onmouseout="this.style.background='#1a7a3a'">
+            ✉️ Send an Invite
+          </button>
+
+          <!-- Expandable invite panel -->
+          <div id="icInvitePanel" style="display:none;background:#f0fdf4;border:2px solid #d1fae5;border-radius:14px;padding:16px;margin-bottom:14px;">
+            <div style="font-size:14px;font-weight:800;color:#1a7a3a;margin-bottom:12px;">How do you want to invite?</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+
+              <!-- Email -->
+              <button id="icChannelEmail" onclick="selectIcChannel('email')"
+                style="width:100%;padding:14px 16px;background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:12px;font-family:inherit;text-align:left;transition:background .15s;"
+                onmouseover="this.style.background='#dcfce7'" onmouseout="this.style.background='#f0fdf4'">
+                <span style="font-size:24px;flex-shrink:0;">✉️</span>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:14px;font-weight:800;color:#14532d;">Email via PBallConnect</div>
+                  <div style="font-size:11px;color:#16a34a;">Sends a branded invite directly — no email app needed</div>
+                </div>
+                <span style="color:#16a34a;flex-shrink:0;">→</span>
+              </button>
+
+              <!-- Text (mobile only — shown by JS on open) -->
+              <button id="icChannelText" onclick="selectIcChannel('text')"
+                style="display:none;width:100%;padding:14px 16px;background:#eff6ff;border:2px solid #2563eb;border-radius:12px;cursor:pointer;align-items:center;gap:12px;font-family:inherit;text-align:left;transition:background .15s;"
+                onmouseover="this.style.background='#dbeafe'" onmouseout="this.style.background='#eff6ff'">
+                <span style="font-size:24px;flex-shrink:0;">💬</span>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:14px;font-weight:800;color:#1e3a8a;">Send a Text</div>
+                  <div style="font-size:11px;color:#3b82f6;">Opens your Messages app</div>
+                </div>
+                <span style="color:#2563eb;flex-shrink:0;">→</span>
+              </button>
+
+              <!-- Copy Link -->
+              <button id="icChannelLink" onclick="selectIcChannel('link')"
+                style="width:100%;padding:14px 16px;background:#fefce8;border:2px solid #ca8a04;border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:12px;font-family:inherit;text-align:left;transition:background .15s;"
+                onmouseover="this.style.background='#fef9c3'" onmouseout="this.style.background='#fefce8'">
+                <span style="font-size:24px;flex-shrink:0;">🔗</span>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:14px;font-weight:800;color:#713f12;">Copy Invite Link</div>
+                  <div style="font-size:11px;color:#ca8a04;">Paste anywhere — WhatsApp, Slack, LinkedIn, wherever</div>
+                </div>
+                <span style="color:#ca8a04;flex-shrink:0;">→</span>
+              </button>
+
+            </div>
+
+            <!-- QR option -->
+            <div onclick="openQrModal()" style="font-size:11px;color:#6b7280;text-align:center;margin-top:12px;cursor:pointer;">
+              At the court? Show your QR code instead →
+            </div>
+
+            <!-- Per-channel form (shown when a channel is selected) -->
+            <div id="icChannelForm" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid #d1fae5;">
+
+              <!-- Email fields -->
+              <div id="icEmailFields" style="display:none;">
+                <input id="icFormName" type="text" placeholder="Their name"
+                  style="width:100%;padding:10px 12px;border:2px solid #9ca3af;border-radius:10px;font-size:13px;color:#111;background:#fff;box-sizing:border-box;outline:none;margin-bottom:8px;font-family:inherit;"
+                  oninput="this.style.borderColor=this.value.trim()?'#16a34a':'#9ca3af'"/>
+                <input id="icFormEmail" type="email" placeholder="Their email"
+                  style="width:100%;padding:10px 12px;border:2px solid #9ca3af;border-radius:10px;font-size:13px;color:#111;background:#fff;box-sizing:border-box;outline:none;margin-bottom:10px;font-family:inherit;"
+                  oninput="this.style.borderColor=this.value.trim()?'#16a34a':'#9ca3af'"/>
+                <button onclick="sendIcEmailInvite()"
+                  style="width:100%;padding:13px;background:#1a7a3a;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:background .15s;"
+                  onmouseover="this.style.background='#15652f'" onmouseout="this.style.background='#1a7a3a'">
+                  Send Invite ✉️
+                </button>
+                <div id="icEmailConfirm" style="display:none;"></div>
+              </div>
+
+              <!-- Text fields -->
+              <div id="icTextFields" style="display:none;">
+                <input id="icFormNameText" type="text" placeholder="Their name"
+                  style="width:100%;padding:10px 12px;border:2px solid #9ca3af;border-radius:10px;font-size:13px;color:#111;background:#fff;box-sizing:border-box;outline:none;margin-bottom:10px;font-family:inherit;"
+                  oninput="this.style.borderColor=this.value.trim()?'#2563eb':'#9ca3af'"/>
+                <button onclick="sendIcTextInvite()"
+                  style="width:100%;padding:13px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:background .15s;">
+                  Open Messages 💬
+                </button>
+              </div>
+
+              <!-- Link fields -->
+              <div id="icLinkFields" style="display:none;">
+                <input id="icFormNameLink" type="text" placeholder="Their name"
+                  style="width:100%;padding:10px 12px;border:2px solid #9ca3af;border-radius:10px;font-size:13px;color:#111;background:#fff;box-sizing:border-box;outline:none;margin-bottom:10px;font-family:inherit;"
+                  oninput="this.style.borderColor=this.value.trim()?'#ca8a04':'#9ca3af'"/>
+                <button onclick="sendIcLinkInvite()"
+                  style="width:100%;padding:13px;background:#ca8a04;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:background .15s;">
+                  Copy Link 🔗
+                </button>
+                <div id="icLinkConfirm" style="display:none;"></div>
+              </div>
+
+            </div>
           </div>
+
+          <!-- Sent invites history -->
+          <div class="ic-card ic-pending-invites-card" id="icInvitesCard" style="display:none;max-width:100%;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+              <div class="ic-section-label" style="margin-bottom:0;">⏳ Invites Sent <span id="icInvitesBadge" class="ic-badge"></span></div>
+              <div style="font-size:11px;color:var(--dim);">Awaiting acceptance</div>
+            </div>
+            <div id="icInvitesList"></div>
+          </div>
+
+          <!-- Find Players link -->
+          <div onclick="showIcSection('find')" style="font-size:13px;color:#2563eb;cursor:pointer;margin-bottom:16px;">🔍 Find Players to add →</div>
 
           <!-- Member list header -->
           <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:8px;padding:0 2px;">
@@ -1129,92 +1223,16 @@
           <div id="icApprovedList" style="border:1.5px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#ffffff;">
             <div style="padding:32px;text-align:center;color:#9ca3af;font-size:14px;">
               Your Inner Circle is empty.<br>
-              <span style="font-size:13px;color:#1a7a3a;cursor:pointer;font-weight:700;" onclick="showIcSection('invite')">Invite someone to get started →</span>
+              <span style="font-size:13px;color:#1a7a3a;cursor:pointer;font-weight:700;" onclick="toggleIcInvitePanel()">Invite someone to get started →</span>
             </div>
           </div>
         </div>
 
-        <!-- ── SECTION: Invite New Members ── -->
+        <!-- ── SECTION: Invite New Members (legacy nav target) ── -->
         <div id="icSectionInvite" style="display:none;">
-
-          <!-- Recipient form -->
-          <div id="icRecipientForm" style="background:#f0fdf4;border:2px solid #d1fae5;border-radius:14px;padding:16px;margin-bottom:16px;">
-            <div style="font-size:13px;font-weight:800;color:#1a7a3a;margin-bottom:8px;">Who are you inviting?</div>
-            <input id="icRecipientName" type="text" placeholder="Their name (required)"
-              style="width:100%;padding:10px 12px;border:2px solid #9ca3af;border-radius:10px;font-size:13px;color:#111;background:#fff;box-sizing:border-box;outline:none;margin-bottom:8px;font-family:inherit;"
-              oninput="this.style.borderColor=this.value.trim()?'#16a34a':'#9ca3af'"
-              onfocus="if(!this.value.trim()) this.style.borderColor='#9ca3af'"
-            />
-            <input id="icRecipientEmail" type="email" placeholder="Their email address (optional)"
-              style="width:100%;padding:10px 12px;border:2px solid #9ca3af;border-radius:10px;font-size:13px;color:#111;background:#fff;box-sizing:border-box;outline:none;font-family:inherit;"
-              oninput="document.getElementById('icEmailNudge').style.display='none';this.style.borderColor=this.value.trim()?'#16a34a':'#9ca3af'"
-            />
-            <p id="icEmailNudge" style="display:none;margin:6px 0 0;font-size:12px;color:#b45309;">Add their email above to pre-fill your email app</p>
-          </div>
-
-          <!-- 3-button invite layout -->
-          <div style="margin-bottom:16px;">
-            <div style="font-size:18px;font-weight:800;color:#111;margin-bottom:6px;">Invite to Your Inner Circle</div>
-            <div style="font-size:13px;color:#6b7280;margin-bottom:20px;">Choose how you want to reach out</div>
-
-            <div style="display:flex;flex-direction:column;gap:10px;">
-
-              <!-- Text -->
-              <button onclick="smIcInviteText()"
-                style="width:100%;padding:16px 20px;background:#eff6ff;border:2px solid #2563eb;border-radius:14px;cursor:pointer;display:flex;align-items:center;gap:14px;font-family:inherit;text-align:left;transition:background .15s;"
-                onmouseover="this.style.background='#dbeafe'" onmouseout="this.style.background='#eff6ff'">
-                <span style="font-size:28px;flex-shrink:0;">💬</span>
-                <div style="flex:1;min-width:0;">
-                  <div style="font-size:15px;font-weight:800;color:#1e3a8a;">Send a Text</div>
-                  <div style="font-size:12px;color:#3b82f6;">SMS on mobile · WhatsApp or copy on desktop</div>
-                </div>
-                <span style="font-size:18px;color:#2563eb;flex-shrink:0;">→</span>
-              </button>
-              <div id="icTextDesktopPanel" style="display:none;background:#f0fdf4;border:1px solid #d1fae5;border-radius:12px;padding:14px;margin-top:-4px;"></div>
-
-              <!-- Email -->
-              <button onclick="smIcInviteEmail()"
-                style="width:100%;padding:16px 20px;background:#f0fdf4;border:2px solid #16a34a;border-radius:14px;cursor:pointer;display:flex;align-items:center;gap:14px;font-family:inherit;text-align:left;transition:background .15s;"
-                onmouseover="this.style.background='#dcfce7'" onmouseout="this.style.background='#f0fdf4'">
-                <span style="font-size:28px;flex-shrink:0;">✉️</span>
-                <div style="flex:1;min-width:0;">
-                  <div style="font-size:15px;font-weight:800;color:#14532d;">Send an Email</div>
-                  <div style="font-size:12px;color:#16a34a;">Sends directly from PBallConnect — no app needed</div>
-                </div>
-                <span style="font-size:18px;color:#16a34a;flex-shrink:0;">→</span>
-              </button>
-              <!-- Copy Link -->
-              <button onclick="smIcInviteLink()"
-                style="width:100%;padding:16px 20px;background:#fefce8;border:2px solid #ca8a04;border-radius:14px;cursor:pointer;display:flex;align-items:center;gap:14px;font-family:inherit;text-align:left;transition:background .15s;"
-                onmouseover="this.style.background='#fef9c3'" onmouseout="this.style.background='#fefce8'">
-                <span style="font-size:28px;flex-shrink:0;">🔗</span>
-                <div style="flex:1;min-width:0;">
-                  <div style="font-size:15px;font-weight:800;color:#713f12;">Copy Invite Link</div>
-                  <div style="font-size:12px;color:#ca8a04;">Paste anywhere — WhatsApp, Messenger, Slack, LinkedIn, wherever</div>
-                </div>
-                <span style="font-size:18px;color:#ca8a04;flex-shrink:0;">→</span>
-              </button>
-
-            </div>
-
-            <!-- QR option -->
-            <div onclick="openQrModal()" style="font-size:12px;color:#6b7280;text-align:center;margin-top:16px;cursor:pointer;">
-              At the court? Show your QR code instead →
-            </div>
-          </div>
-
-          <!-- Hidden legacy stubs (referenced by JS) -->
+          <!-- Hidden legacy stubs referenced by JS -->
           <div id="inviteStatus" style="display:none;"></div>
           <div id="inviteSentList" style="display:none;"></div>
-
-          <!-- Sent invites history -->
-          <div class="ic-card ic-pending-invites-card" id="icInvitesCard" style="display:none;max-width:100%;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-              <div class="ic-section-label" style="margin-bottom:0;">⏳ Invites Sent <span id="icInvitesBadge" class="ic-badge"></span></div>
-              <div style="font-size:11px;color:var(--dim);">Awaiting acceptance</div>
-            </div>
-            <div id="icInvitesList"></div>
-          </div>
         </div>
 
         <!-- ── SECTION: Member Requests ── -->

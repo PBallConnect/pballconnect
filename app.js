@@ -8104,9 +8104,18 @@ function showIcSection(section){
   const cap=section.charAt(0).toUpperCase()+section.slice(1);
   const target=document.getElementById('icSection'+cap);
   if(target) target.style.display='block';
+  // 'invite' now lives inside icSectionMembers — redirect there and open the panel
+  if(section==='invite'){
+    const membersEl = document.getElementById('icSectionMembers');
+    if(membersEl) membersEl.style.display = 'block';
+    const panel = document.getElementById('icInvitePanel');
+    if(panel && panel.style.display === 'none') toggleIcInvitePanel();
+    loadIcInvites();
+    window.scrollTo(0,0);
+    return;
+  }
   // Load data on demand
   if(section==='find')     loadNearbyPlayers();
-  if(section==='invite')   loadIcInvites();
   if(section==='requests') loadIcPending();
   window.scrollTo(0,0);
 }
@@ -8169,7 +8178,7 @@ function switchIcMemberView(view){
 
   // alpha (default)
   if(!IC_MEMBERS.length){
-    list.innerHTML='<div style="padding:32px;text-align:center;color:#9ca3af;font-size:14px;">Your Inner Circle is empty.<br><span style="font-size:13px;color:#1a7a3a;cursor:pointer;font-weight:700;" onclick="showIcSection(\'invite\')">Invite someone to get started →</span></div>';
+    list.innerHTML='<div style="padding:32px;text-align:center;color:#9ca3af;font-size:14px;">Your Inner Circle is empty.<br><span style="font-size:13px;color:#1a7a3a;cursor:pointer;font-weight:700;" onclick="toggleIcInvitePanel()">Invite someone to get started →</span></div>';
     return;
   }
   const sorted=[...IC_MEMBERS].sort((a,b)=>((a.player.first_name||'')+(a.player.last_name||'')).localeCompare((b.player.first_name||'')+(b.player.last_name||'')));
@@ -8596,6 +8605,148 @@ async function smIcInviteLink(){
   }catch(e){ showToast('Could not create invite','#f87171'); }
 }
 window.smIcInviteLink = smIcInviteLink;
+
+// ── IC Invite Panel (redesigned flow in icSectionMembers) ────────────────
+
+const _icIsMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+function toggleIcInvitePanel(){
+  const panel = document.getElementById('icInvitePanel');
+  if(!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  // Show text button only on mobile
+  const textBtn = document.getElementById('icChannelText');
+  if(textBtn) textBtn.style.display = _icIsMobile ? 'flex' : 'none';
+  // Reset form state when opening
+  if(!isOpen) resetIcChannelForm();
+}
+window.toggleIcInvitePanel = toggleIcInvitePanel;
+
+function selectIcChannel(channel){
+  window._icSelectedChannel = channel;
+  // Show form container
+  const form = document.getElementById('icChannelForm');
+  if(form) form.style.display = 'block';
+  // Hide all field groups then show the selected one
+  ['icEmailFields','icTextFields','icLinkFields'].forEach(function(id){
+    const el = document.getElementById(id);
+    if(el) el.style.display = 'none';
+  });
+  const map = { email:'icEmailFields', text:'icTextFields', link:'icLinkFields' };
+  const target = document.getElementById(map[channel]);
+  if(target) target.style.display = 'block';
+  // Focus the first input in the selected group
+  const firstInput = target && target.querySelector('input');
+  if(firstInput) setTimeout(function(){ firstInput.focus(); }, 50);
+}
+window.selectIcChannel = selectIcChannel;
+
+function resetIcChannelForm(){
+  const form = document.getElementById('icChannelForm');
+  if(form) form.style.display = 'none';
+  ['icFormName','icFormEmail','icFormNameText','icFormNameLink'].forEach(function(id){
+    const el = document.getElementById(id);
+    if(el){ el.value = ''; el.style.borderColor = '#9ca3af'; }
+  });
+  const conf1 = document.getElementById('icEmailConfirm');
+  const conf2 = document.getElementById('icLinkConfirm');
+  if(conf1) conf1.style.display = 'none';
+  if(conf2) conf2.style.display = 'none';
+}
+window.resetIcChannelForm = resetIcChannelForm;
+
+async function sendIcEmailInvite(){
+  const nameEl  = document.getElementById('icFormName');
+  const emailEl = document.getElementById('icFormEmail');
+  const name    = nameEl?.value?.trim();
+  const email   = emailEl?.value?.trim();
+
+  if(!name){
+    if(nameEl){ nameEl.classList.add('ic-shake'); setTimeout(function(){ nameEl.classList.remove('ic-shake'); }, 600); }
+    showToast('Please enter their name','#f59e0b');
+    return;
+  }
+  if(!email){
+    if(emailEl){ emailEl.style.borderColor='#dc2626'; emailEl.focus(); }
+    showToast('Please enter their email','#f59e0b');
+    return;
+  }
+
+  const btn = document.querySelector('#icEmailFields button');
+  if(btn){ btn.disabled = true; btn.textContent = 'Sending…'; }
+
+  try{
+    const recipient = { name, email };
+    const { token } = await icCreateSingleUseInvite(recipient, 'email');
+    const url = 'https://pballconnect.com/invite.html?token=' + token;
+    await sendEmail({
+      to_email:     email,
+      type:         'ic_invite',
+      inviter_name: getMyName(),
+      invitee_name: name,
+      personal_note: null,
+      invite_url:   url
+    });
+    const conf = document.getElementById('icEmailConfirm');
+    if(conf){
+      conf.innerHTML = '✅ Invite sent to <strong>'+name+'</strong>!';
+      conf.style.cssText = 'display:block;color:#14532d;font-size:13px;font-weight:600;margin-top:10px;padding:10px;background:#d1fae5;border-radius:8px;';
+    }
+    if(nameEl){ nameEl.value=''; nameEl.style.borderColor='#9ca3af'; }
+    if(emailEl){ emailEl.value=''; emailEl.style.borderColor='#9ca3af'; }
+    loadIcInvites();
+  }catch(e){
+    showToast('Could not send — try again','#f87171');
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = 'Send Invite ✉️'; }
+  }
+}
+window.sendIcEmailInvite = sendIcEmailInvite;
+
+async function sendIcTextInvite(){
+  const nameEl = document.getElementById('icFormNameText');
+  const name   = nameEl?.value?.trim();
+  if(!name){
+    if(nameEl){ nameEl.classList.add('ic-shake'); setTimeout(function(){ nameEl.classList.remove('ic-shake'); }, 600); }
+    showToast('Please enter their name','#f59e0b');
+    return;
+  }
+  try{
+    const { token } = await icCreateSingleUseInvite({ name, email:null }, 'text');
+    const url = 'https://pballconnect.com/invite.html?token=' + token;
+    const myFirst = (getMyName()||'Someone').split(' ')[0];
+    const msg = encodeURIComponent(myFirst+' invited you to their Inner Circle on PBallConnect! Set up your free player profile: '+url+' 🎾');
+    window.open('sms:?body='+msg, '_self');
+    showToast('💬 Messages opened for '+name,'#60a5fa');
+    if(nameEl){ nameEl.value=''; nameEl.style.borderColor='#9ca3af'; }
+    loadIcInvites();
+  }catch(e){ showToast('Could not create invite','#f87171'); }
+}
+window.sendIcTextInvite = sendIcTextInvite;
+
+async function sendIcLinkInvite(){
+  const nameEl = document.getElementById('icFormNameLink');
+  const name   = nameEl?.value?.trim();
+  if(!name){
+    if(nameEl){ nameEl.classList.add('ic-shake'); setTimeout(function(){ nameEl.classList.remove('ic-shake'); }, 600); }
+    showToast('Please enter their name','#f59e0b');
+    return;
+  }
+  try{
+    const { token } = await icCreateSingleUseInvite({ name, email:null }, 'link');
+    const url = 'https://pballconnect.com/invite.html?token=' + token;
+    await icCopyToClipboard(url);
+    const conf = document.getElementById('icLinkConfirm');
+    if(conf){
+      conf.innerHTML = '✅ Link copied for <strong>'+name+'</strong> — paste it anywhere!';
+      conf.style.cssText = 'display:block;color:#713f12;font-size:13px;font-weight:600;margin-top:10px;padding:10px;background:#fef9c3;border-radius:8px;';
+    }
+    if(nameEl){ nameEl.value=''; nameEl.style.borderColor='#9ca3af'; }
+    loadIcInvites();
+  }catch(e){ showToast('Could not create invite','#f87171'); }
+}
+window.sendIcLinkInvite = sendIcLinkInvite;
 
 async function sendInvite(method){
   const myEmail = getMyEmail();
