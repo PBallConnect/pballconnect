@@ -8097,6 +8097,21 @@ function showIcSection(section){
     active.btn.querySelectorAll('div').forEach(d => d.style.color = '#fff');
   }
 
+  // 'invite' redirects to members + opens the panel — handle BEFORE showing any section
+  if(section==='invite'){
+    ['Members','Invite','Requests','Find'].forEach(s=>{
+      const el=document.getElementById('icSection'+s); if(el) el.style.display='none';
+    });
+    const membersEl = document.getElementById('icSectionMembers');
+    if(membersEl) membersEl.style.display = 'block';
+    const panel = document.getElementById('icInvitePanel');
+    if(panel && panel.style.display === 'none') toggleIcInvitePanel();
+    switchIcMemberView('grid');
+    loadIcInvites();
+    window.scrollTo(0,0);
+    return;
+  }
+
   ['Members','Invite','Requests','Find'].forEach(s=>{
     const el=document.getElementById('icSection'+s);
     if(el) el.style.display='none';
@@ -8104,17 +8119,9 @@ function showIcSection(section){
   const cap=section.charAt(0).toUpperCase()+section.slice(1);
   const target=document.getElementById('icSection'+cap);
   if(target) target.style.display='block';
-  // 'invite' now lives inside icSectionMembers — redirect there and open the panel
-  if(section==='invite'){
-    const membersEl = document.getElementById('icSectionMembers');
-    if(membersEl) membersEl.style.display = 'block';
-    const panel = document.getElementById('icInvitePanel');
-    if(panel && panel.style.display === 'none') toggleIcInvitePanel();
-    loadIcInvites();
-    window.scrollTo(0,0);
-    return;
-  }
-  // Load data on demand
+
+  // Load data on demand + enforce default view
+  if(section==='members')  switchIcMemberView('grid');
   if(section==='find')     loadNearbyPlayers();
   if(section==='requests') loadIcPending();
   window.scrollTo(0,0);
