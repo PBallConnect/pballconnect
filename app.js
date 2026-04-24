@@ -7132,7 +7132,7 @@ function renderInnerCircleList(){
   const countLabel = document.getElementById('icMemberCountLabel');
   if(countLabel) countLabel.textContent = IC_MEMBERS.length ? '('+IC_MEMBERS.length+')' : '';
   // Reset to A–Z view on data reload
-  switchIcMemberView('alpha');
+  switchIcMemberView('grid');
 }
 
 function buildIcMemberCard(player, conn, myEmail, lastPlayed){
