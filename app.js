@@ -8471,9 +8471,13 @@ function icClearRecipientForm(){
   const nameEl  = document.getElementById('icRecipientName');
   const emailEl = document.getElementById('icRecipientEmail');
   const nudgeEl = document.getElementById('icEmailNudge');
+  const textPanel  = document.getElementById('icTextDesktopPanel');
+  const emailPanel = document.getElementById('icEmailDesktopPanel');
   if(nameEl){ nameEl.value=''; nameEl.style.borderColor='#9ca3af'; }
   if(emailEl){ emailEl.value=''; emailEl.style.borderColor='#9ca3af'; }
   if(nudgeEl) nudgeEl.style.display='none';
+  if(textPanel) textPanel.style.display='none';
+  if(emailPanel) emailPanel.style.display='none';
 }
 window.icClearRecipientForm = icClearRecipientForm;
 
@@ -8481,25 +8485,58 @@ window.icClearRecipientForm = icClearRecipientForm;
 async function smIcInviteText(){
   const recipient = icGetRecipient();
   if(!recipient) return;
+
+  const panel = document.getElementById('icTextDesktopPanel');
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+  // Toggle panel closed if already open (desktop re-click)
+  if(!isMobile && panel && panel.style.display !== 'none'){
+    panel.style.display = 'none';
+    return;
+  }
+
   try{
     const {url} = await icCreateSingleUseInvite(recipient, 'text');
     const myName = (getMyName()||'Someone').split(' ')[0];
-    const body = encodeURIComponent(
-      myName+' invited you to their Inner Circle on PBallConnect! '+
-      'Set up your free player profile: '+url+' (takes 2 min) 🎾'
-    );
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const message = myName+' invited you to their Inner Circle on PBallConnect! '+
+      'Set up your free player profile: '+url+' (takes 2 min) 🎾';
+    const encodedMsg = encodeURIComponent(message);
+
     if(isMobile){
-      window.open('sms:?body='+body, '_self');
+      window.open('sms:?body='+encodedMsg, '_self');
       showToast('💬 Text opened for '+recipient.name,'#60a5fa');
+      icClearRecipientForm();
+      loadIcInvites();
     } else {
-      await icCopyToClipboard(decodeURIComponent(body));
-      showToast('📋 Message copied — paste into a text to '+recipient.name,'#60a5fa');
+      // Desktop: show inline panel with WhatsApp + Copy options
+      window._icPendingTextMsg = message;
+      if(panel){
+        panel.innerHTML =
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;">'+
+            '<button onclick="window.open(\'https://wa.me/?text='+encodedMsg+'\',\'_blank\');document.getElementById(\'icTextDesktopPanel\').style.display=\'none\';"'+
+              ' style="flex:1;min-width:140px;padding:10px 12px;background:#d9fdd3;border:1px solid #25d366;border-radius:8px;color:#075e54;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">'+
+              '💬 Send via WhatsApp'+
+            '</button>'+
+            '<button onclick="window._icCopyMsgText()"'+
+              ' style="flex:1;min-width:140px;padding:10px 12px;background:#f1f5f9;border:1px solid #d1d5db;border-radius:8px;color:#374151;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">'+
+              '📋 Copy Message Text'+
+            '</button>'+
+          '</div>';
+        panel.style.display = 'block';
+      }
+      icClearRecipientForm();
+      loadIcInvites();
     }
-    icClearRecipientForm();
-    loadIcInvites();
   }catch(e){ showToast('Could not create invite','#f87171'); }
 }
+
+// Helper exposed for copy button in the text desktop panel
+window._icCopyMsgText = async function(){
+  await icCopyToClipboard(window._icPendingTextMsg || '');
+  showToast('📋 Full message copied — paste into any chat app!','#60a5fa');
+  const panel = document.getElementById('icTextDesktopPanel');
+  if(panel) panel.style.display = 'none';
+};
 window.smIcInviteText = smIcInviteText;
 
 async function smIcInviteEmail(){
@@ -8515,6 +8552,9 @@ async function smIcInviteEmail(){
     // Still proceed — nudge only, not a block
   }
 
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const panel = document.getElementById('icEmailDesktopPanel');
+
   try{
     const {url} = await icCreateSingleUseInvite(recipient, 'email');
     const myName = (getMyName()||'Someone').split(' ')[0];
@@ -8526,10 +8566,34 @@ async function smIcInviteEmail(){
       'Click here to set up your free profile:\n'+url+
       '\n\nSee you on the court! 🏓'
     );
-    window.location.href = 'mailto:'+(recipient.email||'')+'?subject='+subject+'&body='+body;
+    const mailto = 'mailto:'+(recipient.email||'')+'?subject='+subject+'&body='+body;
+
+    // Always try mailto first
+    window.location.href = mailto;
     showToast('✉️ Email opened for '+recipient.name,'#4CAF7D');
     icClearRecipientForm();
     loadIcInvites();
+
+    // On desktop: show fallback panel 300ms later
+    if(!isMobile && panel){
+      setTimeout(function(){
+        const gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1&su='+subject+'&body='+body;
+        const outlookUrl = 'https://outlook.live.com/mail/0/deeplink/compose?subject='+subject+'&body='+body;
+        panel.innerHTML =
+          '<div style="font-size:12px;color:#6b7280;margin-bottom:8px;">Email app didn\'t open?</div>'+
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;">'+
+            '<button onclick="window.open(\''+gmailUrl+'\',\'_blank\');document.getElementById(\'icEmailDesktopPanel\').style.display=\'none\';"'+
+              ' style="flex:1;min-width:140px;padding:10px 12px;background:#fef2f2;border:1px solid #ef4444;border-radius:8px;color:#991b1b;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">'+
+              '📧 Open Gmail'+
+            '</button>'+
+            '<button onclick="window.open(\''+outlookUrl+'\',\'_blank\');document.getElementById(\'icEmailDesktopPanel\').style.display=\'none\';"'+
+              ' style="flex:1;min-width:140px;padding:10px 12px;background:#eff6ff;border:1px solid #2563eb;border-radius:8px;color:#1e3a8a;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">'+
+              '📧 Open Outlook'+
+            '</button>'+
+          '</div>';
+        panel.style.display = 'block';
+      }, 300);
+    }
   }catch(e){ showToast('Could not create invite','#f87171'); }
 }
 window.smIcInviteEmail = smIcInviteEmail;
