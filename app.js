@@ -5969,7 +5969,11 @@ async function checkMatchToken(){
       ).catch(()=>{});
     }
 
-    // Navigate to dashboard — the invite card there handles I'm In / Can't Make It
+    // Clear ?match= from URL so a page refresh doesn't re-trigger this handler
+    const cleanUrl = window.location.pathname + window.location.hash;
+    history.replaceState(null, '', cleanUrl);
+
+    // Navigate to the invited-by-others page
     showPage('invitedByOthers');
 
   }catch(e){ console.warn('checkMatchToken error:', e); }
@@ -7127,12 +7131,14 @@ async function loadInnerCircle(){
 function renderInnerCircleList(){
   const badge = document.getElementById('icApprovedBadge');
   if(badge) badge.textContent = IC_MEMBERS.length||'';
-  // Sync IC page (and dashboard) member count
+  // Sync IC page header tile + dashboard member count
+  const tabMemberTile = document.getElementById('icTabMemberCount');
+  if(tabMemberTile) tabMemberTile.textContent = IC_MEMBERS.length || '0';
   const tabCount = document.getElementById('dashIcMemberCount');
   if(tabCount) tabCount.textContent = IC_MEMBERS.length || '0';
   const countLabel = document.getElementById('icMemberCountLabel');
   if(countLabel) countLabel.textContent = IC_MEMBERS.length ? '('+IC_MEMBERS.length+')' : '';
-  // Reset to A–Z view on data reload
+  // Reset to grid view on data reload
   switchIcMemberView('grid');
 }
 
@@ -7229,6 +7235,10 @@ async function loadIcPending(){
     let pending = await res.json();
     pending.sort((a,b)=>(a.requester_name||'').localeCompare(b.requester_name||''));
     IC_INCOMING_COUNT = pending.length;
+
+    // Sync IC page header tile for incoming requests
+    const tabReqTile = document.getElementById('icTabRequestCount');
+    if(tabReqTile) tabReqTile.textContent = IC_INCOMING_COUNT || '0';
 
     // Update left nav purple badge
     const pb = document.getElementById('icNavPurpleBadge');
