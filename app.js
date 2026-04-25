@@ -8682,6 +8682,31 @@ function resetIcChannelForm(){
 }
 window.resetIcChannelForm = resetIcChannelForm;
 
+// Create a pending connections row + immediately bump the sent counter.
+// For invites where recipient email is unknown, use 'pending_TOKEN' as placeholder.
+async function icPostPendingConnection(recipientEmail, recipientName, token){
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+      body:JSON.stringify({
+        requester_email: getMyEmail(),
+        requester_name:  getMyName(),
+        recipient_email: recipientEmail || ('pending_'+token),
+        recipient_name:  recipientName,
+        status:          'pending'
+      })
+    });
+  }catch(e){
+    console.warn('Could not create pending connection row:', e.message);
+  }
+  // Increment counters immediately — loadIcInvites() will fully sync in background
+  const tabSent = document.getElementById('icTabSentCount');
+  if(tabSent){ const n=parseInt(tabSent.textContent)||0; tabSent.textContent=n+1; }
+  const dashSent = document.getElementById('dashIcSentCount');
+  if(dashSent){ const n=parseInt(dashSent.textContent)||0; dashSent.textContent=n+1; }
+}
+
 async function sendIcEmailInvite(){
   const nameEl  = document.getElementById('icFormName');
   const emailEl = document.getElementById('icFormEmail');
@@ -8704,8 +8729,9 @@ async function sendIcEmailInvite(){
 
   try{
     const recipient = { name, email };
-    const { url } = await icCreateSingleUseInvite(recipient, 'email');
+    const { token, url } = await icCreateSingleUseInvite(recipient, 'email');
     if(!url) throw new Error('Invite creation failed');
+    await icPostPendingConnection(email, name, token);
     await sendEmail({
       to_email:     email,
       type:         'ic_invite',
@@ -8773,8 +8799,9 @@ async function sendIcTextInvite(){
     return;
   }
   try{
-    const { url } = await icCreateSingleUseInvite({ name, email:null }, 'text');
+    const { token, url } = await icCreateSingleUseInvite({ name, email:null }, 'text');
     if(!url) throw new Error('Invite creation failed');
+    await icPostPendingConnection(null, name, token);
     const myFirst = (getMyName()||'Someone').split(' ')[0];
     const msg = encodeURIComponent(myFirst+' invited you to their Inner Circle on PBallConnect! Set up your free player profile: '+url+' 🎾');
     window.open('sms:?body='+msg, '_self');
@@ -8794,8 +8821,9 @@ async function sendIcLinkInvite(){
     return;
   }
   try{
-    const { url } = await icCreateSingleUseInvite({ name, email:null }, 'link');
+    const { token, url } = await icCreateSingleUseInvite({ name, email:null }, 'link');
     if(!url) throw new Error('Invite creation failed');
+    await icPostPendingConnection(null, name, token);
     await icCopyToClipboard(url);
     const conf = document.getElementById('icLinkConfirm');
     if(conf){
