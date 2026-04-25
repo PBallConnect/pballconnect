@@ -424,8 +424,7 @@
   .reg-wrapper{max-width:560px;}
 
   /* ── My Courts ────────────────────────────────────── */
-  .courts-page-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:960px;}
-  @media(max-width:700px){.courts-page-grid{grid-template-columns:1fr;}}
+  .courts-page-grid{display:grid;grid-template-columns:1fr;gap:20px;}
   .courts-container{border-radius:20px;padding:20px;}
   .courts-container.private{background:#f5f3ff;border:1px solid rgba(140,100,255,0.35);}
   .courts-container.public{background:#f0fdf4;border:1px solid rgba(76,175,125,0.35);}
