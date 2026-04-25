@@ -1184,6 +1184,15 @@
             </div>
           </div>
 
+          <!-- Sent invites history — shown above grid when there are awaiting invites -->
+          <div class="ic-card ic-pending-invites-card" id="icInvitesCard" style="display:none;max-width:100%;margin-top:0;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+              <div class="ic-section-label" style="margin-bottom:0;">⏳ Invites Sent <span id="icInvitesBadge" class="ic-badge"></span></div>
+              <div style="font-size:11px;color:var(--dim);">Awaiting acceptance</div>
+            </div>
+            <div id="icInvitesList"></div>
+          </div>
+
           <!-- View toggle row -->
           <div style="display:flex;gap:6px;margin-bottom:8px;padding:0 2px;">
             <button id="icViewGrid" onclick="switchIcMemberView('grid')"
@@ -1219,14 +1228,6 @@
             </div>
           </div>
 
-          <!-- Sent invites history -->
-          <div class="ic-card ic-pending-invites-card" id="icInvitesCard" style="display:none;max-width:100%;margin-top:14px;margin-bottom:14px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-              <div class="ic-section-label" style="margin-bottom:0;">⏳ Invites Sent <span id="icInvitesBadge" class="ic-badge"></span></div>
-              <div style="font-size:11px;color:var(--dim);">Awaiting acceptance</div>
-            </div>
-            <div id="icInvitesList"></div>
-          </div>
 
         </div>
 
