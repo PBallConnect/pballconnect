@@ -7877,12 +7877,14 @@ function showIcView(mode){
 // ── IC Section switcher (new tab-based navigation) ─────
 
 // Fetches the active outbound IC invite count from the invites table and syncs both tiles.
+// Counts outbound IC invites still awaiting a response (connections with status='pending'
+// where this player is the requester). Same source as the invites card — authoritative.
 async function _syncIcSentCount(){
   const myEmail = getMyEmail();
   if(!myEmail) return;
   try{
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/invites?inviter_email=eq.${encodeURIComponent(myEmail)}&invite_type=eq.single&is_used=eq.false&or=(status.is.null,status.not.in.(registered,accepted))&select=id`,
+      `${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(myEmail)}&status=eq.pending&select=id`,
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
     );
     if(!res.ok) return;
