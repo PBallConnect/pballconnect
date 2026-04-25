@@ -1415,7 +1415,7 @@ function showPage(page){
   if(page==='myCourts')    loadMyCourts();
   if(page==='lessons')     renderCoachingPage();
   if(page==='myLessons')   renderLessonsPage();
-  if(page==='innerCircle'){ loadInnerCircle(); /* loadNearbyPlayers runs lazily when Find section is opened */ }
+  if(page==='innerCircle'){ loadInnerCircle(); }
   if(page==='playerProfile'){
     if(SESSION_PLAYER){
       setTimeout(()=>restoreProfileForm(SESSION_PLAYER), 200);
@@ -1856,7 +1856,7 @@ function refreshCurrentPage(){
   const page = active.id.replace('page-','');
   // Re-trigger the page load
   const loaders = {
-    innerCircle: ()=>{ loadInnerCircle(); loadNearbyPlayers(); },
+    innerCircle: ()=>{ loadInnerCircle(); },
     myInvites: loadMyInvitesPage,
     invitedByOthers: loadInvitedByOthersPage,
     findPlayers: initFindPlayers,
@@ -7733,29 +7733,11 @@ document.addEventListener('click',function(e){
   if(modal&&e.target===modal) closePlayerCard();
 });
 
-// ── IC Near/Search tabs ────────────────────────────────
-let nearbyDebounce=null;
-let nearbyAllPlayers=[];
-let nearbyMyEmail='';
-
-function switchFindTab(tab){
-  const nearby=document.getElementById('icNearbyPanel');
-  const search=document.getElementById('icSearchPanel');
-  const tabNear=document.getElementById('tabNearby');
-  const tabSrch=document.getElementById('tabSearch');
-  if(tab==='nearby'){
-    if(nearby) nearby.style.display='block';
-    if(search) search.style.display='none';
-    if(tabNear) tabNear.classList.add('active');
-    if(tabSrch) tabSrch.classList.remove('active');
-    loadNearbyPlayers();
-  } else {
-    if(nearby) nearby.style.display='none';
-    if(search) search.style.display='block';
-    if(tabNear) tabNear.classList.remove('active');
-    if(tabSrch) tabSrch.classList.add('active');
-  }
-}
+// ── IC Near/Search tabs — Find Players removed from IC ─
+// switchFindTab, loadNearbyPlayers, filterNearbyGrid stubbed as no-ops.
+// icSectionFind HTML removed from index.html.
+function switchFindTab(){}
+window.switchFindTab = switchFindTab;
 
 const SKILL_LEVELS=[2.0,2.25,2.5,2.75,3.0,3.25,3.5,3.75,4.0,4.25,4.5,4.75,5.0,5.5,6.0,6.5,7.0];
 
@@ -7766,153 +7748,9 @@ function getAdjacentSkills(mySkill){
   return {below:idx>0?SKILL_LEVELS[idx-1]:null,my:val,above:idx<SKILL_LEVELS.length-1?SKILL_LEVELS[idx+1]:null};
 }
 
-async function loadNearbyPlayers(){
-  clearTimeout(nearbyDebounce);
-  nearbyDebounce=setTimeout(async()=>{
-    const myEmail=getMyEmail();
-    const mySkill=S.skill?String(S.skill):'';
-    const radiusMi=parseInt(document.getElementById('icRadiusSlider')?.value||15);
-    const skills=getAdjacentSkills(mySkill||'3.5');
-    const colBelow=document.getElementById('colBelowLabel');
-    const colMy=document.getElementById('colMyLabel');
-    const colAbove=document.getElementById('colAboveLabel');
-    if(colBelow) colBelow.textContent=mySkill&&skills.below!==null?skills.below:'—';
-    if(colMy) colMy.textContent=mySkill?skills.my:'—';
-    if(colAbove) colAbove.textContent=mySkill&&skills.above!==null?skills.above:'—';
-    if(!mySkill){
-      ['colBelow','colMy','colAbove'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<div class="ic-col-empty">Sign in to see players</div>';});
-      return;
-    }
-    ['colBelow','colMy','colAbove'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<div class="ic-col-empty" style="color:var(--green);">Loading…</div>';});
-    const cityData=getCityLatLon();
-    try{
-      let nearbyPlayers=[];
-      if(cityData){
-        try{
-          const rpcRes=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_players_within_radius`,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN},body:JSON.stringify({t_lat:cityData.lat,t_long:cityData.lon,radius_miles:radiusMi})});
-          if(rpcRes.ok){const data=await rpcRes.json();if(Array.isArray(data)&&data.length>0)nearbyPlayers=data;}
-        }catch(e){}
-      }
-      if(!nearbyPlayers.length){
-        const stateAbbr=(S.state||'NH').length===2?S.state.toUpperCase():'NH';
-        const res=await fetch(`${SUPABASE_URL}/rest/v1/public_profiles?state=eq.${encodeURIComponent(stateAbbr)}&select=first_name,last_name,email,nickname,skill_level,dupr_rating,play_venues,court_name,city,state,avatar_emoji,gender,handedness,playing_since,lat,lon&limit=2000`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
-        if(res.ok){
-          const all=await res.json();
-          nearbyPlayers=cityData?all.filter(p=>{if(!p.lat||!p.lon)return false;return haversine(cityData.lat,cityData.lon,parseFloat(p.lat),parseFloat(p.lon))<=radiusMi*1.60934;}):all;
-        }
-      }
-      nearbyPlayers=nearbyPlayers.filter(p=>(p.email||'').toLowerCase()!==myEmail);
-      nearbyAllPlayers=nearbyPlayers; nearbyMyEmail=myEmail;
-      let myConns=[];
-      if(myEmail){
-        const cr=await fetch(`${SUPABASE_URL}/rest/v1/connections?or=(requester_email.eq.${encodeURIComponent(myEmail)},recipient_email.eq.${encodeURIComponent(myEmail)})&select=*`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
-        if(cr.ok) myConns=await cr.json();
-      }
-      const buckets={below:[],my:[],above:[]};
-      nearbyPlayers.forEach(p=>{
-        const pSkill=parseFloat(p.skill_level||0);
-        if(skills.below!==null&&Math.abs(pSkill-skills.below)<0.13) buckets.below.push(p);
-        else if(Math.abs(pSkill-skills.my)<0.13) buckets.my.push(p);
-        else if(skills.above!==null&&Math.abs(pSkill-skills.above)<0.13) buckets.above.push(p);
-      });
-      const subtitle=document.getElementById('icNearbySubtitle');
-      const total=buckets.below.length+buckets.my.length+buckets.above.length;
-      if(subtitle) subtitle.innerHTML='<strong style="color:#fff;">'+total+'</strong> players within '+radiusMi+' miles &nbsp;·&nbsp; <span style="color:#fbbf24;">'+buckets.below.length+' below ('+skills.below+')</span> &nbsp;·&nbsp; <span style="color:var(--green);">'+buckets.my.length+' at my level ('+skills.my+')</span> &nbsp;·&nbsp; <span style="color:#a78bfa;">'+buckets.above.length+' above ('+skills.above+')</span>';
-      const colIds={below:'colBelow',my:'colMy',above:'colAbove'};
-      const colClasses={below:'col-below',my:'col-my',above:'col-above'};
-      Object.entries(buckets).forEach(([key,players])=>{
-        const col=document.getElementById(colIds[key]);
-        if(!col) return;
-        col.innerHTML='';
-        if(!players.length){col.innerHTML='<div class="ic-col-empty">No players at this level nearby</div>';return;}
-        players.sort(()=>Math.random()-0.5);
-        players.slice(0,20).forEach(p=>col.appendChild(buildMiniPlayerCard(p,myConns,myEmail,colClasses[key])));
-      });
-      if(total===0){const e=document.getElementById('icNearbyEmpty');if(e)e.style.display='block';}
-    }catch(e){
-      ['colBelow','colMy','colAbove'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<div class="ic-col-empty">Error loading players.</div>';});
-    }
-  },500);
-}
-
-function buildMiniPlayerCard(player,myConns,myEmail,colClass){
-  const div=document.createElement('div');
-  div.className='ic-mini-card '+colClass;
-  const name=((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim();
-  const emoji=player.avatar_emoji||null;
-  const initials=name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
-  const pEmail=(player.email||'').toLowerCase();
-  const conn=myConns.find(c=>(c.requester_email===(myEmail||'')&&c.recipient_email===pEmail)||(c.recipient_email===(myEmail||'')&&c.requester_email===pEmail));
-  const venueRaw=(player.play_venues||'').toLowerCase();
-  let venueLabel='';
-  if(venueRaw.includes('indoor')&&venueRaw.includes('outdoor')) venueLabel='🏢 Indoor & Outdoor';
-  else if(venueRaw.includes('indoor')) venueLabel='🏢 Indoors';
-  else if(venueRaw.includes('outdoor')) venueLabel='🌳 Outdoors';
-  else if(venueRaw.includes('both')) venueLabel='🏢🌳 Both';
-  const miniTags=[];
-  if(player.dupr_rating) miniTags.push({cls:'ic-mini-tag-avail',label:'DUPR '+player.dupr_rating});
-  if(venueLabel) miniTags.push({cls:'ic-mini-tag-venue',label:venueLabel});
-  const genderLabel=player.gender==='Prefer not to say'?'⚪ Private':player.gender==='Male'?'♂ Male':player.gender==='Female'?'♀ Female':'';
-  if(genderLabel) miniTags.push({cls:'ic-mini-tag-gender',label:genderLabel});
-  const tagsHtml=miniTags.map(t=>'<span class="ic-mini-tag '+t.cls+'">'+t.label+'</span>').join('');
-  const courtShort=player.court_name?player.court_name.substring(0,22)+(player.court_name.length>22?'…':''):'';
-  div.innerHTML='<div class="ic-mini-top"><div class="ic-mini-avatar">'+(emoji||initials)+'</div><div style="flex:1;min-width:0;"><div class="ic-mini-name">'+name+'</div>'+(player.nickname?'<div class="ic-mini-nick">"'+player.nickname+'"</div>':'')+'</div><div class="ic-mini-right-col">'+(courtShort?'<div class="ic-mini-court-right">🏟<br><span>'+courtShort+'</span></div>':'')+(player.playing_since?'<div class="ic-mini-since">Since<br><span>'+player.playing_since+'</span></div>':'')+'</div></div>'+(tagsHtml?'<div class="ic-mini-tags">'+tagsHtml+'</div>':'')+'<div class="ic-mini-add-wrap"></div>';
-  div.onclick=function(e){if(e.target.tagName==='BUTTON')return;openPlayerCard(player,conn,myEmail);};
-  const addWrap=div.querySelector('.ic-mini-add-wrap');
-  const addBtn=document.createElement('button');
-  addBtn.className='ic-mini-add';
-  if(conn){
-    if(conn.status==='approved'){addBtn.textContent='✓ In Circle';addBtn.style.color='var(--green)';}
-    else if(conn.status==='pending'&&conn.requester_email===myEmail){addBtn.textContent='⏳ Invited';addBtn.style.color='#f59e0b';}
-    else if(conn.status==='pending'){addBtn.textContent='🔔 Approve';addBtn.style.color='var(--green)';addBtn.onclick=function(e){e.stopPropagation();icRespond(conn.id,'approved',addBtn);};}
-    addBtn.disabled=conn.status==='approved'||(conn.status==='pending'&&conn.requester_email===myEmail);
-  } else {
-    addBtn.textContent='+ Add to Circle';
-    addBtn.onclick=function(e){e.stopPropagation();openIcConfirmModal(player);};
-  }
-  // Star button on mini card — only for existing IC members
-  if(conn && conn.status==='approved'){
-    const miniFav = document.createElement('button');
-    const pEmailFav = (player.email||'').toLowerCase();
-    const isF = IC_FAVORITES.has(pEmailFav);
-    miniFav.textContent = isF?'⭐':'☆';
-    miniFav.style.cssText='background:none;border:none;font-size:13px;cursor:pointer;padding:0;color:'+(isF?'#fbbf24':'var(--dim)')+';';
-    miniFav.onclick=function(e){e.stopPropagation();toggleFavorite(pEmailFav,miniFav);};
-    addWrap.appendChild(miniFav);
-  }
-  addWrap.appendChild(addBtn);
-  return div;
-}
-
-function filterNearbyGrid(val){
-  const q=val.trim().toLowerCase();
-  const mySkill=S.skill||'';
-  const skills=getAdjacentSkills(mySkill);
-  const filtered=q?nearbyAllPlayers.filter(p=>{
-    const name=((p.first_name||'')+(p.last_name||'')).toLowerCase();
-    const nick=(p.nickname||'').toLowerCase();
-    return name.includes(q)||nick.includes(q)||((p.skill_level||'').toLowerCase()).includes(q);
-  }):nearbyAllPlayers;
-  const buckets={below:[],my:[],above:[]};
-  filtered.forEach(p=>{
-    const pSkill=parseFloat(p.skill_level||0);
-    if(skills.below!==null&&Math.abs(pSkill-skills.below)<0.13) buckets.below.push(p);
-    else if(Math.abs(pSkill-skills.my)<0.13) buckets.my.push(p);
-    else if(skills.above!==null&&Math.abs(pSkill-skills.above)<0.13) buckets.above.push(p);
-  });
-  const total=buckets.below.length+buckets.my.length+buckets.above.length;
-  const subtitle=document.getElementById('icNearbySubtitle');
-  if(subtitle) subtitle.innerHTML=q?'<strong>'+total+'</strong> match "'+val+'"':'<strong>'+total+'</strong> players found';
-  const colIds={below:'colBelow',my:'colMy',above:'colAbove'};
-  const colClasses={below:'col-below',my:'col-my',above:'col-above'};
-  Object.entries(buckets).forEach(([key,players])=>{
-    const col=document.getElementById(colIds[key]);
-    if(!col) return;
-    col.innerHTML='';
-    if(!players.length){col.innerHTML='<div class="ic-col-empty">No matches</div>';return;}
-    players.slice(0,20).forEach(p=>col.appendChild(buildMiniPlayerCard(p,[],nearbyMyEmail,colClasses[key])));
-  });
-}
+function loadNearbyPlayers(){}
+function filterNearbyGrid(){}
+window.filterNearbyGrid = filterNearbyGrid;
 
 // ── IC Stats + Invites ─────────────────────────────────
 async function loadIcInvites(){
@@ -8129,7 +7967,6 @@ function showIcSection(section){
     const pendingCard = document.getElementById('icPendingCard');
     if(pendingCard) pendingCard.style.display = 'none';
   }
-  if(section==='find')     loadNearbyPlayers();
   if(section==='requests') loadIcPending();
   window.scrollTo(0,0);
 }

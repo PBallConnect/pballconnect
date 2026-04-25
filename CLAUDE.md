@@ -203,7 +203,6 @@ The IC invite panel lives inside `icSectionMembers` (not a separate section).
 6. `icColHeaders` — hidden in grid view
 7. `icApprovedList` — hidden in grid view
 8. `icInvitesCard` — shown below list when pending invites exist
-9. 🔍 Find Players to add → link
 
 **`icInvitePanel` contains 3 channel buttons:**
 - ✉️ **Email via PBallConnect** — always shown
@@ -295,7 +294,7 @@ Last updated: April 2026.
 ### Left Nav Sections
 - **MATCHES:** Confirmed Matches, Players Wanting to Play, Recurring Matches
 - **ORGANIZER:** Set Up a Match, My Match Invites, My Groups, Recurring Matches _(grayed at 40% opacity for non-organizers)_
-- **INNER CIRCLE:** Members, Invite, Requests, Find Players _(no badge numbers)_
+- **INNER CIRCLE:** Members, Invite, Requests _(no badge numbers; Find Players removed)_
 - **MY COURTS:** Private (`#navCourtPrivate` / `#navCourtPrivateNum`) + Public (`#navCourtPublic` / `#navCourtPublicNum`) — wrappers hidden when count = 0
 
 `updateNavCourtBadges(publicCount, privateCount)` writes to inner `*Num` spans.
@@ -312,9 +311,9 @@ Last updated: April 2026.
 
 ### IC Page Navigation
 
-`showIcSection(section)` is the sole IC nav function. Sections: `members`, `invite`, `requests`, `find`.
+`showIcSection(section)` is the sole IC nav function. Sections: `members`, `invite`, `requests`.
 `showIcView(mode)` is kept for backward compatibility only — delegates to `showIcSection()`.
-`loadNearbyPlayers()` is lazy — only fires when `showIcSection('find')` is called.
+`loadNearbyPlayers()`, `filterNearbyGrid()`, `switchFindTab()` are no-op stubs — `icSectionFind` HTML was removed.
 
 **`showIcSection('invite')` redirects immediately** — it hides all sections, shows `icSectionMembers`, opens `icInvitePanel` if closed, calls `switchIcMemberView('grid')`, and returns early. `icSectionInvite` is never shown; it is a legacy stub only.
 
@@ -523,13 +522,18 @@ Applied via JS: `el.classList.add('ic-shake'); setTimeout(()=>el.classList.remov
 1. **Fix `invites` table RLS INSERT policy** — single-use invite tokens fail to save silently. Add INSERT policy in Supabase so records are created correctly.
 2. **Play Structure as Step 1 with branching** — Set Group path auto-calculates courts and skips steps 2–3; Open/Mixed/Same runs full 7-container wizard.
 3. **My Groups UI** — organizer chip red/white, gender lookup fix (`player_email` not `email`), Set vs Random toggle in create modal.
-4. **Find Players (IC page)** — wire up Browse Nearby; `showIcSection('find')` and `loadNearbyPlayers()` are currently stubbed only.
-5. **Match Invites — status pill dropdowns** — In/Pending/Waitlist/Out boxes reveal player name list. `_miResponseCache` and `toggleInvitePanel()` already scaffolded.
+4. **Match Invites — status pill dropdowns** — In/Pending/Waitlist/Out boxes reveal player name list. `_miResponseCache` and `toggleInvitePanel()` already scaffolded.
 6. **Landing page at pballconnect.com** — marketing page. App moves to subdomain.
 7. **Onboarding flow for new users** — guided setup after first login.
 8. **Recurring matches v2** — gap alert delivery via Cloudflare Cron Worker.
 9. **Web push notifications** — browser push for match invites, IC requests, gap alerts.
 10. **Player statistics dashboard** — `playerStats` page needs data and UX.
+
+---
+
+## Product Decisions
+
+- **Find Players / Browse Nearby removed from Inner Circle (April 2026)** — `icSectionFind` HTML removed from `index.html`; `loadNearbyPlayers`, `filterNearbyGrid`, `switchFindTab` stubbed as no-ops in `app.js`. Player discovery via IC invite flow (email/text/link/QR) is sufficient. Do not re-add the Find section to the IC page.
 
 ---
 

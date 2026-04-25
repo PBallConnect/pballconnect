@@ -1228,8 +1228,6 @@
             <div id="icInvitesList"></div>
           </div>
 
-          <!-- Find Players link -->
-          <div onclick="showIcSection('find')" style="font-size:13px;color:#2563eb;cursor:pointer;margin-top:8px;">🔍 Find Players to add →</div>
         </div>
 
         <!-- ── SECTION: Invite New Members (legacy nav target) ── -->
@@ -1252,64 +1250,6 @@
           </div>
         </div>
 
-        <!-- ── SECTION: Find Players ── -->
-        <div id="icSectionFind" style="display:none;">
-          <div class="ic-search-card" style="max-width:100%;">
-            <div style="padding-bottom:8px;margin-bottom:12px;border-bottom:1px solid #e5e7eb;">
-              <div class="ic-section-label" style="margin-bottom:8px;">Find players to add</div>
-              <div class="ic-find-tabs">
-                <button class="ic-find-tab active" id="tabNearby" onclick="switchFindTab('nearby')">📍 Nearby by skill</button>
-                <button class="ic-find-tab" id="tabSearch" onclick="switchFindTab('search')">🔍 Search by name</button>
-              </div>
-            </div>
-            <div id="icNearbyPanel">
-              <div class="ic-nearby-controls">
-                <div class="ic-nearby-slider-row">
-                  <span style="font-size:12px;color:#374151;font-weight:600;">Within</span>
-                  <input type="range" id="icRadiusSlider" min="5" max="30" step="5" value="15"
-                    oninput="document.getElementById('icRadiusLabel').textContent=this.value+' mi';loadNearbyPlayers();"
-                    style="flex:1;margin:0 10px;"/>
-                  <span id="icRadiusLabel" style="font-size:13px;font-weight:700;color:#1a7a3a;min-width:40px;">15 mi</span>
-                </div>
-                <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
-                  <input type="text" id="icNearbySearch" placeholder="Filter by name, nickname, court or rating…"
-                    oninput="filterNearbyGrid(this.value)" autocomplete="off"
-                    style="flex:1;padding:8px 12px;border-radius:8px;border:2px solid #9ca3af;background:#f9fafb;color:#111;font-size:12px;font-family:'DM Sans',sans-serif;"/>
-                  <button onclick="document.getElementById('icNearbySearch').value='';filterNearbyGrid('');"
-                    style="padding:7px 10px;border-radius:8px;border:2px solid #9ca3af;background:#ffffff;color:#374151;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;">Clear</button>
-                </div>
-                <div style="font-size:11px;color:#6b7280;margin-top:6px;" id="icNearbySubtitle">Showing players near you grouped by skill level</div>
-              </div>
-              <div class="ic-skill-grid-wrap">
-                <div class="ic-skill-column">
-                  <div class="ic-skill-col-head ic-col-below"><div class="ic-col-head-label">One below</div><div class="ic-col-head-rating" id="colBelowLabel">—</div></div>
-                  <div class="ic-skill-col" id="colBelow"></div>
-                </div>
-                <div class="ic-skill-column">
-                  <div class="ic-skill-col-head ic-col-my"><div class="ic-col-head-label">My level</div><div class="ic-col-head-rating" id="colMyLabel">—</div></div>
-                  <div class="ic-skill-col" id="colMy"></div>
-                </div>
-                <div class="ic-skill-column">
-                  <div class="ic-skill-col-head ic-col-above"><div class="ic-col-head-label">One above</div><div class="ic-col-head-rating" id="colAboveLabel">—</div></div>
-                  <div class="ic-skill-col" id="colAbove"></div>
-                </div>
-              </div>
-              <div id="icNearbyEmpty" style="display:none;" class="ic-circle-empty">
-                <div class="ic-circle-empty-icon">🔍</div>
-                No players found nearby.<br><span style="color:var(--green);font-size:12px;">Try increasing the distance slider.</span>
-              </div>
-            </div>
-            <div id="icSearchPanel" style="display:none;">
-              <div class="ic-search-row" style="margin-top:12px;">
-                <input type="text" id="icSearchInput" placeholder="Search by name or nickname…"
-                  autocomplete="off" oninput="icSearchPlayers(this.value)"
-                  style="flex:1;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;"/>
-                <button class="ic-search-btn" onclick="icSearchPlayers(document.getElementById('icSearchInput').value)">Search</button>
-              </div>
-              <div id="icSearchResults" style="margin-top:12px;"></div>
-            </div>
-          </div>
-        </div>
 
         <!-- Legacy stubs for JS compat -->
         <div id="icStatsDashboard" style="display:none;"></div>
