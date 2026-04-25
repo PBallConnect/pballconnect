@@ -8076,11 +8076,11 @@ function _buildIcLevelGrid(){
 
   const fmt = v => parseFloat(v.toFixed(2));
   const cols = [
-    { label:'Far Below', rating: fmt(myLevel-0.50), prefix:'≤' },
-    { label:'Below',     rating: fmt(myLevel-0.25), prefix:''  },
-    { label:'My Level',  rating: fmt(myLevel),      prefix:'',  center:true },
-    { label:'Above',     rating: fmt(myLevel+0.25), prefix:''  },
-    { label:'Far Above', rating: fmt(myLevel+0.50), prefix:'≥' },
+    { label:'.5+ Below My Level',  rating: fmt(myLevel-0.50), prefix:'≤' },
+    { label:'.25 Below My Level', rating: fmt(myLevel-0.25), prefix:''  },
+    { label:'My Level',           rating: fmt(myLevel),      prefix:'',  center:true },
+    { label:'.25 Above My Level', rating: fmt(myLevel+0.25), prefix:''  },
+    { label:'.5+ Above My Level', rating: fmt(myLevel+0.50), prefix:'≥' },
   ];
 
   // Bucket members into 5 columns by ±0.125 tolerance bands
