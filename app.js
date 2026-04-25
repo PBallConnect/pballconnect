@@ -7116,10 +7116,11 @@ async function loadInnerCircle(){
       }
     }
     renderInnerCircleList();
-    updateNavCircleBadges(IC_MEMBERS.length, IC_PENDING_PLAYERS?.length||0, IC_INCOMING_COUNT);
+    updateNavCircleBadges(IC_MEMBERS.length, 0, IC_INCOMING_COUNT);
     // Only load pending requests on initial load — invites are loaded lazily when that tab is opened
     await loadIcPending();
     updateIcStats([]);
+    _syncIcSentCount(); // async — overwrites dashIcSentCount + icTabSentCount with real invites count
   }catch(e){ console.warn('loadInnerCircle error:',e); }
 }
 
@@ -7391,9 +7392,8 @@ function updateIcStats(pendingMembers){
   set('gMaleInvited',pMale); set('gFemaleInvited',pFemale); set('gOtherInvited',pOther); set('gTotalInvited',pending.length);
   set('lBelowMember',mBelow); set('lMyMember',mMy); set('lAboveMember',mAbove); set('lTotalMember',IC_MEMBERS.length);
   set('lBelowInvited',pBelow); set('lMyInvited',pMy); set('lAboveInvited',pAbove); set('lTotalInvited',pending.length);
-  // Populate the IC page summary boxes and dashboard IC boxes
+  // Populate the IC page summary box (dashIcSentCount is owned by _syncIcSentCount)
   set('icOutboundCount', pending.length);
-  set('dashIcSentCount', pending.length);
   // Inbound count comes from IC_INCOMING_COUNT set elsewhere
   const inboundEl = document.getElementById('icInboundCount');
   if(inboundEl) inboundEl.textContent = IC_INCOMING_COUNT||0;
@@ -7798,7 +7798,8 @@ async function loadIcInvites(){
       navPendBadge.style.display='inline-flex';
     }
 
-    if(!allSent.length){card.style.display='none';return;}
+    // Only show the card when there are still-active (unused) invites awaiting response
+    if(!pending.length){card.style.display='none';return;}
     card.style.display='block';
     const badge=document.getElementById('icInvitesBadge');
     if(badge) badge.textContent=pending.length||'';
@@ -7816,14 +7817,11 @@ async function loadIcInvites(){
         const name=conn.recipient_name||conn.recipient_email;
         const initials=name.split(' ').map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
         const sentAt=conn.created_at?new Date(conn.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
-        const updatedAt=conn.status!=='pending'&&(conn.updated_at||conn.created_at)
-          ?new Date(conn.updated_at||conn.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
-          :'';
         const row=document.createElement('div');
         row.className='ic-invite-row';
-        const meta=sentAt?'Sent '+sentAt+(updatedAt?' · '+statusLabel+' '+updatedAt:''):'';
+        const meta=sentAt?'Sent '+sentAt:'';
         row.innerHTML=
-          '<div class="ic-invite-avatar" style="background:'+(conn.status==='approved'?'rgba(76,175,125,0.2)':conn.status==='declined'?'rgba(239,68,68,0.15)':'rgba(255,255,255,0.08)')+';color:'+(conn.status==='approved'?'var(--green)':conn.status==='declined'?'#f87171':'#fff')+';">'+initials+'</div>'+
+          '<div class="ic-invite-avatar" style="background:rgba(255,255,255,0.08);color:#fff;">'+initials+'</div>'+
           '<div style="flex:1;"><div class="ic-invite-name">'+name+'</div>'+
           '<div class="ic-invite-meta">'+meta+'</div></div>'+
           '<span class="ic-invite-status" style="color:'+statusColor+';">'+statusLabel+'</span>';
@@ -7840,16 +7838,12 @@ async function loadIcInvites(){
           };
           row.appendChild(cancelBtn);
         }
-        // NOTE: No "+ Add to my IC" button here — these are YOUR outbound requests.
-        // If they accepted (status==='approved'), they are already in your IC.
-        // The mutual connection is established the moment they accept your request.
         list.appendChild(row);
       });
     };
 
-    renderGroup(pending,  '⏳ Awaiting', '#fbbf24', true);
-    renderGroup(accepted, '✅ Accepted', 'var(--green)', false);
-    renderGroup(declined, '❌ Declined', '#f87171', false);
+    // Only show AWAITING — accepted invites are already in the IC member count
+    renderGroup(pending, '⏳ Awaiting', '#fbbf24', true);
 
   }catch(e){ console.warn('loadIcInvites error:',e); }
 }
@@ -7881,20 +7875,38 @@ function showIcView(mode){
 }
 
 // ── IC Section switcher (new tab-based navigation) ─────
+
+// Fetches the active outbound IC invite count from the invites table and syncs both tiles.
+async function _syncIcSentCount(){
+  const myEmail = getMyEmail();
+  if(!myEmail) return;
+  try{
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/invites?inviter_email=eq.${encodeURIComponent(myEmail)}&invite_type=eq.single&is_used=eq.false&select=id`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+    );
+    if(!res.ok) return;
+    const rows = await res.json();
+    const n = rows.length;
+    const tabSentEl  = document.getElementById('icTabSentCount');
+    const dashSentEl = document.getElementById('dashIcSentCount');
+    if(tabSentEl)  tabSentEl.textContent  = n;
+    if(dashSentEl) dashSentEl.textContent = n;
+  }catch(e){}
+}
+
 function showIcSection(section){
   // FIX 1 — Sync IC page tab counts from live data
   const tabMember = document.getElementById('icTabMemberCount');
-  const tabSent   = document.getElementById('icTabSentCount');
   const tabReq    = document.getElementById('icTabRequestCount');
   if(tabMember) tabMember.textContent = IC_MEMBERS.length || '0';
-  if(tabSent)   tabSent.textContent   = IC_PENDING_PLAYERS?.length || '0';
   if(tabReq)    tabReq.textContent    = IC_INCOMING_COUNT || '0';
+  // Sync sent count from invites table (async, updates tiles when done)
+  _syncIcSentCount();
   // Also sync shared dashboard count IDs
   const dashMember = document.getElementById('dashIcMemberCount');
-  const dashSent   = document.getElementById('dashIcSentCount');
   const dashReq    = document.getElementById('dashIcIncomingCount');
   if(dashMember) dashMember.textContent = IC_MEMBERS.length || '0';
-  if(dashSent)   dashSent.textContent   = IC_PENDING_PLAYERS?.length || '0';
   if(dashReq)    dashReq.textContent    = IC_INCOMING_COUNT || '0';
   const lbl = document.getElementById('icMemberCountLabel');
   if(lbl) lbl.textContent = IC_MEMBERS.length ? '('+IC_MEMBERS.length+')' : '';
