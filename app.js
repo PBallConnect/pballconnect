@@ -8599,17 +8599,30 @@ async function sendIcEmailInvite(){
   if(btn){ btn.disabled = true; btn.textContent = 'Sending…'; }
 
   try{
+    // Check if invitee already has a profile — use ic_invite_existing for members, ic_invite for new users
+    let inviteeIsExisting = false;
+    try{
+      const chkRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(email)}&select=email&limit=1`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+      );
+      if(chkRes.ok){
+        const chkRows = await chkRes.json();
+        inviteeIsExisting = chkRows.length > 0;
+      }
+    }catch(_){}
+
     const recipient = { name, email };
     const { token, url } = await icCreateSingleUseInvite(recipient, 'email');
     if(!url) throw new Error('Invite creation failed');
     await icPostPendingConnection(email, name, token);
     await sendEmail({
       to_email:     email,
-      type:         'ic_invite',
+      type:         inviteeIsExisting ? 'ic_invite_existing' : 'ic_invite',
       inviter_name: getMyName(),
       invitee_name: name,
       personal_note: null,
-      invite_url:   url
+      invite_url:   inviteeIsExisting ? null : url
     });
     const conf = document.getElementById('icEmailConfirm');
     if(conf){

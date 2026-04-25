@@ -34,11 +34,12 @@ export async function onRequestPost(context) {
     }
 
     const emailSubject = subject || (
-      type === 'match_invite'  ? matchInviteSubject :
-      type === 'match_update'  ? '🎾 Your PBallConnect match has been updated' :
-      type === 'match_decline' ? '🎾 A player declined your match invite' :
-      type === 'ic_invite'     ? `${(inviter_name||'Someone').split(' ')[0]} invited you to PBallConnect 🎾` :
-      type === 'app_invite'    ? '🎾 You\'ve been invited to PBallConnect!' :
+      type === 'match_invite'        ? matchInviteSubject :
+      type === 'match_update'        ? '🎾 Your PBallConnect match has been updated' :
+      type === 'match_decline'       ? '🎾 A player declined your match invite' :
+      type === 'ic_invite'           ? `${(inviter_name||'Someone').split(' ')[0]} invited you to PBallConnect 🎾` :
+      type === 'ic_invite_existing'  ? `${(inviter_name||'Someone').split(' ')[0]} wants to add you to their Inner Circle on PBallConnect` :
+      type === 'app_invite'          ? '🎾 You\'ve been invited to PBallConnect!' :
       '🎾 PBallConnect Notification'
     );
 
@@ -46,7 +47,38 @@ export async function onRequestPost(context) {
 
     const recipientFirst = (invitee_name || '').split(' ')[0] || 'there';
 
-    const innerCard = type === 'ic_invite' ? `
+    const innerCard = type === 'ic_invite_existing' ? `
+      <tr><td style="background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;padding:32px 28px;">
+        <!-- Header -->
+        <div style="text-align:center;margin-bottom:6px;">
+          <span style="font-size:26px;font-weight:800;color:#1a7a3a;font-family:Arial,sans-serif;">PBall</span><span style="font-size:26px;font-weight:800;color:#111;font-family:Arial,sans-serif;">Connect</span>
+          &nbsp;<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#f3f4f6;color:#9ca3af;font-size:9px;font-weight:700;letter-spacing:.08em;vertical-align:middle;">BETA</span>
+        </div>
+        <p style="text-align:center;color:#9ca3af;font-style:italic;font-size:13px;margin:0 0 24px;">For the Love of Pickleball</p>
+        <!-- Message -->
+        <p style="color:#111;font-size:20px;font-weight:800;text-align:center;margin:0 0 16px;line-height:1.3;">${senderName} wants you in their Inner Circle!</p>
+        <p style="color:#374151;font-size:14px;line-height:1.7;text-align:center;margin:0 0 24px;">
+          Hey ${recipientFirst}! ${senderName} has added you to their Inner Circle on PBallConnect. Log in to accept and add them back.
+        </p>
+        <!-- CTA button -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
+          <tr><td align="center">
+            <a href="https://pballconnect.com" style="display:inline-block;width:100%;max-width:300px;padding:15px 24px;background:#1a7a3a;color:#ffffff;font-size:15px;font-weight:800;text-decoration:none;border-radius:10px;text-align:center;box-sizing:border-box;">
+              View My Inner Circle &rarr;
+            </a>
+          </td></tr>
+        </table>
+        <p style="text-align:center;color:#9ca3af;font-size:12px;margin:0 0 24px;">No password needed &mdash; we use secure magic links.</p>
+        <!-- Sign-off -->
+        <p style="color:#374151;font-size:13px;text-align:center;margin:0 0 20px;line-height:1.6;">See you on the court! 🏓<br/><span style="color:#6b7280;">— The PBallConnect Team</span></p>
+        <!-- Footer -->
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 16px;"/>
+        <p style="color:#9ca3af;font-size:11px;text-align:center;margin:0;line-height:1.6;">
+          You received this because ${senderName} invited you. If this was a mistake, simply ignore this email.<br/>
+          <a href="${site_url || 'https://pballconnect.com'}" style="color:#1a7a3a;text-decoration:none;">pballconnect.com</a>
+        </p>
+      </td></tr>
+    ` : type === 'ic_invite' ? `
       <tr><td style="background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;padding:32px 28px;">
         <!-- Header -->
         <div style="text-align:center;margin-bottom:6px;">
@@ -135,7 +167,7 @@ export async function onRequestPost(context) {
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a120b;padding:40px 20px;">
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
-        ${(type !== 'app_invite' && type !== 'ic_invite') ? `
+        ${(type !== 'app_invite' && type !== 'ic_invite' && type !== 'ic_invite_existing') ? `
         <tr><td style="text-align:center;padding-bottom:24px;">
           <div style="font-size:32px;margin-bottom:8px;">🏓</div>
           <div style="color:#4CAF7D;font-size:22px;font-weight:800;">PBall<span style="color:#fff;">Connect</span></div>
