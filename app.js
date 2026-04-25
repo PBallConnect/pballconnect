@@ -7117,8 +7117,8 @@ async function loadInnerCircle(){
     }
     renderInnerCircleList();
     updateNavCircleBadges(IC_MEMBERS.length, IC_PENDING_PLAYERS?.length||0, IC_INCOMING_COUNT);
-    // Await both so updateIcStats fires after IC_INVITED_PLAYERS is populated
-    await Promise.all([loadIcInvites(), loadIcPending()]);
+    // Only load pending requests on initial load — invites are loaded lazily when that tab is opened
+    await loadIcPending();
     updateIcStats([]);
   }catch(e){ console.warn('loadInnerCircle error:',e); }
 }
@@ -8121,7 +8121,14 @@ function showIcSection(section){
   if(target) target.style.display='block';
 
   // Load data on demand + enforce default view
-  if(section==='members')  switchIcMemberView('grid');
+  if(section==='members'){
+    switchIcMemberView('grid');
+    // Ensure invite/pending noise is hidden in the members view
+    const invitesCard = document.getElementById('icInvitesCard');
+    if(invitesCard) invitesCard.style.display = 'none';
+    const pendingCard = document.getElementById('icPendingCard');
+    if(pendingCard) pendingCard.style.display = 'none';
+  }
   if(section==='find')     loadNearbyPlayers();
   if(section==='requests') loadIcPending();
   window.scrollTo(0,0);
@@ -8161,6 +8168,9 @@ function switchIcMemberView(view){
     if(list)       list.style.display       = 'none';
     if(colHeaders) colHeaders.style.display = 'none';
     if(grid)       grid.style.display       = 'block';
+    // Also hide the invites history card — it has no place in the grid view
+    const invitesCard = document.getElementById('icInvitesCard');
+    if(invitesCard) invitesCard.style.display = 'none';
     _buildIcLevelGrid();
     return;
   }
