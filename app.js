@@ -7882,7 +7882,7 @@ async function _syncIcSentCount(){
   if(!myEmail) return;
   try{
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/invites?inviter_email=eq.${encodeURIComponent(myEmail)}&invite_type=eq.single&is_used=eq.false&select=id`,
+      `${SUPABASE_URL}/rest/v1/invites?inviter_email=eq.${encodeURIComponent(myEmail)}&invite_type=eq.single&is_used=eq.false&or=(status.is.null,status.not.in.(registered,accepted))&select=id`,
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
     );
     if(!res.ok) return;
