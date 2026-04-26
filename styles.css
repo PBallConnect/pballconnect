@@ -308,8 +308,9 @@
     .top-header{position:sticky!important;top:0!important;z-index:400!important;}
     .main-content{padding-bottom:80px;}
 
-    /* ── IC sticky header ── */
-    #icStickyHeader{left:0!important;}
+    /* ── IC container: in-flow on mobile, same as dashboard ── */
+    #icStickyHeader{position:static!important;top:auto!important;left:auto!important;right:auto!important;padding:0!important;background:transparent!important;border:none!important;box-shadow:none!important;z-index:auto!important;}
+    #icStickyHeaderSpacer{display:none!important;}
 
     /* ── Page padding ── */
     .page-section{padding:16px 14px 100px;}
