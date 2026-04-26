@@ -6515,7 +6515,16 @@ async function restoreSession(email, playerData){
       if(res.ok){ const rows = await res.json(); player = rows[0]; }
     }catch(e){ console.warn('Session restore failed:', e); return; }
   }
-  // New user — auth succeeded via magic link but no registration exists yet
+  // Existing user found — strip ?newuser=1 and any invite params so they can't
+  // trigger new-user flows on re-render or secondary auth state events.
+  if(player){
+    const _hasNewUser = new URLSearchParams(window.location.search).get('newuser') === '1';
+    if(_hasNewUser){
+      history.replaceState(null, '', window.location.pathname);
+    }
+  }
+
+  // No registration row found — auth succeeded via magic link but account doesn't exist yet
   if(!player){
     if(_newUserRegistrationStarted) return; // already started — don't reset the form
     S.email = email.toLowerCase();
