@@ -1050,27 +1050,27 @@
         <div style="max-width:600px;margin:0 auto;">
         <div style="background:#fef9c3;border:3px solid #eab308;border-radius:16px;padding:14px 12px;margin-bottom:0;">
           <div style="font-size:15px;font-weight:800;color:#713f12;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;text-align:center;">Inner Circle</div>
-          <div style="display:flex;gap:8px;">
+          <div style="display:flex;flex-wrap:nowrap;width:100%;overflow:hidden;gap:6px;">
 
             <!-- Green: My Inner Circle -->
             <button id="icTabMembers" onclick="showIcSection('members')"
-              style="flex:1;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #16a34a;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;">
-              <div id="icTabMemberCount" style="font-size:26px;font-weight:800;color:#14532d;line-height:1;">0</div>
-              <div style="font-size:12px;font-weight:700;color:#14532d;margin-top:5px;line-height:1.4;">👥 My IC</div>
+              style="flex:1 1 0;min-width:0;padding:6px 4px;border-radius:12px;background:#ffffff;border:2.5px solid #16a34a;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;word-break:break-word;">
+              <div id="icTabMemberCount" style="font-size:clamp(16px,5vw,26px);font-weight:800;color:#14532d;line-height:1;">0</div>
+              <div style="font-size:clamp(9px,2.5vw,12px);font-weight:700;color:#14532d;margin-top:5px;line-height:1.4;">👥 My IC</div>
             </button>
 
             <!-- Amber: My Invites to Others -->
             <button id="icTabInvite" onclick="showIcSection('invite')"
-              style="flex:1;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #d97706;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;">
-              <div id="icTabSentCount" style="font-size:26px;font-weight:800;color:#78350f;line-height:1;">0</div>
-              <div style="font-size:12px;font-weight:700;color:#78350f;margin-top:5px;line-height:1.4;">My Inner Circle<br/>Invites to Others</div>
+              style="flex:1 1 0;min-width:0;padding:6px 4px;border-radius:12px;background:#ffffff;border:2.5px solid #d97706;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;word-break:break-word;">
+              <div id="icTabSentCount" style="font-size:clamp(16px,5vw,26px);font-weight:800;color:#78350f;line-height:1;">0</div>
+              <div style="font-size:clamp(9px,2.5vw,12px);font-weight:700;color:#78350f;margin-top:5px;line-height:1.4;">My Inner Circle<br/>Invites to Others</div>
             </button>
 
             <!-- Purple: Others Invites to Me -->
             <button id="icTabRequests" onclick="showIcSection('requests')"
-              style="flex:1;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #7c3aed;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;">
-              <div id="icTabRequestCount" style="font-size:26px;font-weight:800;color:#4c1d95;line-height:1;">0</div>
-              <div style="font-size:12px;font-weight:700;color:#4c1d95;margin-top:5px;line-height:1.4;">Others Inner Circle<br/>Invites to Me</div>
+              style="flex:1 1 0;min-width:0;padding:6px 4px;border-radius:12px;background:#ffffff;border:2.5px solid #7c3aed;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;word-break:break-word;">
+              <div id="icTabRequestCount" style="font-size:clamp(16px,5vw,26px);font-weight:800;color:#4c1d95;line-height:1;">0</div>
+              <div style="font-size:clamp(9px,2.5vw,12px);font-weight:700;color:#4c1d95;margin-top:5px;line-height:1.4;">Others Inner Circle<br/>Invites to Me</div>
             </button>
 
           </div>
