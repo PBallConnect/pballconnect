@@ -262,7 +262,7 @@
 
   /* ── Left Nav ─────────────────────────────────────── */
   .left-nav{width:240px;min-height:100vh;background:#f3f4f6;border-right:1px solid #d1d5db;
-    display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:50;-webkit-transition:transform .3s ease;transition:transform .3s ease;-webkit-transform:translateX(0);transform:translateX(0);}
+    display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:50;}
   /* .left-nav.collapsed removed — JS uses .open class, not .collapsed */
   .nav-logo{padding:0;border-bottom:1px solid #d1d5db;}
   .nav-logo-icon{font-size:28px;}
@@ -298,14 +298,16 @@
   .nav-overlay.visible{opacity:1;pointer-events:auto;}
 
   @media(max-width:768px){
-    /* ── Nav ── */
+    /* ── Mobile nav ── */
+    .app-shell{flex-direction:column;}
+    .left-nav{position:fixed;top:52px;left:0;width:240px;height:calc(100vh - 52px);transform:translateX(-240px);transition:transform 0.25s ease;z-index:350;overflow-y:auto;}
+    .left-nav.open{transform:translateX(0);}
+    .nav-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:349;}
+    .nav-overlay.visible{display:block;}
     .nav-toggle{display:block;}
-    .left-nav{position:fixed;width:240px;height:100%;min-height:0;-webkit-transform:translateX(-240px)!important;transform:translateX(-240px)!important;}
-    .left-nav.open{-webkit-transform:translateX(0)!important;transform:translateX(0)!important;}
-    .app-shell{flex-direction:column;flex:1;overflow:visible;}
-    .right-column{margin-left:0!important;width:100%;display:flex;flex-direction:column;min-height:100vh;}
+    .right-column{margin-left:0!important;}
+    .main-content{padding-bottom:80px;}
     .top-header{position:sticky!important;top:0!important;z-index:400!important;}
-    .main-content{flex:1;width:100%;overflow-x:hidden;padding-bottom:60px;margin-left:0;margin-right:0;}
 
     /* ── Page padding ── */
     .page-section{padding:16px 14px 100px;}
@@ -332,11 +334,6 @@
     /* ── IC skill columns → 2 col on mobile ── */
     .ic-skill-grid-wrap{grid-template-columns:1fr 1fr;}
     .ic-skill-grid-5col{grid-template-columns:1fr 1fr;}
-
-    /* ── Nav toggle in header ── */
-    .nav-toggle{display:flex!important;}
-    .left-nav{top:52px!important;z-index:350!important;height:calc(100vh - 52px)!important;}
-    .nav-overlay{z-index:349!important;top:52px!important;}
 
     /* ── Better tap targets ── */
     .nav-item{padding:14px 20px;min-height:48px;}
@@ -392,9 +389,6 @@
     .ic-member-card{padding:12px;}
     .ic-member-emoji{width:40px;height:40px;font-size:20px;}
 
-    /* ── App shell + nav height/position (below 52px header) — moved from global scope ── */
-    .app-shell{min-height:calc(100vh - 52px);}
-    .left-nav{top:52px;height:calc(100vh - 52px);overflow-y:auto;}
   }
 
   /* ── Extra small phones (< 390px) ── */
@@ -410,7 +404,7 @@
 
   /* ── Main content ─────────────────────────────────── */
   .right-column{margin-left:240px;display:flex;flex-direction:column;min-height:100vh;position:relative;flex:1;}
-  @media(max-width:768px){.right-column{margin-left:0;} .main-content{padding-bottom:80px;}}
+
   .main-content{flex:1;background:#ffffff;min-height:calc(100vh - 52px);overflow-x:hidden;max-width:600px;margin-left:auto;margin-right:auto;}
   .page-section{display:none;padding:32px 32px 80px;}
   .page-section.active{display:block;}
