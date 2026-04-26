@@ -7968,7 +7968,7 @@ function showIcSection(section){
     active.btn.querySelectorAll('div').forEach(d => d.style.color = '#fff');
   }
 
-  // 'invite' redirects to members + opens the panel — handle BEFORE showing any section
+  // 'invite' shows members + invite list; panel only opens via Send an Invite button
   if(section==='invite'){
     ['Members','Invite','Requests','Find'].forEach(s=>{
       const el=document.getElementById('icSection'+s); if(el) el.style.display='none';
@@ -7976,7 +7976,7 @@ function showIcSection(section){
     const membersEl = document.getElementById('icSectionMembers');
     if(membersEl) membersEl.style.display = 'block';
     const panel = document.getElementById('icInvitePanel');
-    if(panel && panel.style.display === 'none') toggleIcInvitePanel();
+    if(panel) panel.style.display = 'none';
     switchIcMemberView('grid');
     loadIcInvites();
     window.scrollTo(0,0);
