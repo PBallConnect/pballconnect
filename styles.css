@@ -298,16 +298,18 @@
   .nav-overlay.visible{opacity:1;pointer-events:auto;}
 
   @media(max-width:768px){
-    /* ── Mobile nav ── */
-    .app-shell{flex-direction:column;}
-    .left-nav{position:fixed;top:52px;left:0;width:240px;height:calc(100vh - 52px);transform:translateX(-240px);transition:transform 0.25s ease;z-index:350;overflow-y:auto;}
+    /* ── Nav drawer ── */
+    .left-nav{position:fixed;top:52px;left:0;width:240px;height:calc(100vh - 52px);min-height:unset;transform:translateX(-240px);transition:transform 0.25s ease;z-index:350;overflow-y:auto;}
     .left-nav.open{transform:translateX(0);}
-    .nav-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:349;}
-    .nav-overlay.visible{display:block;}
+    .nav-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:349;opacity:1;pointer-events:none;}
+    .nav-overlay.visible{display:block;pointer-events:auto;}
     .nav-toggle{display:block;}
     .right-column{margin-left:0!important;}
-    .main-content{padding-bottom:80px;}
     .top-header{position:sticky!important;top:0!important;z-index:400!important;}
+    .main-content{padding-bottom:80px;}
+
+    /* ── IC sticky header ── */
+    #icStickyHeader{left:0!important;}
 
     /* ── Page padding ── */
     .page-section{padding:16px 14px 100px;}
@@ -331,17 +333,17 @@
     .pc-stats-grid{grid-template-columns:1fr 1fr;}
     .courts-page-grid{grid-template-columns:1fr;}
 
-    /* ── IC skill columns → 2 col on mobile ── */
+    /* ── IC skill columns → 2 col ── */
     .ic-skill-grid-wrap{grid-template-columns:1fr 1fr;}
     .ic-skill-grid-5col{grid-template-columns:1fr 1fr;}
 
-    /* ── Better tap targets ── */
+    /* ── Tap targets ── */
     .nav-item{padding:14px 20px;min-height:48px;}
     .chip{min-height:40px;display:inline-flex;align-items:center;justify-content:center;}
     button{-webkit-tap-highlight-color:transparent;}
-
-    /* ── Prevent text selection on tap ── */
     .nav-item,.chip,.btn-next,.btn-back,.btn-submit{-webkit-user-select:none;user-select:none;}
+
+    /* ── Top header ── */
     .top-logo-text{font-size:13px;}
     #memberCountBadge{display:none!important;}
     .top-header-right{gap:6px;}
@@ -385,10 +387,9 @@
     /* ── Coach section ── */
     #coachSection .grid2{grid-template-columns:1fr;}
 
-    /* ── Find players / IC member cards ── */
+    /* ── IC member cards ── */
     .ic-member-card{padding:12px;}
     .ic-member-emoji{width:40px;height:40px;font-size:20px;}
-
   }
 
   /* ── Extra small phones (< 390px) ── */
@@ -1036,20 +1037,3 @@
     80%{ transform:translateX(4px); }
   }
   .ic-shake { animation: ic-shake 0.5s ease; }
-}
-@media (max-width: 768px) {
-  #icStickyHeader { left: 0 !important; }
-
-  /* IC header tiles — shrink to fit the 3-up row on narrow screens */
-  #icTabMembers, #icTabInvite, #icTabRequests {
-    padding: 8px 4px !important;
-  }
-  #icTabMemberCount, #icTabSentCount, #icTabRequestCount {
-    font-size: 20px !important;
-  }
-  #icTabMembers div:last-child,
-  #icTabInvite div:last-child,
-  #icTabRequests div:last-child {
-    font-size: 10px !important;
-  }
-}
