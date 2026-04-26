@@ -7993,6 +7993,9 @@ function showIcSection(section){
 
   // Load data on demand + enforce default view
   if(section==='members'){
+    // Always collapse the invite panel — it should only open via the Send an Invite button
+    const invitePanel = document.getElementById('icInvitePanel');
+    if(invitePanel) invitePanel.style.display = 'none';
     switchIcMemberView('grid');
     // Ensure invite/pending noise is hidden in the members view
     const invitesCard = document.getElementById('icInvitesCard');

@@ -1046,4 +1046,17 @@
 }
 @media (max-width: 768px) {
   #icStickyHeader { left: 0 !important; }
+
+  /* IC header tiles — shrink to fit the 3-up row on narrow screens */
+  #icTabMembers, #icTabInvite, #icTabRequests {
+    padding: 8px 4px !important;
+  }
+  #icTabMemberCount, #icTabSentCount, #icTabRequestCount {
+    font-size: 20px !important;
+  }
+  #icTabMembers div:last-child,
+  #icTabInvite div:last-child,
+  #icTabRequests div:last-child {
+    font-size: 10px !important;
+  }
 }
