@@ -8357,9 +8357,9 @@ async function icCreateSingleUseInvite(recipient, method){
     const url = 'https://pballconnect.com/invite.html?token=' + token;
     return { token, url };
   }catch(e){
-    console.warn('Invite record failed but continuing:', e.message);
-    // Don't rethrow — let the caller decide whether to surface the error
-    return { token: null, url: null };
+    console.error('Invite INSERT failed:', e.message);
+    showToast('Invite failed — please try again','#f87171');
+    throw e; // stop caller: no email sent, no counter incremented
   }
 }
 
