@@ -9177,6 +9177,7 @@ function showInviteLandingChoice(email, inv){
   document.body.appendChild(overlay);
   window._inviteChoiceFull = function(){
     overlay.remove();
+    _newUserRegistrationStarted = false;
     const emailEl = document.getElementById('email'); if(emailEl) emailEl.value = email;
     showPage('playerProfile'); unlockProfileForm(); goTo(1);
     S._tosConsent=false; S._privacyConsent=false; S._riskConsent=false;
@@ -9189,6 +9190,7 @@ function showInviteLandingChoice(email, inv){
   };
   window._inviteChoiceQuick = function(){
     overlay.remove();
+    _newUserRegistrationStarted = false;
     showQuickConnectForm(email, inv);
   };
 }
@@ -9515,6 +9517,8 @@ async function sendMutualInvite(theirEmail, theirName){
 }
 
 function startNewRegistration(email){
+  if(_newUserRegistrationStarted) return; // prevent double-call from dual auth event sources
+  _newUserRegistrationStarted = true;
   closeLoginModal();
   S.email = (email||'').toLowerCase();
   localStorage.removeItem('pb_pending_email');
