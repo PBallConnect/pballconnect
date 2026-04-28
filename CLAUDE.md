@@ -1,6 +1,6 @@
 # CLAUDE.md — PBallConnect Reference
 
-_Last updated: April 23, 2026_
+_Last updated: April 27, 2026_
 
 ---
 
@@ -38,6 +38,9 @@ Deployed on **Cloudflare Pages** at `pballconnect.com`. No build step, no bundle
 | `functions/api/send-email.js` | — | Cloudflare Pages Function for transactional email via Resend |
 | `supabase_rls_policies.sql` | — | RLS policy definitions — run in Supabase SQL editor after schema changes |
 | `manifest.json` | — | PWA manifest (also injected inline at runtime in app.js) |
+| `icon-512.png`, `icon-192.png` | — | PWA home screen icons |
+| `apple-touch-icon.png` | — | iOS home screen icon |
+| `favicon-32.png` | — | Browser tab favicon |
 
 ---
 
@@ -153,12 +156,12 @@ Email types:
 ### Tier 1 — Single-Use Tokens
 
 - Created by `icCreateSingleUseInvite(recipient, method)` — shared helper for all single-use channels (email, text, copy link)
-- Token: 20 chars from `crypto.getRandomValues(new Uint8Array(16))`
-- Written to `invites` table: `invite_type: 'single'`, `is_used: false`, `invitee_name`, `invitee_email`
+- Token: 16 chars generated client-side via `crypto.getRandomValues(new Uint8Array(12))` — included in INSERT payload as `invite_token`
+- Written to `invites` table: `invite_type: 'single'`, `is_used: false`, `invite_token`, `invitee_name`, `invitee_email`
 - URL: `https://pballconnect.com/invite.html?token=TOKEN`
 - On registration: PATCH token row with `is_used: true, status: 'registered'`
 - `invite.html` checks `is_used` before showing the card; shows friendly "already used" error if true (asks user to request a fresh invite)
-- INSERT failure is caught silently — invite channels still fire even if DB write fails (fallback behavior)
+- INSERT throws on failure (no silent catch) — invite channels abort if DB write fails so no orphaned invite URLs are shared
 
 ### Tier 2 — Permanent QR Tokens
 
@@ -190,6 +193,14 @@ No app.js dependency. Uses `var` + plain function declarations (no ES modules).
 7. `restoreSession` → no row found → `startNewRegistration(email)`
 8. `startNewRegistration` → `showInviteLandingChoice()` (Full Profile or Quick Connect)
 
+**Double-call guard:** `startNewRegistration` sets `_newUserRegistrationStarted = true` on first call and returns immediately if called again (both `onAuthStateChange` and `getSession()` fire on magic link arrival, which previously stacked two choice overlays). The flag is cleared by `_inviteChoiceFull` and `_inviteChoiceQuick` before navigating away.
+
+**Post-registration IC connection:** `handlePostRegistrationInvite(email, name)` fires after the new user saves their profile. If they tap "Yes — Join [inviter]'s IC!":
+- PATCH original connection row (inviter → new user, status:pending) → `status:'approved'`
+- POST reciprocal row (new user → inviter, status:'approved') — auto-approved since inviter initiated
+- Both sides are immediately mutual IC members
+If they tap "Maybe Later": original row stays pending; new user can accept from IC → Requests later.
+
 ### IC Invite UI Flow (in-app)
 
 The IC invite panel lives inside `icSectionMembers` (not a separate section).
@@ -212,7 +223,7 @@ The IC invite panel lives inside `icSectionMembers` (not a separate section).
 
 **Channel behavior:**
 - `selectIcChannel('email')` — hides Text + Link buttons + QR line, shows `icEmailFields` (name + email inputs + Send button). Recipient name required; email required.
-  - `sendIcEmailInvite()` calls `icCreateSingleUseInvite()` + `sendEmail({type:'ic_invite'})` via Resend API directly (no email app). After success, shows inline confirm + "Send another?" prompt after 1200ms.
+  - `sendIcEmailInvite()` calls `icCreateSingleUseInvite()` + `sendEmail({type:'ic_invite'})` via Resend API directly (no email app). After success, shows inline confirm + "Send another?" prompt after 1200ms. Each awaiting invite card shows the invitee's email below their name.
   - `icSendAnother()` — clears fields, keeps panel open for batch inviting
   - `icDoneInviting()` — closes panel, resets form, reloads IC page state, scrolls top, shows toast
 - `selectIcChannel('text')` — shows `icTextFields` (name input + Open Messages button). Recipient name required.
@@ -272,7 +283,7 @@ Two separate checkboxes required before Submit:
 UI: `toggleAvail(key)`, `updateAvailToggles()`.
 
 ### Quick Connect
-Minimal overlay — email (readonly), first name, phone, zip, skill slider, age, playing since, waivers. Saves to `registrations`. No `quick_connect` column exists — do not add one. Goes directly to dashboard with welcome toast. No organizer question.
+Minimal overlay — email (readonly), **First Name** (label: "First Name", placeholder: "Your first name", required), phone, zip, skill slider, age, playing since, waivers. Saves to `registrations`. No `quick_connect` column exists — do not add one. Goes directly to dashboard with welcome toast. No organizer question. No nickname field — do not add one.
 
 ---
 
@@ -325,7 +336,7 @@ Last updated: April 2026.
 - `'favorites'` — shows `icApprovedList` (filtered to `IC_FAVORITES`), hides `icLevelGrid`, shows `icColHeaders`
 - `'alpha'` — shows `icApprovedList` sorted A–Z, hides `icLevelGrid`, shows `icColHeaders`
 
-**Fixed IC sticky header** (`id="icStickyHeader"`): `position:fixed; top:52px; left:240px; right:0; z-index:100; background:#fff; border-bottom:2px solid #e5e7eb`. On mobile (`max-width:768px`): `left:0`. Inner centering div: `max-width:600px; margin:0 auto`. Spacer div below: `height:140px`.
+**IC sticky header** (`id="icStickyHeader"`): `position:sticky; top:52px; z-index:100; background:#fff; border-bottom:2px solid #e5e7eb`. Sits inside the normal page content flow — no fixed positioning, no left/right offsets, no inner centering wrapper. On mobile the header stays inside the content container and is overridden to `position:static` so it doesn't escape the layout.
 
 ---
 
@@ -477,9 +488,20 @@ Applied via JS: `el.classList.add('ic-shake'); setTimeout(()=>el.classList.remov
 
 1. **Dashboard "Invited" box count can occasionally diverge from nav badge.** `loadDashTileCounts()` fetches its own count — verify it filters past matches and self-organized matches consistently.
 
-2. **`invites` table RLS INSERT policy may be missing.** `icCreateSingleUseInvite()` INSERT can fail silently (caught by try/catch). Invite channels still fire, but no DB record is created. Fix: add `CREATE POLICY "authenticated users can insert invites" ON invites FOR INSERT TO authenticated WITH CHECK (auth.uid() IS NOT NULL);` in Supabase SQL editor.
+2. **Mobile portrait left nav not working as slide-in drawer on iPhone.** The left nav should slide in from the left on mobile (hamburger toggle), but does not work correctly on iPhone. CSS position/transform approach needs a fresh pass.
+
+3. **Non-member match invite flow not built.** Organizers can only invite IC members. Inviting players outside the IC (by email or name) is not yet implemented.
 
 **Resolved (do not re-introduce):**
+- ~~`invites` table RLS INSERT policy missing~~ — policy added in Supabase; invites now write correctly
+- ~~`invite_token` missing from INSERT payload~~ — client-side token generated via `crypto.getRandomValues` and included in payload
+- ~~`+` addressed Gmail accounts blocked by silent filter in `sendEmail()`~~ — filter removed; only `@example.com` and `@test.com` are blocked
+- ~~`icPostPendingConnection()` 409 Conflict on duplicate~~ — handled with `resolution=ignore-duplicates`
+- ~~`sendEmail()` missing `return` keyword~~ — fixed; function now returns the fetch response
+- ~~IC connection stays `pending` after new user accepts invite~~ — original row now PATCHed to `approved`; reciprocal row created as `approved`; `inviteMutualOverlay` with broken requester logic removed
+- ~~Duplicate invite cards in incoming requests view~~ — `loadIcPending()` deduplicates by `requester_email` before rendering
+- ~~"Welcome back" shown on first login~~ — per-email `localStorage` flag (`pb_welcomed_<email>`) distinguishes first vs. returning logins
+- ~~Full Profile button doing nothing on registration choice screen~~ — `startNewRegistration` now sets `_newUserRegistrationStarted = true` on first call; dual auth events (both `onAuthStateChange` and `getSession()` fire on magic link arrival) no longer stack two overlays
 - ~~IC tab shows 0 on arrival from dashboard~~ — fixed by syncing counts in `showIcSection()`
 - ~~+ Add to my IC showing for existing IC members in outbound accepted group~~ — removed from that group
 - ~~Duplicate courts in nearby list~~ — `normalizeCourtName()` fuzzy match + double-dedup applied
@@ -493,9 +515,12 @@ Applied via JS: `el.classList.add('ic-shake'); setTimeout(()=>el.classList.remov
 - [x] Liability waiver with RSA 508:13 language at registration
 - [x] Two-tier invite system (single-use tokens + QR) live
 - [x] IC invite email via Resend API (no email app required)
-- [ ] **Fix `invites` table RLS INSERT policy** — invite records fail to save silently
+- [x] `invites` table RLS INSERT policy added
+- [x] PWA icons added (icon-512, icon-192, apple-touch-icon, favicon-32)
+- [ ] **Fix mobile portrait left nav** — slide-in drawer not working on iPhone
+- [ ] **Non-member match invite flow** — invite players outside IC by email
 - [ ] **Test full invite flow end to end:**
-  - Single-use token → register → IC connection created
+  - Single-use token → register → IC connection created ✓ (tested April 27)
   - QR token → register → IC connection created
   - Reset QR → old link invalid → new QR works
 - [ ] LLC formation — replace `[OWNER NAME / LLC NAME]` and `[YOUR EMAIL ADDRESS]` placeholders in ToS
@@ -519,10 +544,11 @@ Applied via JS: `el.classList.add('ic-shake'); setTimeout(()=>el.classList.remov
 
 ## Next to Build
 
-1. **Fix `invites` table RLS INSERT policy** — single-use invite tokens fail to save silently. Add INSERT policy in Supabase so records are created correctly.
-2. **Play Structure as Step 1 with branching** — Set Group path auto-calculates courts and skips steps 2–3; Open/Mixed/Same runs full 7-container wizard.
-3. **My Groups UI** — organizer chip red/white, gender lookup fix (`player_email` not `email`), Set vs Random toggle in create modal.
-4. **Match Invites — status pill dropdowns** — In/Pending/Waitlist/Out boxes reveal player name list. `_miResponseCache` and `toggleInvitePanel()` already scaffolded.
+1. **Fix mobile portrait left nav** — slide-in drawer via hamburger toggle not working on iPhone. CSS `position:fixed` + `transform:translateX` approach needs a clean-room pass.
+2. **Non-member match invite flow** — organizer enters email/name for players not in their IC; app sends invite email with magic link to join + RSVP.
+3. **Play Structure as Step 1 with branching** — Set Group path auto-calculates courts and skips steps 2–3; Open/Mixed/Same runs full 7-container wizard.
+4. **My Groups UI** — organizer chip red/white, gender lookup fix (`player_email` not `email`), Set vs Random toggle in create modal.
+5. **Match Invites — status pill dropdowns** — In/Pending/Waitlist/Out boxes reveal player name list. `_miResponseCache` and `toggleInvitePanel()` already scaffolded.
 6. **Landing page at pballconnect.com** — marketing page. App moves to subdomain.
 7. **Onboarding flow for new users** — guided setup after first login.
 8. **Recurring matches v2** — gap alert delivery via Cloudflare Cron Worker.
@@ -593,3 +619,9 @@ Design and planning happens in Claude.ai (claude.ai/code or chat). Implementatio
 18. **Never display raw token strings in any UI.** Tokens appear only in URLs (invite links). Never render the token value as visible text in the app or email body.
 
 19. **`_icIsMobile` detection is required before showing the Text channel.** The 💬 Send a Text button must only be shown on mobile devices. Use `_icIsMobile` (set once at module load) — never show the SMS button unconditionally.
+
+20. **`startNewRegistration` has a double-call guard.** It sets `_newUserRegistrationStarted = true` on first call and returns immediately on any subsequent call. Both `onAuthStateChange` and `getSession()` fire on magic link arrival — without the guard, two choice overlays stack. `_inviteChoiceFull` and `_inviteChoiceQuick` clear the flag before navigating away. Do not remove this guard.
+
+21. **Quick Connect uses First Name only — no nickname.** The `qcFirstName` field (label: "First Name", placeholder: "Your first name") is the only name field. There is no nickname field and no auto-generation from email. Do not add a nickname field or fall back to `email.split('@')[0]` for display names in this flow.
+
+22. **`loadIcPending()` deduplicates by `requester_email`.** Multiple connection rows can exist for the same (inviter, invitee) pair from repeat sends or test runs. The function deduplicates before rendering, keeping the most recent row per `requester_email`. Do not remove this deduplication.
