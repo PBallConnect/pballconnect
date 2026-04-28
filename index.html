@@ -558,6 +558,9 @@
         <div class="dupr-ticks" id="personalRatingTicks"></div>
       </div>
       <div class="hint">Your self-assessed playing level · Increments of 0.25</div>
+      <div style="text-align:center;margin-top:4px;">
+        <a href="#" onclick="showSkillGuide();return false;" style="font-size:0.85rem;color:#16a34a;text-decoration:underline;">❓ What's my level?</a>
+      </div>
     </div>
     <div class="divider"></div>
     <div class="field">
@@ -2212,6 +2215,47 @@
         ✓ I Understand — Choose Photo
       </button>
     </div>
+  </div>
+</div>
+
+<!-- Skill Level Guide Modal -->
+<div class="modal-overlay" id="skillGuideModal" style="display:none" onclick="hideSkillGuide()">
+  <div class="modal" onclick="event.stopPropagation()" style="max-height:85vh;overflow-y:auto;">
+    <h3 style="margin-bottom:4px;color:#111;">🏓 Find Your Level</h3>
+    <p style="color:#6b7280;font-size:13px;margin-bottom:20px;">Based on USA Pickleball ratings</p>
+
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
+
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;">
+        <div style="font-size:14px;font-weight:800;color:#111;">1.0–2.5 &nbsp;<span style="font-weight:500;color:#6b7280;">·</span>&nbsp; <span style="color:#6b7280;font-weight:600;">Beginner</span></div>
+        <div style="font-size:12px;color:#4b5563;margin-top:5px;line-height:1.6;">Learning the rules, keeping score, and sustaining short rallies.</div>
+      </div>
+
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;">
+        <div style="font-size:14px;font-weight:800;color:#111;">3.0 &nbsp;<span style="font-weight:500;color:#6b7280;">·</span>&nbsp; <span style="color:#6b7280;font-weight:600;">Intermediate</span></div>
+        <div style="font-size:12px;color:#4b5563;margin-top:5px;line-height:1.6;">Consistent serves and returns, understanding court positioning, and learning to dink.</div>
+      </div>
+
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;">
+        <div style="font-size:14px;font-weight:800;color:#111;">3.5 &nbsp;<span style="font-weight:500;color:#6b7280;">·</span>&nbsp; <span style="color:#6b7280;font-weight:600;">Lower Intermediate</span></div>
+        <div style="font-size:12px;color:#4b5563;margin-top:5px;line-height:1.6;">Sustaining dink rallies, developing drop shots, and moving to the kitchen line reliably.</div>
+      </div>
+
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px 16px;">
+        <div style="font-size:14px;font-weight:800;color:#111;">4.0 &nbsp;<span style="font-weight:500;color:#1a7a3a;">·</span>&nbsp; <span style="color:#1a7a3a;font-weight:600;">Upper Intermediate</span></div>
+        <div style="font-size:12px;color:#4b5563;margin-top:5px;line-height:1.6;">Consistency, controlling pace, playing with strategy, and working well with a partner.</div>
+      </div>
+
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px 16px;">
+        <div style="font-size:14px;font-weight:800;color:#111;">4.5+ &nbsp;<span style="font-weight:500;color:#1a7a3a;">·</span>&nbsp; <span style="color:#1a7a3a;font-weight:600;">Advanced / Elite</span></div>
+        <div style="font-size:12px;color:#4b5563;margin-top:5px;line-height:1.6;">Mastered most shots, high consistency, minimal errors, and strong strategic play.</div>
+      </div>
+
+    </div>
+
+    <p style="font-size:11px;color:#9ca3af;text-align:center;border-top:1px solid #e5e7eb;padding-top:12px;margin-bottom:16px;">Source: USA Pickleball</p>
+
+    <button class="btn-close" onclick="hideSkillGuide()">Got it!</button>
   </div>
 </div>
 

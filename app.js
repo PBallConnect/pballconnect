@@ -459,6 +459,14 @@ function openPhotoConsentModal(){
 function closePhotoConsentModal(){
   document.getElementById('photoConsentModal').style.display='none';
 }
+
+window.showSkillGuide = function(){
+  document.getElementById('skillGuideModal').style.display='flex';
+};
+window.hideSkillGuide = function(){
+  document.getElementById('skillGuideModal').style.display='none';
+};
+
 function acceptPhotoConsent(){
   closePhotoConsentModal();
   // Record consent timestamp
@@ -9276,6 +9284,7 @@ function showQuickConnectForm(email, inv){
           '<span id="qcSkillVal" style="font-weight:800;color:#1a7a3a;min-width:40px;text-align:right;">4.0</span>'+
         '</div>'+
         '<div style="font-size:10px;color:#9ca3af;text-align:center;">2.0 (beginner) → 7.0+ (pro)</div>'+
+        '<div style="text-align:center;margin-top:4px;"><a href="#" onclick="showSkillGuide();return false;" style="font-size:0.85rem;color:#16a34a;text-decoration:underline;">❓ What\'s my level?</a></div>'+
       '</div>'+
       '<div style="margin-bottom:16px;">'+
         '<label style="'+lbl+'">Age Range</label>'+
