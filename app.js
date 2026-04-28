@@ -8582,7 +8582,7 @@ async function icPostPendingConnection(recipientEmail, recipientName, token){
   try{
     await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
       method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal,resolution=ignore-duplicates'},
       body:JSON.stringify({
         requester_email: getMyEmail(),
         requester_name:  getMyName(),
