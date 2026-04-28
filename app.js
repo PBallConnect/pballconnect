@@ -8331,13 +8331,24 @@ async function icCreateSingleUseInvite(recipient, method){
   const myEmail = getMyEmail();
   const myName  = getMyName();
 
+  // Generate token client-side
+  let token;
+  try{
+    const _c = window.crypto || window.msCrypto;
+    const _a = new Uint8Array(12);
+    _c.getRandomValues(_a);
+    token = Array.from(_a).map(b=>b.toString(36)).join('').substring(0,16);
+  }catch(_e){ token = Math.random().toString(36).slice(2); }
+
   const payload = {
     inviter_email: myEmail,
     inviter_name:  myName,
     invitee_name:  recipient.name,
     invitee_email: recipient.email || null,
     invite_method: method,
-    invite_type:   'single'
+    invite_type:   'single',
+    invite_token:  token,
+    is_used:       false
   };
 
   try{
