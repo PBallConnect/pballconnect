@@ -972,7 +972,6 @@ async function sendEmail({ to_email, type, personal_note, invite_url, subject, i
         match_date_str: match_date_str||null,
       })
     });
-    console.log('sendEmail response status:', res.status, 'to:', to_email);
     if(!res.ok) console.warn('sendEmail failed:', res.status);
     return res;
   }catch(e){ console.warn('sendEmail error:', e.message); }
@@ -8639,13 +8638,9 @@ async function sendIcEmailInvite(){
     }catch(_){}
 
     const recipient = { name, email };
-    console.log('Step 1: creating token');
     const { token, url } = await icCreateSingleUseInvite(recipient, 'email');
-    console.log('Step 2: token created', { token, url });
     if(!url) throw new Error('Invite creation failed');
-    console.log('Step 3: posting pending connection');
     await icPostPendingConnection(email, name, token);
-    console.log('Step 4: pending connection done');
     const emailPayload = {
       to_email:     email,
       type:         inviteeIsExisting ? 'ic_invite_existing' : 'ic_invite',
@@ -8654,9 +8649,7 @@ async function sendIcEmailInvite(){
       personal_note: null,
       invite_url:   inviteeIsExisting ? null : url
     };
-    console.log('Step 5: calling sendEmail with', emailPayload);
-    const emailResult = await sendEmail(emailPayload);
-    console.log('Step 6: sendEmail returned', emailResult);
+    await sendEmail(emailPayload);
     const conf = document.getElementById('icEmailConfirm');
     if(conf){
       conf.innerHTML = '✅ Invite sent to <strong>'+name+'</strong>!';
@@ -9637,59 +9630,27 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
     '</div>';
   document.body.appendChild(overlay);
 
-  // Step 2 — after accepting or skipping, ask if they want to invite inviter back
+  // Step 2 — finalize connections based on new user's choice
   const showStep2 = async (accepted)=>{
     overlay.remove();
     if(accepted){
       try{
+        // Patch original invite row (inviter → new user) to approved — the new user accepted
+        await fetch(`${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(inv.inviter_email)}&recipient_email=eq.${encodeURIComponent(newPlayerEmail)}&status=eq.pending`,{
+          method:'PATCH',
+          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+          body:JSON.stringify({status:'approved'})
+        });
+        // Create reciprocal connection (new user → inviter) as approved — mutual IC since inviter initiated
         await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
           method:'POST',
-          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
-          body:JSON.stringify({requester_email:newPlayerEmail,requester_name:newPlayerName,recipient_email:inv.inviter_email,recipient_name:inv.inviter_name||'',status:'pending'})
+          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal,resolution=ignore-duplicates'},
+          body:JSON.stringify({requester_email:newPlayerEmail,requester_name:newPlayerName,recipient_email:inv.inviter_email,recipient_name:inv.inviter_name||'',status:'approved'})
         });
-        showToast('✅ Inner Circle request sent to '+shortName+'!','#4CAF7D');
+        showToast('🎾 You\'re now in each other\'s Inner Circle!','#4CAF7D');
       }catch(e){}
     }
-
-    // Prompt: would YOU like to invite THEM back to YOUR IC?
-    setTimeout(()=>{
-      const step2 = document.createElement('div');
-      step2.id = 'inviteMutualOverlay';
-      step2.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:700;background:#0a120b;border-top:2px solid rgba(76,175,125,0.4);padding:20px 20px 32px;box-shadow:0 -8px 32px rgba(0,0,0,0.7);';
-      step2.innerHTML =
-        '<div style="display:flex;align-items:flex-start;gap:12px;">'+
-          '<span style="font-size:28px;flex-shrink:0;">👥</span>'+
-          '<div style="flex:1;">'+
-            '<div style="color:#fff;font-weight:700;font-size:15px;margin-bottom:6px;">Invite '+shortName+' to YOUR Inner Circle?</div>'+
-            '<div style="color:var(--dim);font-size:13px;margin-bottom:14px;">'+
-              'Send '+shortName+' a request so they can also add YOU to their Inner Circle — then you can organize matches together!'+
-            '</div>'+
-            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
-              '<button id="mutualYes2" style="padding:12px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:13px;cursor:pointer;">'+
-                '<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Yes, invite '+shortName+'!'+
-              '</button>'+
-              '<button onclick="document.getElementById(\'inviteMutualOverlay\').remove()" style="padding:12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;">Not now</button>'+
-            '</div>'+
-          '</div>'+
-          '<button onclick="document.getElementById(\'inviteMutualOverlay\').remove()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer;flex-shrink:0;padding:0;">✕</button>'+
-        '</div>';
-      document.body.appendChild(step2);
-      document.getElementById('mutualYes2').onclick = async()=>{
-        const btn = document.getElementById('mutualYes2');
-        if(btn){btn.disabled=true;btn.textContent='Sending…';}
-        try{
-          await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
-            method:'POST',
-            headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
-            body:JSON.stringify({requester_email:inv.inviter_email,requester_name:inv.inviter_name||'',recipient_email:newPlayerEmail,recipient_name:newPlayerName,status:'pending'})
-          });
-          showToast('🎾 Invite sent! '+shortName+' will be notified.','#4CAF7D');
-        }catch(e){}
-        setTimeout(()=>document.getElementById('inviteMutualOverlay')?.remove(), 1500);
-      };
-      // Auto-dismiss after 20s
-      setTimeout(()=>document.getElementById('inviteMutualOverlay')?.remove(), 20000);
-    }, 500);
+    // If declined, original row stays pending — new user can accept from IC → Requests later
   };
 
   document.getElementById('icJoinYes').onclick = ()=>showStep2(true);
