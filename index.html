@@ -205,6 +205,17 @@
   <!-- Main Content -->
   <main class="main-content">
 
+    <!-- ══ WELCOME / LANDING PAGE ════════════════════════════════ -->
+    <div class="page-section active" id="page-welcome" style="background:#ffffff;min-height:100vh;padding:0;margin:0;">
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;padding:2rem;text-align:center;">
+        <img src="icon-192.png" alt="PBallConnect" style="width:96px;height:96px;border-radius:20px;margin-bottom:1.5rem;">
+        <h1 style="font-size:2rem;font-weight:700;margin-bottom:0.5rem;">PBallConnect</h1>
+        <p style="color:#666;font-size:1.1rem;margin-bottom:2.5rem;">Pickleball. Your people. Your courts.</p>
+        <button onclick="openLoginModal()" style="width:100%;max-width:320px;padding:1rem;background:#1a7a3a;color:#fff;border:none;border-radius:12px;font-size:1.1rem;font-weight:600;cursor:pointer;margin-bottom:1rem;">Sign In</button>
+        <button onclick="showPage('tos')" style="width:100%;max-width:320px;padding:0.75rem;background:transparent;color:#1a7a3a;border:2px solid #1a7a3a;border-radius:12px;font-size:1rem;cursor:pointer;">Learn More</button>
+      </div>
+    </div>
+
     <!-- PLAYER PROFILE PAGE -->
     <!-- ══ DASHBOARD PAGE ══════════════════════════════════════ -->
     <div class="page-section" id="page-dashboard" style="background:#ffffff;min-height:100vh;padding:0;margin:0;">
@@ -302,7 +313,7 @@
       </div>
     </div>
 
-    <div class="page-section active" id="page-playerProfile">
+    <div class="page-section" id="page-playerProfile">
       <div class="reg-wrapper">
 
         <!-- STICKY HEADER — Edit Profile + Share + Step dots -->

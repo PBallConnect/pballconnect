@@ -1381,13 +1381,19 @@ async function showCitySelector(stateName){
 
 // ── Navigation ─────────────────────────────────────────
 function showPage(page){
+  // Auth gate — redirect unauthenticated users to welcome screen
+  const UNPROTECTED_PAGES = ['welcome', 'tos', 'privacy'];
+  if(!SESSION_PLAYER && !UNPROTECTED_PAGES.includes(page)){
+    showPage('welcome');
+    return;
+  }
   if(page!=='playerProfile'){stopChangeDetection();_editModeActive=false;}
   closeNav();
   setTimeout(closeNav, 50); // catch any async re-opens
   window.scrollTo(0,0); // always open pages at the top
-  // Remove existing back button, show on all pages except dashboard
+  // Remove existing back button, show on all pages except dashboard and welcome
   document.getElementById('backToDashBtn')?.remove();
-  if(page !== 'dashboard') showBackToDashboard();
+  if(page !== 'dashboard' && page !== 'welcome') showBackToDashboard();
   document.querySelectorAll('.page-section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
@@ -6351,6 +6357,9 @@ function openLoginModal(){
   }
 }
 
+// Alias used by welcome screen and any other callers expecting showLoginModal
+function showLoginModal(){ openLoginModal(); }
+
 function closeLoginModal(){
   const modal = document.getElementById('loginModal');
   if(modal) modal.style.display='none';
@@ -6472,13 +6481,25 @@ function initLogin(){
   });
 
   // Restore from an existing Supabase session (persisted in localStorage by the SDK)
-  _supabase.auth.getSession().then(async({data:{session}})=>{
+  initApp();
+}
+
+async function initApp(){
+  try{
+    const { data: { session } } = await _supabase.auth.getSession();
     if(session && !SESSION_PLAYER){
       SUPABASE_ACCESS_TOKEN = session.access_token;
       localStorage.setItem('pb_email', session.user.email);
       await restoreSession(session.user.email);
+      if(SESSION_PLAYER) return; // restoreSession called showPage('dashboard')
     }
-  });
+  }catch(e){
+    // Session expired or network error — fall through to welcome
+  }
+  // No valid session — show welcome screen (only if not already in a new-user registration flow)
+  if(!SESSION_PLAYER && !_newUserRegistrationStarted){
+    showPage('welcome');
+  }
 }
 
 document.addEventListener('DOMContentLoaded', initLogin);
