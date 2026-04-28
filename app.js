@@ -854,26 +854,10 @@ async function saveRegistration(payload){
         body: JSON.stringify(payload)
       }
     );
-    console.log('🔵 Response status:', res.status, res.statusText);
-    console.log('🔵 Response headers:', [...res.headers.entries()].map(([k,v])=>k+':'+v).join(', '));
-    if(res.ok){
-      console.log('✅ Save successful!');
-      return true;
-    }
+    if(res.ok) return true;
     const text = await res.text();
-    console.error('❌ Save failed - body:', text);
     throw new Error(text || `HTTP ${res.status}`);
   }catch(e){
-    console.error('❌ Fetch error type:', e.constructor.name);
-    console.error('❌ Fetch error message:', e.message);
-    console.error('❌ Full error:', e);
-    // Test if network works at all
-    try{
-      const ping = await fetch('https://httpbin.org/get');
-      console.log('🌐 Network works - httpbin responded:', ping.status);
-    }catch(pe){
-      console.error('🌐 Network also failed - no internet?', pe.message);
-    }
     throw e;
   }
 }
@@ -9161,7 +9145,6 @@ function showInviteEmailStep(inv){
 function showInviteLandingChoice(email, inv){
   document.getElementById('inviteEmailStep')?.remove();
   const inviterName = inv?.inviter_name || 'A fellow player';
-  const firstName = email.split('@')[0];
   const overlay = document.createElement('div');
   overlay.id = 'inviteLandingChoice';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:20px;';
@@ -9255,7 +9238,7 @@ function showQuickConnectForm(email, inv){
       '</div>'+
       '<div style="margin-bottom:16px;">'+
         '<label style="'+lbl+'">First Name <span style="color:#dc2626;">*</span></label>'+
-        '<input id="qcFirstName" type="text" placeholder="First name" autocomplete="given-name" style="'+inp+'" oninput="window._qcUpdateBtn()"/>'+
+        '<input id="qcFirstName" type="text" placeholder="Your first name" autocomplete="given-name" style="'+inp+'" oninput="window._qcUpdateBtn()"/>'+
       '</div>'+
       '<div style="margin-bottom:16px;">'+
         '<label style="'+lbl+'">Phone Number <span style="color:#dc2626;">*</span></label>'+
