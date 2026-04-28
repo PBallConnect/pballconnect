@@ -1,0 +1,692 @@
+<!--
+  FUTURE: When ready to make this the root page:
+  rename index.html → app.html
+  rename landing.html → index.html
+  update _redirects accordingly
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Find pickleball players near you. Build your Inner Circle, organize matches, and connect with your local pickleball community."/>
+  <meta property="og:title" content="PBallConnect — Find Your Pickleball People"/>
+  <meta property="og:description" content="Find pickleball players near you. Build your Inner Circle, organize matches, and connect with your local community."/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="https://pballconnect.com/icon-512.png"/>
+  <title>PBallConnect — Find Your Pickleball People</title>
+
+  <!-- Cloudflare Turnstile -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green: #16a34a;
+      --green-dark: #15803d;
+      --green-light: #dcfce7;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --bg: #ffffff;
+      --bg-alt: #f9fafb;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Nav ── */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 1.5rem;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+    }
+
+    .nav-logo img {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+    }
+
+    .nav-logo-text {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+
+    .nav-logo-text span { color: var(--green); }
+
+    .nav-signin {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--green);
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border: 1.5px solid var(--green);
+      border-radius: 8px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .nav-signin:hover {
+      background: var(--green);
+      color: #fff;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center;
+      padding: 4rem 1.5rem 3rem;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    .hero-logo {
+      width: 88px;
+      height: 88px;
+      border-radius: 20px;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 24px rgba(22,163,74,0.18);
+    }
+
+    .hero-eyebrow {
+      display: inline-block;
+      background: var(--green-light);
+      color: var(--green-dark);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+    }
+
+    .hero h1 {
+      font-size: clamp(2rem, 6vw, 3rem);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
+    }
+
+    .hero h1 .green { color: var(--green); }
+
+    .hero-tagline {
+      font-size: clamp(1.1rem, 3vw, 1.3rem);
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 1.25rem;
+    }
+
+    .hero-desc {
+      font-size: 1rem;
+      color: #4b5563;
+      max-width: 480px;
+      margin: 0 auto 2rem;
+      line-height: 1.7;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.875rem;
+    }
+
+    .btn-primary {
+      display: inline-block;
+      background: var(--green);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      padding: 0.9rem 2rem;
+      border-radius: 12px;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      width: 100%;
+      max-width: 320px;
+      text-align: center;
+    }
+
+    .btn-primary:hover { background: var(--green-dark); transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+
+    .hero-signin-link {
+      font-size: 0.875rem;
+      color: var(--muted);
+      text-decoration: none;
+    }
+
+    .hero-signin-link a {
+      color: var(--green);
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .hero-signin-link a:hover { text-decoration: underline; }
+
+    /* ── Social proof strip ── */
+    .proof-strip {
+      background: var(--bg-alt);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 1.25rem 1.5rem;
+      text-align: center;
+    }
+
+    .proof-strip p {
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+
+    .proof-strip strong {
+      color: var(--text);
+    }
+
+    /* ── Features ── */
+    .features {
+      padding: 4rem 1.5rem;
+      max-width: 840px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      text-align: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 0.75rem;
+    }
+
+    .section-title {
+      text-align: center;
+      font-size: clamp(1.5rem, 4vw, 2rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-sub {
+      text-align: center;
+      font-size: 1rem;
+      color: var(--muted);
+      margin-bottom: 2.5rem;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+    }
+
+    @media (min-width: 600px) {
+      .features-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    .feature-card {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.75rem 1.5rem;
+      transition: box-shadow 0.2s, transform 0.15s;
+    }
+
+    .feature-card:hover {
+      box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+      transform: translateY(-2px);
+    }
+
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--green-light);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .feature-card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .feature-card p {
+      font-size: 0.9rem;
+      color: #4b5563;
+      line-height: 1.65;
+    }
+
+    /* ── Waitlist section ── */
+    .waitlist-section {
+      background: var(--bg-alt);
+      border-top: 1px solid var(--border);
+      padding: 4rem 1.5rem;
+    }
+
+    .waitlist-inner {
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    .waitlist-form-wrap {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2rem 1.75rem;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.375rem;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 0.75rem 0.9rem;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 1rem;
+      color: var(--text);
+      background: #fff;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    .form-group input:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(22,163,74,0.12);
+    }
+
+    .form-group input.error {
+      border-color: #dc2626;
+    }
+
+    /* Honeypot — visually hidden, out of tab order */
+    .hp-field {
+      position: absolute;
+      left: -9999px;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      opacity: 0;
+    }
+
+    .turnstile-wrap {
+      margin: 1.25rem 0;
+      display: flex;
+      justify-content: center;
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 0.9rem 1.5rem;
+      background: var(--green);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+      margin-top: 0.25rem;
+    }
+
+    .btn-submit:hover:not(:disabled) { background: var(--green-dark); }
+
+    .btn-submit:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .form-error {
+      display: none;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      color: #dc2626;
+      font-size: 0.875rem;
+      margin-top: 1rem;
+      line-height: 1.5;
+    }
+
+    /* Success state */
+    .waitlist-success {
+      display: none;
+      text-align: center;
+      padding: 1rem 0;
+    }
+
+    .success-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .waitlist-success h3 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      margin-bottom: 0.75rem;
+    }
+
+    .waitlist-success p {
+      font-size: 0.95rem;
+      color: #4b5563;
+      line-height: 1.7;
+    }
+
+    .waitlist-success .share-prompt {
+      margin-top: 1.25rem;
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 2rem 1.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.8125rem;
+      color: var(--muted);
+    }
+
+    footer a {
+      color: var(--green);
+      text-decoration: none;
+    }
+
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <!-- ── Nav ── -->
+  <nav class="nav" role="navigation" aria-label="Main navigation">
+    <a href="/" class="nav-logo" aria-label="PBallConnect home">
+      <img src="icon-192.png" alt="PBallConnect logo"/>
+      <span class="nav-logo-text"><span>PBall</span>Connect</span>
+    </a>
+    <a href="/index.html" class="nav-signin">Sign In</a>
+  </nav>
+
+  <!-- ── Hero ── -->
+  <section class="hero" aria-label="Hero">
+    <img src="icon-192.png" alt="PBallConnect" class="hero-logo"/>
+    <div class="hero-eyebrow">Now in Beta</div>
+    <h1>Find your <span class="green">pickleball</span> people.</h1>
+    <p class="hero-tagline">Your game. Your crew. Your courts.</p>
+    <p class="hero-desc">
+      PBallConnect matches you with nearby players at your skill level,
+      helps you build a trusted Inner Circle, and makes organizing matches easy.
+    </p>
+    <div class="hero-actions">
+      <a href="#waitlist" class="btn-primary">Request an Invite</a>
+      <p class="hero-signin-link">Already a member? <a href="/index.html">Sign In</a></p>
+    </div>
+  </section>
+
+  <!-- ── Social proof strip ── -->
+  <div class="proof-strip">
+    <p>🏓 &nbsp;<strong>Free forever for players.</strong> No ads. No subscriptions. Just pickleball.</p>
+  </div>
+
+  <!-- ── Features ── -->
+  <section class="features" aria-label="Features">
+    <p class="section-label">Why PBallConnect</p>
+    <h2 class="section-title">Everything your game needs</h2>
+    <p class="section-sub">Built by pickleball players, for pickleball players.</p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon" aria-hidden="true">🎯</div>
+        <h3>Skill-Matched Players</h3>
+        <p>Find players at your level using DUPR ratings and self-reported skill. No more lopsided games — just good competition.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" aria-hidden="true">👥</div>
+        <h3>Your Inner Circle</h3>
+        <p>Build a trusted group of go-to players. Invite friends by email, text, or QR code. Keep your regulars close.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" aria-hidden="true">📅</div>
+        <h3>Match Organization</h3>
+        <p>Set up matches in minutes. Choose courts, set formats, invite your crew, and track RSVPs — all in one place.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Waitlist ── -->
+  <section class="waitlist-section" id="waitlist" aria-label="Join the waitlist">
+    <div class="waitlist-inner">
+      <p class="section-label">Get Early Access</p>
+      <h2 class="section-title" style="margin-bottom:0.5rem;">Request an invite</h2>
+      <p class="section-sub">We're growing court by court. Drop your info and we'll reach&nbsp;out when players near you are connecting.</p>
+
+      <div class="waitlist-form-wrap">
+        <!-- Success state (hidden until submission) -->
+        <div class="waitlist-success" id="waitlistSuccess" role="alert" aria-live="polite">
+          <div class="success-icon">🎉</div>
+          <h3>You're on the list!</h3>
+          <p>We'll reach out when players near you are connecting on PBallConnect. Keep an eye on your inbox.</p>
+          <p class="share-prompt">Know other players? Send them to <strong>pballconnect.com</strong></p>
+        </div>
+
+        <!-- Form -->
+        <form id="waitlistForm" novalidate autocomplete="on">
+          <div class="form-group">
+            <label for="wlFirstName">First Name</label>
+            <input
+              type="text"
+              id="wlFirstName"
+              name="firstName"
+              placeholder="Your first name"
+              autocomplete="given-name"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="wlEmail">Email</label>
+            <input
+              type="email"
+              id="wlEmail"
+              name="email"
+              placeholder="you@example.com"
+              autocomplete="email"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="wlZip">Zip Code</label>
+            <input
+              type="text"
+              id="wlZip"
+              name="zip"
+              placeholder="e.g. 03055"
+              autocomplete="postal-code"
+              inputmode="numeric"
+              maxlength="5"
+              pattern="\d{5}"
+              required
+            />
+          </div>
+
+          <!-- Honeypot — do not remove, do not label -->
+          <div class="hp-field" aria-hidden="true">
+            <input
+              type="text"
+              name="website"
+              id="wlHoneypot"
+              tabindex="-1"
+              autocomplete="off"
+              value=""
+            />
+          </div>
+
+          <!-- Cloudflare Turnstile -->
+          <div class="turnstile-wrap">
+            <div
+              class="cf-turnstile"
+              data-sitekey="TURNSTILE_SITE_KEY_PLACEHOLDER"
+              data-theme="light"
+              id="wlTurnstile"
+            ></div>
+          </div>
+
+          <button type="submit" class="btn-submit" id="wlSubmitBtn">
+            Request My Invite &rarr;
+          </button>
+
+          <div class="form-error" id="wlError" role="alert" aria-live="assertive"></div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <p>
+      &copy; 2026 PBallConnect &nbsp;&middot;&nbsp;
+      <a href="/index.html#page-tos">Terms of Service</a> &nbsp;&middot;&nbsp;
+      <a href="/index.html#page-privacy">Privacy Policy</a>
+    </p>
+  </footer>
+
+  <script>
+    (function () {
+      var form = document.getElementById('waitlistForm');
+      var submitBtn = document.getElementById('wlSubmitBtn');
+      var errorEl = document.getElementById('wlError');
+      var successEl = document.getElementById('waitlistSuccess');
+      var honeypot = document.getElementById('wlHoneypot');
+
+      function showError(msg) {
+        errorEl.textContent = msg;
+        errorEl.style.display = 'block';
+        submitBtn.disabled = false;
+      }
+
+      function hideError() {
+        errorEl.style.display = 'none';
+        errorEl.textContent = '';
+      }
+
+      function showSuccess() {
+        form.style.display = 'none';
+        successEl.style.display = 'block';
+      }
+
+      function getTurnstileToken() {
+        // Turnstile auto-populates a hidden input named cf-turnstile-response
+        var el = document.querySelector('[name="cf-turnstile-response"]');
+        return el ? el.value : '';
+      }
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        hideError();
+
+        var firstName = document.getElementById('wlFirstName').value.trim();
+        var email = document.getElementById('wlEmail').value.trim();
+        var zip = document.getElementById('wlZip').value.trim();
+        var hp = honeypot ? honeypot.value : '';
+        var turnstileToken = getTurnstileToken();
+
+        // Client-side validation
+        if (!firstName) { return showError('Please enter your first name.'); }
+        if (!email || !email.includes('@')) { return showError('Please enter a valid email address.'); }
+        if (!/^\d{5}$/.test(zip)) { return showError('Please enter a valid 5-digit zip code.'); }
+
+        // Honeypot check — silently fake success if filled
+        if (hp) {
+          showSuccess();
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting\u2026';
+
+        fetch('/api/waitlist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            firstName: firstName,
+            email: email,
+            zip: zip,
+            turnstileToken: turnstileToken,
+          }),
+        })
+          .then(function (res) {
+            return res.json().then(function (data) {
+              return { status: res.status, data: data };
+            });
+          })
+          .then(function (result) {
+            if (result.status === 200 && result.data.ok) {
+              showSuccess();
+            } else if (result.status === 429) {
+              showError('You\u2019ve submitted too many times. Please try again in an hour.');
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Request My Invite \u2192';
+            } else if (result.status === 403) {
+              showError('Security check failed. Please refresh and try again.');
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Request My Invite \u2192';
+            } else {
+              showError(result.data.error || 'Something went wrong. Please try again.');
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Request My Invite \u2192';
+            }
+          })
+          .catch(function () {
+            showError('Network error. Please check your connection and try again.');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Request My Invite \u2192';
+          });
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -6,6 +6,25 @@ export async function onRequestPost(context) {
     'Access-Control-Allow-Headers': 'Content-Type',
   };
 
+  // ── IP RATE LIMITING ─────────────────────────────────────────────────────
+  // Max 5 requests per IP per hour. Skipped gracefully if KV not bound.
+  const ip = context.request.headers.get('CF-Connecting-IP') || 'unknown';
+  if (context.env.RATE_LIMIT_KV) {
+    try {
+      const key = `send-email:${ip}`;
+      const existing = await context.env.RATE_LIMIT_KV.get(key);
+      const count = existing ? parseInt(existing, 10) : 0;
+      if (count >= 5) {
+        return new Response(JSON.stringify({ error: 'Too many requests. Please try again later.' }), {
+          status: 429, headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+      await context.env.RATE_LIMIT_KV.put(key, String(count + 1), { expirationTtl: 3600 });
+    } catch (_) {
+      // KV unavailable — skip rate limiting gracefully
+    }
+  }
+
   try {
     const body = await context.request.json();
     const { to_email, subject, personal_note, invite_url, site_url, type, inviter_name, invitee_name, match_date_str } = body;

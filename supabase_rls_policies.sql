@@ -593,3 +593,28 @@ create policy "Organizers can delete recurring matches"
   on recurring_matches for delete
   to authenticated
   using (auth.email() = organizer_email);
+
+
+-- ── WAITLIST ──────────────────────────────────────────────────
+-- Public waitlist for the landing page at landing.html.
+-- Written by the /api/waitlist Cloudflare Pages Function using
+-- the service role key (bypasses RLS). No public access granted.
+-- David reads/exports this table manually from the Supabase dashboard.
+--
+-- Run this block in Supabase SQL Editor when ready to launch the waitlist.
+
+create table if not exists waitlist (
+  id           uuid        primary key default gen_random_uuid(),
+  first_name   text        not null,
+  email        text        not null,
+  zip_code     text        not null,
+  requested_at timestamptz not null default now(),
+  invited_at   timestamptz,           -- set manually when David sends their invite
+  notes        text,                  -- internal use only
+  constraint waitlist_email_unique unique (email)
+);
+
+alter table waitlist enable row level security;
+
+-- No public policies — service role key bypasses RLS for all writes.
+-- Authenticated admin reads (Supabase dashboard / service role) work without policies.
