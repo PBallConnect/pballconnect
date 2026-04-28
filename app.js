@@ -8639,17 +8639,24 @@ async function sendIcEmailInvite(){
     }catch(_){}
 
     const recipient = { name, email };
+    console.log('Step 1: creating token');
     const { token, url } = await icCreateSingleUseInvite(recipient, 'email');
+    console.log('Step 2: token created', { token, url });
     if(!url) throw new Error('Invite creation failed');
+    console.log('Step 3: posting pending connection');
     await icPostPendingConnection(email, name, token);
-    await sendEmail({
+    console.log('Step 4: pending connection done');
+    const emailPayload = {
       to_email:     email,
       type:         inviteeIsExisting ? 'ic_invite_existing' : 'ic_invite',
       inviter_name: getMyName(),
       invitee_name: name,
       personal_note: null,
       invite_url:   inviteeIsExisting ? null : url
-    });
+    };
+    console.log('Step 5: calling sendEmail with', emailPayload);
+    const emailResult = await sendEmail(emailPayload);
+    console.log('Step 6: sendEmail returned', emailResult);
     const conf = document.getElementById('icEmailConfirm');
     if(conf){
       conf.innerHTML = '✅ Invite sent to <strong>'+name+'</strong>!';
