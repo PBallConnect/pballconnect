@@ -6563,7 +6563,10 @@ async function restoreSession(email, playerData){
   const editBtn = document.getElementById('editProfileBtnInPage');
   if(editBtn) editBtn.style.display='block';
   updateTopBar(player);
-  showToast('Welcome back, '+(player.first_name||'Player')+'! 🎾','#4CAF7D');
+  const _wbKey = 'pb_welcomed_' + (player.email||'').toLowerCase();
+  const _isReturning = !!localStorage.getItem(_wbKey);
+  localStorage.setItem(_wbKey, '1');
+  showToast((_isReturning ? 'Welcome back, ' : 'Welcome, ')+(player.first_name||'Player')+'! 🎾','#4CAF7D');
 
   // Top badge is set by loadAllMatchBadges (via refreshTopInviteBadge) with proper filtering
 
@@ -7240,7 +7243,16 @@ async function loadIcPending(){
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
     );
     if(!res.ok) return;
-    let pending = await res.json();
+    const rawPending = await res.json();
+    // Deduplicate by requester_email — keep the most recent row per inviter
+    const seenRequesters = new Map();
+    rawPending.forEach(row=>{
+      const key = (row.requester_email||'').toLowerCase();
+      if(!seenRequesters.has(key) || (row.created_at||'') > (seenRequesters.get(key).created_at||'')){
+        seenRequesters.set(key, row);
+      }
+    });
+    let pending = Array.from(seenRequesters.values());
     pending.sort((a,b)=>(a.requester_name||'').localeCompare(b.requester_name||''));
     IC_INCOMING_COUNT = pending.length;
 
@@ -9671,7 +9683,7 @@ if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
     // Inline service worker via blob URL
     const swCode = `
-      const CACHE = 'pb-registry-v5';
+      const CACHE = 'pb-registry-v6';
       const OFFLINE_URLS = ['/'];
       self.addEventListener('install', e => {
         e.waitUntil(caches.open(CACHE).then(c => c.addAll(OFFLINE_URLS)));
@@ -10073,7 +10085,11 @@ async function loadDashboard(){
   const nameEl  = document.getElementById('dashName');
   const emojiEl = document.getElementById('dashEmoji');
   if(SESSION_PLAYER){
-    if(nameEl)  nameEl.textContent  = SESSION_PLAYER.first_name ? 'Welcome back, '+SESSION_PLAYER.first_name+'!' : '';
+    if(nameEl){
+      const _wbDashKey = 'pb_welcomed_' + (SESSION_PLAYER.email||'').toLowerCase();
+      const _isReturningDash = !!localStorage.getItem(_wbDashKey);
+      nameEl.textContent = SESSION_PLAYER.first_name ? (_isReturningDash ? 'Welcome back, ' : 'Welcome, ')+SESSION_PLAYER.first_name+'!' : '';
+    }
     if(emojiEl) emojiEl.textContent = SESSION_PLAYER.avatar_emoji || '🎾';
   }
 
