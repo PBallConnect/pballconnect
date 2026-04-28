@@ -1,6 +1,6 @@
 # CLAUDE.md — PBallConnect Reference
 
-_Last updated: April 27, 2026_
+_Last updated: April 28, 2026_
 
 ---
 
@@ -24,6 +24,8 @@ Deployed on **Cloudflare Pages** at `pballconnect.com`. No build step, no bundle
 | Maps | D3.js + TopoJSON for state/county selection |
 | QR Codes | `qrcode` library (CDN) |
 | PWA | Service worker + inline manifest |
+| Bot Protection | Cloudflare Turnstile (on waitlist form) |
+| Rate Limiting | Cloudflare KV (`RATE_LIMIT_KV` binding) — used by both Pages Functions |
 
 ---
 
@@ -34,13 +36,17 @@ Deployed on **Cloudflare Pages** at `pballconnect.com`. No build step, no bundle
 | `app.js` | ~10,500 lines | Entire application: state, rendering, navigation, Supabase calls, feature logic |
 | `index.html` | ~2,200 lines | Shell HTML — all `page-*` sections + CDN script tags |
 | `styles.css` | — | All styles |
+| `landing.html` | — | Public marketing landing page — standalone, no app.js/styles.css dependency. Hero, features, skill level guide, waitlist form with Turnstile bot protection. |
 | `invite.html` | — | Standalone invite landing page — no app.js dependency |
-| `functions/api/send-email.js` | — | Cloudflare Pages Function for transactional email via Resend |
-| `supabase_rls_policies.sql` | — | RLS policy definitions — run in Supabase SQL editor after schema changes |
+| `functions/api/send-email.js` | — | Cloudflare Pages Function for transactional email via Resend. IP rate-limited (5/hr) via `RATE_LIMIT_KV`. |
+| `functions/api/waitlist.js` | — | Cloudflare Pages Function for waitlist form submissions. IP rate-limited (3/hr), Turnstile-verified, saves to `waitlist` table via service role key, sends confirmation email via Resend. |
+| `supabase_rls_policies.sql` | — | RLS policy definitions + waitlist table DDL — run in Supabase SQL editor after schema changes |
 | `manifest.json` | — | PWA manifest (also injected inline at runtime in app.js) |
 | `icon-512.png`, `icon-192.png` | — | PWA home screen icons |
 | `apple-touch-icon.png` | — | iOS home screen icon |
 | `favicon-32.png` | — | Browser tab favicon |
+
+> **FUTURE:** When ready to make `landing.html` the root page: rename `index.html` → `app.html`, rename `landing.html` → `index.html`, update `_redirects` accordingly.
 
 ---
 
@@ -70,6 +76,7 @@ No tests, no linter, no build commands.
 | `courts` | Court locations | `id`, `name`, `address`, `is_private`, `court_count`, `lat`, `lon` |
 | `player_courts` | Courts a player uses | `player_email`, `court_id` |
 | `invites` | App invite links | `invite_token`, `invite_type` ('single'/'qr'), `is_used` (boolean, default false), `inviter_email`, `inviter_name`, `invitee_email`, `invitee_name`, `invite_method`, `status` |
+| `waitlist` | Public marketing waitlist | `id`, `first_name`, `email` (unique), `zip_code`, `requested_at`, `invited_at` (nullable — set when invite sent), `notes` (internal) |
 | `player_feedback` | Post-match feedback | — |
 | `player_groups` | Named groups | `id`, `organizer_email`, `name`, `max_players`, `group_type` ('set'/'random'), `match_type` ('singles'/'doubles') |
 | `player_group_members` | Group members | `group_id`, `player_email`, `role` ('primary'/'sub') |
@@ -102,6 +109,8 @@ Supabase magic link (`_supabase.auth.signInWithOtp`). On sign-in, `restoreSessio
 
 Login modal: title "Welcome to PBallConnect", button "Send Magic Link →", success "Check your inbox!"
 
+**Welcome screen + auth gate (April 2026):** `page-welcome` is the default active page (`page-playerProfile` no longer starts active). `showPage()` checks `SESSION_PLAYER` at the top — unauthenticated users navigating to any protected page are silently redirected to `welcome`. Unprotected pages: `['welcome', 'tos', 'privacy']`. The back-button pill is suppressed on `welcome` (same as `dashboard`). `initApp()` replaces the bare `getSession()` block — on load it attempts to restore an existing session; if no session exists and no new-user registration is in progress, it explicitly calls `showPage('welcome')`. `showLoginModal()` is an alias for `openLoginModal()` (supports inline onclick handlers).
+
 ### Global State
 
 | Variable | Purpose |
@@ -129,6 +138,29 @@ headers: {
 ```
 
 Supabase join syntax (`table(col,col)`) only works when FK relationships are configured in PostgREST. Use the two-step pattern when joins are unreliable: fetch IDs first, then `?id=in.(...)`.
+
+### Waitlist Function (`/api/waitlist`)
+
+`POST /api/waitlist` is handled by `functions/api/waitlist.js`. Pipeline in order:
+1. **IP rate limit** — max 3/hr via `RATE_LIMIT_KV`; skipped gracefully if KV not bound
+2. **Validate** — `firstName`, `email`, `zip` (5 digits), `turnstileToken` all required
+3. **Turnstile verify** — POST to `https://challenges.cloudflare.com/turnstile/v0/siteverify` using `env.TURNSTILE_SECRET_KEY`; skipped if key is missing/placeholder (safe for pre-launch testing)
+4. **Save** — POST to `waitlist` table via `env.SUPABASE_SERVICE_KEY` (bypasses RLS); 409 conflict (duplicate email) is silently treated as success
+5. **Confirm email** — sends from `hello@pballconnect.com` via Resend; failure is non-fatal (wrapped in try/catch)
+6. Return `{ ok: true }`
+
+### Rate Limiting Pattern (both functions)
+
+Both `send-email.js` and `waitlist.js` use the same KV pattern:
+```js
+const key = `<prefix>:<ip>`;
+const count = parseInt(await env.RATE_LIMIT_KV.get(key) || '0', 10);
+if (count >= N) return 429;
+await env.RATE_LIMIT_KV.put(key, String(count + 1), { expirationTtl: 3600 });
+```
+- `send-email.js` prefix: `send-email:` — limit 5/hr
+- `waitlist.js` prefix: `waitlist:` — limit 3/hr
+- Both skip gracefully if `RATE_LIMIT_KV` binding is not configured
 
 ### Email
 
@@ -470,6 +502,10 @@ Full width, `background:#1a7a3a`, `color:#fff`, `font-size:16px`, `font-weight:8
 - Orange (My Match Invites to Others): `background:rgba(234,88,12,0.08); border:1.5px solid rgba(234,88,12,0.2)`
 - Blue (Match Invites from Others): `background:rgba(37,99,235,0.08); border:1.5px solid rgba(37,99,235,0.2)`
 
+### Skill Level Guide Modal (`skillGuideModal`)
+
+Reusable modal showing 5 USA Pickleball skill levels (1.0–2.5 Beginner through 4.5+ Advanced/Elite). Opened by `window.showSkillGuide()`, closed by `window.hideSkillGuide()` or clicking the backdrop. Uses the existing `modal-overlay` / `modal` CSS class pattern (same as waiver modal). Displayed in the app via "❓ What's my level?" link (color `#16a34a`, font-size 0.85rem, underlined) placed directly below the Personal Skill Rating slider in registration step 2 and the Quick Connect skill slider. The link is also displayed inline (no modal) on `landing.html` as a dedicated "Know Your Game / Find Your Level" section between features and waitlist.
+
 ### ic-shake Animation
 CSS class `ic-shake` applied to recipient input on validation failure (blank name before invite creation):
 ```css
@@ -517,6 +553,16 @@ Applied via JS: `el.classList.add('ic-shake'); setTimeout(()=>el.classList.remov
 - [x] IC invite email via Resend API (no email app required)
 - [x] `invites` table RLS INSERT policy added
 - [x] PWA icons added (icon-512, icon-192, apple-touch-icon, favicon-32)
+- [x] Welcome/landing screen (`page-welcome`) + auth gate in `showPage()`
+- [x] `landing.html` — public marketing landing page live at `/landing.html`
+- [x] Waitlist form with Cloudflare Turnstile bot protection
+- [x] `/api/waitlist` Cloudflare Pages Function — rate-limited, Turnstile-verified, saves to Supabase
+- [x] Rate limiting on `/api/send-email` (5/hr per IP via KV)
+- [x] Skill level guide modal (`skillGuideModal`) + "What's my level?" trigger on all skill sliders
+- [ ] **Run waitlist table SQL** — SQL is in `supabase_rls_policies.sql`; must be run manually in Supabase SQL editor before waitlist goes live
+- [ ] **Complete Turnstile setup** — replace `TURNSTILE_SITE_KEY_PLACEHOLDER` in `landing.html`; add `TURNSTILE_SECRET_KEY` to Cloudflare Pages env vars
+- [ ] **Add `SUPABASE_SERVICE_KEY` to Cloudflare Pages env vars** — needed by `/api/waitlist`
+- [ ] **Bind `RATE_LIMIT_KV`** — create KV namespace in Cloudflare, bind as `RATE_LIMIT_KV` in Pages settings
 - [ ] **Fix mobile portrait left nav** — slide-in drawer not working on iPhone
 - [ ] **Non-member match invite flow** — invite players outside IC by email
 - [ ] **Test full invite flow end to end:**
@@ -528,12 +574,11 @@ Applied via JS: `el.classList.add('ic-shake'); setTimeout(()=>el.classList.remov
 - [ ] NH RSA 508:13 waiver language verified by NH attorney
 - [ ] Insurance (General Liability, E&O, Cyber)
 - [ ] SPF + DKIM + DMARC fully configured in Resend
-- [ ] Landing page at pballconnect.com (marketing, not the app)
-- [ ] App moved to pballconnect.com/app or subdomain
+- [ ] `hello@pballconnect.com` sender address verified in Resend (used by waitlist confirmation email)
+- [ ] App moved to pballconnect.com/app or subdomain; `landing.html` promoted to root
 - [ ] Google indexing updated to landing page
 - [ ] GDPR / CCPA compliance review
 - [ ] Rate limiting on magic link sends
-- [ ] Rate limiting on /api/send-email
 - [ ] Error monitoring (Sentry or Cloudflare Logpush)
 - [ ] Uptime monitoring
 - [ ] Backup / point-in-time recovery confirmed in Supabase
@@ -546,10 +591,10 @@ Applied via JS: `el.classList.add('ic-shake'); setTimeout(()=>el.classList.remov
 
 1. **Fix mobile portrait left nav** — slide-in drawer via hamburger toggle not working on iPhone. CSS `position:fixed` + `transform:translateX` approach needs a clean-room pass.
 2. **Non-member match invite flow** — organizer enters email/name for players not in their IC; app sends invite email with magic link to join + RSVP.
-3. **Play Structure as Step 1 with branching** — Set Group path auto-calculates courts and skips steps 2–3; Open/Mixed/Same runs full 7-container wizard.
-4. **My Groups UI** — organizer chip red/white, gender lookup fix (`player_email` not `email`), Set vs Random toggle in create modal.
-5. **Match Invites — status pill dropdowns** — In/Pending/Waitlist/Out boxes reveal player name list. `_miResponseCache` and `toggleInvitePanel()` already scaffolded.
-6. **Landing page at pballconnect.com** — marketing page. App moves to subdomain.
+3. **Promote `landing.html` to root** — rename `index.html` → `app.html`, `landing.html` → `index.html`, update `_redirects`. Requires Cloudflare setup steps (Turnstile, waitlist table SQL, service key, KV binding) to be complete first.
+4. **Play Structure as Step 1 with branching** — Set Group path auto-calculates courts and skips steps 2–3; Open/Mixed/Same runs full 7-container wizard.
+5. **My Groups UI** — organizer chip red/white, gender lookup fix (`player_email` not `email`), Set vs Random toggle in create modal.
+6. **Match Invites — status pill dropdowns** — In/Pending/Waitlist/Out boxes reveal player name list. `_miResponseCache` and `toggleInvitePanel()` already scaffolded.
 7. **Onboarding flow for new users** — guided setup after first login.
 8. **Recurring matches v2** — gap alert delivery via Cloudflare Cron Worker.
 9. **Web push notifications** — browser push for match invites, IC requests, gap alerts.
@@ -568,7 +613,7 @@ Applied via JS: `el.classList.add('ic-shake'); setTimeout(()=>el.classList.remov
 1. Edit `app.js`, `index.html`, or `styles.css` directly — no build step.
 2. Test locally with `npx serve .` or `python -m http.server`.
 3. For Supabase schema changes: run SQL in Supabase SQL editor, update `supabase_rls_policies.sql`, and update the `public_profiles` view if new columns need to be exposed.
-4. For Cloudflare Pages Function changes: edit `functions/api/send-email.js`. Environment variable `RESEND_API_KEY` is set in Cloudflare Pages dashboard.
+4. For Cloudflare Pages Function changes: edit files in `functions/api/`. Environment variables (`RESEND_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `TURNSTILE_SECRET_KEY`) are set in the Cloudflare Pages dashboard. `RATE_LIMIT_KV` is a KV namespace binding (not an env var — set under Settings → Functions → KV namespace bindings).
 5. Deploy: `git push origin main` → Cloudflare Pages auto-deploys.
 6. Verify deploy at https://pballconnect.com — Cloudflare typically deploys within 60 seconds.
 
@@ -625,3 +670,11 @@ Design and planning happens in Claude.ai (claude.ai/code or chat). Implementatio
 21. **Quick Connect uses First Name only — no nickname.** The `qcFirstName` field (label: "First Name", placeholder: "Your first name") is the only name field. There is no nickname field and no auto-generation from email. Do not add a nickname field or fall back to `email.split('@')[0]` for display names in this flow.
 
 22. **`loadIcPending()` deduplicates by `requester_email`.** Multiple connection rows can exist for the same (inviter, invitee) pair from repeat sends or test runs. The function deduplicates before rendering, keeping the most recent row per `requester_email`. Do not remove this deduplication.
+
+23. **`landing.html` is fully standalone.** No dependency on `app.js` or `styles.css`. All styles are inline or in a `<style>` block within the file. Do not import app styles into landing.html or vice versa.
+
+24. **Waitlist uses `SUPABASE_SERVICE_KEY`, not anon key.** The `waitlist` table has RLS enabled with no public policies — only the service role can write to it. The waitlist function must use `env.SUPABASE_SERVICE_KEY` in both `apikey` and `Authorization` headers. Never use the anon key for waitlist writes.
+
+25. **Turnstile verification is skippable during development.** `waitlist.js` skips Turnstile verification if `TURNSTILE_SECRET_KEY` is missing or starts with `TURNSTILE_`. This lets the form work end-to-end before Turnstile is configured. Once the real secret key is set, verification is enforced automatically.
+
+26. **`window.showSkillGuide` / `window.hideSkillGuide` must stay on `window`.** The "❓ What's my level?" links use inline `onclick` in both static HTML (index.html) and dynamically generated HTML (Quick Connect in app.js). Both require global scope — do not move these to module scope.
