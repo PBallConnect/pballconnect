@@ -954,9 +954,7 @@ function showBackToDashboard(){
 // ── Secure email sender — Cloudflare Pages Function ──────────────────
 async function sendEmail({ to_email, type, personal_note, invite_url, subject, inviter_name, invitee_name, match_date_str }){
   if(!to_email || !to_email.includes('@')) return;
-  // Skip obvious test/fake addresses — plus-addressed test emails, example.com, etc.
   const lower = to_email.toLowerCase();
-  if(lower.includes('+') && lower.includes('@gmail.com')) return; // dippa+1234@gmail.com pattern
   if(lower.endsWith('@example.com')) return;
   if(lower.endsWith('@test.com')) return;
   try{
@@ -974,7 +972,9 @@ async function sendEmail({ to_email, type, personal_note, invite_url, subject, i
         match_date_str: match_date_str||null,
       })
     });
+    console.log('sendEmail response status:', res.status, 'to:', to_email);
     if(!res.ok) console.warn('sendEmail failed:', res.status);
+    return res;
   }catch(e){ console.warn('sendEmail error:', e.message); }
 }
 
