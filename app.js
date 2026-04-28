@@ -7839,9 +7839,12 @@ async function loadIcInvites(){
         const row=document.createElement('div');
         row.className='ic-invite-row';
         const meta=sentAt?'Sent '+sentAt:'';
+        const emailLine=(conn.recipient_email&&!conn.recipient_email.startsWith('pending_'))
+          ?'<div style="font-size:11px;color:#6b7280;margin-top:1px;">'+conn.recipient_email+'</div>':'';
         row.innerHTML=
           '<div class="ic-invite-avatar" style="background:rgba(255,255,255,0.08);color:#fff;">'+initials+'</div>'+
           '<div style="flex:1;"><div class="ic-invite-name">'+name+'</div>'+
+          emailLine+
           '<div class="ic-invite-meta">'+meta+'</div></div>'+
           '<span class="ic-invite-status" style="color:'+statusColor+';">'+statusLabel+'</span>';
         if(showCancel){
