@@ -5266,6 +5266,9 @@ async function loadInvitedByOthersPage(){
       const inCount=allInResps.filter(r=>r.match_id===m.id).length;
       return inCount<(m.max_players||(m.match_type==='doubles'?4:2));
     });
+    console.log('PAGE pending - openInvites:',openInvites.length,openInvites);
+    console.log('PAGE pending - invitedPending:',invitedPending.length,invitedPending);
+    console.log('PAGE pending - orgPending:',orgPending.length,orgPending);
 
     container.innerHTML='';
     if(!openInvites.length&&!invitedPending.length&&!orgPending.length){
@@ -10300,61 +10303,71 @@ async function loadDashTileCounts(myEmail){
     setTile('dashTileIC', IC_INCOMING_COUNT>0 ? IC_INCOMING_COUNT+' request'+(IC_INCOMING_COUNT>1?'s':'')+' pending' : 'None pending');
     setTile('dashIcIncomingCount', IC_INCOMING_COUNT||0);
 
-    // Pending matches — open invites + accepted not full + organized not full
-    // Source 1: matches where I responded 'in' but roster is unfilled
-    // Source 2: matches I organized with unfilled roster
-    // Source 3: matches where I have an unresponded invite (response='pending')
-    // Fetch sources 1+2 in parallel (Source 3 uses pendRows already fetched above)
+    // Pending matches — identical criteria to loadInvitedByOthersPage:
+    //   Open invites:      response='pending', upcoming, not cancelled, organizer !== me
+    //   Joined not full:   response='in', upcoming, not cancelled, organizer !== me, inCount < maxP
+    //   Organized not full: organizer_email=me, upcoming, not cancelled, inCount < maxP
+    // No DB-level status filter — PostgREST neq excludes NULL-status rows; filter in JS instead.
     const myEmailLower2 = myEmail.toLowerCase();
-    const inResRows = cfResp; // already fetched: match_responses where response=in
     const pendInviteIds = pendRows.map(r=>r.match_id).filter(Boolean);
-    const [pmInvitedMatches, pmOrgMatches, pmPendingMatches] = await Promise.all([
-      // Source 1 — matches I accepted
-      inResRows.length
-        ? fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${inResRows.map(r=>r.match_id).join(',')})&status=neq.full&status=neq.cancelled&select=id,match_date,match_type,max_players,organizer_email`,
-            {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
-            .then(r=>r.ok?r.json():[])
-        : Promise.resolve([]),
-      // Source 2 — matches I organized
-      fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=neq.full&status=neq.cancelled&select=id,match_date,match_type,max_players,organizer_email`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
-        .then(r=>r.ok?r.json():[]),
-      // Source 3 — open invites I haven't responded to yet (no status filter — NULL issue)
+    const inRespIds = cfResp.map(r=>r.match_id).filter(Boolean);
+    const [pmPendingMatches, pmInvitedMatches, pmOrgMatchesRaw2] = await Promise.all([
+      // Open invites — matches where I have response='pending'
       pendInviteIds.length
         ? fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${pendInviteIds.join(',')})&select=id,match_date,match_type,max_players,organizer_email,status`,
             {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
             .then(r=>r.ok?r.json():[])
-        : Promise.resolve([])
+        : Promise.resolve([]),
+      // Joined — matches where I have response='in'
+      inRespIds.length
+        ? fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${inRespIds.join(',')})&select=id,match_date,match_type,max_players,organizer_email,status`,
+            {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
+            .then(r=>r.ok?r.json():[])
+        : Promise.resolve([]),
+      // Organized — all matches I organized
+      fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&select=id,match_date,match_type,max_players,organizer_email,status`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
+        .then(r=>r.ok?r.json():[])
     ]);
-    // Source 3: filter to upcoming, not cancelled, not self-organized
+    // JS-side filters — mirrors loadInvitedByOthersPage exactly
     const pmOpenInvites = pmPendingMatches.filter(m=>
-      !isMatchPast(m)&&
-      (m.status||'')!=='cancelled'&&
-      (m.organizer_email||'').toLowerCase()!==myEmailLower2
+      !isMatchPast(m)&&(m.status||'')!=='cancelled'&&(m.organizer_email||'').toLowerCase()!==myEmailLower2
     );
-    // Deduplicate sources 1+2+3 and filter to today/future (local date)
-    const pmSeen = new Set();
-    // Open invites count as-is (any upcoming invite = 1 pending tile item)
-    // Sources 1+2 count only if roster not full — handled below
-    const pmOpenIds = new Set(pmOpenInvites.map(m=>m.id));
-    pmOpenInvites.forEach(m=>pmSeen.add(m.id));
-    const pmRosterCandidates = [...pmInvitedMatches, ...pmOrgMatches].filter(m=>{
-      if(pmSeen.has(m.id)) return false;
-      pmSeen.add(m.id);
-      return !isMatchPast(m);
-    });
-    let pendingMatchCount = pmOpenInvites.length; // open invites always count
-    if(pmRosterCandidates.length){
-      const pmIds = pmRosterCandidates.map(m=>m.id);
-      const pmRespRes = await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${pmIds.join(',')})&response=eq.in&select=match_id`,
+    const pmOrgMatches2 = pmOrgMatchesRaw2.filter(m=>
+      !isMatchPast(m)&&(m.status||'')!=='cancelled'
+    );
+    const pmOrgIds2 = new Set(pmOrgMatches2.map(m=>m.id));
+    const pmJoined = pmInvitedMatches.filter(m=>
+      !isMatchPast(m)&&(m.status||'')!=='cancelled'&&
+      (m.organizer_email||'').toLowerCase()!==myEmailLower2&&
+      !pmOrgIds2.has(m.id)
+    );
+    // Fetch in-responses for roster-count candidates (joined + organized)
+    const pmRosterIds=[...new Set([...pmJoined.map(m=>m.id),...pmOrgMatches2.map(m=>m.id)])];
+    let pmInResps=[];
+    if(pmRosterIds.length){
+      const rr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${pmRosterIds.join(',')})&response=eq.in&select=match_id`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
-      const pmResps = pmRespRes.ok ? await pmRespRes.json() : [];
-      pendingMatchCount += pmRosterCandidates.filter(m=>{
-        const inCount = pmResps.filter(r=>r.match_id===m.id).length;
-        const maxP = m.max_players||(m.match_type==='doubles'?4:2);
-        return inCount < maxP;
-      }).length;
+      if(rr.ok) pmInResps=await rr.json();
     }
+    const pmInvitedPending=pmJoined.filter(m=>{
+      const inCount=pmInResps.filter(r=>r.match_id===m.id).length;
+      return inCount<(m.max_players||(m.match_type==='doubles'?4:2));
+    });
+    const pmOrgPending=pmOrgMatches2.filter(m=>{
+      const inCount=pmInResps.filter(r=>r.match_id===m.id).length;
+      return inCount<(m.max_players||(m.match_type==='doubles'?4:2));
+    });
+    // Deduplicate across all three sources
+    const pmAllIds=new Set();
+    let pendingMatchCount=0;
+    [...pmOpenInvites,...pmInvitedPending,...pmOrgPending].forEach(m=>{
+      if(!pmAllIds.has(m.id)){pmAllIds.add(m.id);pendingMatchCount++;}
+    });
+    console.log('DASHBOARD pending - openInvites:',pmOpenInvites.length,pmOpenInvites);
+    console.log('DASHBOARD pending - invitedPending:',pmInvitedPending.length,pmInvitedPending);
+    console.log('DASHBOARD pending - orgPending:',pmOrgPending.length,pmOrgPending);
+    console.log('DASHBOARD pending - deduplicated total:',pendingMatchCount);
     const sqEl = document.getElementById('dashSqPending');
     const btnEl = document.getElementById('dashTilePendingBtn');
     if(sqEl) sqEl.textContent = pendingMatchCount;
