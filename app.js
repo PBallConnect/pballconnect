@@ -4313,7 +4313,8 @@ async function loadConfirmedMatches(){
       const allResps = responses.filter(r=>r.match_id===m.id);
       const inPlayers = allResps.filter(r=>r.response==='in');
       const waitlist  = allResps.filter(r=>r.response==='waitlist');
-      const daysUntil = m.match_date ? Math.ceil((new Date(m.match_date+'T12:00')-new Date())/(1000*60*60*24)) : null;
+      const _today = new Date(); _today.setHours(0,0,0,0);
+      const daysUntil = m.match_date ? Math.round((new Date(m.match_date+'T00:00') - _today)/(1000*60*60*24)) : null;
       const urgency = daysUntil===0?'TODAY':daysUntil===1?'TOMORROW':daysUntil!=null?'In '+daysUntil+' days':'';
       const isOutdoor = !m.is_private_court;
 
@@ -4358,7 +4359,7 @@ async function loadConfirmedMatches(){
       card.innerHTML=
         // Header
         '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">'+
-          '<span style="font-size:24px;">'+(m.match_type==='doubles'?'&#127955;&#127955;':'&#127955;')+'</span>'+
+          '<span style="font-size:24px;">'+(m.match_type==='doubles'?'<img src="icon-192.png" class="pb-icon" alt="pickleball"/><img src="icon-192.png" class="pb-icon" alt="pickleball"/>':'<img src="icon-192.png" class="pb-icon" alt="pickleball"/>')+'</span>'+
           '<div style="flex:1;">'+
             '<div style="color:#1a7a3a;font-size:15px;font-weight:700;">'+dateStr+'</div>'+
             '<div style="color:#555;font-size:12px;font-weight:600;">'+timeStr+'</div>'+
@@ -5236,7 +5237,8 @@ async function loadInvitedByOthersPage(){
       const spotsLeft=Math.max(0,maxNeeded-confirmedCount);
       const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'long',day:'numeric'}):'TBD';
       const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' - '+fmt12(m.time_end):''):'TBD';
-      const daysUntil=m.match_date?Math.ceil((new Date(m.match_date+'T12:00')-new Date())/(1000*60*60*24)):null;
+      const _today=new Date(); _today.setHours(0,0,0,0);
+      const daysUntil=m.match_date?Math.round((new Date(m.match_date+'T00:00')-_today)/(1000*60*60*24)):null;
       const urgency=daysUntil===0?'TODAY':daysUntil===1?'TOMORROW':daysUntil!=null?'In '+daysUntil+' days':'';
       const courtDisplay=m.court_name&&m.court_name!=='TBD'?m.court_name:(m.court_address||'Location TBD');
 
@@ -5269,7 +5271,7 @@ async function loadInvitedByOthersPage(){
       function render(){
         card.innerHTML=
           '<div onclick="this.parentElement._toggle()" style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;cursor:pointer;">'+
-            '<span style="font-size:22px;flex-shrink:0;">'+(m.match_type==='doubles'?'&#127955;&#127955;':'&#127955;')+'</span>'+
+            '<span style="font-size:22px;flex-shrink:0;">'+(m.match_type==='doubles'?'<img src="icon-192.png" class="pb-icon" alt="pickleball"/><img src="icon-192.png" class="pb-icon" alt="pickleball"/>':'<img src="icon-192.png" class="pb-icon" alt="pickleball"/>')+'</span>'+
             '<div style="flex:1;min-width:0;">'+
               '<div style="color:#1a7a3a;font-size:14px;font-weight:700;">'+dateStr+'</div>'+
               '<div style="color:#555;font-size:12px;">'+timeStr+' &middot; '+courtDisplay+'</div>'+
@@ -10202,7 +10204,8 @@ async function loadDashNextMatch(myEmail){
         const responses = countMap[m.id]||[];
         const dateStr = m.match_date ? new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}) : '—';
         const timeStr = m.time_start ? fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):'') : '—';
-        const daysUntil = m.match_date ? Math.ceil((new Date(m.match_date+'T12:00')-new Date())/(1000*60*60*24)) : null;
+        const _today = new Date(); _today.setHours(0,0,0,0);
+        const daysUntil = m.match_date ? Math.round((new Date(m.match_date+'T00:00') - _today)/(1000*60*60*24)) : null;
         const urgency = daysUntil===0?'TODAY 🔥':daysUntil===1?'TOMORROW':null;
         const isOrg = (m.organizer_email||'').toLowerCase()===myEmail.toLowerCase();
         const playerChips = responses.map(p=>{
