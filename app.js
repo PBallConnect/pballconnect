@@ -5187,187 +5187,207 @@ function makeRemainingPill(remaining, maxNeeded){
   '</div>';
 }
 
-// ── Invited by Others page ──────────────────────────────
+// ── Pending Matches page (page-invitedByOthers) ─────────
 async function loadInvitedByOthersPage(){
   const myEmail=getMyEmail();
   const container=document.getElementById('invitedByOthersList');
   if(!container) return;
-  if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in to view your invites.</div>'; return; }
+  if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in to view your matches.</div>'; return; }
   container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:12px 0;">Loading...</div>';
   try{
-    // Get my match responses — but EXCLUDE matches I organized
-    const rr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&select=match_id,response,responded_at&order=responded_at.desc`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
-    const myResponses=rr.ok?await rr.json():[];
-    if(!myResponses.length){
-      container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">You have not been invited to any matches yet.</div>';
-      return;
+    const myEmailLower=myEmail.toLowerCase();
+
+    // Fetch organizer matches + my 'in' responses in parallel
+    const [orgRes,inRespRes]=await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=neq.full&status=neq.cancelled&select=*&order=match_date.asc`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}),
+      fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.in&select=match_id`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
+    ]);
+    const orgMatchesRaw=orgRes.ok?await orgRes.json():[];
+    const myInResps=inRespRes.ok?await inRespRes.json():[];
+
+    // Filter organizer matches to today/future (local date)
+    const orgMatches=orgMatchesRaw.filter(m=>!isMatchPast(m));
+
+    // Fetch invited matches I responded 'in' to
+    let invitedRaw=[];
+    if(myInResps.length){
+      const inIds=myInResps.map(r=>r.match_id);
+      const r=await fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${inIds.join(',')})&status=neq.full&status=neq.cancelled&select=*&order=match_date.asc`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+      invitedRaw=r.ok?await r.json():[];
     }
-    const matchIds=myResponses.map(r=>r.match_id);
-    // Fetch open matches — filter out my own organized matches in JS (more reliable than neq)
-    const mr=await fetch(
-      `${SUPABASE_URL}/rest/v1/matches?id=in.(${matchIds.join(',')})&status=neq.full&status=neq.cancelled&select=*&order=match_date.asc`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
-    const allMatches=mr.ok?await mr.json():[];
-    // Filter out: past matches AND matches I organized (case-insensitive email compare)
-    const myEmailLower = myEmail.toLowerCase();
-    const allFiltered = allMatches.filter(m=>
-      !isMatchPast(m) &&
-      (m.organizer_email||'').toLowerCase() !== myEmailLower
+    // Exclude: past, self-organized, already in organizer set
+    const orgIds=new Set(orgMatches.map(m=>m.id));
+    const invitedMatches=invitedRaw.filter(m=>
+      !isMatchPast(m)&&
+      (m.organizer_email||'').toLowerCase()!==myEmailLower&&
+      !orgIds.has(m.id)
     );
-    // Split into actionable (pending/in/waitlist) and declined/removed (out)
-    const matches = allFiltered.filter(m=>{
-      const resp = myResponses.find(r=>r.match_id===m.id)?.response||'pending';
-      return resp !== 'out';
+
+    // Fetch all 'in' responses for all candidate matches
+    const allCandidateIds=[...orgMatches,...invitedMatches].map(m=>m.id);
+    let allInResps=[];
+    if(allCandidateIds.length){
+      const rr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${allCandidateIds.join(',')})&response=eq.in&select=match_id,player_name,player_email`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+      allInResps=rr.ok?await rr.json():[];
+    }
+
+    // Keep only truly pending (roster not yet full)
+    const orgPending=orgMatches.filter(m=>{
+      const inCount=allInResps.filter(r=>r.match_id===m.id).length;
+      return inCount<(m.max_players||(m.match_type==='doubles'?4:2));
     });
-    const declinedMatches = allFiltered.filter(m=>{
-      const resp = myResponses.find(r=>r.match_id===m.id)?.response;
-      return resp === 'out';
+    const invitedPending=invitedMatches.filter(m=>{
+      const inCount=allInResps.filter(r=>r.match_id===m.id).length;
+      return inCount<(m.max_players||(m.match_type==='doubles'?4:2));
     });
+
     container.innerHTML='';
-    if(!matches.length && !declinedMatches.length){
-      container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">No open match invites from others.<br><span style="font-size:12px;">Confirmed matches appear under Confirmed Matches.</span></div>';
+    if(!orgPending.length&&!invitedPending.length){
+      container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">No pending matches.</div>';
       return;
     }
-    // Fetch all IN responses for these matches
-    const rRes=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${matches.map(m=>m.id).join(',')})&response=eq.in&select=match_id,player_name,player_email`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
-    const allResponses=rRes.ok?await rRes.json():[];
 
-    matches.forEach(m=>{
-      const myResp=myResponses.find(r=>r.match_id===m.id);
-      const myResponse=myResp?.response||'pending';
-      const inPlayers=allResponses.filter(r=>r.match_id===m.id);
-      const maxNeeded=m.max_players||(m.match_type==='doubles'?4:2);
-      // Spots left: don't count myself if I'm on waitlist
-      const confirmedCount=inPlayers.length;
-      const spotsLeft=Math.max(0,maxNeeded-confirmedCount);
-      const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'long',day:'numeric'}):'TBD';
-      const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' - '+fmt12(m.time_end):''):'TBD';
-      const _today=new Date(); _today.setHours(0,0,0,0);
-      const daysUntil=m.match_date?Math.round((new Date(m.match_date+'T00:00')-_today)/(1000*60*60*24)):null;
-      const urgency=daysUntil===0?'TODAY':daysUntil===1?'TOMORROW':daysUntil!=null?'In '+daysUntil+' days':'';
-      const courtDisplay=m.court_name&&m.court_name!=='TBD'?m.court_name:(m.court_address||'Location TBD');
+    const showHeadings=orgPending.length>0&&invitedPending.length>0;
 
-      // Player chips — organizer always first with star
-      const organizerChip='<div style="display:inline-flex;flex-direction:column;align-items:center;margin:2px;">'+
-        '<span class="avatar-organizer" style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;">'+
-          (m.organizer_name||'Organizer').split(' ')[0]+' &#9733;'+
-        '</span>'+
-        '<span class="avatar-organizer-label">Match Organizer</span>'+
-      '</div>';
-      const iboOrgEmailLower=(m.organizer_email||'').toLowerCase();
-      const playerChips=inPlayers
-        .filter(p=>(p.player_email||'').toLowerCase()!==iboOrgEmailLower)
-        .map(p=>{
+    function makeSectionHeading(label,topMargin){
+      const h=document.createElement('div');
+      h.style.cssText='font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid rgba(245,158,11,0.3);'+(topMargin?'margin-top:20px;':'');
+      h.textContent=label;
+      return h;
+    }
+
+    // ── Section A: Matches You're Organizing ────────────
+    if(orgPending.length){
+      if(showHeadings) container.appendChild(makeSectionHeading("Matches You're Organizing",false));
+      orgPending.forEach(m=>{
+        const inPlayers=allInResps.filter(r=>r.match_id===m.id);
+        const maxNeeded=m.max_players||(m.match_type==='doubles'?4:2);
+        const confirmedCount=inPlayers.length;
+        const spotsLeft=Math.max(0,maxNeeded-confirmedCount);
+        const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'long',day:'numeric'}):'TBD';
+        const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' - '+fmt12(m.time_end):''):'TBD';
+        const _today=new Date();_today.setHours(0,0,0,0);
+        const daysUntil=m.match_date?Math.round((new Date(m.match_date+'T00:00')-_today)/(1000*60*60*24)):null;
+        const urgency=daysUntil===0?'TODAY':daysUntil===1?'TOMORROW':daysUntil!=null?'In '+daysUntil+' days':'';
+        const courtDisplay=m.court_name&&m.court_name!=='TBD'?m.court_name:(m.court_address||'Location TBD');
+        const playerChips=inPlayers.map(p=>{
           const firstName=(p.player_name||p.player_email||'').split(' ')[0];
           return '<span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:#f0fdf4;border:2px solid #1a7a3a;font-size:11px;color:#1a7a3a;font-weight:600;margin:2px;">'+firstName+'</span>';
         }).join('');
-
-      const isPending=myResponse==='pending';
-      const isIn=myResponse==='in';
-      const isOut=myResponse==='out';
-      const isWaitlist=myResponse==='waitlist';
-
-      // Fix: if on waitlist but spots available, allow upgrading to in
-      const canUpgrade=isWaitlist&&spotsLeft>0;
-
-      const iboCountdown = getCountdown(m.match_date, m.time_start);
-      const iboUrgent = iboCountdown?.urgent;
-      const card=document.createElement('div');
-      const isRosterPending = isIn && confirmedCount < maxNeeded;
-      card.style.cssText='background:#ffffff;border:3px solid '+(isPending?'#3b82f6':isRosterPending?'#f59e0b':'#d1d5db')+';border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);';
-      if(iboUrgent) card.classList.add('pb-card-urgent');
-
-      let expanded=isPending||canUpgrade;
-
-      function render(){
-        card.innerHTML=
-          '<div onclick="this.parentElement._toggle()" style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;cursor:pointer;">'+
-            '<span style="font-size:22px;flex-shrink:0;">'+(m.match_type==='doubles'?'<img src="icon-192.png" class="pb-icon" alt="pickleball"/><img src="icon-192.png" class="pb-icon" alt="pickleball"/>':'<img src="icon-192.png" class="pb-icon" alt="pickleball"/>')+'</span>'+
-            '<div style="flex:1;min-width:0;">'+
-              '<div style="color:#1a7a3a;font-size:14px;font-weight:700;">'+dateStr+'</div>'+
-              '<div style="color:#555;font-size:12px;">'+timeStr+' &middot; '+courtDisplay+'</div>'+
-              renderCountdown(m.match_date,m.time_start)+
-              '<div style="color:#555;font-size:11px;margin-top:2px;">'+
-                'By <strong style="color:#111;">'+(m.organizer_name||'Unknown')+'</strong>'+
-                ' &middot; '+(m.match_type==='singles'?'Singles':'Doubles')+
+        const card=document.createElement('div');
+        card.style.cssText='background:#ffffff;border:3px solid #f59e0b;border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);';
+        if(getCountdown(m.match_date,m.time_start)?.urgent) card.classList.add('pb-card-urgent');
+        let expanded=false;
+        function renderOrgCard(){
+          card.innerHTML=
+            '<div onclick="this.parentElement._toggle()" style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;cursor:pointer;">'+
+              '<span style="font-size:22px;flex-shrink:0;">'+(m.match_type==='doubles'?'<img src="icon-192.png" class="pb-icon" alt="pickleball"/><img src="icon-192.png" class="pb-icon" alt="pickleball"/>':'<img src="icon-192.png" class="pb-icon" alt="pickleball"/>')+'</span>'+
+              '<div style="flex:1;min-width:0;">'+
+                '<div style="color:#1a7a3a;font-size:14px;font-weight:700;">'+dateStr+'</div>'+
+                '<div style="color:#555;font-size:12px;">'+timeStr+' &middot; '+courtDisplay+'</div>'+
+                renderCountdown(m.match_date,m.time_start)+
+                '<div style="color:#555;font-size:11px;margin-top:2px;">'+(m.match_type==='singles'?'Singles':'Doubles')+'</div>'+
+              '</div>'+
+              '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">'+
+                (urgency?'<div style="padding:2px 8px;border-radius:999px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.35);color:#f59e0b;font-size:9px;font-weight:700;">'+urgency+'</div>':'')+
+                '<div style="font-size:11px;font-weight:700;color:#f59e0b;">Organizing</div>'+
+                '<div style="font-size:10px;color:#6b7280;">'+(expanded?'&#9650; less':'&#9660; details')+'</div>'+
               '</div>'+
             '</div>'+
-            '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">'+
-              (urgency?'<div style="padding:2px 8px;border-radius:999px;background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.3);color:var(--green);font-size:9px;font-weight:700;">'+urgency+'</div>':'')+
-              '<div style="font-size:11px;font-weight:700;color:'+(isPending?'#60a5fa':isRosterPending?'#f59e0b':isIn?'var(--green)':canUpgrade?'#f59e0b':isWaitlist?'#f59e0b':'#f87171')+';">'+
-                (isPending?'Awaiting response':isRosterPending?'Pending roster':isIn?'You are in!':canUpgrade?'Waitlist - spot open!':isWaitlist?'On waitlist':'Declined')+
-              '</div>'+
-              '<div style="font-size:10px;color:#6b7280;">'+(expanded?'&#9650; less':'&#9660; details')+'</div>'+
-            '</div>'+
-          '</div>'+
-          (expanded?
-            '<div style="padding:0 16px 14px;border-top:1px solid #e5e7eb;">'+
-              '<div style="margin-top:10px;">'+
-                '<div style="font-size:10px;font-weight:700;color:#1a5c32;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">'+
-                  'Players ('+confirmedCount+'/'+maxNeeded+') &middot; '+
-                  (spotsLeft>0?spotsLeft+' spot'+(spotsLeft!==1?'s':'')+' left':'Full!')+
+            (expanded?
+              '<div style="padding:0 16px 14px;border-top:1px solid #e5e7eb;">'+
+                '<div style="margin-top:10px;">'+
+                  '<div style="font-size:10px;font-weight:700;color:#1a5c32;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">'+
+                    'Players ('+confirmedCount+'/'+maxNeeded+') &middot; '+(spotsLeft>0?spotsLeft+' spot'+(spotsLeft!==1?'s':'')+' left':'Full!')+
+                  '</div>'+
+                  (playerChips?'<div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:12px;">'+playerChips+'</div>':'<div style="font-size:12px;color:var(--dim);margin-bottom:12px;">No players confirmed yet</div>')+
                 '</div>'+
-                '<div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:12px;">'+organizerChip+playerChips+'</div>'+
-              '</div>'+
-              (isPending?
-                '<div style="display:flex;gap:8px;">'+
-                  '<button data-mid="'+m.id+'" data-resp="in" class="ibo-respond-btn ibo-pulse" style="flex:1;padding:11px;border-radius:10px;border:2px solid var(--green);background:rgba(76,175,125,0.1);color:var(--green);font-weight:700;font-size:13px;cursor:pointer;">&#10003; I&#39;m In!</button>'+
-                  '<button data-mid="'+m.id+'" data-resp="out" class="ibo-respond-btn" style="flex:1;padding:11px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;">&#10007; Can&#39;t Make It</button>'+
-                '</div>'
-              :canUpgrade?
-                '<div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:10px 12px;margin-bottom:10px;">'+
-                  '<div style="font-size:12px;color:#fbbf24;font-weight:600;margin-bottom:8px;">&#9889; A spot opened up — want to join?</div>'+
-                  '<button data-mid="'+m.id+'" data-resp="in" class="ibo-respond-btn" style="width:100%;padding:10px;border-radius:8px;border:none;background:var(--green);color:#fff;font-weight:700;font-size:13px;cursor:pointer;">&#10003; Yes, I&#39;m In!</button>'+
-                '</div>'
-              :isRosterPending?
                 '<div style="padding:8px 12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;">'+
                   '<div style="font-size:12px;color:#f59e0b;font-weight:700;">&#8987; Pending — roster not full</div>'+
                   '<div style="font-size:11px;color:#92400e;margin-top:2px;">'+confirmedCount+' of '+maxNeeded+' spots filled</div>'+
-                '</div>'
-              :isIn?
-                '<div style="padding:8px 12px;background:rgba(76,175,125,0.08);border-radius:8px;font-size:12px;color:var(--green);font-weight:600;">&#10003; You are confirmed!</div>'
-              :'')+
-            '</div>'
-          :'');
-      }
-
-      card._toggle=function(){ expanded=!expanded; render(); };
-      render();
-      container.appendChild(card);
-    });
-
-    // ── Empty state when only declined matches exist ──
-    if(!matches.length){
-      const emptyDiv=document.createElement('div');
-      emptyDiv.style.cssText='color:var(--dim);font-size:13px;padding:20px 0;text-align:center;';
-      emptyDiv.innerHTML='No open match invites from others.<br><span style="font-size:12px;">Confirmed matches appear under Confirmed Matches.</span>';
-      container.appendChild(emptyDiv);
+                '</div>'+
+              '</div>'
+            :'');
+        }
+        card._toggle=function(){expanded=!expanded;renderOrgCard();};
+        renderOrgCard();
+        container.appendChild(card);
+      });
     }
 
-    // ── Declined / Removed section ────────────────────
-    if(declinedMatches.length){
-      const section=document.createElement('div');
-      section.style.cssText='margin-top:20px;';
-      section.innerHTML=
-        '<div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);">'+
-          '✕ Declined or Removed ('+declinedMatches.length+')'+
+    // ── Section B: Matches You've Joined ────────────────
+    if(invitedPending.length){
+      if(showHeadings) container.appendChild(makeSectionHeading("Matches You've Joined",true));
+      invitedPending.forEach(m=>{
+        const inPlayers=allInResps.filter(r=>r.match_id===m.id);
+        const maxNeeded=m.max_players||(m.match_type==='doubles'?4:2);
+        const confirmedCount=inPlayers.length;
+        const spotsLeft=Math.max(0,maxNeeded-confirmedCount);
+        const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'long',day:'numeric'}):'TBD';
+        const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' - '+fmt12(m.time_end):''):'TBD';
+        const _today=new Date();_today.setHours(0,0,0,0);
+        const daysUntil=m.match_date?Math.round((new Date(m.match_date+'T00:00')-_today)/(1000*60*60*24)):null;
+        const urgency=daysUntil===0?'TODAY':daysUntil===1?'TOMORROW':daysUntil!=null?'In '+daysUntil+' days':'';
+        const courtDisplay=m.court_name&&m.court_name!=='TBD'?m.court_name:(m.court_address||'Location TBD');
+        const iboOrgEmailLower=(m.organizer_email||'').toLowerCase();
+        const organizerChip='<div style="display:inline-flex;flex-direction:column;align-items:center;margin:2px;">'+
+          '<span class="avatar-organizer" style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;">'+
+            (m.organizer_name||'Organizer').split(' ')[0]+' &#9733;'+
+          '</span>'+
+          '<span class="avatar-organizer-label">Match Organizer</span>'+
         '</div>';
-      declinedMatches.forEach(m=>{
-        const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}):'TBD';
-        const timeStr=m.time_start?fmt12(m.time_start):'TBD';
-        const row=document.createElement('div');
-        row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;opacity:0.65;';
-        row.innerHTML=
-          '<div>'+
-            '<div style="font-size:13px;font-weight:700;color:var(--dim);">'+dateStr+' · '+timeStr+'</div>'+
-            '<div style="font-size:11px;color:var(--dim);margin-top:2px;">By '+(m.organizer_name||(m.organizer_email||'').split('@')[0]||'Unknown')+'</div>'+
-          '</div>'+
-          '<div style="font-size:11px;font-weight:700;color:#6b7280;padding:3px 8px;border-radius:999px;background:rgba(255,255,255,0.06);border:1px solid var(--border);">Declined / Removed</div>';
-        section.appendChild(row);
+        const playerChips=inPlayers
+          .filter(p=>(p.player_email||'').toLowerCase()!==iboOrgEmailLower)
+          .map(p=>{
+            const firstName=(p.player_name||p.player_email||'').split(' ')[0];
+            return '<span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:#f0fdf4;border:2px solid #1a7a3a;font-size:11px;color:#1a7a3a;font-weight:600;margin:2px;">'+firstName+'</span>';
+          }).join('');
+        const card=document.createElement('div');
+        card.style.cssText='background:#ffffff;border:3px solid #f59e0b;border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);';
+        if(getCountdown(m.match_date,m.time_start)?.urgent) card.classList.add('pb-card-urgent');
+        let expanded=false;
+        function renderInvCard(){
+          card.innerHTML=
+            '<div onclick="this.parentElement._toggle()" style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;cursor:pointer;">'+
+              '<span style="font-size:22px;flex-shrink:0;">'+(m.match_type==='doubles'?'<img src="icon-192.png" class="pb-icon" alt="pickleball"/><img src="icon-192.png" class="pb-icon" alt="pickleball"/>':'<img src="icon-192.png" class="pb-icon" alt="pickleball"/>')+'</span>'+
+              '<div style="flex:1;min-width:0;">'+
+                '<div style="color:#1a7a3a;font-size:14px;font-weight:700;">'+dateStr+'</div>'+
+                '<div style="color:#555;font-size:12px;">'+timeStr+' &middot; '+courtDisplay+'</div>'+
+                renderCountdown(m.match_date,m.time_start)+
+                '<div style="color:#555;font-size:11px;margin-top:2px;">'+
+                  'By <strong style="color:#111;">'+(m.organizer_name||'Unknown')+'</strong>'+
+                  ' &middot; '+(m.match_type==='singles'?'Singles':'Doubles')+
+                '</div>'+
+              '</div>'+
+              '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">'+
+                (urgency?'<div style="padding:2px 8px;border-radius:999px;background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.3);color:var(--green);font-size:9px;font-weight:700;">'+urgency+'</div>':'')+
+                '<div style="font-size:11px;font-weight:700;color:#f59e0b;">Pending roster</div>'+
+                '<div style="font-size:10px;color:#6b7280;">'+(expanded?'&#9650; less':'&#9660; details')+'</div>'+
+              '</div>'+
+            '</div>'+
+            (expanded?
+              '<div style="padding:0 16px 14px;border-top:1px solid #e5e7eb;">'+
+                '<div style="margin-top:10px;">'+
+                  '<div style="font-size:10px;font-weight:700;color:#1a5c32;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">'+
+                    'Players ('+confirmedCount+'/'+maxNeeded+') &middot; '+(spotsLeft>0?spotsLeft+' spot'+(spotsLeft!==1?'s':'')+' left':'Full!')+
+                  '</div>'+
+                  '<div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:12px;">'+organizerChip+playerChips+'</div>'+
+                '</div>'+
+                '<div style="padding:8px 12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;">'+
+                  '<div style="font-size:12px;color:#f59e0b;font-weight:700;">&#8987; Pending — roster not full</div>'+
+                  '<div style="font-size:11px;color:#92400e;margin-top:2px;">'+confirmedCount+' of '+maxNeeded+' spots filled</div>'+
+                '</div>'+
+              '</div>'
+            :'');
+        }
+        card._toggle=function(){expanded=!expanded;renderInvCard();};
+        renderInvCard();
+        container.appendChild(card);
       });
-      container.appendChild(section);
     }
   }catch(e){
     container.innerHTML='<div style="color:#f87171;font-size:13px;">Error: '+e.message+'</div>';
