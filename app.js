@@ -5210,21 +5210,29 @@ async function loadInvitedByOthersPage(){
     // Filter organizer matches to today/future (local date)
     const orgMatches=orgMatchesRaw.filter(m=>!isMatchPast(m));
 
-    // Fetch invited matches I responded 'in' to
+    console.log('[PendingMatches] myInResps:', myInResps.length, myInResps);
+
+    // Fetch invited matches I responded 'in' to — no status filter here because
+    // PostgREST neq does not include NULL rows, and many matches have status=null.
+    // We filter by inCount ourselves below.
     let invitedRaw=[];
     if(myInResps.length){
       const inIds=myInResps.map(r=>r.match_id);
-      const r=await fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${inIds.join(',')})&status=neq.full&status=neq.cancelled&select=*&order=match_date.asc`,
+      const r=await fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${inIds.join(',')})&select=*&order=match_date.asc`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       invitedRaw=r.ok?await r.json():[];
     }
-    // Exclude: past, self-organized, already in organizer set
+    console.log('[PendingMatches] invitedRaw:', invitedRaw.length, invitedRaw);
+
+    // Exclude: past, cancelled, self-organized, already in organizer set
     const orgIds=new Set(orgMatches.map(m=>m.id));
     const invitedMatches=invitedRaw.filter(m=>
       !isMatchPast(m)&&
+      (m.status||'')!=='cancelled'&&
       (m.organizer_email||'').toLowerCase()!==myEmailLower&&
       !orgIds.has(m.id)
     );
+    console.log('[PendingMatches] invitedMatches (after filter):', invitedMatches.length, invitedMatches);
 
     // Fetch all 'in' responses for all candidate matches
     const allCandidateIds=[...orgMatches,...invitedMatches].map(m=>m.id);
@@ -5244,6 +5252,7 @@ async function loadInvitedByOthersPage(){
       const inCount=allInResps.filter(r=>r.match_id===m.id).length;
       return inCount<(m.max_players||(m.match_type==='doubles'?4:2));
     });
+    console.log('[PendingMatches] orgPending:', orgPending.length, 'invitedPending:', invitedPending.length);
 
     container.innerHTML='';
     if(!orgPending.length&&!invitedPending.length){
