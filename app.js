@@ -5189,175 +5189,193 @@ function makeRemainingPill(remaining, maxNeeded){
 
 // ── Pending Matches page (page-invitedByOthers) ─────────
 async function loadInvitedByOthersPage(){
-  // Use SESSION_PLAYER.email as the authoritative source — more reliable than
-  // S.email which is mutable form state that can change during profile editing.
+  // Use SESSION_PLAYER.email as the authoritative source — S.email is mutable form state.
   const myEmail=(SESSION_PLAYER?.email||getMyEmail()||'').toLowerCase();
   const container=document.getElementById('invitedByOthersList');
   if(!container) return;
   if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in to view your matches.</div>'; return; }
   container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:12px 0;">Loading...</div>';
-  console.log('[PendingMatches] loading for email:', myEmail);
   try{
-    const myEmailLower=myEmail; // already lowercased above
-
-    // Fetch organizer matches + my 'in' responses in parallel
-    const [orgRes,inRespRes]=await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=neq.full&status=neq.cancelled&select=*&order=match_date.asc`,
+    // Fetch all three response types + organizer matches in parallel
+    const [pendRespRes,inRespRes,orgRes]=await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.pending&select=match_id`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}),
       fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.in&select=match_id`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}),
+      fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&select=*&order=match_date.asc`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
     ]);
-    console.log('[PendingMatches] orgRes status:', orgRes.status, '| inRespRes status:', inRespRes.status);
 
-    const orgMatchesRaw=orgRes.ok?await orgRes.json():[];
-    if(!orgRes.ok) console.error('[PendingMatches] orgRes error — HTTP', orgRes.status);
-
+    const myPendResps=pendRespRes.ok?await pendRespRes.json():[];
     const myInResps=inRespRes.ok?await inRespRes.json():[];
-    if(!inRespRes.ok) console.error('[PendingMatches] inRespRes error — HTTP', inRespRes.status);
-    console.log('[PendingMatches] myInResps:', myInResps.length, JSON.stringify(myInResps));
+    const orgMatchesRaw=orgRes.ok?await orgRes.json():[];
 
-    // Filter organizer matches to today/future (local date)
-    const orgMatches=orgMatchesRaw.filter(m=>!isMatchPast(m));
-    console.log('[PendingMatches] orgMatchesRaw:', orgMatchesRaw.length, '→ orgMatches (future):', orgMatches.length);
+    // Fetch match details for pending and 'in' responses in parallel.
+    // No status filter — PostgREST neq excludes NULL-status rows. Filter in JS instead.
+    const pendIds=myPendResps.map(r=>r.match_id).filter(Boolean);
+    const inIds=myInResps.map(r=>r.match_id).filter(Boolean);
+    const [pendMatchesRaw,inMatchesRaw]=await Promise.all([
+      pendIds.length
+        ? fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${pendIds.join(',')})&select=*&order=match_date.asc`,
+            {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}).then(r=>r.ok?r.json():[])
+        : Promise.resolve([]),
+      inIds.length
+        ? fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${inIds.join(',')})&select=*&order=match_date.asc`,
+            {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}).then(r=>r.ok?r.json():[])
+        : Promise.resolve([])
+    ]);
 
-    // Fetch invited matches I responded 'in' to — no status filter because
-    // PostgREST neq does not include NULL-status rows. We filter in JS instead.
-    let invitedRaw=[];
-    if(myInResps.length){
-      const inIds=myInResps.map(r=>r.match_id).filter(Boolean);
-      console.log('[PendingMatches] fetching invitedRaw for IDs:', JSON.stringify(inIds));
-      const r=await fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${inIds.join(',')})&select=*&order=match_date.asc`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
-      console.log('[PendingMatches] invitedRaw fetch status:', r.status);
-      if(r.ok) invitedRaw=await r.json();
-      else console.error('[PendingMatches] invitedRaw fetch error — HTTP', r.status);
-    }
-    console.log('[PendingMatches] invitedRaw:', invitedRaw.length, JSON.stringify(invitedRaw.map(m=>({id:m.id,organizer_email:m.organizer_email,status:m.status,match_date:m.match_date}))));
-
-    // Exclude: past, cancelled, self-organized, already in organizer set
+    // Organizer matches: today/future, not cancelled
+    const orgMatches=orgMatchesRaw.filter(m=>!isMatchPast(m)&&(m.status||'')!=='cancelled');
     const orgIds=new Set(orgMatches.map(m=>m.id));
-    const invitedMatches=invitedRaw.filter(m=>{
-      const notPast=!isMatchPast(m);
-      const notCancelled=(m.status||'')!=='cancelled';
-      const notSelfOrg=(m.organizer_email||'').toLowerCase()!==myEmailLower;
-      const notInOrgIds=!orgIds.has(m.id);
-      if(!notPast||!notCancelled||!notSelfOrg||!notInOrgIds){
-        console.warn('[PendingMatches] invitedRaw match DROPPED — id:'+m.id,
-          'notPast:'+notPast,'notCancelled:'+notCancelled,
-          'notSelfOrg:'+notSelfOrg+' (org='+m.organizer_email+' vs me='+myEmailLower+')',
-          'notInOrgIds:'+notInOrgIds);
-      }
-      return notPast&&notCancelled&&notSelfOrg&&notInOrgIds;
-    });
-    console.log('[PendingMatches] invitedMatches after filter:', invitedMatches.length);
 
-    // Fetch all 'in' responses for all candidate matches
-    const allCandidateIds=[...orgMatches,...invitedMatches].map(m=>m.id);
+    // Section 1 — Open Invites: response='pending', upcoming, not cancelled, not self-organized
+    const openInvites=pendMatchesRaw.filter(m=>
+      !isMatchPast(m)&&
+      (m.status||'')!=='cancelled'&&
+      (m.organizer_email||'').toLowerCase()!==myEmail
+    );
+
+    // Section 2 — Matches You've Joined: response='in', upcoming, not cancelled, not self-organized
+    const joinedMatches=inMatchesRaw.filter(m=>
+      !isMatchPast(m)&&
+      (m.status||'')!=='cancelled'&&
+      (m.organizer_email||'').toLowerCase()!==myEmail&&
+      !orgIds.has(m.id)
+    );
+
+    // Fetch all 'in' responses for every candidate match (for roster counts + player chips)
+    const allCandidateIds=[...new Set([
+      ...openInvites.map(m=>m.id),
+      ...joinedMatches.map(m=>m.id),
+      ...orgMatches.map(m=>m.id)
+    ])];
     let allInResps=[];
     if(allCandidateIds.length){
       const rr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${allCandidateIds.join(',')})&response=eq.in&select=match_id,player_name,player_email`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       if(rr.ok) allInResps=await rr.json();
-      else console.error('[PendingMatches] allInResps fetch error — HTTP', rr.status);
     }
-    console.log('[PendingMatches] allInResps:', allInResps.length);
 
-    // Keep only truly pending (roster not yet full)
+    // Sections 2+3 only show roster-not-full matches
+    const invitedPending=joinedMatches.filter(m=>{
+      const inCount=allInResps.filter(r=>r.match_id===m.id).length;
+      return inCount<(m.max_players||(m.match_type==='doubles'?4:2));
+    });
     const orgPending=orgMatches.filter(m=>{
       const inCount=allInResps.filter(r=>r.match_id===m.id).length;
       return inCount<(m.max_players||(m.match_type==='doubles'?4:2));
     });
-    const invitedPending=invitedMatches.filter(m=>{
-      const inCount=allInResps.filter(r=>r.match_id===m.id).length;
-      const maxP=m.max_players||(m.match_type==='doubles'?4:2);
-      console.log('[PendingMatches] invitedPending check — id:'+m.id,'inCount:'+inCount,'maxP:'+maxP,'pending:'+(inCount<maxP));
-      return inCount<maxP;
-    });
-    console.log('[PendingMatches] orgPending:', orgPending.length, '| invitedPending:', invitedPending.length);
 
     container.innerHTML='';
-    if(!orgPending.length&&!invitedPending.length){
-      container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">No pending matches.</div>';
+    if(!openInvites.length&&!invitedPending.length&&!orgPending.length){
+      container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">No active match invites or pending matches.</div>';
       return;
     }
 
-    const showHeadings=orgPending.length>0&&invitedPending.length>0;
+    const sectionCount=[openInvites.length>0,invitedPending.length>0,orgPending.length>0].filter(Boolean).length;
+    const showHeadings=sectionCount>1;
 
-    function makeSectionHeading(label,topMargin){
+    function makeBlueHeading(label,topMargin){
+      const h=document.createElement('div');
+      h.style.cssText='font-size:11px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid rgba(59,130,246,0.3);'+(topMargin?'margin-top:20px;':'');
+      h.textContent=label;
+      return h;
+    }
+    function makeAmberHeading(label,topMargin){
       const h=document.createElement('div');
       h.style.cssText='font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid rgba(245,158,11,0.3);'+(topMargin?'margin-top:20px;':'');
       h.textContent=label;
       return h;
     }
 
-    // ── Section A: Matches You're Organizing ────────────
-    if(orgPending.length){
-      if(showHeadings) container.appendChild(makeSectionHeading("Matches You're Organizing",false));
-      orgPending.forEach(m=>{
+    // ── Section 1: Open Invites ──────────────────────────
+    if(openInvites.length){
+      if(showHeadings) container.appendChild(makeBlueHeading('Open Invites — Action Required',false));
+      openInvites.forEach(m=>{
         const inPlayers=allInResps.filter(r=>r.match_id===m.id);
         const maxNeeded=m.max_players||(m.match_type==='doubles'?4:2);
         const confirmedCount=inPlayers.length;
         const spotsLeft=Math.max(0,maxNeeded-confirmedCount);
-        const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'long',day:'numeric'}):'TBD';
+        const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-CA',{weekday:'short',month:'long',day:'numeric'}):'TBD';
         const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' - '+fmt12(m.time_end):''):'TBD';
         const _today=new Date();_today.setHours(0,0,0,0);
         const daysUntil=m.match_date?Math.round((new Date(m.match_date+'T00:00')-_today)/(1000*60*60*24)):null;
         const urgency=daysUntil===0?'TODAY':daysUntil===1?'TOMORROW':daysUntil!=null?'In '+daysUntil+' days':'';
         const courtDisplay=m.court_name&&m.court_name!=='TBD'?m.court_name:(m.court_address||'Location TBD');
-        const playerChips=inPlayers.map(p=>{
-          const firstName=(p.player_name||p.player_email||'').split(' ')[0];
-          return '<span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:#f0fdf4;border:2px solid #1a7a3a;font-size:11px;color:#1a7a3a;font-weight:600;margin:2px;">'+firstName+'</span>';
-        }).join('');
+        const iboOrgEmailLower=(m.organizer_email||'').toLowerCase();
+        const organizerChip='<div style="display:inline-flex;flex-direction:column;align-items:center;margin:2px;">'+
+          '<span class="avatar-organizer" style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;">'+
+            (m.organizer_name||'Organizer').split(' ')[0]+' &#9733;'+
+          '</span>'+
+          '<span class="avatar-organizer-label">Match Organizer</span>'+
+        '</div>';
+        const playerChips=inPlayers
+          .filter(p=>(p.player_email||'').toLowerCase()!==iboOrgEmailLower)
+          .map(p=>{
+            const firstName=(p.player_name||p.player_email||'').split(' ')[0];
+            return '<span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:#eff6ff;border:2px solid #3b82f6;font-size:11px;color:#1d4ed8;font-weight:600;margin:2px;">'+firstName+'</span>';
+          }).join('');
+        const mid=m.id;
         const card=document.createElement('div');
-        card.style.cssText='background:#ffffff;border:3px solid #f59e0b;border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);';
+        card.style.cssText='background:#ffffff;border:3px solid #3b82f6;border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);';
         if(getCountdown(m.match_date,m.time_start)?.urgent) card.classList.add('pb-card-urgent');
-        let expanded=false;
-        function renderOrgCard(){
+        let expanded=true; // open invites expanded by default — action required
+        function renderOpenCard(){
           card.innerHTML=
             '<div onclick="this.parentElement._toggle()" style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;cursor:pointer;">'+
               '<span style="font-size:22px;flex-shrink:0;">'+(m.match_type==='doubles'?'<img src="icon-192.png" class="pb-icon" alt="pickleball"/><img src="icon-192.png" class="pb-icon" alt="pickleball"/>':'<img src="icon-192.png" class="pb-icon" alt="pickleball"/>')+'</span>'+
               '<div style="flex:1;min-width:0;">'+
-                '<div style="color:#1a7a3a;font-size:14px;font-weight:700;">'+dateStr+'</div>'+
+                '<div style="color:#1d4ed8;font-size:14px;font-weight:700;">'+dateStr+'</div>'+
                 '<div style="color:#555;font-size:12px;">'+timeStr+' &middot; '+courtDisplay+'</div>'+
                 renderCountdown(m.match_date,m.time_start)+
-                '<div style="color:#555;font-size:11px;margin-top:2px;">'+(m.match_type==='singles'?'Singles':'Doubles')+'</div>'+
+                '<div style="color:#555;font-size:11px;margin-top:2px;">'+
+                  'By <strong style="color:#111;">'+(m.organizer_name||'Unknown')+'</strong>'+
+                  ' &middot; '+(m.match_type==='singles'?'Singles':'Doubles')+
+                '</div>'+
               '</div>'+
               '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">'+
-                (urgency?'<div style="padding:2px 8px;border-radius:999px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.35);color:#f59e0b;font-size:9px;font-weight:700;">'+urgency+'</div>':'')+
-                '<div style="font-size:11px;font-weight:700;color:#f59e0b;">Organizing</div>'+
+                (urgency?'<div style="padding:2px 8px;border-radius:999px;background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.35);color:#1d4ed8;font-size:9px;font-weight:700;">'+urgency+'</div>':'')+
+                '<div style="font-size:11px;font-weight:700;color:#3b82f6;">Awaiting response</div>'+
                 '<div style="font-size:10px;color:#6b7280;">'+(expanded?'&#9650; less':'&#9660; details')+'</div>'+
               '</div>'+
             '</div>'+
             (expanded?
               '<div style="padding:0 16px 14px;border-top:1px solid #e5e7eb;">'+
                 '<div style="margin-top:10px;">'+
-                  '<div style="font-size:10px;font-weight:700;color:#1a5c32;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">'+
+                  '<div style="font-size:10px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">'+
                     'Players ('+confirmedCount+'/'+maxNeeded+') &middot; '+(spotsLeft>0?spotsLeft+' spot'+(spotsLeft!==1?'s':'')+' left':'Full!')+
                   '</div>'+
-                  (playerChips?'<div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:12px;">'+playerChips+'</div>':'<div style="font-size:12px;color:var(--dim);margin-bottom:12px;">No players confirmed yet</div>')+
+                  '<div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:12px;">'+organizerChip+playerChips+'</div>'+
                 '</div>'+
-                '<div style="padding:8px 12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;">'+
-                  '<div style="font-size:12px;color:#f59e0b;font-weight:700;">&#8987; Pending — roster not full</div>'+
-                  '<div style="font-size:11px;color:#92400e;margin-top:2px;">'+confirmedCount+' of '+maxNeeded+' spots filled</div>'+
+                '<div style="display:flex;gap:10px;" id="iboRespRow_'+mid+'">'+
+                  '<button class="ibo-respond-btn" data-mid="'+mid+'" data-resp="in" '+
+                    'style="flex:1;padding:10px;background:#1a7a3a;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">'+
+                    '&#10003; Accept'+
+                  '</button>'+
+                  '<button class="ibo-respond-btn" data-mid="'+mid+'" data-resp="out" '+
+                    'style="flex:1;padding:10px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">'+
+                    '&#10007; Decline'+
+                  '</button>'+
                 '</div>'+
               '</div>'
             :'');
         }
-        card._toggle=function(){expanded=!expanded;renderOrgCard();};
-        renderOrgCard();
+        card._toggle=function(){expanded=!expanded;renderOpenCard();};
+        renderOpenCard();
         container.appendChild(card);
       });
     }
 
-    // ── Section B: Matches You've Joined ────────────────
+    // ── Section 2: Matches You've Joined ────────────────
     if(invitedPending.length){
-      if(showHeadings) container.appendChild(makeSectionHeading("Matches You've Joined",true));
+      if(showHeadings) container.appendChild(makeAmberHeading("Matches You've Joined",openInvites.length>0));
       invitedPending.forEach(m=>{
         const inPlayers=allInResps.filter(r=>r.match_id===m.id);
         const maxNeeded=m.max_players||(m.match_type==='doubles'?4:2);
         const confirmedCount=inPlayers.length;
         const spotsLeft=Math.max(0,maxNeeded-confirmedCount);
-        const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'long',day:'numeric'}):'TBD';
+        const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-CA',{weekday:'short',month:'long',day:'numeric'}):'TBD';
         const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' - '+fmt12(m.time_end):''):'TBD';
         const _today=new Date();_today.setHours(0,0,0,0);
         const daysUntil=m.match_date?Math.round((new Date(m.match_date+'T00:00')-_today)/(1000*60*60*24)):null;
@@ -5416,6 +5434,65 @@ async function loadInvitedByOthersPage(){
         }
         card._toggle=function(){expanded=!expanded;renderInvCard();};
         renderInvCard();
+        container.appendChild(card);
+      });
+    }
+
+    // ── Section 3: Matches You're Organizing ────────────
+    if(orgPending.length){
+      if(showHeadings) container.appendChild(makeAmberHeading("Matches You're Organizing",invitedPending.length>0||openInvites.length>0));
+      orgPending.forEach(m=>{
+        const inPlayers=allInResps.filter(r=>r.match_id===m.id);
+        const maxNeeded=m.max_players||(m.match_type==='doubles'?4:2);
+        const confirmedCount=inPlayers.length;
+        const spotsLeft=Math.max(0,maxNeeded-confirmedCount);
+        const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-CA',{weekday:'short',month:'long',day:'numeric'}):'TBD';
+        const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' - '+fmt12(m.time_end):''):'TBD';
+        const _today=new Date();_today.setHours(0,0,0,0);
+        const daysUntil=m.match_date?Math.round((new Date(m.match_date+'T00:00')-_today)/(1000*60*60*24)):null;
+        const urgency=daysUntil===0?'TODAY':daysUntil===1?'TOMORROW':daysUntil!=null?'In '+daysUntil+' days':'';
+        const courtDisplay=m.court_name&&m.court_name!=='TBD'?m.court_name:(m.court_address||'Location TBD');
+        const playerChips=inPlayers.map(p=>{
+          const firstName=(p.player_name||p.player_email||'').split(' ')[0];
+          return '<span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:#f0fdf4;border:2px solid #1a7a3a;font-size:11px;color:#1a7a3a;font-weight:600;margin:2px;">'+firstName+'</span>';
+        }).join('');
+        const card=document.createElement('div');
+        card.style.cssText='background:#ffffff;border:3px solid #f59e0b;border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);';
+        if(getCountdown(m.match_date,m.time_start)?.urgent) card.classList.add('pb-card-urgent');
+        let expanded=false;
+        function renderOrgCard(){
+          card.innerHTML=
+            '<div onclick="this.parentElement._toggle()" style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;cursor:pointer;">'+
+              '<span style="font-size:22px;flex-shrink:0;">'+(m.match_type==='doubles'?'<img src="icon-192.png" class="pb-icon" alt="pickleball"/><img src="icon-192.png" class="pb-icon" alt="pickleball"/>':'<img src="icon-192.png" class="pb-icon" alt="pickleball"/>')+'</span>'+
+              '<div style="flex:1;min-width:0;">'+
+                '<div style="color:#1a7a3a;font-size:14px;font-weight:700;">'+dateStr+'</div>'+
+                '<div style="color:#555;font-size:12px;">'+timeStr+' &middot; '+courtDisplay+'</div>'+
+                renderCountdown(m.match_date,m.time_start)+
+                '<div style="color:#555;font-size:11px;margin-top:2px;">'+(m.match_type==='singles'?'Singles':'Doubles')+'</div>'+
+              '</div>'+
+              '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">'+
+                (urgency?'<div style="padding:2px 8px;border-radius:999px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.35);color:#f59e0b;font-size:9px;font-weight:700;">'+urgency+'</div>':'')+
+                '<div style="font-size:11px;font-weight:700;color:#f59e0b;">Organizing</div>'+
+                '<div style="font-size:10px;color:#6b7280;">'+(expanded?'&#9650; less':'&#9660; details')+'</div>'+
+              '</div>'+
+            '</div>'+
+            (expanded?
+              '<div style="padding:0 16px 14px;border-top:1px solid #e5e7eb;">'+
+                '<div style="margin-top:10px;">'+
+                  '<div style="font-size:10px;font-weight:700;color:#1a5c32;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">'+
+                    'Players ('+confirmedCount+'/'+maxNeeded+') &middot; '+(spotsLeft>0?spotsLeft+' spot'+(spotsLeft!==1?'s':'')+' left':'Full!')+
+                  '</div>'+
+                  (playerChips?'<div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:12px;">'+playerChips+'</div>':'<div style="font-size:12px;color:var(--dim);margin-bottom:12px;">No players confirmed yet</div>')+
+                '</div>'+
+                '<div style="padding:8px 12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;">'+
+                  '<div style="font-size:12px;color:#f59e0b;font-weight:700;">&#8987; Pending — roster not full</div>'+
+                  '<div style="font-size:11px;color:#92400e;margin-top:2px;">'+confirmedCount+' of '+maxNeeded+' spots filled</div>'+
+                '</div>'+
+              '</div>'
+            :'');
+        }
+        card._toggle=function(){expanded=!expanded;renderOrgCard();};
+        renderOrgCard();
         container.appendChild(card);
       });
     }
@@ -10223,38 +10300,56 @@ async function loadDashTileCounts(myEmail){
     setTile('dashTileIC', IC_INCOMING_COUNT>0 ? IC_INCOMING_COUNT+' request'+(IC_INCOMING_COUNT>1?'s':'')+' pending' : 'None pending');
     setTile('dashIcIncomingCount', IC_INCOMING_COUNT||0);
 
-    // Pending matches — roster not yet full, today or future
+    // Pending matches — open invites + accepted not full + organized not full
     // Source 1: matches where I responded 'in' but roster is unfilled
     // Source 2: matches I organized with unfilled roster
-    // Fetch both in parallel, then deduplicate by match_id
+    // Source 3: matches where I have an unresponded invite (response='pending')
+    // Fetch sources 1+2 in parallel (Source 3 uses pendRows already fetched above)
     const myEmailLower2 = myEmail.toLowerCase();
     const inResRows = cfResp; // already fetched: match_responses where response=in
-    const [pmInvitedMatches, pmOrgMatches] = await Promise.all([
+    const pendInviteIds = pendRows.map(r=>r.match_id).filter(Boolean);
+    const [pmInvitedMatches, pmOrgMatches, pmPendingMatches] = await Promise.all([
       // Source 1 — matches I accepted
       inResRows.length
-        ? fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${inResRows.map(r=>r.match_id).join(',')})&status=neq.full&status=neq.cancelled&select=id,match_date,match_type,max_players`,
+        ? fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${inResRows.map(r=>r.match_id).join(',')})&status=neq.full&status=neq.cancelled&select=id,match_date,match_type,max_players,organizer_email`,
             {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
             .then(r=>r.ok?r.json():[])
         : Promise.resolve([]),
       // Source 2 — matches I organized
-      fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=neq.full&status=neq.cancelled&select=id,match_date,match_type,max_players`,
+      fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=neq.full&status=neq.cancelled&select=id,match_date,match_type,max_players,organizer_email`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
-        .then(r=>r.ok?r.json():[])
+        .then(r=>r.ok?r.json():[]),
+      // Source 3 — open invites I haven't responded to yet (no status filter — NULL issue)
+      pendInviteIds.length
+        ? fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${pendInviteIds.join(',')})&select=id,match_date,match_type,max_players,organizer_email,status`,
+            {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
+            .then(r=>r.ok?r.json():[])
+        : Promise.resolve([])
     ]);
-    // Deduplicate and filter to today/future (local date)
+    // Source 3: filter to upcoming, not cancelled, not self-organized
+    const pmOpenInvites = pmPendingMatches.filter(m=>
+      !isMatchPast(m)&&
+      (m.status||'')!=='cancelled'&&
+      (m.organizer_email||'').toLowerCase()!==myEmailLower2
+    );
+    // Deduplicate sources 1+2+3 and filter to today/future (local date)
     const pmSeen = new Set();
-    const pmCandidates = [...pmInvitedMatches, ...pmOrgMatches].filter(m=>{
+    // Open invites count as-is (any upcoming invite = 1 pending tile item)
+    // Sources 1+2 count only if roster not full — handled below
+    const pmOpenIds = new Set(pmOpenInvites.map(m=>m.id));
+    pmOpenInvites.forEach(m=>pmSeen.add(m.id));
+    const pmRosterCandidates = [...pmInvitedMatches, ...pmOrgMatches].filter(m=>{
       if(pmSeen.has(m.id)) return false;
       pmSeen.add(m.id);
       return !isMatchPast(m);
     });
-    let pendingMatchCount = 0;
-    if(pmCandidates.length){
-      const pmIds = pmCandidates.map(m=>m.id);
+    let pendingMatchCount = pmOpenInvites.length; // open invites always count
+    if(pmRosterCandidates.length){
+      const pmIds = pmRosterCandidates.map(m=>m.id);
       const pmRespRes = await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${pmIds.join(',')})&response=eq.in&select=match_id`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       const pmResps = pmRespRes.ok ? await pmRespRes.json() : [];
-      pendingMatchCount = pmCandidates.filter(m=>{
+      pendingMatchCount += pmRosterCandidates.filter(m=>{
         const inCount = pmResps.filter(r=>r.match_id===m.id).length;
         const maxP = m.max_players||(m.match_type==='doubles'?4:2);
         return inCount < maxP;
