@@ -4318,14 +4318,21 @@ async function loadConfirmedMatches(){
       const urgency = daysUntil===0?'TODAY':daysUntil===1?'TOMORROW':daysUntil!=null?'In '+daysUntil+' days':'';
       const isOutdoor = !m.is_private_court;
 
-      function nameChip(p, color, borderColor){
+      function nameChip(p, color, borderColor, isOrg){
         const rawName=p.player_name||'';
         const firstName=rawName.split(' ')[0]||(p.player_email||'').split('@')[0].replace(/[+_.]/g,' ').split(' ')[0];
+        const chipClass=isOrg?' class="avatar-organizer"':'';
+        const bg=isOrg?'#dc2626':color;
+        const bc=isOrg?'#dc2626':borderColor;
+        const chip='<span'+chipClass+' style="display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;'+
+          'background:'+bg+';border:2px solid '+bc+';font-size:12px;color:#fff;font-weight:700;">'+firstName+'</span>';
+        if(isOrg) return '<div style="display:inline-flex;flex-direction:column;align-items:center;margin:2px;">'+chip+'<span class="avatar-organizer-label">Match Organizer</span></div>';
         return '<span style="display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;'+
           'background:'+color+';border:2px solid '+borderColor+';font-size:12px;color:#fff;font-weight:700;margin:2px;">'+firstName+'</span>';
       }
 
-      const inChips = inPlayers.map(p=>nameChip(p,'#1a7a3a','#1a7a3a')).join('');
+      const orgEmailLower=(m.organizer_email||'').toLowerCase();
+      const inChips = inPlayers.map(p=>nameChip(p,'#1a7a3a','#1a7a3a',(p.player_email||'').toLowerCase()===orgEmailLower)).join('');
       const waitChips = waitlist.map((p,i)=>nameChip(p,'#b45309','#b45309')+
         '<span style="font-size:9px;color:#fbbf24;vertical-align:middle;margin-left:-4px;margin-right:4px;">#'+(i+1)+'</span>').join('');
 
@@ -5243,10 +5250,15 @@ async function loadInvitedByOthersPage(){
       const courtDisplay=m.court_name&&m.court_name!=='TBD'?m.court_name:(m.court_address||'Location TBD');
 
       // Player chips — organizer always first with star
-      const organizerChip='<span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:#d1fae5;border:2px solid #1a7a3a;font-size:11px;color:#1a7a3a;font-weight:700;margin:2px;">'+
-        (m.organizer_name||'Organizer').split(' ')[0]+' &#9733;</span>';
+      const organizerChip='<div style="display:inline-flex;flex-direction:column;align-items:center;margin:2px;">'+
+        '<span class="avatar-organizer" style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;">'+
+          (m.organizer_name||'Organizer').split(' ')[0]+' &#9733;'+
+        '</span>'+
+        '<span class="avatar-organizer-label">Match Organizer</span>'+
+      '</div>';
+      const iboOrgEmailLower=(m.organizer_email||'').toLowerCase();
       const playerChips=inPlayers
-        .filter(p=>p.player_email!==m.organizer_email)
+        .filter(p=>(p.player_email||'').toLowerCase()!==iboOrgEmailLower)
         .map(p=>{
           const firstName=(p.player_name||p.player_email||'').split(' ')[0];
           return '<span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:#f0fdf4;border:2px solid #1a7a3a;font-size:11px;color:#1a7a3a;font-weight:600;margin:2px;">'+firstName+'</span>';
