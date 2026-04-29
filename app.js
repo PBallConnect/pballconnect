@@ -10173,39 +10173,47 @@ async function loadDashTileCounts(myEmail){
     setTile('dashTileIC', IC_INCOMING_COUNT>0 ? IC_INCOMING_COUNT+' request'+(IC_INCOMING_COUNT>1?'s':'')+' pending' : 'None pending');
     setTile('dashIcIncomingCount', IC_INCOMING_COUNT||0);
 
-    // Pending matches — accepted (in) but roster not yet full
-    const inResRows = cfResp; // already fetched above: matches where response=in
-    if(inResRows.length){
-      const inIds = inResRows.map(r=>r.match_id);
-      // Fetch these matches (not full/cancelled, not past, not self-organized)
-      const pmMatchRes = await fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${inIds.join(',')})&status=neq.full&status=neq.cancelled&select=id,match_date,time_start,time_end,match_type,max_players,organizer_email`,
+    // Pending matches — roster not yet full, today or future
+    // Source 1: matches where I responded 'in' but roster is unfilled
+    // Source 2: matches I organized with unfilled roster
+    // Fetch both in parallel, then deduplicate by match_id
+    const myEmailLower2 = myEmail.toLowerCase();
+    const inResRows = cfResp; // already fetched: match_responses where response=in
+    const [pmInvitedMatches, pmOrgMatches] = await Promise.all([
+      // Source 1 — matches I accepted
+      inResRows.length
+        ? fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${inResRows.map(r=>r.match_id).join(',')})&status=neq.full&status=neq.cancelled&select=id,match_date,match_type,max_players`,
+            {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
+            .then(r=>r.ok?r.json():[])
+        : Promise.resolve([]),
+      // Source 2 — matches I organized
+      fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&status=neq.full&status=neq.cancelled&select=id,match_date,match_type,max_players`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
+        .then(r=>r.ok?r.json():[])
+    ]);
+    // Deduplicate and filter to today/future (local date)
+    const pmSeen = new Set();
+    const pmCandidates = [...pmInvitedMatches, ...pmOrgMatches].filter(m=>{
+      if(pmSeen.has(m.id)) return false;
+      pmSeen.add(m.id);
+      return !isMatchPast(m);
+    });
+    let pendingMatchCount = 0;
+    if(pmCandidates.length){
+      const pmIds = pmCandidates.map(m=>m.id);
+      const pmRespRes = await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${pmIds.join(',')})&response=eq.in&select=match_id`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
-      const pmMatches = pmMatchRes.ok ? await pmMatchRes.json() : [];
-      const myEmailLower2 = myEmail.toLowerCase();
-      const openPmMatches = pmMatches.filter(m=>
-        !isMatchPast(m) &&
-        (m.organizer_email||'').toLowerCase() !== myEmailLower2
-      );
-      let pendingMatchCount = 0;
-      if(openPmMatches.length){
-        const pmIds = openPmMatches.map(m=>m.id);
-        const pmRespRes = await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${pmIds.join(',')})&response=eq.in&select=match_id`,
-          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
-        const pmResps = pmRespRes.ok ? await pmRespRes.json() : [];
-        pendingMatchCount = openPmMatches.filter(m=>{
-          const inCount = pmResps.filter(r=>r.match_id===m.id).length;
-          const maxP = m.max_players||(m.match_type==='doubles'?4:2);
-          return inCount < maxP;
-        }).length;
-      }
-      const sqEl = document.getElementById('dashSqPending');
-      const btnEl = document.getElementById('dashTilePendingBtn');
-      if(sqEl) sqEl.textContent = pendingMatchCount;
-      if(btnEl) btnEl.style.display = pendingMatchCount > 0 ? 'flex' : 'none';
-    } else {
-      const btnEl = document.getElementById('dashTilePendingBtn');
-      if(btnEl) btnEl.style.display = 'none';
+      const pmResps = pmRespRes.ok ? await pmRespRes.json() : [];
+      pendingMatchCount = pmCandidates.filter(m=>{
+        const inCount = pmResps.filter(r=>r.match_id===m.id).length;
+        const maxP = m.max_players||(m.match_type==='doubles'?4:2);
+        return inCount < maxP;
+      }).length;
     }
+    const sqEl = document.getElementById('dashSqPending');
+    const btnEl = document.getElementById('dashTilePendingBtn');
+    if(sqEl) sqEl.textContent = pendingMatchCount;
+    if(btnEl) btnEl.style.display = pendingMatchCount > 0 ? 'flex' : 'none';
 
   }catch(e){ console.warn('loadDashTileCounts error:',e); }
 }
