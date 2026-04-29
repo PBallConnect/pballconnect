@@ -5263,7 +5263,8 @@ async function loadInvitedByOthersPage(){
       const iboCountdown = getCountdown(m.match_date, m.time_start);
       const iboUrgent = iboCountdown?.urgent;
       const card=document.createElement('div');
-      card.style.cssText='background:#ffffff;border:3px solid '+(isPending?'#3b82f6':'#d1d5db')+';border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);';
+      const isRosterPending = isIn && confirmedCount < maxNeeded;
+      card.style.cssText='background:#ffffff;border:3px solid '+(isPending?'#3b82f6':isRosterPending?'#f59e0b':'#d1d5db')+';border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);';
       if(iboUrgent) card.classList.add('pb-card-urgent');
 
       let expanded=isPending||canUpgrade;
@@ -5283,8 +5284,8 @@ async function loadInvitedByOthersPage(){
             '</div>'+
             '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">'+
               (urgency?'<div style="padding:2px 8px;border-radius:999px;background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.3);color:var(--green);font-size:9px;font-weight:700;">'+urgency+'</div>':'')+
-              '<div style="font-size:11px;font-weight:700;color:'+(isPending?'#60a5fa':isIn?'var(--green)':canUpgrade?'#f59e0b':isWaitlist?'#f59e0b':'#f87171')+';">'+
-                (isPending?'Awaiting response':isIn?'You are in!':canUpgrade?'Waitlist - spot open!':isWaitlist?'On waitlist':'Declined')+
+              '<div style="font-size:11px;font-weight:700;color:'+(isPending?'#60a5fa':isRosterPending?'#f59e0b':isIn?'var(--green)':canUpgrade?'#f59e0b':isWaitlist?'#f59e0b':'#f87171')+';">'+
+                (isPending?'Awaiting response':isRosterPending?'Pending roster':isIn?'You are in!':canUpgrade?'Waitlist - spot open!':isWaitlist?'On waitlist':'Declined')+
               '</div>'+
               '<div style="font-size:10px;color:#6b7280;">'+(expanded?'&#9650; less':'&#9660; details')+'</div>'+
             '</div>'+
@@ -5307,6 +5308,11 @@ async function loadInvitedByOthersPage(){
                 '<div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:10px 12px;margin-bottom:10px;">'+
                   '<div style="font-size:12px;color:#fbbf24;font-weight:600;margin-bottom:8px;">&#9889; A spot opened up — want to join?</div>'+
                   '<button data-mid="'+m.id+'" data-resp="in" class="ibo-respond-btn" style="width:100%;padding:10px;border-radius:8px;border:none;background:var(--green);color:#fff;font-weight:700;font-size:13px;cursor:pointer;">&#10003; Yes, I&#39;m In!</button>'+
+                '</div>'
+              :isRosterPending?
+                '<div style="padding:8px 12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;">'+
+                  '<div style="font-size:12px;color:#f59e0b;font-weight:700;">&#8987; Pending — roster not full</div>'+
+                  '<div style="font-size:11px;color:#92400e;margin-top:2px;">'+confirmedCount+' of '+maxNeeded+' spots filled</div>'+
                 '</div>'
               :isIn?
                 '<div style="padding:8px 12px;background:rgba(76,175,125,0.08);border-radius:8px;font-size:12px;color:var(--green);font-weight:600;">&#10003; You are confirmed!</div>'
@@ -10154,6 +10160,40 @@ async function loadDashTileCounts(myEmail){
     // IC requests — use live count from restoreSession
     setTile('dashTileIC', IC_INCOMING_COUNT>0 ? IC_INCOMING_COUNT+' request'+(IC_INCOMING_COUNT>1?'s':'')+' pending' : 'None pending');
     setTile('dashIcIncomingCount', IC_INCOMING_COUNT||0);
+
+    // Pending matches — accepted (in) but roster not yet full
+    const inResRows = cfResp; // already fetched above: matches where response=in
+    if(inResRows.length){
+      const inIds = inResRows.map(r=>r.match_id);
+      // Fetch these matches (not full/cancelled, not past, not self-organized)
+      const pmMatchRes = await fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${inIds.join(',')})&status=neq.full&status=neq.cancelled&select=id,match_date,time_start,time_end,match_type,max_players,organizer_email`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+      const pmMatches = pmMatchRes.ok ? await pmMatchRes.json() : [];
+      const myEmailLower2 = myEmail.toLowerCase();
+      const openPmMatches = pmMatches.filter(m=>
+        !isMatchPast(m) &&
+        (m.organizer_email||'').toLowerCase() !== myEmailLower2
+      );
+      let pendingMatchCount = 0;
+      if(openPmMatches.length){
+        const pmIds = openPmMatches.map(m=>m.id);
+        const pmRespRes = await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${pmIds.join(',')})&response=eq.in&select=match_id`,
+          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+        const pmResps = pmRespRes.ok ? await pmRespRes.json() : [];
+        pendingMatchCount = openPmMatches.filter(m=>{
+          const inCount = pmResps.filter(r=>r.match_id===m.id).length;
+          const maxP = m.max_players||(m.match_type==='doubles'?4:2);
+          return inCount < maxP;
+        }).length;
+      }
+      const sqEl = document.getElementById('dashSqPending');
+      const btnEl = document.getElementById('dashTilePendingBtn');
+      if(sqEl) sqEl.textContent = pendingMatchCount;
+      if(btnEl) btnEl.style.display = pendingMatchCount > 0 ? 'flex' : 'none';
+    } else {
+      const btnEl = document.getElementById('dashTilePendingBtn');
+      if(btnEl) btnEl.style.display = 'none';
+    }
 
   }catch(e){ console.warn('loadDashTileCounts error:',e); }
 }
