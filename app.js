@@ -5189,13 +5189,16 @@ function makeRemainingPill(remaining, maxNeeded){
 
 // ── Pending Matches page (page-invitedByOthers) ─────────
 async function loadInvitedByOthersPage(){
-  const myEmail=getMyEmail();
+  // Use SESSION_PLAYER.email as the authoritative source — more reliable than
+  // S.email which is mutable form state that can change during profile editing.
+  const myEmail=(SESSION_PLAYER?.email||getMyEmail()||'').toLowerCase();
   const container=document.getElementById('invitedByOthersList');
   if(!container) return;
   if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in to view your matches.</div>'; return; }
   container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:12px 0;">Loading...</div>';
+  console.log('[PendingMatches] loading for email:', myEmail);
   try{
-    const myEmailLower=myEmail.toLowerCase();
+    const myEmailLower=myEmail; // already lowercased above
 
     // Fetch organizer matches + my 'in' responses in parallel
     const [orgRes,inRespRes]=await Promise.all([
@@ -5204,35 +5207,49 @@ async function loadInvitedByOthersPage(){
       fetch(`${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.in&select=match_id`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
     ]);
+    console.log('[PendingMatches] orgRes status:', orgRes.status, '| inRespRes status:', inRespRes.status);
+
     const orgMatchesRaw=orgRes.ok?await orgRes.json():[];
+    if(!orgRes.ok) console.error('[PendingMatches] orgRes error — HTTP', orgRes.status);
+
     const myInResps=inRespRes.ok?await inRespRes.json():[];
+    if(!inRespRes.ok) console.error('[PendingMatches] inRespRes error — HTTP', inRespRes.status);
+    console.log('[PendingMatches] myInResps:', myInResps.length, JSON.stringify(myInResps));
 
     // Filter organizer matches to today/future (local date)
     const orgMatches=orgMatchesRaw.filter(m=>!isMatchPast(m));
+    console.log('[PendingMatches] orgMatchesRaw:', orgMatchesRaw.length, '→ orgMatches (future):', orgMatches.length);
 
-    console.log('[PendingMatches] myInResps:', myInResps.length, myInResps);
-
-    // Fetch invited matches I responded 'in' to — no status filter here because
-    // PostgREST neq does not include NULL rows, and many matches have status=null.
-    // We filter by inCount ourselves below.
+    // Fetch invited matches I responded 'in' to — no status filter because
+    // PostgREST neq does not include NULL-status rows. We filter in JS instead.
     let invitedRaw=[];
     if(myInResps.length){
-      const inIds=myInResps.map(r=>r.match_id);
+      const inIds=myInResps.map(r=>r.match_id).filter(Boolean);
+      console.log('[PendingMatches] fetching invitedRaw for IDs:', JSON.stringify(inIds));
       const r=await fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${inIds.join(',')})&select=*&order=match_date.asc`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
-      invitedRaw=r.ok?await r.json():[];
+      console.log('[PendingMatches] invitedRaw fetch status:', r.status);
+      if(r.ok) invitedRaw=await r.json();
+      else console.error('[PendingMatches] invitedRaw fetch error — HTTP', r.status);
     }
-    console.log('[PendingMatches] invitedRaw:', invitedRaw.length, invitedRaw);
+    console.log('[PendingMatches] invitedRaw:', invitedRaw.length, JSON.stringify(invitedRaw.map(m=>({id:m.id,organizer_email:m.organizer_email,status:m.status,match_date:m.match_date}))));
 
     // Exclude: past, cancelled, self-organized, already in organizer set
     const orgIds=new Set(orgMatches.map(m=>m.id));
-    const invitedMatches=invitedRaw.filter(m=>
-      !isMatchPast(m)&&
-      (m.status||'')!=='cancelled'&&
-      (m.organizer_email||'').toLowerCase()!==myEmailLower&&
-      !orgIds.has(m.id)
-    );
-    console.log('[PendingMatches] invitedMatches (after filter):', invitedMatches.length, invitedMatches);
+    const invitedMatches=invitedRaw.filter(m=>{
+      const notPast=!isMatchPast(m);
+      const notCancelled=(m.status||'')!=='cancelled';
+      const notSelfOrg=(m.organizer_email||'').toLowerCase()!==myEmailLower;
+      const notInOrgIds=!orgIds.has(m.id);
+      if(!notPast||!notCancelled||!notSelfOrg||!notInOrgIds){
+        console.warn('[PendingMatches] invitedRaw match DROPPED — id:'+m.id,
+          'notPast:'+notPast,'notCancelled:'+notCancelled,
+          'notSelfOrg:'+notSelfOrg+' (org='+m.organizer_email+' vs me='+myEmailLower+')',
+          'notInOrgIds:'+notInOrgIds);
+      }
+      return notPast&&notCancelled&&notSelfOrg&&notInOrgIds;
+    });
+    console.log('[PendingMatches] invitedMatches after filter:', invitedMatches.length);
 
     // Fetch all 'in' responses for all candidate matches
     const allCandidateIds=[...orgMatches,...invitedMatches].map(m=>m.id);
@@ -5240,8 +5257,10 @@ async function loadInvitedByOthersPage(){
     if(allCandidateIds.length){
       const rr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${allCandidateIds.join(',')})&response=eq.in&select=match_id,player_name,player_email`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
-      allInResps=rr.ok?await rr.json():[];
+      if(rr.ok) allInResps=await rr.json();
+      else console.error('[PendingMatches] allInResps fetch error — HTTP', rr.status);
     }
+    console.log('[PendingMatches] allInResps:', allInResps.length);
 
     // Keep only truly pending (roster not yet full)
     const orgPending=orgMatches.filter(m=>{
@@ -5250,9 +5269,11 @@ async function loadInvitedByOthersPage(){
     });
     const invitedPending=invitedMatches.filter(m=>{
       const inCount=allInResps.filter(r=>r.match_id===m.id).length;
-      return inCount<(m.max_players||(m.match_type==='doubles'?4:2));
+      const maxP=m.max_players||(m.match_type==='doubles'?4:2);
+      console.log('[PendingMatches] invitedPending check — id:'+m.id,'inCount:'+inCount,'maxP:'+maxP,'pending:'+(inCount<maxP));
+      return inCount<maxP;
     });
-    console.log('[PendingMatches] orgPending:', orgPending.length, 'invitedPending:', invitedPending.length);
+    console.log('[PendingMatches] orgPending:', orgPending.length, '| invitedPending:', invitedPending.length);
 
     container.innerHTML='';
     if(!orgPending.length&&!invitedPending.length){
