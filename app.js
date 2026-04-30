@@ -2741,11 +2741,15 @@ async function smRenderStep3GroupPicker(wrap){
     '</select>';
 }
 
-window.smOnStep3GroupSelect = function(value){
-  if(!value){ MS.selectedGroups=new Set(); MS.group=null; }
-  else {
+window.smOnStep3GroupSelect = async function(value){
+  if(!value){
+    MS.selectedGroups=new Set(); MS.group=null;
+    MS.namedGroupMemberEmails=new Set();
+  } else {
     MS.selectedGroups = new Set(['named_'+value]);
     MS.group = 'named_'+value;
+    // Fetch primary members so smUpdateNeededGrid() can count them
+    MS.namedGroupMemberEmails=await smFetchNamedGroupMembers(value);
     // Ensure Step 6 dropdown is populated from cache then mirror selection
     const sel6 = document.getElementById('smGroupSelect');
     if(sel6 && _groups && _groups.length && sel6.options.length <= 1){
@@ -5628,10 +5632,13 @@ function smUpdateNeededGrid(){
   const mySkill  = S.skill||SESSION_PLAYER?.skill_level||'';
   const skills   = mySkill ? getAdjacentSkills(mySkill) : null;
   const allGroups = MS.selectedGroups && MS.selectedGroups.size ? MS.selectedGroups : new Set();
+  const myOrgEmail=(SESSION_PLAYER?.email||getMyEmail()||'').toLowerCase();
   const seen = new Set();
-  let invMen=myGender==='male'?1:0, invWomen=myGender==='female'?1:0, invTotal=1;
+  // Organizer is never counted in INVITED — matchMaxNeeded() already excludes them from NEEDED
+  let invMen=0, invWomen=0, invTotal=0;
   IC_MEMBERS.forEach(({player})=>{
     const e=(player.email||'').toLowerCase();
+    if(e===myOrgEmail) return; // never count the organizer
     if(seen.has(e)) return;
     let inc=false;
     for(const g of allGroups){
@@ -5642,6 +5649,8 @@ function smUpdateNeededGrid(){
       if(g==='my_level'&&skills&&Math.abs(ps-skills.my)<0.13){ inc=true; break; }
       if(g==='below'&&skills&&skills.below!==null&&Math.abs(ps-skills.below)<0.13){ inc=true; break; }
       if(g==='above'&&skills&&skills.above!==null&&Math.abs(ps-skills.above)<0.13){ inc=true; break; }
+      // Named group — membership pre-fetched into MS.namedGroupMemberEmails on group select
+      if(g.startsWith('named_')&&MS.namedGroupMemberEmails?.has(e)){ inc=true; break; }
     }
     if(!inc && allGroups.has('specific') && MS.specificPlayers.has(e)) inc=true;
     if(inc){
@@ -5665,7 +5674,7 @@ function smUpdateNeededGrid(){
       '<div style="'+ls+'"><div style="'+lb+'">Women</div><div style="'+cn+';color:#dc2626;">'+nWom+'</div><div style="'+cn+';color:#1a7a3a;">'+invWomen+'</div></div>';
   }
 
-  const overInvited = invTotal > needed + 1; // +1 because organizer is already counted in invTotal
+  const overInvited = invTotal > needed; // organizer excluded from invTotal, so compare directly to needed
   const warn = document.getElementById('smOverInviteWarning');
   if(warn){
     if(overInvited){
@@ -5991,9 +6000,28 @@ async function smLoadGroupSelect(){
   }catch(e){}
 }
 
-function smOnGroupSelect(value){
-  if(!value){ MS.selectedGroups=new Set(); MS.group=null; }
-  else { MS.selectedGroups=new Set(['named_'+value]); MS.group='named_'+value; }
+// Fetch primary members for a named group, excluding the organizer.
+// Returns a Set of lowercase emails. Called by both group select handlers.
+async function smFetchNamedGroupMembers(groupId){
+  const myEmail=(SESSION_PLAYER?.email||getMyEmail()||'').toLowerCase();
+  try{
+    const res=await fetch(
+      `${SUPABASE_URL}/rest/v1/player_group_members?group_id=eq.${encodeURIComponent(groupId)}&role=eq.primary&select=player_email`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+    );
+    const rows=res.ok?await res.json():[];
+    return new Set(rows.map(r=>(r.player_email||'').toLowerCase()).filter(e=>e&&e!==myEmail));
+  }catch(e){ return new Set(); }
+}
+
+async function smOnGroupSelect(value){
+  if(!value){
+    MS.selectedGroups=new Set(); MS.group=null;
+    MS.namedGroupMemberEmails=new Set();
+  } else {
+    MS.selectedGroups=new Set(['named_'+value]); MS.group='named_'+value;
+    MS.namedGroupMemberEmails=await smFetchNamedGroupMembers(value);
+  }
   smUpdateNeededGrid();
   smUpdateSummary();
   smUpdateSendBtn();
@@ -6005,6 +6033,7 @@ function initSetupMatch(){
   MS.format='doubles'; MS.numCourts=1; MS.group=null;
   MS.specificPlayers=new Set(); MS.extraGroups=new Set(); MS.selectedGroups=new Set(['all']);
   MS.deselectedPlayers=new Set(); MS.primaryPlayers=new Set(); MS.subPlayers=new Set();
+  MS.namedGroupMemberEmails=new Set();
   MS.isFeeler=false; MS.duration=2; MS.selectedCourts=new Map();
   MS.hasOverlapConflict=false; MS.courtType='public'; MS.inviteMode='all';
   MS.timeStart=null; MS.timeEnd=null; MS.date=null;
