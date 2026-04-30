@@ -3982,6 +3982,18 @@ async function submitMatch(){
         }catch(e){ console.warn('outer specific fetch failed:',e); }
       }
     }
+    // Named group path — primary members from pre-cached roster (smFetchGroupRoster already ran)
+    // MS.namedGroupRoster.primary: [{email, name}] — no additional DB fetch needed
+    if(MS.group && MS.group.startsWith('named_') && MS.namedGroupRoster){
+      const myEmailLC = myEmail.toLowerCase();
+      for(const member of (MS.namedGroupRoster.primary || [])){
+        if(!member.email || (member.email||'').toLowerCase() === myEmailLC) continue;
+        if(!seenEmails.has(member.email)){
+          seenEmails.add(member.email);
+          invitees.push({ email: member.email, first_name: member.name, last_name: '' });
+        }
+      }
+    }
     // Auto-add organizer as "in" — they created the match, they're playing
     if(matchId){
       await fetch(`${SUPABASE_URL}/rest/v1/match_responses`,{
@@ -3989,6 +4001,18 @@ async function submitMatch(){
         headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
         body:JSON.stringify({match_id:matchId,player_email:myEmail,player_name:myName,response:'in'})
       }).catch(()=>{});
+    }
+    // Named group subs — insert pending rows for future dropout cascade; no invite email sent yet
+    if(MS.group && MS.group.startsWith('named_') && MS.namedGroupRoster && matchId){
+      const myEmailLC = myEmail.toLowerCase();
+      for(const sub of (MS.namedGroupRoster.subs || [])){
+        if(!sub.email || (sub.email||'').toLowerCase() === myEmailLC) continue;
+        await fetch(`${SUPABASE_URL}/rest/v1/match_responses`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+          body:JSON.stringify({match_id:matchId,player_email:sub.email,player_name:sub.name+' (Sub)',response:'pending'})
+        }).catch(()=>{});
+      }
     }
     status.textContent='Sending to '+invitees.length+' players…';
     const dateStr=date?new Date(date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}):'';
@@ -4008,7 +4032,8 @@ async function submitMatch(){
       if(player.email){
         const matchUrl=window.location.origin+window.location.pathname+'?match='+matchId;
         const subNote = isSub ? ' · You are listed as a SUBSTITUTE — you may be called up if a primary player cannot make it.' : '';
-        sendEmail({ to_email:player.email, type:'match_invite', personal_note:(MS.format==='doubles'?'Doubles':'Singles')+' · '+dateStr+' '+timeStr+(MS.courtName?' @ '+MS.courtName:'')+(note?' · Note: '+note:'')+weatherNote+subNote, invite_url:matchUrl, inviter_name:((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim(), match_date_str:dateStr });
+        try{ await sendEmail({ to_email:player.email, type:'match_invite', personal_note:(MS.format==='doubles'?'Doubles':'Singles')+' · '+dateStr+' '+timeStr+(MS.courtName?' @ '+MS.courtName:'')+(note?' · Note: '+note:'')+weatherNote+subNote, invite_url:matchUrl, inviter_name:((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim(), match_date_str:dateStr }); }
+        catch(emailErr){ showToast('⚠️ Email failed for '+((player.first_name||player.email)),'#f59e0b'); console.warn('sendEmail failed:',player.email,emailErr); }
       }
     }
     showToast('🎾 Match invite sent to '+invitees.length+' players!','#4CAF7D');
