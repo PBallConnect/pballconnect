@@ -10313,19 +10313,22 @@ async function loadDashTileCounts(myEmail){
     const inRespIds = cfResp.map(r=>r.match_id).filter(Boolean);
     const [pmPendingMatches, pmInvitedMatches, pmOrgMatchesRaw2] = await Promise.all([
       // Open invites — matches where I have response='pending'
+      // Must include time_start,time_end so isMatchPast() uses real end time, not 23:59 fallback
       pendInviteIds.length
-        ? fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${pendInviteIds.join(',')})&select=id,match_date,match_type,max_players,organizer_email,status`,
+        ? fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${pendInviteIds.join(',')})&select=id,match_date,time_start,time_end,match_type,max_players,organizer_email,status`,
             {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
             .then(r=>r.ok?r.json():[])
         : Promise.resolve([]),
       // Joined — matches where I have response='in'
+      // Must include time_start,time_end so isMatchPast() uses real end time, not 23:59 fallback
       inRespIds.length
-        ? fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${inRespIds.join(',')})&select=id,match_date,match_type,max_players,organizer_email,status`,
+        ? fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${inRespIds.join(',')})&select=id,match_date,time_start,time_end,match_type,max_players,organizer_email,status`,
             {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
             .then(r=>r.ok?r.json():[])
         : Promise.resolve([]),
       // Organized — all matches I organized
-      fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&select=id,match_date,match_type,max_players,organizer_email,status`,
+      // Must include time_start,time_end so isMatchPast() uses real end time, not 23:59 fallback
+      fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&select=id,match_date,time_start,time_end,match_type,max_players,organizer_email,status`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
         .then(r=>r.ok?r.json():[])
     ]);
