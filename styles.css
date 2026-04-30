@@ -1041,3 +1041,5 @@
     80%{ transform:translateX(4px); }
   }
   .ic-shake { animation: ic-shake 0.5s ease; }
+/* Set Up a Match — Set Group path */
+.sm-option-dimmed { opacity: 0.4; pointer-events: none; transition: opacity 0.2s; }
