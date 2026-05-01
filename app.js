@@ -9940,37 +9940,32 @@ function showMutualInvitePrompt(theirEmail, theirName){
 
   const prompt = document.createElement('div');
   prompt.id = 'mutualInvitePrompt';
-  prompt.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:500;'+
-    'background:#0a120b;border-top:2px solid rgba(76,175,125,0.5);'+
-    'padding:16px 20px 28px;box-shadow:0 -8px 32px rgba(0,0,0,0.7);'+
-    'animation:slideUp .3s ease;';
+  prompt.style.cssText = 'position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.6);'+
+    'display:flex;align-items:center;justify-content:center;padding:20px;';
 
   const shortName = (theirName||theirEmail).split(' ')[0];
   prompt.innerHTML =
-    '<div style="display:flex;align-items:flex-start;gap:12px;">'+
-    '<span style="font-size:26px;flex-shrink:0;">👥</span>'+
-    '<div style="flex:1;">'+
-      '<div style="color:#fff;font-weight:700;font-size:15px;margin-bottom:4px;">'+
-        shortName+' is now in your Inner Circle!'+
+    '<div style="background:#fff;border-radius:20px;padding:28px 24px;max-width:320px;width:100%;'+
+      'text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'+
+      '<div style="font-size:40px;margin-bottom:12px;">👥</div>'+
+      '<div style="font-size:17px;font-weight:800;color:#111;margin-bottom:10px;">'+
+        'Add '+shortName+' to your Inner Circle?'+
       '</div>'+
-      '<div style="color:var(--dim);font-size:13px;line-height:1.5;margin-bottom:12px;">'+
-        'Would you like to add yourself to '+shortName+'\'s Inner Circle too?'+
+      '<div style="font-size:13px;color:#6b7280;line-height:1.6;margin-bottom:20px;">'+
+        shortName+' invited you to PBallConnect — would you like to add them to your circle too?'+
       '</div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
+      '<div style="display:flex;gap:10px;justify-content:center;">'+
         '<button id="mutualYesBtn" onclick="sendMutualInvite(\''+theirEmail+'\',\''+theirName+'\')" '+
-          'style="padding:11px;border-radius:10px;border:none;background:var(--green);'+
-          'color:var(--dark);font-weight:700;font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+
-          '✅ Yes, add me to '+shortName+'\'s IC'+
+          'style="padding:11px 18px;border-radius:10px;border:none;background:#1a7a3a;'+
+          'color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+
+          '✅ Yes, add them'+
         '</button>'+
         '<button onclick="document.getElementById(\'mutualInvitePrompt\').remove()" '+
-          'style="padding:11px;border-radius:10px;border:1px solid var(--border);'+
-          'background:transparent;color:var(--dim);font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+
+          'style="padding:11px 18px;border-radius:10px;border:1.5px solid #d1d5db;'+
+          'background:#fff;color:#6b7280;font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+
           'Not right now'+
         '</button>'+
       '</div>'+
-    '</div>'+
-    '<button onclick="document.getElementById(\'mutualInvitePrompt\').remove()" '+
-      'style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:20px;flex-shrink:0;padding:0;">✕</button>'+
     '</div>';
 
   document.body.appendChild(prompt);
