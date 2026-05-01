@@ -1392,8 +1392,11 @@ function showPage(page){
   // Auth gate — redirect unauthenticated users to welcome screen
   const UNPROTECTED_PAGES = ['welcome', 'tos', 'privacy'];
   if(!SESSION_PLAYER && !UNPROTECTED_PAGES.includes(page)){
-    showPage('welcome');
-    return;
+    // Allow playerProfile during active new-user registration flow:
+    // startNewRegistration() and _inviteChoiceFull() call showPage('playerProfile') before
+    // SESSION_PLAYER is set. _newUserRegistrationStarted stays true until AFTER showPage() returns.
+    if(page === 'playerProfile' && _newUserRegistrationStarted){ /* allowed */ }
+    else { showPage('welcome'); return; }
   }
   if(page!=='playerProfile'){stopChangeDetection();_editModeActive=false;}
   closeNav();
@@ -6928,6 +6931,20 @@ function initLogin(){
 }
 
 async function initApp(){
+  // Bug 2 fix: if landing from a magic link (?newuser=1), immediately replace the
+  // welcome page CTAs with a loading state so users can't tap Sign In during the
+  // async auth gap (getSession + restoreSession + startNewRegistration can take ~1-2s).
+  if(new URLSearchParams(window.location.search).get('newuser') === '1'){
+    const welcomeInner = document.querySelector('#page-welcome > div');
+    if(welcomeInner){
+      welcomeInner.innerHTML =
+        '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;padding:2rem;text-align:center;">'+
+          '<div style="font-size:48px;margin-bottom:16px;">🎾</div>'+
+          '<div style="font-size:18px;font-weight:700;color:#111;margin-bottom:8px;">Setting up your account…</div>'+
+          '<div style="font-size:14px;color:#6b7280;">Just a moment — your invite is loading.</div>'+
+        '</div>';
+    }
+  }
   try{
     const { data: { session } } = await _supabase.auth.getSession();
     if(session && !SESSION_PLAYER){
@@ -9636,9 +9653,12 @@ function showInviteLandingChoice(email, inv){
   document.body.appendChild(overlay);
   window._inviteChoiceFull = function(){
     overlay.remove();
-    _newUserRegistrationStarted = false;
     const emailEl = document.getElementById('email'); if(emailEl) emailEl.value = email;
-    showPage('playerProfile'); unlockProfileForm(); goTo(1);
+    // _newUserRegistrationStarted must remain true through showPage() so the auth gate
+    // allows playerProfile without a SESSION_PLAYER. Clear it immediately after.
+    showPage('playerProfile');
+    _newUserRegistrationStarted = false;
+    unlockProfileForm(); goTo(1);
     S._tosConsent=false; S._privacyConsent=false; S._riskConsent=false;
     document.getElementById('checkBoxTos')?.classList.remove('on');
     document.getElementById('checkBoxRisk')?.classList.remove('on');
