@@ -7135,22 +7135,11 @@ function openProfileMenu(){
   if(existing){ existing.remove(); return; }
   const menu = document.createElement('div');
   menu.id='profileQuickMenu'; menu.className='profile-quick-menu';
-  const fields=[
-    {label:'✏️ Name & Nickname',field:'nickname'},
-    {label:'📍 Zip Code',field:'addrZip'},
-    {label:'⭐ Skill Rating',field:'personalRatingSlider'},
-    {label:'📅 Playing Since',field:'playingSince'},
-    {label:'🏟 Venue Preference',field:'venuePrefChips'},
-  ];
-  const header=document.createElement('div');
-  header.style.cssText='font-size:11px;color:var(--dim);padding:8px 12px 6px;border-bottom:1px solid var(--border);';
-  header.textContent='Jump to field:'; menu.appendChild(header);
-  fields.forEach(f=>{
-    const item=document.createElement('div'); item.className='profile-menu-item';
-    item.textContent=f.label;
-    item.onclick=()=>{ menu.remove(); showPage('playerProfile'); };
-    menu.appendChild(item);
-  });
+  const editRow=document.createElement('div');
+  editRow.className='profile-menu-item';
+  editRow.textContent='✏️ Edit Profile';
+  editRow.onclick=()=>{ menu.remove(); showPage('playerProfile'); };
+  menu.appendChild(editRow);
   const divider=document.createElement('div');
   divider.style.cssText='height:1px;background:var(--border);margin:4px 0;';
   menu.appendChild(divider);
