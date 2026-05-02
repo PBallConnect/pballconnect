@@ -6476,11 +6476,11 @@ function initSetupMatch(){
   // Court count buttons
   selectNumCourts(1);
 
-  // Gender buttons
+  // Gender buttons — reset borders, backgrounds, and any dimming from a previous Set Group selection
   const ge=document.getElementById('smGenderEither'), gm=document.getElementById('smGenderMixed'), gs=document.getElementById('smGenderSame'), gg=document.getElementById('smGenderGroup');
-  if(ge){ ge.style.border='2px solid #1a7a3a'; ge.style.background='#f0fdf4'; }
-  if(gm){ gm.style.border='1px solid #e5e7eb'; gm.style.background='#fff'; }
-  if(gs){ gs.style.border='1px solid #e5e7eb'; gs.style.background='#fff'; }
+  if(ge){ ge.style.border='2px solid #1a7a3a'; ge.style.background='#f0fdf4'; ge.classList.remove('sm-option-dimmed'); }
+  if(gm){ gm.style.border='1px solid #e5e7eb'; gm.style.background='#fff'; gm.classList.remove('sm-option-dimmed'); }
+  if(gs){ gs.style.border='1px solid #e5e7eb'; gs.style.background='#fff'; gs.classList.remove('sm-option-dimmed'); }
   if(gg){ gg.style.border='1px solid #e5e7eb'; gg.style.background='#fff'; }
   const gw=document.getElementById('smGenderGroupWrap'); if(gw){ gw.style.display='none'; gw.innerHTML=''; }
 

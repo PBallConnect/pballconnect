@@ -409,7 +409,7 @@
   /* ── Main content ─────────────────────────────────── */
   .right-column{margin-left:240px;display:flex;flex-direction:column;min-height:100vh;position:relative;flex:1;}
 
-  .main-content{flex:1;background:#ffffff;min-height:calc(100vh - 52px);overflow-x:hidden;max-width:600px;margin-left:auto;margin-right:auto;}
+  .main-content{flex:1;background:#ffffff;min-height:calc(100vh - 52px);overflow-x:clip;max-width:600px;margin-left:auto;margin-right:auto;}
   .page-section{display:none;padding:32px 32px 80px;}
   .page-section.active{display:block;}
   #smProgressBar{margin:-32px -32px 16px;}
