@@ -6126,15 +6126,7 @@ async function smCheckConflict(){
         '<div style="color:#fca5a5;font-size:12px;line-height:1.5;">You have a match'+ct+' from '+ts+' that overlaps this time. Please choose a different time or date.</div>'+
         '</div>';
     } else if(sameDayOnly.length){
-      const lines = sameDayOnly.map(m=>{
-        const ts = fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):'');
-        return 'You have a match today at '+ts+'. No time conflict — you\'re good to go!';
-      }).join('<br>');
-      warnBox.style.display='block';
-      warnBox.innerHTML='<div style="background:#fef9c3;border:1px solid #d97706;border-radius:10px;padding:10px 14px;margin-top:8px;">'+
-        '<div style="color:#78350f;font-weight:700;font-size:13px;margin-bottom:4px;">Same day match</div>'+
-        '<div style="color:#92400e;font-size:12px;line-height:1.5;">'+lines+'</div>'+
-        '</div>';
+      warnBox.style.display='none'; warnBox.innerHTML='';
     }
   }catch(e){ console.warn('smCheckConflict:',e); }
   smUpdateSendBtn();
