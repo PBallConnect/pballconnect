@@ -6903,6 +6903,8 @@ async function doLogin(){
 async function signOut(){
   try{ await _supabase.auth.signOut(); }catch(e){}
   localStorage.removeItem('pb_email');
+  localStorage.removeItem('pb_nickname');
+  localStorage.removeItem('pb_emoji');
   SUPABASE_ACCESS_TOKEN = SUPABASE_ANON_KEY;
   S.email=''; S.nickname=''; S.avatarEmoji='🎾'; S.skill='';
   SESSION_PLAYER=null;
@@ -6931,18 +6933,23 @@ function initLogin(){
 }
 
 async function initApp(){
-  // Bug 2 fix: if landing from a magic link (?newuser=1), immediately replace the
-  // welcome page CTAs with a loading state so users can't tap Sign In during the
-  // async auth gap (getSession + restoreSession + startNewRegistration can take ~1-2s).
-  if(new URLSearchParams(window.location.search).get('newuser') === '1'){
-    const welcomeInner = document.querySelector('#page-welcome > div');
-    if(welcomeInner){
+  // Hide welcome CTAs immediately to prevent flash during async session detection.
+  // Existing users go straight to dashboard and never see welcome again.
+  // ?newuser=1 (magic link arrival): replace CTAs with invite loading state.
+  // No-session users: visibility is restored below before showPage('welcome').
+  const welcomeInner = document.querySelector('#page-welcome > div');
+  const isNewUser = new URLSearchParams(window.location.search).get('newuser') === '1';
+  if(welcomeInner){
+    if(isNewUser){
       welcomeInner.innerHTML =
         '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;padding:2rem;text-align:center;">'+
           '<div style="font-size:48px;margin-bottom:16px;">🎾</div>'+
           '<div style="font-size:18px;font-weight:700;color:#111;margin-bottom:8px;">Setting up your account…</div>'+
           '<div style="font-size:14px;color:#6b7280;">Just a moment — your invite is loading.</div>'+
         '</div>';
+    } else {
+      // Hide buttons during session check — restored below if no session found
+      welcomeInner.style.visibility = 'hidden';
     }
   }
   try{
@@ -6956,7 +6963,8 @@ async function initApp(){
   }catch(e){
     // Session expired or network error — fall through to welcome
   }
-  // No valid session — show welcome screen (only if not already in a new-user registration flow)
+  // No valid session — restore welcome content visibility then show the page
+  if(welcomeInner && !isNewUser) welcomeInner.style.visibility = '';
   if(!SESSION_PLAYER && !_newUserRegistrationStarted){
     showPage('welcome');
   }
@@ -7008,8 +7016,8 @@ async function restoreSession(email, playerData){
   S.gender       = player.gender      || '';
   S.driveDistance= player.drive_distance_miles ? player.drive_distance_miles+' miles' : '25 miles';
   S.venuePref    = player.play_venues || '';
-  S.nickname     = localStorage.getItem('pb_nickname') || player.nickname || '';
-  S.avatarEmoji  = localStorage.getItem('pb_emoji')    || player.avatar_emoji || '🎾';
+  S.nickname     = player.nickname    || '';
+  S.avatarEmoji  = player.avatar_emoji || '🎾';
   S.skill        = player.skill_level || '';
   S.playingSince = player.playing_since || '';
   S.addrLat      = player.lat  || null;
