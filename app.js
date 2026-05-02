@@ -2752,8 +2752,14 @@ function selectMatchGender(pref, el){
       wrap.style.display = 'block';
       smRenderStep3GroupPicker(wrap);
     }
+    // Set Group path: hide Step 4 invite container (skipped)
+    const ic = document.getElementById('smInviteContainer');
+    if(ic) ic.style.display = 'none';
   } else {
     if(wrap) wrap.style.display = 'none';
+    // Non-Set-Group path: show Step 4 invite container
+    const ic = document.getElementById('smInviteContainer');
+    if(ic) ic.style.display = '';
   }
 
   // Re-render specific picker if open
@@ -2931,6 +2937,8 @@ window._smSelectGroupFromGrid = function(gId){
     const ia=document.getElementById('smInviteAll');
     if(ia){ ia.style.border='2px solid #1a7a3a'; ia.style.background='#f0fdf4'; }
     const wrap=document.getElementById('smGenderGroupWrap'); if(wrap) _smRenderGroupGrid(wrap);
+    // Restore Step 4 invite container (deselected from Set Group path)
+    const _ic=document.getElementById('smInviteContainer'); if(_ic) _ic.style.display='';
     smUpdateNeededGrid(); smUpdateSummary(); smUpdateSendBtn(); smUpdateProgress(1);
     return;
   }
@@ -2975,9 +2983,12 @@ window._smSelectGroupFromGrid = function(gId){
   smLockSteps2And3(data.fmt, data.courts);
 
   smUpdateNeededGrid(); smUpdateSummary(); smUpdateSendBtn();
-  // Steps 1-3 are complete (Play Structure + auto-format + auto-courts).
-  // Advance to step 4 (Date & Time) as the next action for the organizer.
-  smUpdateProgress(4);
+  // Steps 1-4 are complete (Play Structure + auto-format + auto-courts + invite known from group).
+  // Advance to step 5 (Date & Time) as the next action for the organizer.
+  // Hide the invite container — Set Group path skips Step 4.
+  const _ic = document.getElementById('smInviteContainer');
+  if(_ic) _ic.style.display = 'none';
+  smUpdateProgress(5);
 
   // CHANGE 3 / CHANGE 4: Show roster confirmation modal
   smShowGroupRosterModal(gId);
@@ -3216,7 +3227,7 @@ function buildTimeSelect(selectId, startHH, endHH){
 
 function onMatchStartTimeChange(startVal){
   MS.timeStart = startVal;
-  if(startVal) smUpdateProgress(4); // Date & Time is now Step 4
+  if(startVal) smUpdateProgress(5); // Date & Time is now Step 5
   if(!startVal) return;
   // Auto-set end time = start + duration
   const [h,m] = startVal.split(':').map(Number);
@@ -3257,7 +3268,7 @@ function adjustDuration(delta){
   if(startVal) onMatchStartTimeChange(startVal);
   // Re-render Step 7 summary so Date & Time row shows the new end time
   smUpdateSummary();
-  smUpdateProgress(4);
+  smUpdateProgress(5); // Date & Time is now Step 5
   smCheckConflict();
 }
 
@@ -3876,7 +3887,7 @@ async function loadMatchCourts(){
 function updateMatchCourtsNext(){
   smUpdateSendBtn();
   smUpdateSummary();
-  if(MS.selectedCourts && MS.selectedCourts.size > 0) smUpdateProgress(5); // Court is now Step 5
+  if(MS.selectedCourts && MS.selectedCourts.size > 0) smUpdateProgress(6); // Court is now Step 6
   // Hide "+ Add a new court" once a court is selected; restore when deselected
   const addBtn = document.getElementById('smAddCourtBtn');
   if(addBtn) addBtn.style.display = (MS.selectedCourts && MS.selectedCourts.size > 0) ? 'none' : '';
@@ -5857,7 +5868,7 @@ document.addEventListener('click', function(e){
 // ══════════════════════════════════════════════════════
 
 // ── Set Up a Match: progress bar ─────────────────────
-const _smStepLabels = ['Play Structure','Match Type','Number of Courts','Date & Time','Court','Invite','Review & Send'];
+const _smStepLabels = ['Play Structure','Match Type','Number of Courts','Invites','Date & Time','Court','Review & Send'];
 let _smCurrentStep = 1;
 let _smInitializing = false;
 
@@ -5945,6 +5956,31 @@ function smUpdateSendBtn(){
   if(ok) smUpdateProgress(7);
 }
 
+function smRenderReviewRoster(){
+  const wrap = document.getElementById('smReviewRosterWrap');
+  if(!wrap) return;
+  const roster = MS.namedGroupRoster || {primary:[],subs:[]};
+  const myEmail = (SESSION_PLAYER?.email || '').toLowerCase();
+  const primary = roster.primary.filter(p => p.email && p.email.toLowerCase() !== myEmail);
+  const subs    = roster.subs.filter(p => p.email && p.email.toLowerCase() !== myEmail);
+  if(!primary.length && !subs.length){ wrap.style.display='none'; wrap.innerHTML=''; return; }
+  let html = '<div style="font-size:12px;font-weight:800;color:#1a7a3a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Who\'s Invited</div>';
+  if(primary.length){
+    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:'+(subs.length?'2px':'0')+'">';
+    primary.forEach(p=>{ html += '<span style="background:#f0fdf4;border:1px solid #a7f3d0;border-radius:20px;padding:4px 10px;font-size:13px;color:#1a7a3a;font-weight:600;">'+p.name+'</span>'; });
+    html += '</div>';
+  }
+  if(subs.length){
+    html += '<div style="border-top:2px solid #333;margin:10px 0;"></div>';
+    html += '<div style="font-size:11px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Subs</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+    subs.forEach(p=>{ html += '<span style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:20px;padding:4px 10px;font-size:13px;color:#9ca3af;font-style:italic;">'+p.name+'</span>'; });
+    html += '</div>';
+  }
+  wrap.innerHTML = html;
+  wrap.style.display = 'block';
+}
+
 function smUpdateSummary(){
   const rows = document.getElementById('smSummaryRows');
   if(!rows) return;
@@ -5994,6 +6030,13 @@ function smUpdateSummary(){
     '<div style="'+rs+'"><span style="'+ls+'">Date &amp; Time</span><span style="'+vs+'">'+dateTimeStr+'</span></div>'+
     '<div style="'+rs+'"><span style="'+ls+'">Court</span><span style="'+vs+'">'+courtStr+'</span></div>'+
     '<div style="'+rs+'border-bottom:none;"><span style="'+ls+'">Inviting</span><span style="'+vs+'">'+invLbl+'</span></div>';
+  // Set Group path: render roster in Review section
+  if(MS.group && MS.group.startsWith('named_')){
+    smRenderReviewRoster();
+  } else {
+    const rrw=document.getElementById('smReviewRosterWrap');
+    if(rrw){ rrw.style.display='none'; rrw.innerHTML=''; }
+  }
 }
 
 function smUpdateNeededGrid(){
@@ -6338,7 +6381,7 @@ function _smRenderCourtRow(court, container, showSaveBtn){
 
 function smSelectInvite(mode, skipProgress){
   MS.inviteMode = mode;
-  if(!skipProgress) smUpdateProgress(6);
+  if(!skipProgress) smUpdateProgress(4); // Invites is now Step 4
   ['all','specific','group'].forEach(m=>{
     const cap = m.charAt(0).toUpperCase()+m.slice(1);
     const el = document.getElementById('smInvite'+cap);
@@ -6594,6 +6637,8 @@ function initSetupMatch(){
   if(gs){ gs.style.border='1px solid #e5e7eb'; gs.style.background='#fff'; gs.classList.remove('sm-option-dimmed'); }
   if(gg){ gg.style.border='1px solid #e5e7eb'; gg.style.background='#fff'; }
   const gw=document.getElementById('smGenderGroupWrap'); if(gw){ gw.style.display='none'; gw.innerHTML=''; }
+  const icCont=document.getElementById('smInviteContainer'); if(icCont) icCont.style.display='';
+  const rrw=document.getElementById('smReviewRosterWrap'); if(rrw){ rrw.style.display='none'; rrw.innerHTML=''; }
 
   // Invite mode buttons
   const ia=document.getElementById('smInviteAll'), isp=document.getElementById('smInviteSpecific'), ig=document.getElementById('smInviteGroup');

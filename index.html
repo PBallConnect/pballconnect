@@ -1484,11 +1484,54 @@
         </div>
       </div>
 
-      <!-- Container 4: Date & Time -->
-      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
+      <!-- Container 4: Invites -->
+      <div id="smInviteContainer" style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
           <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">4</div>
-          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 4</span> · Date &amp; Time</span>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 4</span> · Invites</span>
+        </div>
+        <!-- Placeholder (non-Set-Group path) -->
+        <div style="padding:16px;background:#f0fdf4;border:1px solid #a7f3d0;border-radius:12px;text-align:center;color:#1a7a3a;font-size:13px;font-weight:700;">
+          🎯 Invite step coming soon
+        </div>
+        <!-- Hidden elements preserved for JS compatibility -->
+        <div id="smNeededGrid" style="display:none;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+          <div style="display:grid;grid-template-columns:1fr 72px 72px;background:#f9fafb;padding:8px 12px;border-bottom:1px solid #e5e7eb;">
+            <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;"></div>
+            <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;text-align:center;">Needed</div>
+            <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;text-align:center;">Invited</div>
+          </div>
+          <div id="smNeededGridRows"></div>
+        </div>
+        <div id="smOverInviteWarning" style="display:none;"></div>
+        <div id="smInviteAll" style="display:none;"><span id="smInviteAllCount"></span></div>
+        <div id="smInviteSpecific" style="display:none;"></div>
+        <div id="smInviteGroup" style="display:none;"></div>
+        <!-- Set Group path: read-only roster -->
+        <div id="smGroupRosterDisplay" style="display:none;margin-bottom:14px;"></div>
+        <!-- Specific player picker -->
+        <div id="smSpecificPickerWrap" style="display:none;margin-bottom:14px;border:1px solid #e5e7eb;border-radius:12px;padding:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <div style="font-size:12px;font-weight:700;color:#1a7a3a;">Select players</div>
+            <div id="matchSpecificCount" style="font-size:12px;color:#6b7280;font-weight:600;"></div>
+          </div>
+          <div id="matchSpecificWarning" style="display:none;"></div>
+          <div id="matchSpecificList" style="max-height:300px;overflow-y:auto;"></div>
+        </div>
+        <!-- Named group picker -->
+        <div id="smGroupPickerWrap" style="display:none;margin-bottom:14px;">
+          <select id="smGroupSelect" onchange="smOnGroupSelect(this.value)"
+            style="width:100%;padding:10px 14px;border-radius:10px;border:2px solid #d1d5db;background:#fff;color:#111;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;">
+            <option value="">Select a group…</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Container 5: Date & Time -->
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">5</div>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 5</span> · Date &amp; Time</span>
         </div>
         <div style="margin-bottom:12px;">
           <input type="date" id="matchDate"
@@ -1524,11 +1567,11 @@
         <div id="smConflictBox" style="display:none;"></div>
       </div>
 
-      <!-- Container 5: Court -->
+      <!-- Container 6: Court -->
       <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-          <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">5</div>
-          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 5</span> · Court</span>
+          <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">6</div>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 6</span> · Court</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
           <button id="smCourtTypePublic" onclick="smSetCourtType('public')"
@@ -1547,71 +1590,13 @@
           style="width:100%;padding:10px;border-radius:10px;border:1.5px dashed #d1d5db;background:#f9fafb;color:#6b7280;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">+ Add a new court</button>
       </div>
 
-      <!-- Container 6: Invite -->
-      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-          <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">6</div>
-          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 6</span> · Invite</span>
-        </div>
-        <!-- Needed / Invited grid — sticky so it stays visible while scrolling the picker -->
-        <div style="position:sticky;top:52px;z-index:20;background:#fff;padding-bottom:8px;border-bottom:2px solid #e5e7eb;margin-bottom:12px;">
-          <div id="smNeededGrid" style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
-            <div style="display:grid;grid-template-columns:1fr 72px 72px;background:#f9fafb;padding:8px 12px;border-bottom:1px solid #e5e7eb;">
-              <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;"></div>
-              <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;text-align:center;">Needed</div>
-              <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;text-align:center;">Invited</div>
-            </div>
-            <div id="smNeededGridRows"></div>
-          </div>
-          <div id="smOverInviteWarning" style="display:none;background:#fef9c3;border:1px solid #eab308;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:600;color:#713f12;margin-top:8px;"></div>
-        </div>
-        <!-- Invite mode selector -->
-        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
-          <div id="smInviteAll" onclick="smSelectInvite('all')"
-            style="padding:12px 16px;border:2px solid #1a7a3a;border-radius:12px;background:#f0fdf4;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
-            <div style="display:flex;align-items:center;gap:12px;">
-              <span style="font-size:20px;">👥</span>
-              <div><div style="font-size:13px;font-weight:700;color:#111;">Entire Inner Circle</div><div style="font-size:11px;color:#6b7280;">Everyone in your circle</div></div>
-            </div>
-            <span id="smInviteAllCount" style="font-size:12px;font-weight:700;color:#1a7a3a;background:rgba(26,122,58,0.1);padding:3px 10px;border-radius:999px;white-space:nowrap;flex-shrink:0;"></span>
-          </div>
-          <div id="smInviteSpecific" onclick="smSelectInvite('specific')"
-            style="padding:12px 16px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;display:flex;align-items:center;gap:12px;">
-            <span style="font-size:20px;">🎯</span>
-            <div><div style="font-size:13px;font-weight:700;color:#111;">Specific Players</div><div style="font-size:11px;color:#6b7280;">Pick names from your circle</div></div>
-          </div>
-          <div id="smInviteGroup" onclick="smSelectInvite('group')"
-            style="padding:12px 16px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;display:flex;align-items:center;gap:12px;">
-            <span style="font-size:20px;">📋</span>
-            <div><div style="font-size:13px;font-weight:700;color:#111;">Named Group</div><div style="font-size:11px;color:#6b7280;">One of your saved groups</div></div>
-          </div>
-        </div>
-        <!-- Set Group path: read-only roster (shown instead of picker cards) -->
-        <div id="smGroupRosterDisplay" style="display:none;margin-bottom:14px;"></div>
-        <!-- Specific player picker -->
-        <div id="smSpecificPickerWrap" style="display:none;margin-bottom:14px;border:1px solid #e5e7eb;border-radius:12px;padding:12px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-            <div style="font-size:12px;font-weight:700;color:#1a7a3a;">Select players</div>
-            <div id="matchSpecificCount" style="font-size:12px;color:#6b7280;font-weight:600;"></div>
-          </div>
-          <div id="matchSpecificWarning" style="display:none;"></div>
-          <div id="matchSpecificList" style="max-height:300px;overflow-y:auto;"></div>
-        </div>
-        <!-- Named group picker -->
-        <div id="smGroupPickerWrap" style="display:none;margin-bottom:14px;">
-          <select id="smGroupSelect" onchange="smOnGroupSelect(this.value)"
-            style="width:100%;padding:10px 14px;border-radius:10px;border:2px solid #d1d5db;background:#fff;color:#111;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;">
-            <option value="">Select a group…</option>
-          </select>
-        </div>
-      </div>
-
       <!-- Container 7: Review & Send -->
       <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:24px;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
           <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">7</div>
           <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 7</span> · Review &amp; Send</span>
         </div>
+        <div id="smReviewRosterWrap" style="display:none;margin-bottom:16px;"></div>
         <div id="smSummaryRows" style="margin-bottom:16px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;"></div>
         <div style="margin-bottom:16px;">
           <textarea id="matchNote" placeholder="Add a note for your players…"
