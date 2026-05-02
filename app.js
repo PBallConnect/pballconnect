@@ -1399,6 +1399,14 @@ async function showCitySelector(stateName){
 
 // ── Navigation ─────────────────────────────────────────
 function showPage(page){
+  // Guard: intercept navigation away from Setup Match mid-wizard
+  if(!_smAllowNavigation && page !== 'setupMatch'){
+    const activePage = document.querySelector('.page-section.active')?.id?.replace('page-','');
+    if(activePage === 'setupMatch' && isMatchWizardDirty()){
+      _smShowLeaveDialog(page);
+      return;
+    }
+  }
   // Auth gate — redirect unauthenticated users to welcome screen
   const UNPROTECTED_PAGES = ['welcome', 'tos', 'privacy'];
   if(!SESSION_PLAYER && !UNPROTECTED_PAGES.includes(page)){
@@ -3247,6 +3255,9 @@ function adjustDuration(delta){
   // Update end time based on new duration
   const startVal = document.getElementById('matchTimeStart')?.value || MS.timeStart;
   if(startVal) onMatchStartTimeChange(startVal);
+  // Re-render Step 7 summary so Date & Time row shows the new end time
+  smUpdateSummary();
+  smUpdateProgress(4);
   smCheckConflict();
 }
 
@@ -3866,6 +3877,9 @@ function updateMatchCourtsNext(){
   smUpdateSendBtn();
   smUpdateSummary();
   if(MS.selectedCourts && MS.selectedCourts.size > 0) smUpdateProgress(5); // Court is now Step 5
+  // Hide "+ Add a new court" once a court is selected; restore when deselected
+  const addBtn = document.getElementById('smAddCourtBtn');
+  if(addBtn) addBtn.style.display = (MS.selectedCourts && MS.selectedCourts.size > 0) ? 'none' : '';
 }
 
 function updateMatchCourtsSummary(){
@@ -4216,8 +4230,11 @@ async function submitMatch(){
     showToast('🎾 Invites sent! Your match is set.','#4CAF7D');
     status.textContent='';
     btn.textContent='✅ Sent!';
-    // Navigate immediately so toast overlays the dashboard
+    // Navigate immediately so toast overlays the dashboard.
+    // Bypass the mid-wizard navigation guard — submit succeeded, wizard is done.
+    _smAllowNavigation = true;
     showPage('dashboard');
+    _smAllowNavigation = false;
     // Reload dashboard tile counts so the new match appears immediately
     const _dashEmail = myEmail;
     loadDashTileCounts(_dashEmail);
@@ -5790,6 +5807,46 @@ document.addEventListener('click', function(e){
 const _smStepLabels = ['Play Structure','Match Type','Number of Courts','Date & Time','Court','Invite','Review & Send'];
 let _smCurrentStep = 1;
 let _smInitializing = false;
+
+// ── Set Up a Match: navigation guard (Bug 3) ──────────
+// Set to true immediately before post-submit showPage('dashboard') so the guard is bypassed.
+let _smAllowNavigation = false;
+
+function isMatchWizardDirty(){
+  if(!MS) return false;
+  return !!(
+    MS.timeStart ||
+    (MS.selectedCourts && MS.selectedCourts.size > 0) ||
+    (MS.genderPref && MS.genderPref !== 'either') ||
+    MS.selectedGroupId
+  );
+}
+
+function _smShowLeaveDialog(targetPage){
+  const existing = document.getElementById('smLeaveDialog');
+  if(existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'smLeaveDialog';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9500;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML =
+    '<div style="background:#fff;border-radius:16px;padding:24px;max-width:360px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">' +
+      '<div style="font-size:18px;font-weight:800;color:#111;margin-bottom:10px;">⚠️ Leave Match Setup?</div>' +
+      '<div style="font-size:14px;color:#6b7280;margin-bottom:20px;line-height:1.5;">Your match setup progress will be lost.</div>' +
+      '<div style="display:flex;gap:10px;">' +
+        '<button id="smLeaveStay" style="flex:1;padding:11px;border-radius:10px;border:1.5px solid #e5e7eb;background:#fff;color:#111;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Stay</button>' +
+        '<button id="smLeaveAnyway" style="flex:1;padding:11px;border-radius:10px;border:none;background:#dc2626;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Leave anyway</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  document.getElementById('smLeaveStay').onclick = ()=>overlay.remove();
+  document.getElementById('smLeaveAnyway').onclick = ()=>{
+    overlay.remove();
+    initSetupMatch();           // reset wizard state
+    _smAllowNavigation = true;
+    showPage(targetPage);
+    _smAllowNavigation = false;
+  };
+}
 
 function smUpdateProgress(step){
   if(_smInitializing) return;
