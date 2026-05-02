@@ -2707,8 +2707,46 @@ function onMatchGenderPrefChange(val){
   }
 }
 
+// ── Group mode exit (State 2 → State 1) ──────────────
+function _smExitGroupMode(){
+  // Restore all 4 Play Structure buttons to default (none highlighted)
+  ['smGenderEither','smGenderMixed','smGenderSame','smGenderGroup'].forEach(id=>{
+    const d=document.getElementById(id);
+    if(!d) return;
+    d.style.border='1px solid #e5e7eb'; d.style.background='#fff';
+    d.classList.remove('sm-option-dimmed');
+  });
+  // Hide and clear the group picker
+  const wrap=document.getElementById('smGenderGroupWrap');
+  if(wrap){ wrap.style.display='none'; wrap.innerHTML=''; }
+  // Reset group-related MS state
+  MS.genderPref='either';
+  MS.group=null; MS.selectedGroups=new Set(['all']); MS.inviteMode='all';
+  MS.selectedGroupId=null; window._smGroupGridSelectedId=null; MS.allGroupsRoster=null;
+  MS.namedGroupMemberEmails=new Set(); MS.namedGroupSubEmails=new Set();
+  MS.namedGroupRoster={primary:[],subs:[]};
+  // Restore Step 4 invite container (empty — organizer must pick a Play Structure option)
+  const ic=document.getElementById('smInviteContainer');
+  if(ic) ic.style.display='';
+  const igs=document.getElementById('smInviteGridSection');
+  if(igs) igs.innerHTML='';
+  // Unlock Steps 2 & 3
+  smUnlockSteps2And3();
+  smUpdateNeededGrid(); smUpdateSummary(); smUpdateSendBtn(); smUpdateProgress(1);
+}
+
 // ── Gender preference (Set Up A Match Container 3) ────
 function selectMatchGender(pref, el){
+  // Toggle behavior for "One of My Set Groups":
+  // — State 2 (group mode shown, no specific group chosen) → tap again → State 1
+  // — State 3 (specific group already locked in) → tap does nothing
+  if(pref === 'group'){
+    const wrap = document.getElementById('smGenderGroupWrap');
+    const groupModeOpen = wrap && wrap.style.display !== 'none';
+    if(groupModeOpen && !MS.selectedGroupId){ _smExitGroupMode(); return; }
+    if(MS.selectedGroupId) return; // State 3: ignore taps on header
+  }
+
   MS.genderPref = pref === 'group' ? 'either' : pref; // group uses 'either' for slot math
   ['smGenderEither','smGenderMixed','smGenderSame','smGenderGroup'].forEach(id=>{
     const d = document.getElementById(id);
