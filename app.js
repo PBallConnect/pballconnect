@@ -2688,6 +2688,9 @@ function selectMatchFormat(fmt, el){
   smUpdateNeededGrid();
   smUpdateSummary();
   smUpdateProgress(2);
+  // Rebuild invite grid so minimum-needed counter stays in sync
+  const _igs = document.getElementById('smInviteGridSection');
+  if(_igs && _igs.innerHTML && MS.genderPref !== 'group') buildSmInviteGrid();
 }
 
 // ── Match type preference (Profile) ───────────────────
@@ -2757,9 +2760,12 @@ function selectMatchGender(pref, el){
     if(ic) ic.style.display = 'none';
   } else {
     if(wrap) wrap.style.display = 'none';
-    // Non-Set-Group path: show Step 4 invite container
+    // Non-Set-Group path: show Step 4 invite container and build invite grid
     const ic = document.getElementById('smInviteContainer');
     if(ic) ic.style.display = '';
+    // Clear previous selections — filter may have changed (e.g. Open→Same Gender)
+    MS.specificPlayers = new Set();
+    buildSmInviteGrid();
   }
 
   // Re-render specific picker if open
@@ -3037,6 +3043,9 @@ function selectNumCourts(n){
   smUpdateNeededGrid();
   smUpdateSummary();
   if(!_smInitializing) smUpdateProgress(3);
+  // Rebuild invite grid so minimum-needed counter stays in sync
+  const _igs2 = document.getElementById('smInviteGridSection');
+  if(_igs2 && _igs2.innerHTML && MS.genderPref !== 'group') buildSmInviteGrid();
 }
 
 function toggleOrganizerPlaying(checked){
@@ -5956,6 +5965,200 @@ function smUpdateSendBtn(){
   if(ok) smUpdateProgress(7);
 }
 
+// ── Step 4 Invite Grid helpers ────────────────────────
+function _smGetInviteBuckets(){
+  const mySkill  = parseFloat(S.skill || SESSION_PLAYER?.skill_level || 0);
+  const myGender = (SESSION_PLAYER?.gender || '').toLowerCase();
+  const filtered = IC_MEMBERS.filter(m =>
+    MS.genderPref === 'same' ? (m.player.gender||'').toLowerCase() === myGender : true
+  );
+  const buckets = [
+    { key:'far_below', label:'Far Below', members:[] },
+    { key:'below',     label:'Below',     members:[] },
+    { key:'my_level',  label:'My Level',  members:[], center:true },
+    { key:'above',     label:'Above',     members:[] },
+    { key:'far_above', label:'Far Above', members:[] },
+  ];
+  const unrated = [];
+  filtered.forEach(m => {
+    const s = parseFloat(m.player.skill_level || 0);
+    if(!s || !mySkill){ unrated.push(m); return; }
+    const diff = s - mySkill;
+    if     (diff <= -0.375) buckets[0].members.push(m);
+    else if(diff <= -0.125) buckets[1].members.push(m);
+    else if(diff <=  0.125) buckets[2].members.push(m);
+    else if(diff <=  0.375) buckets[3].members.push(m);
+    else                    buckets[4].members.push(m);
+  });
+  return { buckets, unrated, mySkill };
+}
+
+function buildSmInviteGrid(){
+  const section = document.getElementById('smInviteGridSection');
+  if(!section) return;
+
+  // Grid always uses explicit selection — set invite mode to specific
+  MS.inviteMode = 'specific';
+  if(!MS.specificPlayers) MS.specificPlayers = new Set();
+
+  const { buckets, unrated, mySkill } = _smGetInviteBuckets();
+  const playersPerCourt = MS.format === 'singles' ? 2 : 4;
+  const minNeeded = (MS.numCourts * playersPerCourt) - 1;
+  const selCount  = MS.specificPlayers.size;
+  const metMin    = selCount >= minNeeded;
+
+  const fmtR = v => v.toFixed(2);
+  const ranges = mySkill ? [
+    `< ${fmtR(mySkill - 0.375)}`,
+    `${fmtR(mySkill - 0.375)} – ${fmtR(mySkill - 0.125)}`,
+    `${fmtR(mySkill - 0.125)} – ${fmtR(mySkill + 0.125)}`,
+    `${fmtR(mySkill + 0.125)} – ${fmtR(mySkill + 0.375)}`,
+    `> ${fmtR(mySkill + 0.375)}`,
+  ] : ['','','','',''];
+
+  // Column selection state
+  const colState = bkt => {
+    if(!bkt.members.length) return 'empty';
+    const n = bkt.members.filter(m => MS.specificPlayers.has((m.player.email||'').toLowerCase())).length;
+    if(n === bkt.members.length) return 'all';
+    if(n === 0) return 'none';
+    return 'partial';
+  };
+
+  const pill = (email, name) => {
+    const sel = MS.specificPlayers.has(email);
+    const ps  = sel
+      ? 'background:#1a7a3a;color:#fff;border:1px solid #1a7a3a;'
+      : 'background:#fff;color:#374151;border:1px solid #d1d5db;';
+    const safeEmail = email.replace(/'/g,"\\'");
+    return `<div onclick="window._smToggleInvitePlayer('${safeEmail}')" style="${ps}border-radius:999px;padding:3px 7px;font-size:11px;font-weight:600;margin-bottom:3px;cursor:pointer;text-align:center;user-select:none;">${name}</div>`;
+  };
+
+  // Build 5-column grid HTML
+  let html = '<div style="overflow-x:auto;margin-bottom:10px;">';
+  html += '<table style="width:100%;border-collapse:separate;border-spacing:3px 0;table-layout:fixed;">';
+  // Header row
+  html += '<thead><tr>';
+  buckets.forEach((bkt, i) => {
+    const state = colState(bkt);
+    const hBg   = state === 'all'     ? 'background:#1a7a3a;color:#fff;'
+                : state === 'partial' ? 'background:#fef3c7;border:1.5px solid #f59e0b;color:#92400e;'
+                : bkt.center          ? 'background:#d1fae5;color:#1a7a3a;'
+                :                       'background:#f1f5f9;color:#374151;';
+    const click  = bkt.members.length ? `onclick="window._smToggleBucket('${bkt.key}')" ` : '';
+    const cursor = bkt.members.length ? 'cursor:pointer;' : '';
+    html += `<th ${click}style="${hBg}${cursor}border-radius:8px 8px 0 0;padding:5px 3px;text-align:center;font-weight:800;user-select:none;">`;
+    html += `<div style="font-size:10px;">${bkt.label}</div>`;
+    if(ranges[i]) html += `<div style="font-size:9px;opacity:.65;margin-top:1px;">${ranges[i]}</div>`;
+    html += '</th>';
+  });
+  html += '</tr></thead>';
+  // Body — stacked pills per column
+  html += '<tbody><tr>';
+  buckets.forEach(bkt => {
+    html += '<td style="vertical-align:top;padding:4px 1px;">';
+    if(bkt.members.length){
+      bkt.members.forEach(m => {
+        const email = (m.player.email||'').toLowerCase();
+        const name  = ((m.player.first_name||'')+' '+(m.player.last_name||'')).trim() || '?';
+        html += pill(email, name);
+      });
+    } else {
+      html += '<div style="font-size:10px;color:#9ca3af;text-align:center;padding-top:4px;">—</div>';
+    }
+    html += '</td>';
+  });
+  html += '</tr></tbody></table></div>';
+
+  // Unrated row
+  if(unrated.length){
+    html += '<div style="margin-bottom:10px;">';
+    html += '<div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Unrated</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:4px;">';
+    unrated.forEach(m => {
+      const email = (m.player.email||'').toLowerCase();
+      const name  = ((m.player.first_name||'')+' '+(m.player.last_name||'')).trim() || '?';
+      html += pill(email, name);
+    });
+    html += '</div></div>';
+  }
+
+  // Empty state
+  if(!IC_MEMBERS.length){
+    html += '<div style="padding:20px;text-align:center;color:#9ca3af;font-size:13px;">No Inner Circle members yet. Add players to your IC first.</div>';
+  }
+
+  // Counter
+  const counterTxt = metMin
+    ? `${selCount} player${selCount!==1?'s':''} in invite pool ✓`
+    : `${selCount} selected — need at least ${minNeeded} to continue`;
+  const counterClr = metMin ? 'color:#16a34a;font-weight:700;' : 'color:#6b7280;font-weight:600;';
+  html += `<div id="smInviteCounter" style="${counterClr}font-size:13px;text-align:center;margin-bottom:10px;">${counterTxt}</div>`;
+
+  // Continue button
+  const btnStyle = `width:100%;padding:12px;border-radius:10px;border:none;background:#1a7a3a;color:#fff;font-size:14px;font-weight:800;font-family:inherit;transition:opacity .15s;opacity:${metMin?'1':'0.4'};cursor:${metMin?'pointer':'not-allowed'};`;
+  html += `<button id="smInviteContinueBtn" onclick="window._smInviteContinue()" ${metMin?'':'disabled'} style="${btnStyle}">Continue →</button>`;
+
+  section.innerHTML = html;
+}
+
+window._smToggleBucket = function(bucketKey){
+  const { buckets } = _smGetInviteBuckets();
+  const bkt = buckets.find(b => b.key === bucketKey);
+  if(!bkt || !bkt.members.length) return;
+  const emails = bkt.members.map(m => (m.player.email||'').toLowerCase());
+  const allSel = emails.every(e => MS.specificPlayers.has(e));
+  if(allSel){
+    emails.forEach(e => MS.specificPlayers.delete(e));
+  } else {
+    emails.forEach(e => MS.specificPlayers.add(e));
+  }
+  smUpdateProgress(4);
+  smUpdateSummary();
+  buildSmInviteGrid();
+};
+
+window._smToggleInvitePlayer = function(email){
+  email = email.toLowerCase();
+  if(MS.specificPlayers.has(email)) MS.specificPlayers.delete(email);
+  else MS.specificPlayers.add(email);
+  smUpdateProgress(4);
+  smUpdateSummary();
+  buildSmInviteGrid();
+};
+
+window._smInviteContinue = function(){
+  const playersPerCourt = MS.format === 'singles' ? 2 : 4;
+  const minNeeded = (MS.numCourts * playersPerCourt) - 1;
+  if(MS.specificPlayers.size < minNeeded) return;
+  smUpdateProgress(5);
+};
+
+// ── Step 7 Invite Pool review (non-Set-Group path) ─────
+function smRenderInvitePoolReview(){
+  const wrap = document.getElementById('smReviewRosterWrap');
+  if(!wrap) return;
+  if(!MS.specificPlayers || !MS.specificPlayers.size){ wrap.style.display='none'; wrap.innerHTML=''; return; }
+  const { buckets, unrated } = _smGetInviteBuckets();
+  let html = '<div style="font-size:12px;font-weight:800;color:#1a7a3a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Invite Pool</div>';
+  let any = false;
+  buckets.forEach(bkt => {
+    const names = bkt.members
+      .filter(m => MS.specificPlayers.has((m.player.email||'').toLowerCase()))
+      .map(m => ((m.player.first_name||'')+' '+(m.player.last_name||'')).trim() || m.player.email);
+    if(!names.length) return;
+    any = true;
+    html += `<div style="margin-bottom:5px;font-size:12px;color:#374151;"><span style="font-weight:700;">${bkt.label}</span> (${names.length}): ${names.join(', ')}</div>`;
+  });
+  const unratedNames = unrated
+    .filter(m => MS.specificPlayers.has((m.player.email||'').toLowerCase()))
+    .map(m => ((m.player.first_name||'')+' '+(m.player.last_name||'')).trim() || m.player.email);
+  if(unratedNames.length){ any=true; html += `<div style="margin-bottom:5px;font-size:12px;color:#374151;"><span style="font-weight:700;">Unrated</span> (${unratedNames.length}): ${unratedNames.join(', ')}</div>`; }
+  if(!any){ wrap.style.display='none'; wrap.innerHTML=''; return; }
+  wrap.innerHTML = html;
+  wrap.style.display = 'block';
+}
+
 function smRenderReviewRoster(){
   const wrap = document.getElementById('smReviewRosterWrap');
   if(!wrap) return;
@@ -6030,9 +6233,11 @@ function smUpdateSummary(){
     '<div style="'+rs+'"><span style="'+ls+'">Date &amp; Time</span><span style="'+vs+'">'+dateTimeStr+'</span></div>'+
     '<div style="'+rs+'"><span style="'+ls+'">Court</span><span style="'+vs+'">'+courtStr+'</span></div>'+
     '<div style="'+rs+'border-bottom:none;"><span style="'+ls+'">Inviting</span><span style="'+vs+'">'+invLbl+'</span></div>';
-  // Set Group path: render roster in Review section
+  // Review roster / invite pool in Step 7
   if(MS.group && MS.group.startsWith('named_')){
     smRenderReviewRoster();
+  } else if(MS.inviteMode === 'specific' && MS.specificPlayers && MS.specificPlayers.size > 0){
+    smRenderInvitePoolReview();
   } else {
     const rrw=document.getElementById('smReviewRosterWrap');
     if(rrw){ rrw.style.display='none'; rrw.innerHTML=''; }
@@ -6638,6 +6843,7 @@ function initSetupMatch(){
   if(gg){ gg.style.border='1px solid #e5e7eb'; gg.style.background='#fff'; }
   const gw=document.getElementById('smGenderGroupWrap'); if(gw){ gw.style.display='none'; gw.innerHTML=''; }
   const icCont=document.getElementById('smInviteContainer'); if(icCont) icCont.style.display='';
+  const igs=document.getElementById('smInviteGridSection'); if(igs) igs.innerHTML='';
   const rrw=document.getElementById('smReviewRosterWrap'); if(rrw){ rrw.style.display='none'; rrw.innerHTML=''; }
 
   // Invite mode buttons
