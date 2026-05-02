@@ -5918,6 +5918,7 @@ document.addEventListener('click', function(e){
 const _smStepLabels = ['Play Structure','Match Type','Number of Courts','Invites','Date & Time','Court','Review & Send'];
 let _smCurrentStep = 1;
 let _smInitializing = false;
+let _smAllCourtsExpanded = false;
 
 // ── Set Up a Match: navigation guard (Bug 3) ──────────
 // Set to true immediately before post-submit showPage('dashboard') so the guard is bypassed.
@@ -6419,12 +6420,11 @@ async function smCheckConflict(){
 }
 
 function smUpdateCourtPickerView(){
-  const chip    = document.getElementById('smSelectedCourtChip');
-  const savedLbl= document.getElementById('smSavedCourtsLabel');
-  const savedEl = document.getElementById('smSavedCourts');
-  const otherLbl= document.getElementById('smOtherCourtsLabel');
-  const otherEl = document.getElementById('smOtherCourts');
-  const hasSel  = MS.selectedCourts && MS.selectedCourts.size > 0;
+  const chip         = document.getElementById('smSelectedCourtChip');
+  const priorityList = document.getElementById('smPriorityCourtsList');
+  const showAllWrap  = document.getElementById('smShowAllCourtsWrap');
+  const allSection   = document.getElementById('smAllCourtsSection');
+  const hasSel       = MS.selectedCourts && MS.selectedCourts.size > 0;
   if(hasSel){
     let court; MS.selectedCourts.forEach(c=>{ court=c; });
     if(chip){
@@ -6441,27 +6441,35 @@ function smUpdateCourtPickerView(){
           '<button onclick="smChangeCourt()" style="font-size:12px;font-weight:700;color:#6b7280;background:#fff;border:1.5px solid #d1d5db;border-radius:8px;padding:6px 12px;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">Change</button>'+
         '</div>';
     }
-    if(savedLbl) savedLbl.style.display='none';
-    if(savedEl)  savedEl.style.display='none';
-    if(otherLbl) otherLbl.style.display='none';
-    if(otherEl)  otherEl.style.display='none';
+    if(priorityList) priorityList.style.display='none';
+    if(showAllWrap)  showAllWrap.style.display='none';
+    if(allSection)   allSection.style.display='none';
   } else {
     if(chip){ chip.style.display='none'; chip.innerHTML=''; }
-    if(savedLbl) savedLbl.style.display='';
-    if(savedEl)  savedEl.style.display='';
-    if(otherLbl) otherLbl.style.display='';
-    if(otherEl)  otherEl.style.display='';
+    if(priorityList) priorityList.style.display='';
+    if(showAllWrap)  showAllWrap.style.display='';
+    if(allSection)   allSection.style.display=_smAllCourtsExpanded?'':'none';
   }
 }
 
 window.smChangeCourt = function(){
   MS.selectedCourts.clear();
   MS.courtId=null; MS.courtName=null; MS.isPrivate=false;
+  _smAllCourtsExpanded = false;
   smUpdateCourtPickerView();
-  smLoadCourts();
+  smLoadCourtsPriority();
   renderCourtCapacityWarning();
   smUpdateSendBtn();
   smUpdateSummary();
+};
+
+window.smToggleAllCourts = function(){
+  _smAllCourtsExpanded = !_smAllCourtsExpanded;
+  const sec = document.getElementById('smAllCourtsSection');
+  const btn = document.getElementById('smShowAllCourtsBtn');
+  if(sec) sec.style.display = _smAllCourtsExpanded ? '' : 'none';
+  if(btn) btn.textContent = _smAllCourtsExpanded ? 'Show fewer ▲' : 'Show all courts ▼';
+  if(_smAllCourtsExpanded) smLoadCourts();
 };
 
 function smSetCourtType(type){
@@ -6486,11 +6494,113 @@ function smSetCourtType(type){
   MS.selectedCourts.clear();
   MS.courtId=null; MS.courtName=null; MS.isPrivate=false;
   smUpdateCourtPickerView();
-  smLoadCourts();
+  smLoadCourtsPriority();
+  if(_smAllCourtsExpanded) smLoadCourts();
 }
 
 function normalizeCourtName(name){
   return (name||'').toLowerCase().replace(/[^a-z0-9]/g,'').trim();
+}
+
+async function smLoadCourtsPriority(){
+  const myEmail = getMyEmail();
+  if(!myEmail) return;
+  const priorityEl = document.getElementById('smPriorityCourtsList');
+  if(!priorityEl) return;
+  priorityEl.innerHTML='<div style="font-size:11px;color:#6b7280;padding:4px 0;">Loading…</div>';
+  const isPrivate = MS.courtType==='private';
+  try{
+    // Step A: 3 most recently used courts from match history
+    const mRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&select=court_id,court_name,match_date&order=match_date.desc&limit=20`,
+      {headers:{apikey:SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+    );
+    const matchRows = mRes.ok ? await mRes.json() : [];
+    const seenIds = new Set();
+    const recentCourtIds = [];
+    for(const m of matchRows){
+      if(m.court_id && !seenIds.has(m.court_id)){
+        seenIds.add(m.court_id);
+        recentCourtIds.push(m.court_id);
+        if(recentCourtIds.length >= 3) break;
+      }
+    }
+    // Step B: fill remaining slots from saved courts (up to 5 total)
+    const pcRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(myEmail)}&select=court_id`,
+      {headers:{apikey:SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+    );
+    const pcRows = pcRes.ok ? await pcRes.json() : [];
+    const savedCourtIds = pcRows.map(r=>r.court_id).filter(Boolean);
+    const priorityIds = [...recentCourtIds];
+    for(const id of savedCourtIds){
+      if(!seenIds.has(id)){
+        seenIds.add(id);
+        priorityIds.push(id);
+        if(priorityIds.length >= 5) break;
+      }
+    }
+    // Step C: if nothing in history/saved, use all saved courts
+    const idsToFetch = priorityIds.length ? priorityIds : savedCourtIds.slice(0,8);
+    let courts = [];
+    if(idsToFetch.length){
+      const cRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/courts?id=in.(${idsToFetch.join(',')})&is_private=eq.${isPrivate}&select=id,name,address,city,is_private,num_courts`,
+        {headers:{apikey:SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+      );
+      courts = cRes.ok ? await cRes.json() : [];
+      courts.sort((a,b)=>idsToFetch.indexOf(a.id)-idsToFetch.indexOf(b.id));
+    }
+    priorityEl.innerHTML='';
+    if(!courts.length){
+      priorityEl.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:4px 0;font-style:italic;">No '+(isPrivate?'private':'public')+' courts saved yet.</div>';
+    } else {
+      courts.forEach(c=>_smRenderCompactCourtRow(c,priorityEl));
+    }
+  }catch(e){
+    if(priorityEl) priorityEl.innerHTML='<div style="font-size:12px;color:#dc2626;">Could not load courts.</div>';
+  }
+}
+
+function _smRenderCompactCourtRow(court, container){
+  const selected = MS.selectedCourts.has(court.id);
+  const row = document.createElement('div');
+  row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;'+
+    'border:1.5px solid '+(selected?'#1a7a3a':'#e5e7eb')+';'+
+    'background:'+(selected?'#f0fdf4':'#f9fafb')+';cursor:pointer;margin-bottom:6px;transition:all .15s;';
+  const radio = document.createElement('div');
+  radio.style.cssText='width:14px;height:14px;border-radius:50%;border:2px solid '+(selected?'#1a7a3a':'#9ca3af')+';'+
+    'background:'+(selected?'#1a7a3a':'transparent')+';flex-shrink:0;display:flex;align-items:center;justify-content:center;';
+  if(selected) radio.innerHTML='<div style="width:5px;height:5px;border-radius:50%;background:#fff;"></div>';
+  const lbl = document.createElement('div');
+  lbl.style.cssText='flex:1;min-width:0;font-size:13px;font-weight:600;color:'+(selected?'#1a7a3a':'#111')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+  lbl.textContent=court.name;
+  const badge = document.createElement('span');
+  badge.style.cssText='font-size:11px;color:#6b7280;white-space:nowrap;flex-shrink:0;';
+  badge.textContent=court.is_private?'🏢':'🌳';
+  row.appendChild(radio); row.appendChild(lbl); row.appendChild(badge);
+  row.onclick=()=>{
+    if(MS.selectedCourts.has(court.id)){
+      MS.selectedCourts.delete(court.id);
+      MS.courtId=null; MS.courtName=null; MS.isPrivate=false;
+    } else {
+      MS.selectedCourts.clear();
+      MS.selectedCourts.set(court.id,{
+        name:court.name,
+        address:(court.address||'')+(court.city?', '+court.city:''),
+        isPrivate:court.is_private||false,
+        preferred:true,
+        numCourts:court.num_courts??null
+      });
+      MS.courtId=court.id; MS.courtName=court.name; MS.isPrivate=court.is_private||false;
+    }
+    renderCourtCapacityWarning();
+    smUpdateSendBtn();
+    smUpdateSummary();
+    smUpdateCourtPickerView();
+    updateMatchCourtsNext();
+  };
+  container.appendChild(row);
 }
 
 async function smLoadCourts(){
@@ -6862,6 +6972,7 @@ function initSetupMatch(){
   window._smGroupGridSelectedId=null;
   MS.isFeeler=false; MS.duration=2; MS.selectedCourts=new Map();
   MS.hasOverlapConflict=false; MS.courtType='public'; MS.inviteMode='all';
+  _smAllCourtsExpanded=false;
   MS.timeStart=null; MS.timeEnd=null; MS.date=null;
   MS.courtId=null; MS.courtName=null; MS.courtAddress=null; MS.isPrivate=false;
 
