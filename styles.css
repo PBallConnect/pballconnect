@@ -1,4 +1,6 @@
 @keyframes slideUp{from{transform:translateX(-50%) translateY(20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+@keyframes tilePulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,0.6)}70%{box-shadow:0 0 0 12px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+.tile-pulse{animation:tilePulse 0.8s ease-out 3;}
 @keyframes pb-card-pulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,0.35);border-color:#ef4444}50%{box-shadow:0 0 0 6px rgba(220,38,38,0);border-color:#fca5a5}}
 .pb-card-urgent{animation:pb-card-pulse 1.4s ease-in-out infinite;}
 @keyframes pulse-green{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(1.3)}}

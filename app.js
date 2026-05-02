@@ -4207,16 +4207,24 @@ async function submitMatch(){
         catch(emailErr){ showToast('⚠️ Email failed for '+((player.first_name||player.email)),'#f59e0b'); console.warn('sendEmail failed:',player.email,emailErr); }
       }
     }
-    showToast('🎾 Match invite sent to '+invitees.length+' players!','#4CAF7D');
+    // Success: toast first, then navigate to dashboard
+    showToast('🎾 Invites sent! Your match is set.','#4CAF7D');
     status.textContent='';
     btn.textContent='✅ Sent!';
-    loadMatchSquareCounts();
-    // Update nav badges immediately
+    // Navigate immediately so toast overlays the dashboard
+    showPage('dashboard');
+    // Reload dashboard tile counts so the new match appears immediately
+    const _dashEmail = myEmail;
+    loadDashTileCounts(_dashEmail);
     setTimeout(()=>loadAllMatchBadges(), 500);
+    // Pulse the My Match Invites tile after dashboard renders
     setTimeout(()=>{
-      btn.textContent='🎾 Send Invites'; btn.disabled=false; btn.style.opacity='1';
-      initSetupMatch();
-    },3000);
+      const tile = document.getElementById('dashMyInvitesTile');
+      if(tile){
+        tile.classList.add('tile-pulse');
+        setTimeout(()=>tile.classList.remove('tile-pulse'), 2400);
+      }
+    }, 300);
   }catch(e){ status.textContent='⚠️ Error: '+e.message; btn.disabled=false; btn.textContent='🎾 Send Match Invite'; }
 }
 
