@@ -5227,6 +5227,20 @@ async function loadMyInvitesPage(){
           '</div>';
       } else {
         const remaining = Math.max(0, maxNeeded - inP.length);
+        // Urgent reminder banner — show when < 24h away, roster not full, pending players exist
+        const _cd = !isPast ? getCountdown(m.match_date, m.time_start) : null;
+        const _showReminder = !isPast && _cd?.urgency==='urgent' && inP.length < maxNeeded && pend.length > 0;
+        const _reminderBanner = _showReminder
+          ? '<div id="miReminderWrap-'+m.id+'" style="margin-top:10px;padding:10px 14px;background:#fff1f2;border:1.5px solid #fca5a5;border-radius:10px;">'+
+              '<div class="pb-urgent" style="font-size:13px;font-weight:800;color:#dc2626;margin-bottom:6px;">'+
+                '🔴 Match is in '+_cd.text+' — roster not full! '+pend.length+' player'+(pend.length!==1?'s':'')+' haven\'t responded yet.'+
+              '</div>'+
+              '<button id="miReminderBtn-'+m.id+'" onclick="window._miSendReminders(\''+m.id+'\')" '+
+                'style="padding:8px 14px;border-radius:8px;border:none;background:#dc2626;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">'+
+                '📧 Send Reminder to Pending Players'+
+              '</button>'+
+            '</div>'
+          : '';
         bottom=
           // 5-column grid: In | Pending | Waitlist | Out | Remaining — tap any pill to see names
           '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:5px;margin-top:10px;">'+
@@ -5240,6 +5254,7 @@ async function loadMyInvitesPage(){
           buildPillNamesPanel(''+m.id,'pending',pend)+
           buildPillNamesPanel(''+m.id,'waitlist',wait)+
           buildPillNamesPanel(''+m.id,'out',out)+
+          _reminderBanner+
           '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e5e7eb;">'+
             '<button onclick="openEditMatchModal(\''+m.id+'\')" style="padding:7px 14px;border-radius:8px;border:2px solid #1a7a3a;background:#f0fdf4;color:#1a7a3a;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">&#9998; Edit Match</button>'+
           '</div>';
@@ -5460,6 +5475,71 @@ function makeRemainingPill(remaining, maxNeeded){
   '</div>';
 }
 
+// ── My Match Invites: send reminder to pending players ───
+window._miSendReminders = async function(matchId){
+  const btn = document.getElementById('miReminderBtn-'+matchId);
+  if(!btn || btn.disabled) return;
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  const wrap = document.getElementById('miReminderWrap-'+matchId);
+  const cached = _miResponseCache[matchId];
+  if(!cached || !cached.pending || !cached.pending.length){
+    if(wrap) wrap.innerHTML='<div style="font-size:13px;font-weight:700;color:#6b7280;">No pending players found.</div>';
+    return;
+  }
+  try{
+    const matchRes = await fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${encodeURIComponent(matchId)}&select=*&limit=1`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+    const matches = matchRes.ok ? await matchRes.json() : [];
+    const m = matches[0];
+    if(!m){ if(wrap) wrap.innerHTML='<div style="font-size:13px;color:#dc2626;">Match not found.</div>'; return; }
+    const dateStr = m.match_date ? new Date(m.match_date+'T12:00').toLocaleDateString('en-CA',{weekday:'long',month:'long',day:'numeric'}) : 'TBD';
+    const timeStr = m.time_start ? fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):'') : 'TBD';
+    const courtName = (m.court_name&&m.court_name.toLowerCase()!=='tbd') ? m.court_name : (m.court_address||'the court');
+    const orgFirstName = SESSION_PLAYER?.first_name || 'Your organizer';
+    const pendingPlayers = cached.pending;
+    const pendingEmails = pendingPlayers.map(p=>p.player_email).filter(Boolean);
+    let profileMap = {};
+    if(pendingEmails.length){
+      const pr = await fetch(`${SUPABASE_URL}/rest/v1/public_profiles?email=in.(${pendingEmails.map(e=>encodeURIComponent(e)).join(',')})&select=email,first_name`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+      const profiles = pr.ok ? await pr.json() : [];
+      profiles.forEach(p=>{ profileMap[(p.email||'').toLowerCase()]=p; });
+    }
+    let sent = 0, failed = 0;
+    for(const player of pendingPlayers){
+      const playerEmail = player.player_email;
+      if(!playerEmail) continue;
+      const profile = profileMap[(playerEmail||'').toLowerCase()];
+      const firstName = profile?.first_name || (player.player_name||'').split(' ')[0] || 'there';
+      try{
+        await sendEmail({
+          to_email: playerEmail,
+          type: 'match_update',
+          subject: 'Reminder: Can you make it tomorrow? '+courtName+' at '+timeStr,
+          personal_note: 'Just checking in — can you make it to pickleball?\n\n📅 '+dateStr+'\n⏰ '+timeStr+'\n📍 '+courtName+'\n\nAre you in? Open the app to respond.\n\n— '+orgFirstName+' via PBallConnect',
+          inviter_name: orgFirstName,
+          invitee_name: firstName,
+          match_date_str: dateStr
+        });
+        sent++;
+      }catch(emailErr){
+        showToast('⚠️ Reminder failed for '+firstName,'#f59e0b');
+        console.warn('Reminder email failed:',playerEmail,emailErr);
+        failed++;
+      }
+    }
+    if(wrap) wrap.innerHTML =
+      '<div style="font-size:13px;font-weight:700;color:#16a34a;">'+
+        '✅ Reminders sent to '+sent+' player'+(sent!==1?'s':'')+
+        (failed>0?' ('+failed+' failed)':'')+
+      '</div>';
+  }catch(e){
+    if(btn){ btn.disabled=false; btn.textContent='📧 Send Reminder to Pending Players'; }
+    showToast('Error sending reminders: '+e.message,'#f87171');
+  }
+};
+
 // ── Pending Matches page (page-invitedByOthers) ─────────
 async function loadInvitedByOthersPage(){
   // Use SESSION_PLAYER.email as the authoritative source — S.email is mutable form state.
@@ -5525,18 +5605,18 @@ async function loadInvitedByOthersPage(){
     ])];
     let allInResps=[];
     if(allCandidateIds.length){
-      const rr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${allCandidateIds.join(',')})&response=eq.in&select=match_id,player_name,player_email`,
+      const rr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${allCandidateIds.join(',')})&select=match_id,player_name,player_email,response`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       if(rr.ok) allInResps=await rr.json();
     }
 
     // Sections 2+3 only show roster-not-full matches
     const invitedPending=joinedMatches.filter(m=>{
-      const inCount=allInResps.filter(r=>r.match_id===m.id).length;
+      const inCount=allInResps.filter(r=>r.match_id===m.id&&r.response==='in').length;
       return inCount<(m.max_players||(m.match_type==='doubles'?4:2));
     });
     const orgPending=orgMatches.filter(m=>{
-      const inCount=allInResps.filter(r=>r.match_id===m.id).length;
+      const inCount=allInResps.filter(r=>r.match_id===m.id&&r.response==='in').length;
       return inCount<(m.max_players||(m.match_type==='doubles'?4:2));
     });
     console.log('PAGE pending - openInvites:',openInvites.length,openInvites);
@@ -5569,67 +5649,56 @@ async function loadInvitedByOthersPage(){
     if(openInvites.length){
       if(showHeadings) container.appendChild(makeBlueHeading('Open Invites — Action Required',false));
       openInvites.forEach(m=>{
-        const inPlayers=allInResps.filter(r=>r.match_id===m.id);
+        const allMatchResps=allInResps.filter(r=>r.match_id===m.id);
+        const inP=allMatchResps.filter(r=>r.response==='in');
+        const pend=allMatchResps.filter(r=>r.response==='pending');
+        const wait=allMatchResps.filter(r=>r.response==='waitlist');
+        const out=allMatchResps.filter(r=>r.response==='out');
         const maxNeeded=m.max_players||(m.match_type==='doubles'?4:2);
-        const confirmedCount=inPlayers.length;
-        const spotsLeft=Math.max(0,maxNeeded-confirmedCount);
+        const remaining=Math.max(0,maxNeeded-inP.length);
         const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-CA',{weekday:'short',month:'long',day:'numeric'}):'TBD';
-        const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' - '+fmt12(m.time_end):''):'TBD';
-        const _today=new Date();_today.setHours(0,0,0,0);
-        const daysUntil=m.match_date?Math.round((new Date(m.match_date+'T00:00')-_today)/(1000*60*60*24)):null;
-        const urgency=daysUntil===0?'TODAY':daysUntil===1?'TOMORROW':daysUntil!=null?'In '+daysUntil+' days':'';
-        const courtDisplay=m.court_name&&m.court_name!=='TBD'?m.court_name:(m.court_address||'Location TBD');
-        const iboOrgEmailLower=(m.organizer_email||'').toLowerCase();
-        const organizerChip='<div style="display:inline-flex;flex-direction:column;align-items:center;margin:2px;">'+
-          '<span class="avatar-organizer" style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;">'+
-            (m.organizer_name||'Organizer').split(' ')[0]+' &#9733;'+
-          '</span>'+
-          '<span class="avatar-organizer-label">Match Organizer</span>'+
-        '</div>';
-        const playerChips=inPlayers
-          .filter(p=>(p.player_email||'').toLowerCase()!==iboOrgEmailLower)
-          .map(p=>{
-            const firstName=(p.player_name||p.player_email||'').split(' ')[0];
-            return '<span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:#eff6ff;border:2px solid #3b82f6;font-size:11px;color:#1d4ed8;font-weight:600;margin:2px;">'+firstName+'</span>';
-          }).join('');
-        const mid=m.id;
+        const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):''):'TBD';
+        const courtDisplay=m.court_name&&m.court_name!=='TBD'?'📍 '+m.court_name:(m.court_address?'📍 '+m.court_address:'📍 Court TBD');
+        const iboId='ibo-'+m.id;
         const card=document.createElement('div');
         card.style.cssText='background:#ffffff;border:3px solid #3b82f6;border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);';
         if(getCountdown(m.match_date,m.time_start)?.urgent) card.classList.add('pb-card-urgent');
-        let expanded=true; // open invites expanded by default — action required
+        let expanded=true;
         function renderOpenCard(){
           card.innerHTML=
-            '<div onclick="this.parentElement._toggle()" style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;cursor:pointer;">'+
+            '<div onclick="this.parentElement._toggle()" style="display:flex;align-items:flex-start;gap:10px;padding:14px 16px;cursor:pointer;">'+
               '<span style="font-size:22px;flex-shrink:0;">'+(m.match_type==='doubles'?'<img src="icon-192.png" class="pb-icon" alt="pickleball"/><img src="icon-192.png" class="pb-icon" alt="pickleball"/>':'<img src="icon-192.png" class="pb-icon" alt="pickleball"/>')+'</span>'+
               '<div style="flex:1;min-width:0;">'+
                 '<div style="color:#1d4ed8;font-size:14px;font-weight:700;">'+dateStr+'</div>'+
-                '<div style="color:#555;font-size:12px;">'+timeStr+' &middot; '+courtDisplay+'</div>'+
+                '<div style="color:#374151;font-size:12px;font-weight:600;margin-top:1px;">'+timeStr+'</div>'+
+                '<div style="color:#6b7280;font-size:12px;margin-top:2px;">'+courtDisplay+'</div>'+
+                '<div style="font-size:11px;color:#555;margin-top:2px;">By <strong style="color:#111;">'+(m.organizer_name||'Unknown')+'</strong> &middot; '+(m.match_type==='singles'?'Singles':'Doubles')+'</div>'+
                 renderCountdown(m.match_date,m.time_start)+
-                '<div style="color:#555;font-size:11px;margin-top:2px;">'+
-                  'By <strong style="color:#111;">'+(m.organizer_name||'Unknown')+'</strong>'+
-                  ' &middot; '+(m.match_type==='singles'?'Singles':'Doubles')+
-                '</div>'+
               '</div>'+
               '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">'+
-                (urgency?'<div style="padding:2px 8px;border-radius:999px;background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.35);color:#1d4ed8;font-size:9px;font-weight:700;">'+urgency+'</div>':'')+
                 '<div style="font-size:11px;font-weight:700;color:#3b82f6;">Awaiting response</div>'+
                 '<div style="font-size:10px;color:#6b7280;">'+(expanded?'&#9650; less':'&#9660; details')+'</div>'+
               '</div>'+
             '</div>'+
             (expanded?
               '<div style="padding:0 16px 14px;border-top:1px solid #e5e7eb;">'+
-                '<div style="margin-top:10px;">'+
-                  '<div style="font-size:10px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">'+
-                    'Players ('+confirmedCount+'/'+maxNeeded+') &middot; '+(spotsLeft>0?spotsLeft+' spot'+(spotsLeft!==1?'s':'')+' left':'Full!')+
-                  '</div>'+
-                  '<div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:12px;">'+organizerChip+playerChips+'</div>'+
+                '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:5px;margin-top:10px;">'+
+                  makeResponsePill('In',inP,'#1a7a3a',iboId,'in')+
+                  makeResponsePill('Pending',pend,'#b45309',iboId,'pending')+
+                  makeResponsePill('Waitlist',wait,'#f59e0b',iboId,'waitlist')+
+                  makeResponsePill('Out',out,'#f87171',iboId,'out')+
+                  makeRemainingPill(remaining,maxNeeded)+
                 '</div>'+
-                '<div style="display:flex;gap:10px;" id="iboRespRow_'+mid+'">'+
-                  '<button class="ibo-respond-btn" data-mid="'+mid+'" data-resp="in" '+
+                buildPillNamesPanel(iboId,'in',inP)+
+                buildPillNamesPanel(iboId,'pending',pend)+
+                buildPillNamesPanel(iboId,'waitlist',wait)+
+                buildPillNamesPanel(iboId,'out',out)+
+                '<div style="display:flex;gap:10px;margin-top:12px;" id="iboRespRow_'+m.id+'">'+
+                  '<button class="ibo-respond-btn" data-mid="'+m.id+'" data-resp="in" '+
                     'style="flex:1;padding:10px;background:#1a7a3a;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">'+
                     '&#10003; Accept'+
                   '</button>'+
-                  '<button class="ibo-respond-btn" data-mid="'+mid+'" data-resp="out" '+
+                  '<button class="ibo-respond-btn" data-mid="'+m.id+'" data-resp="out" '+
                     'style="flex:1;padding:10px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">'+
                     '&#10007; Decline'+
                   '</button>'+
@@ -5647,64 +5716,50 @@ async function loadInvitedByOthersPage(){
     if(invitedPending.length){
       if(showHeadings) container.appendChild(makeAmberHeading("Matches You've Joined",openInvites.length>0));
       invitedPending.forEach(m=>{
-        const inPlayers=allInResps.filter(r=>r.match_id===m.id);
+        const allMatchResps=allInResps.filter(r=>r.match_id===m.id);
+        const inP=allMatchResps.filter(r=>r.response==='in');
+        const pend=allMatchResps.filter(r=>r.response==='pending');
+        const wait=allMatchResps.filter(r=>r.response==='waitlist');
+        const out=allMatchResps.filter(r=>r.response==='out');
         const maxNeeded=m.max_players||(m.match_type==='doubles'?4:2);
-        const confirmedCount=inPlayers.length;
-        const spotsLeft=Math.max(0,maxNeeded-confirmedCount);
+        const remaining=Math.max(0,maxNeeded-inP.length);
         const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-CA',{weekday:'short',month:'long',day:'numeric'}):'TBD';
-        const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' - '+fmt12(m.time_end):''):'TBD';
-        const _today=new Date();_today.setHours(0,0,0,0);
-        const daysUntil=m.match_date?Math.round((new Date(m.match_date+'T00:00')-_today)/(1000*60*60*24)):null;
-        const urgency=daysUntil===0?'TODAY':daysUntil===1?'TOMORROW':daysUntil!=null?'In '+daysUntil+' days':'';
-        const courtDisplay=m.court_name&&m.court_name!=='TBD'?m.court_name:(m.court_address||'Location TBD');
-        const iboOrgEmailLower=(m.organizer_email||'').toLowerCase();
-        const organizerChip='<div style="display:inline-flex;flex-direction:column;align-items:center;margin:2px;">'+
-          '<span class="avatar-organizer" style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;">'+
-            (m.organizer_name||'Organizer').split(' ')[0]+' &#9733;'+
-          '</span>'+
-          '<span class="avatar-organizer-label">Match Organizer</span>'+
-        '</div>';
-        const playerChips=inPlayers
-          .filter(p=>(p.player_email||'').toLowerCase()!==iboOrgEmailLower)
-          .map(p=>{
-            const firstName=(p.player_name||p.player_email||'').split(' ')[0];
-            return '<span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:#f0fdf4;border:2px solid #1a7a3a;font-size:11px;color:#1a7a3a;font-weight:600;margin:2px;">'+firstName+'</span>';
-          }).join('');
+        const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):''):'TBD';
+        const courtDisplay=m.court_name&&m.court_name!=='TBD'?'📍 '+m.court_name:(m.court_address?'📍 '+m.court_address:'📍 Court TBD');
+        const iboId='ibo-'+m.id;
         const card=document.createElement('div');
-        card.style.cssText='background:#ffffff;border:3px solid #f59e0b;border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);';
+        card.style.cssText='background:#ffffff;border:3px solid #dc2626;border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);';
         if(getCountdown(m.match_date,m.time_start)?.urgent) card.classList.add('pb-card-urgent');
         let expanded=false;
         function renderInvCard(){
           card.innerHTML=
-            '<div onclick="this.parentElement._toggle()" style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;cursor:pointer;">'+
+            '<div onclick="this.parentElement._toggle()" style="display:flex;align-items:flex-start;gap:10px;padding:14px 16px;cursor:pointer;">'+
               '<span style="font-size:22px;flex-shrink:0;">'+(m.match_type==='doubles'?'<img src="icon-192.png" class="pb-icon" alt="pickleball"/><img src="icon-192.png" class="pb-icon" alt="pickleball"/>':'<img src="icon-192.png" class="pb-icon" alt="pickleball"/>')+'</span>'+
               '<div style="flex:1;min-width:0;">'+
-                '<div style="color:#1a7a3a;font-size:14px;font-weight:700;">'+dateStr+'</div>'+
-                '<div style="color:#555;font-size:12px;">'+timeStr+' &middot; '+courtDisplay+'</div>'+
+                '<div style="color:#111;font-size:14px;font-weight:700;">'+dateStr+'</div>'+
+                '<div style="color:#374151;font-size:12px;font-weight:600;margin-top:1px;">'+timeStr+'</div>'+
+                '<div style="color:#6b7280;font-size:12px;margin-top:2px;">'+courtDisplay+'</div>'+
+                '<div style="font-size:11px;color:#555;margin-top:2px;">By <strong style="color:#111;">'+(m.organizer_name||'Unknown')+'</strong> &middot; '+(m.match_type==='singles'?'Singles':'Doubles')+'</div>'+
                 renderCountdown(m.match_date,m.time_start)+
-                '<div style="color:#555;font-size:11px;margin-top:2px;">'+
-                  'By <strong style="color:#111;">'+(m.organizer_name||'Unknown')+'</strong>'+
-                  ' &middot; '+(m.match_type==='singles'?'Singles':'Doubles')+
-                '</div>'+
               '</div>'+
               '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">'+
-                (urgency?'<div style="padding:2px 8px;border-radius:999px;background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.3);color:var(--green);font-size:9px;font-weight:700;">'+urgency+'</div>':'')+
                 '<div style="font-size:11px;font-weight:700;color:#f59e0b;">Pending roster</div>'+
                 '<div style="font-size:10px;color:#6b7280;">'+(expanded?'&#9650; less':'&#9660; details')+'</div>'+
               '</div>'+
             '</div>'+
             (expanded?
               '<div style="padding:0 16px 14px;border-top:1px solid #e5e7eb;">'+
-                '<div style="margin-top:10px;">'+
-                  '<div style="font-size:10px;font-weight:700;color:#1a5c32;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">'+
-                    'Players ('+confirmedCount+'/'+maxNeeded+') &middot; '+(spotsLeft>0?spotsLeft+' spot'+(spotsLeft!==1?'s':'')+' left':'Full!')+
-                  '</div>'+
-                  '<div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:12px;">'+organizerChip+playerChips+'</div>'+
+                '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:5px;margin-top:10px;">'+
+                  makeResponsePill('In',inP,'#1a7a3a',iboId,'in')+
+                  makeResponsePill('Pending',pend,'#b45309',iboId,'pending')+
+                  makeResponsePill('Waitlist',wait,'#f59e0b',iboId,'waitlist')+
+                  makeResponsePill('Out',out,'#f87171',iboId,'out')+
+                  makeRemainingPill(remaining,maxNeeded)+
                 '</div>'+
-                '<div style="padding:8px 12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;">'+
-                  '<div style="font-size:12px;color:#f59e0b;font-weight:700;">&#8987; Pending — roster not full</div>'+
-                  '<div style="font-size:11px;color:#92400e;margin-top:2px;">'+confirmedCount+' of '+maxNeeded+' spots filled</div>'+
-                '</div>'+
+                buildPillNamesPanel(iboId,'in',inP)+
+                buildPillNamesPanel(iboId,'pending',pend)+
+                buildPillNamesPanel(iboId,'waitlist',wait)+
+                buildPillNamesPanel(iboId,'out',out)+
               '</div>'
             :'');
         }
@@ -5718,52 +5773,50 @@ async function loadInvitedByOthersPage(){
     if(orgPending.length){
       if(showHeadings) container.appendChild(makeAmberHeading("Matches You're Organizing",invitedPending.length>0||openInvites.length>0));
       orgPending.forEach(m=>{
-        const inPlayers=allInResps.filter(r=>r.match_id===m.id);
+        const allMatchResps=allInResps.filter(r=>r.match_id===m.id);
+        const inP=allMatchResps.filter(r=>r.response==='in');
+        const pend=allMatchResps.filter(r=>r.response==='pending');
+        const wait=allMatchResps.filter(r=>r.response==='waitlist');
+        const out=allMatchResps.filter(r=>r.response==='out');
         const maxNeeded=m.max_players||(m.match_type==='doubles'?4:2);
-        const confirmedCount=inPlayers.length;
-        const spotsLeft=Math.max(0,maxNeeded-confirmedCount);
+        const remaining=Math.max(0,maxNeeded-inP.length);
         const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-CA',{weekday:'short',month:'long',day:'numeric'}):'TBD';
-        const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' - '+fmt12(m.time_end):''):'TBD';
-        const _today=new Date();_today.setHours(0,0,0,0);
-        const daysUntil=m.match_date?Math.round((new Date(m.match_date+'T00:00')-_today)/(1000*60*60*24)):null;
-        const urgency=daysUntil===0?'TODAY':daysUntil===1?'TOMORROW':daysUntil!=null?'In '+daysUntil+' days':'';
-        const courtDisplay=m.court_name&&m.court_name!=='TBD'?m.court_name:(m.court_address||'Location TBD');
-        const playerChips=inPlayers.map(p=>{
-          const firstName=(p.player_name||p.player_email||'').split(' ')[0];
-          return '<span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:#f0fdf4;border:2px solid #1a7a3a;font-size:11px;color:#1a7a3a;font-weight:600;margin:2px;">'+firstName+'</span>';
-        }).join('');
+        const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):''):'TBD';
+        const courtDisplay=m.court_name&&m.court_name!=='TBD'?'📍 '+m.court_name:(m.court_address?'📍 '+m.court_address:'📍 Court TBD');
+        const iboId='ibo-'+m.id;
         const card=document.createElement('div');
         card.style.cssText='background:#ffffff;border:3px solid #f59e0b;border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);';
         if(getCountdown(m.match_date,m.time_start)?.urgent) card.classList.add('pb-card-urgent');
         let expanded=false;
         function renderOrgCard(){
           card.innerHTML=
-            '<div onclick="this.parentElement._toggle()" style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;cursor:pointer;">'+
+            '<div onclick="this.parentElement._toggle()" style="display:flex;align-items:flex-start;gap:10px;padding:14px 16px;cursor:pointer;">'+
               '<span style="font-size:22px;flex-shrink:0;">'+(m.match_type==='doubles'?'<img src="icon-192.png" class="pb-icon" alt="pickleball"/><img src="icon-192.png" class="pb-icon" alt="pickleball"/>':'<img src="icon-192.png" class="pb-icon" alt="pickleball"/>')+'</span>'+
               '<div style="flex:1;min-width:0;">'+
-                '<div style="color:#1a7a3a;font-size:14px;font-weight:700;">'+dateStr+'</div>'+
-                '<div style="color:#555;font-size:12px;">'+timeStr+' &middot; '+courtDisplay+'</div>'+
+                '<div style="color:#111;font-size:14px;font-weight:700;">'+dateStr+'</div>'+
+                '<div style="color:#374151;font-size:12px;font-weight:600;margin-top:1px;">'+timeStr+'</div>'+
+                '<div style="color:#6b7280;font-size:12px;margin-top:2px;">'+courtDisplay+'</div>'+
+                '<div style="font-size:11px;color:#1a7a3a;font-weight:700;margin-top:2px;">Organized by '+((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim()+'</div>'+
                 renderCountdown(m.match_date,m.time_start)+
-                '<div style="color:#555;font-size:11px;margin-top:2px;">'+(m.match_type==='singles'?'Singles':'Doubles')+'</div>'+
               '</div>'+
               '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">'+
-                (urgency?'<div style="padding:2px 8px;border-radius:999px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.35);color:#f59e0b;font-size:9px;font-weight:700;">'+urgency+'</div>':'')+
                 '<div style="font-size:11px;font-weight:700;color:#f59e0b;">Organizing</div>'+
                 '<div style="font-size:10px;color:#6b7280;">'+(expanded?'&#9650; less':'&#9660; details')+'</div>'+
               '</div>'+
             '</div>'+
             (expanded?
               '<div style="padding:0 16px 14px;border-top:1px solid #e5e7eb;">'+
-                '<div style="margin-top:10px;">'+
-                  '<div style="font-size:10px;font-weight:700;color:#1a5c32;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">'+
-                    'Players ('+confirmedCount+'/'+maxNeeded+') &middot; '+(spotsLeft>0?spotsLeft+' spot'+(spotsLeft!==1?'s':'')+' left':'Full!')+
-                  '</div>'+
-                  (playerChips?'<div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:12px;">'+playerChips+'</div>':'<div style="font-size:12px;color:var(--dim);margin-bottom:12px;">No players confirmed yet</div>')+
+                '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:5px;margin-top:10px;">'+
+                  makeResponsePill('In',inP,'#1a7a3a',iboId,'in')+
+                  makeResponsePill('Pending',pend,'#b45309',iboId,'pending')+
+                  makeResponsePill('Waitlist',wait,'#f59e0b',iboId,'waitlist')+
+                  makeResponsePill('Out',out,'#f87171',iboId,'out')+
+                  makeRemainingPill(remaining,maxNeeded)+
                 '</div>'+
-                '<div style="padding:8px 12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;">'+
-                  '<div style="font-size:12px;color:#f59e0b;font-weight:700;">&#8987; Pending — roster not full</div>'+
-                  '<div style="font-size:11px;color:#92400e;margin-top:2px;">'+confirmedCount+' of '+maxNeeded+' spots filled</div>'+
-                '</div>'+
+                buildPillNamesPanel(iboId,'in',inP)+
+                buildPillNamesPanel(iboId,'pending',pend)+
+                buildPillNamesPanel(iboId,'waitlist',wait)+
+                buildPillNamesPanel(iboId,'out',out)+
               '</div>'
             :'');
         }
