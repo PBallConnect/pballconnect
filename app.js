@@ -2950,8 +2950,10 @@ window._smSelectGroupFromGrid = function(gId){
   }
   if(sel6) sel6.value = gId;
 
-  // Switch Step 6 to group mode (read-only roster)
-  smSelectInvite('group');
+  // Switch Step 6 to group mode (read-only roster).
+  // Pass skipProgress=true — step 6 is auto-complete for the Set Group path,
+  // but we don't mark it yet because steps 4 (Date/Time) and 5 (Court) are still pending.
+  smSelectInvite('group', true);
 
   // Apply format + courts from cached data
   MS.format = data.fmt;
@@ -2964,7 +2966,10 @@ window._smSelectGroupFromGrid = function(gId){
   selectNumCourts(data.courts);
   smLockSteps2And3(data.fmt, data.courts);
 
-  smUpdateNeededGrid(); smUpdateSummary(); smUpdateSendBtn(); smUpdateProgress(1);
+  smUpdateNeededGrid(); smUpdateSummary(); smUpdateSendBtn();
+  // Steps 1-3 are complete (Play Structure + auto-format + auto-courts).
+  // Advance to step 4 (Date & Time) as the next action for the organizer.
+  smUpdateProgress(4);
 
   // CHANGE 3 / CHANGE 4: Show roster confirmation modal
   smShowGroupRosterModal(gId);
@@ -6229,9 +6234,9 @@ function _smRenderCourtRow(court, container, showSaveBtn){
   container.appendChild(row);
 }
 
-function smSelectInvite(mode){
+function smSelectInvite(mode, skipProgress){
   MS.inviteMode = mode;
-  smUpdateProgress(6);
+  if(!skipProgress) smUpdateProgress(6);
   ['all','specific','group'].forEach(m=>{
     const cap = m.charAt(0).toUpperCase()+m.slice(1);
     const el = document.getElementById('smInvite'+cap);
@@ -6332,6 +6337,11 @@ async function smShowGroupRosterModal(groupId){
   const grp=(_groups||[]).find(g=>String(g.id)===String(groupId));
   const grpName=grp?grp.name:'Group';
   const primary=roster.primary; const subs=roster.subs;
+  // Include organizer (SESSION_PLAYER) in the primary count and display
+  const orgName = SESSION_PLAYER
+    ? (((SESSION_PLAYER.first_name||'')+' '+(SESSION_PLAYER.last_name||'')).trim() || 'You')
+    : 'You';
+  const totalPrimary = primary.length + 1; // +1 for organizer
   const existing=document.getElementById('smGroupRosterModal');
   if(existing) existing.remove();
   const overlay=document.createElement('div');
@@ -6340,14 +6350,13 @@ async function smShowGroupRosterModal(groupId){
   const inner=document.createElement('div');
   inner.style.cssText='background:#fff;border-radius:16px;padding:24px;max-width:420px;width:100%;max-height:80vh;overflow-y:auto;';
   let html='<div style="font-size:17px;font-weight:800;color:#111;margin-bottom:16px;">'+grpName+' Roster</div>';
-  html+='<div style="font-size:12px;font-weight:700;color:#6b7280;letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px;">Primary Players ('+primary.length+')</div>';
-  if(primary.length){
-    html+='<ul style="list-style:none;padding:0;margin:0 0 16px;">';
-    primary.forEach(p=>{ html+='<li style="padding:6px 0;border-bottom:1px solid #f3f4f6;font-size:14px;color:#111;">'+p.name+'</li>'; });
-    html+='</ul>';
-  } else {
-    html+='<div style="font-size:13px;color:#9ca3af;margin-bottom:16px;">No primary players</div>';
-  }
+  html+='<div style="font-size:12px;font-weight:700;color:#6b7280;letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px;">Primary Players ('+totalPrimary+')</div>';
+  html+='<ul style="list-style:none;padding:0;margin:0 0 16px;">';
+  // Organizer always first
+  html+='<li style="padding:6px 0;border-bottom:1px solid #f3f4f6;font-size:14px;color:#111;">'+
+    orgName+' <span style="font-size:11px;font-weight:700;color:#dc2626;margin-left:4px;">organizer</span></li>';
+  primary.forEach(p=>{ html+='<li style="padding:6px 0;border-bottom:1px solid #f3f4f6;font-size:14px;color:#111;">'+p.name+'</li>'; });
+  html+='</ul>';
   if(subs.length){
     html+='<div style="font-size:12px;font-weight:700;color:#6b7280;letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px;">Subs ('+subs.length+')</div>';
     html+='<ul style="list-style:none;padding:0;margin:0 0 4px;">';
