@@ -680,3 +680,13 @@ Design and planning happens in Claude.ai (claude.ai/code or chat). Implementatio
 25. **Turnstile verification is skippable during development.** `waitlist.js` skips Turnstile verification if `TURNSTILE_SECRET_KEY` is missing or starts with `TURNSTILE_`. This lets the form work end-to-end before Turnstile is configured. Once the real secret key is set, verification is enforced automatically.
 
 26. **`window.showSkillGuide` / `window.hideSkillGuide` must stay on `window`.** The "❓ What's my level?" links use inline `onclick` in both static HTML (index.html) and dynamically generated HTML (Quick Connect in app.js). Both require global scope — do not move these to module scope.
+
+27. **Open Group invite pool has no hard cap.** Never enforce `max_players` as a selection limit for Open Groups (`group_type === 'random'`). The pool size is intentionally uncapped — it's an invite pool, not a fixed roster. Show "X players in invite pool" as informational text only. The save validation enforces `pool > max_players` (must have at least one sub), not an upper bound.
+
+28. **Same-day match banner — conflicts only.** `smCheckConflict()` may only show the red conflict banner when a true time overlap is detected (`start1 < end2 && start2 < end1`). Never show a green "No time conflict — you're good to go!" or any positive confirmation banner. Same-day non-overlapping matches → amber advisory only, Send not blocked. No overlap at all → no banner, no message.
+
+29. **Post-Send Invites navigation.** After `submitMatch()` succeeds (match created + invites sent), always navigate to Dashboard (`showPage('dashboard')`) with a success toast and a brief amber tile pulse. Do not navigate to `myInvites`, `confirmedMatches`, or any other page.
+
+30. **`isMatchWizardDirty()` guard.** Any navigation away from `page-setupMatch` while the wizard has state (date set, court selected, invites configured, etc.) must show a leave-confirmation dialog before proceeding. The guard is bypassed only when `submitMatch()` completes successfully. Do not silently discard wizard state on nav.
+
+31. **Level filter math for Open Group uses `skill_self` as center.** `SESSION_PLAYER.skill_self` is the organizer's skill level. Bucket thresholds (matching the IC level grid): Far Below diff ≤ −0.375 · Below −0.375 < diff ≤ −0.125 · My Level −0.125 < diff ≤ 0.125 · Above 0.125 < diff ≤ 0.375 · Far Above diff > 0.375. Use `(ic_skill - organizer_skill)` for the diff. Players with no skill level set are excluded from all level-filtered pools.
