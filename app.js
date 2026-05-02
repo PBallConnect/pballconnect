@@ -2722,7 +2722,7 @@ function selectMatchGender(pref, el){
     if(MS.group && MS.group.startsWith('named_')){
       MS.group=null; MS.selectedGroups=new Set(['all']); MS.inviteMode='all';
       MS.namedGroupMemberEmails=new Set(); MS.namedGroupSubEmails=new Set();
-      MS.namedGroupRoster={primary:[],subs:[]};
+      MS.namedGroupRoster={primary:[],subs:[]}; MS.selectedGroupId=null; window._smGroupGridSelectedId=null;
       const display=document.getElementById('smGroupRosterDisplay');
       if(display){ display.style.display='none'; display.innerHTML=''; }
       ['smInviteAll','smInviteSpecific','smInviteGroup'].forEach(id=>{
@@ -2778,64 +2778,222 @@ async function smRenderStep3GroupPicker(wrap){
     return;
   }
 
-  const currentVal = MS.group && MS.group.startsWith('named_') ? MS.group.replace('named_','') : '';
-  wrap.innerHTML = '<select id="smStep3GroupSel" onchange="window.smOnStep3GroupSelect(this.value)" ' +
-    'style="width:100%;padding:10px 14px;border-radius:10px;border:2px solid #1a7a3a;background:#fff;color:#111;font-size:14px;font-family:\'DM Sans\',sans-serif;outline:none;">' +
-    '<option value="">Select a group…</option>' +
-    _groups.map(g=>'<option value="'+g.id+'"'+(g.id==currentVal?' selected':'')+'>'+g.name+'</option>').join('') +
-    '</select>';
+  // Show loading state while fetching all rosters
+  wrap.innerHTML = '<div style="padding:10px;color:#6b7280;font-size:13px;">Loading rosters…</div>';
+
+  // CHANGE 1: Batch-fetch all group member rows in one request
+  const myEmail = (SESSION_PLAYER?.email || getMyEmail() || '').toLowerCase();
+  const allGroupIds = _groups.map(g => g.id);
+  let allMemberRows = [];
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/player_group_members?group_id=in.(${allGroupIds.map(encodeURIComponent).join(',')})&select=group_id,player_email,role`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+    );
+    if(res.ok) allMemberRows = await res.json();
+  } catch(e) {}
+
+  // Collect unique member emails (excluding organizer) for a single profile fetch
+  const uniqueEmails = [...new Set(
+    allMemberRows.map(r=>(r.player_email||'').toLowerCase()).filter(e=>e && e!==myEmail)
+  )];
+  let profileMap = {};
+  if(uniqueEmails.length){
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/public_profiles?email=in.(${uniqueEmails.map(encodeURIComponent).join(',')})&select=email,first_name,last_name`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+      );
+      const profiles = res.ok ? await res.json() : [];
+      profiles.forEach(p => {
+        profileMap[(p.email||'').toLowerCase()] = ((p.first_name||'')+' '+(p.last_name||'')).trim() || p.email;
+      });
+    } catch(e) {}
+  }
+
+  // Build MS.allGroupsRoster keyed by group_id string
+  MS.allGroupsRoster = {};
+  _groups.forEach(g => {
+    const gId = String(g.id);
+    const rows = allMemberRows.filter(r => String(r.group_id) === gId);
+    const primaries = [], subs = [];
+    rows.forEach(r => {
+      const e = (r.player_email||'').toLowerCase();
+      if(!e || e === myEmail) return;
+      const name = profileMap[e] || e;
+      if((r.role||'').toLowerCase() === 'sub') subs.push({email:e,name});
+      else primaries.push({email:e,name});
+    });
+    const fmt = g.match_type === 'singles' ? 'singles' : 'doubles';
+    const primaryCount = primaries.length + 1; // +1 for organizer
+    const courts = Math.min(4, Math.max(1, Math.ceil(primaryCount / (fmt==='singles' ? 2 : 4))));
+    MS.allGroupsRoster[gId] = {group:g, primaries, subs, fmt, courts, primaryCount};
+  });
+
+  // CHANGE 5: Auto-select if organizer has exactly one group
+  if(_groups.length === 1){
+    wrap.innerHTML = '';
+    window._smSelectGroupFromGrid(String(_groups[0].id));
+    return;
+  }
+
+  // CHANGE 2: Render selection grid
+  _smRenderGroupGrid(wrap);
 }
 
-window.smOnStep3GroupSelect = async function(value){
-  if(!value){
-    MS.selectedGroups=new Set(); MS.group=null;
-    MS.namedGroupMemberEmails=new Set(); MS.namedGroupSubEmails=new Set();
-    MS.namedGroupRoster={primary:[],subs:[]};
+// Render the group selection grid table into wrap
+function _smRenderGroupGrid(wrap){
+  if(!MS.allGroupsRoster) return;
+  const selectedId = MS.selectedGroupId ? String(MS.selectedGroupId) : '';
+  const myName = SESSION_PLAYER ? (((SESSION_PLAYER.first_name||'')+' '+(SESSION_PLAYER.last_name||'')).trim() || 'You') : 'You';
+
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb;">';
+  html += '<thead><tr style="background:#f9fafb;">';
+  html += '<th style="text-align:left;padding:7px 10px;font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e5e7eb;">Group</th>';
+  html += '<th style="text-align:center;padding:7px 8px;font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e5e7eb;">Format</th>';
+  html += '<th style="text-align:center;padding:7px 8px;font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e5e7eb;">Courts</th>';
+  html += '<th style="text-align:center;padding:7px 8px;font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e5e7eb;">Players</th>';
+  html += '<th style="text-align:center;padding:7px 8px;font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e5e7eb;">Subs</th>';
+  html += '</tr></thead><tbody>';
+
+  Object.entries(MS.allGroupsRoster).forEach(([gId, data], idx) => {
+    const isSel = gId === selectedId;
+    const isLast = idx === Object.keys(MS.allGroupsRoster).length - 1;
+    const rowBorder = isLast ? 'none' : '1px solid #f3f4f6';
+    const leftAccent = isSel ? '3px solid #1a7a3a' : '3px solid transparent';
+    const rowBg = isSel ? '#f0fdf4' : '#fff';
+    const fmtLabel = data.fmt === 'singles' ? 'Singles' : 'Doubles';
+
+    // Build tooltip name lists: organizer is ★ at top
+    const primaryTooltipNames = JSON.stringify(['★ '+myName+' (you)', ...data.primaries.map(p=>p.name)]);
+    const subTooltipNames = JSON.stringify(data.subs.map(p=>p.name));
+
+    html += `<tr id="smGroupRow_${gId}" onclick="window._smSelectGroupFromGrid('${gId}')" `+
+      `style="cursor:pointer;background:${rowBg};transition:background .12s;" `+
+      `onmouseover="if('${gId}'!==String(window._smGroupGridSelectedId||''))this.style.background='#f9fafb';" `+
+      `onmouseout="if('${gId}'!==String(window._smGroupGridSelectedId||''))this.style.background='#fff';">`;
+
+    html += `<td style="padding:10px 10px;border-bottom:${rowBorder};border-left:${leftAccent};font-weight:700;color:${isSel?'#1a7a3a':'#111'};white-space:nowrap;">${data.group.name}</td>`;
+    html += `<td style="padding:10px 8px;border-bottom:${rowBorder};text-align:center;color:#374151;">${fmtLabel}</td>`;
+    html += `<td style="padding:10px 8px;border-bottom:${rowBorder};text-align:center;color:#374151;">${data.courts}</td>`;
+
+    // Primaries cell — hoverable count with tooltip
+    html += `<td style="padding:10px 8px;border-bottom:${rowBorder};text-align:center;position:relative;" `+
+      `onmouseenter="window._smShowGroupTooltip(this,${primaryTooltipNames})" `+
+      `onmouseleave="window._smHideGroupTooltip()" `+
+      `ontouchstart="event.stopPropagation();window._smToggleGroupTooltip(this,${primaryTooltipNames})">` +
+      `<span style="color:#1a7a3a;font-weight:700;text-decoration:underline dotted;cursor:help;">${data.primaryCount}</span></td>`;
+
+    // Subs cell
+    if(data.subs.length){
+      html += `<td style="padding:10px 8px;border-bottom:${rowBorder};text-align:center;position:relative;" `+
+        `onmouseenter="window._smShowGroupTooltip(this,${subTooltipNames})" `+
+        `onmouseleave="window._smHideGroupTooltip()" `+
+        `ontouchstart="event.stopPropagation();window._smToggleGroupTooltip(this,${subTooltipNames})">` +
+        `<span style="color:#6b7280;font-weight:600;text-decoration:underline dotted;cursor:help;">${data.subs.length}</span></td>`;
+    } else {
+      html += `<td style="padding:10px 8px;border-bottom:${rowBorder};text-align:center;color:#d1d5db;">—</td>`;
+    }
+
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+  window._smGroupGridSelectedId = selectedId || null;
+}
+
+// Select a group from the grid (no extra DB fetch — uses MS.allGroupsRoster cache)
+window._smSelectGroupFromGrid = function(gId){
+  if(!MS.allGroupsRoster || !MS.allGroupsRoster[gId]) return;
+
+  // Toggle deselect if already selected
+  if(MS.selectedGroupId === gId){
+    MS.selectedGroupId = null;
+    window._smGroupGridSelectedId = null;
+    MS.selectedGroups = new Set(['all']); MS.group = null; MS.inviteMode = 'all';
+    MS.namedGroupMemberEmails = new Set(); MS.namedGroupSubEmails = new Set();
+    MS.namedGroupRoster = {primary:[],subs:[]};
     smUnlockSteps2And3();
-    // Hide roster display and restore invite cards
-    const display=document.getElementById('smGroupRosterDisplay');
+    const display = document.getElementById('smGroupRosterDisplay');
     if(display){ display.style.display='none'; display.innerHTML=''; }
     ['smInviteAll','smInviteSpecific','smInviteGroup'].forEach(id=>{
       const d=document.getElementById(id); if(d) d.style.display='';
     });
-  } else {
-    MS.selectedGroups = new Set(['named_'+value]);
-    MS.group = 'named_'+value;
-    // CHANGE 2+4: Fetch full roster (primary + sub + names)
-    await smFetchGroupRoster(value);
-    // Ensure Step 6 dropdown is populated from cache then mirror selection
-    const sel6 = document.getElementById('smGroupSelect');
-    if(sel6 && _groups && _groups.length && sel6.options.length <= 1){
-      sel6.innerHTML = '<option value="">Select a group…</option>'+
-        _groups.map(g=>'<option value="'+g.id+'">'+g.name+(g.max_players?' ('+g.max_players+' players)':'')+' </option>').join('');
-    }
-    if(sel6) sel6.value = value;
-    // Switch Step 6 to group mode (shows read-only roster)
-    smSelectInvite('group');
-    // Auto-set format and courts from group's match_type / max_players
-    const grp = _groups && _groups.find(g=>String(g.id)===String(value));
-    if(grp){
-      const fmt = grp.match_type === 'singles' ? 'singles' : 'doubles';
-      const playersPerCourt = fmt === 'singles' ? 2 : 4;
-      const suggestedCourts = Math.max(1, Math.ceil(((grp.max_players||4) - 1) / playersPerCourt));
-      const cappedCourts = Math.min(4, suggestedCourts);
-      MS.format = fmt;
-      const fmtDbl = document.getElementById('smFmtDoubles');
-      const fmtSgl = document.getElementById('smFmtSingles');
-      if(fmtDbl){ fmtDbl.style.border='1px solid #e5e7eb'; fmtDbl.style.background='#fff'; }
-      if(fmtSgl){ fmtSgl.style.border='1px solid #e5e7eb'; fmtSgl.style.background='#fff'; }
-      const activeBtn = fmt === 'singles' ? fmtSgl : fmtDbl;
-      if(activeBtn){ activeBtn.style.border='2px solid #1a7a3a'; activeBtn.style.background='#f0fdf4'; }
-      selectNumCourts(cappedCourts);
-      // CHANGE 4: Lock steps 2 & 3
-      smLockSteps2And3(fmt, cappedCourts);
-    }
-    // CHANGE 2: Show roster modal
-    smShowGroupRosterModal(value);
+    const ia=document.getElementById('smInviteAll');
+    if(ia){ ia.style.border='2px solid #1a7a3a'; ia.style.background='#f0fdf4'; }
+    const wrap=document.getElementById('smGenderGroupWrap'); if(wrap) _smRenderGroupGrid(wrap);
+    smUpdateNeededGrid(); smUpdateSummary(); smUpdateSendBtn(); smUpdateProgress(1);
+    return;
   }
-  smUpdateNeededGrid();
-  smUpdateSummary();
-  smUpdateSendBtn();
+
+  MS.selectedGroupId = gId;
+  window._smGroupGridSelectedId = gId;
+  const data = MS.allGroupsRoster[gId];
+
+  // Populate MS from cache — no additional fetch needed
+  MS.selectedGroups = new Set(['named_'+gId]);
+  MS.group = 'named_'+gId;
+  MS.namedGroupMemberEmails = new Set(data.primaries.map(p=>p.email));
+  MS.namedGroupSubEmails = new Set(data.subs.map(p=>p.email));
+  MS.namedGroupRoster = {primary: data.primaries.slice(), subs: data.subs.slice()};
+
+  // Re-render grid to reflect selection highlight
+  const wrap = document.getElementById('smGenderGroupWrap');
+  if(wrap) _smRenderGroupGrid(wrap);
+
+  // Mirror to Step 6 group dropdown
+  const sel6 = document.getElementById('smGroupSelect');
+  if(sel6 && _groups && _groups.length && sel6.options.length <= 1){
+    sel6.innerHTML = '<option value="">Select a group…</option>'+
+      _groups.map(g=>'<option value="'+g.id+'">'+g.name+(g.max_players?' ('+g.max_players+' players)':'')+' </option>').join('');
+  }
+  if(sel6) sel6.value = gId;
+
+  // Switch Step 6 to group mode (read-only roster)
+  smSelectInvite('group');
+
+  // Apply format + courts from cached data
+  MS.format = data.fmt;
+  const fmtDbl = document.getElementById('smFmtDoubles');
+  const fmtSgl = document.getElementById('smFmtSingles');
+  if(fmtDbl){ fmtDbl.style.border='1px solid #e5e7eb'; fmtDbl.style.background='#fff'; }
+  if(fmtSgl){ fmtSgl.style.border='1px solid #e5e7eb'; fmtSgl.style.background='#fff'; }
+  const activeBtn = data.fmt === 'singles' ? fmtSgl : fmtDbl;
+  if(activeBtn){ activeBtn.style.border='2px solid #1a7a3a'; activeBtn.style.background='#f0fdf4'; }
+  selectNumCourts(data.courts);
+  smLockSteps2And3(data.fmt, data.courts);
+
+  smUpdateNeededGrid(); smUpdateSummary(); smUpdateSendBtn(); smUpdateProgress(1);
+
+  // CHANGE 3 / CHANGE 4: Show roster confirmation modal
+  smShowGroupRosterModal(gId);
+};
+
+// CHANGE 3: Tooltip helpers for group grid
+window._smShowGroupTooltip = function(cell, names){
+  window._smHideGroupTooltip();
+  const tt = document.createElement('div');
+  tt.id = '_smGroupTooltip';
+  tt.style.cssText = 'position:fixed;z-index:9999;background:#1f2937;color:#fff;border-radius:8px;padding:8px 12px;font-size:12px;line-height:1.7;max-width:220px;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+  tt.innerHTML = names.map(n=>'<div>'+n+'</div>').join('');
+  document.body.appendChild(tt);
+  const rect = cell.getBoundingClientRect();
+  let top = rect.bottom + 6;
+  let left = rect.left;
+  if(left + 220 > window.innerWidth) left = Math.max(4, window.innerWidth - 226);
+  tt.style.top = top + 'px';
+  tt.style.left = left + 'px';
+};
+
+window._smHideGroupTooltip = function(){
+  const tt = document.getElementById('_smGroupTooltip'); if(tt) tt.remove();
+};
+
+window._smToggleGroupTooltip = function(cell, names){
+  const existing = document.getElementById('_smGroupTooltip');
+  if(existing){ existing.remove(); return; }
+  window._smShowGroupTooltip(cell, names);
 };
 
 // ── Multi-court selector ──────────────────────────────
@@ -6295,7 +6453,8 @@ function initSetupMatch(){
   MS.specificPlayers=new Set(); MS.extraGroups=new Set(); MS.selectedGroups=new Set(['all']);
   MS.deselectedPlayers=new Set(); MS.primaryPlayers=new Set(); MS.subPlayers=new Set();
   MS.namedGroupMemberEmails=new Set(); MS.namedGroupSubEmails=new Set();
-  MS.namedGroupRoster={primary:[],subs:[]};
+  MS.namedGroupRoster={primary:[],subs:[]}; MS.allGroupsRoster=null; MS.selectedGroupId=null;
+  window._smGroupGridSelectedId=null;
   MS.isFeeler=false; MS.duration=2; MS.selectedCourts=new Map();
   MS.hasOverlapConflict=false; MS.courtType='public'; MS.inviteMode='all';
   MS.timeStart=null; MS.timeEnd=null; MS.date=null;
