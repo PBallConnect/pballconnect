@@ -827,8 +827,18 @@ function populateSummary(){
 const SUPABASE_URL = 'https://dltiirdjfbjtydazrmvr.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsdGlpcmRqZmJqdHlkYXpybXZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MDQxNzgsImV4cCI6MjA4OTA4MDE3OH0.oBDtS3RZlGxMkqon-r1wdfYR6jPTSPGWIa8cZh7fLWA';
 
-// Supabase auth client — handles magic link sign-in and session persistence
-const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Supabase auth client — handles magic link sign-in and session persistence.
+// Options are explicit so behavior is deterministic regardless of CDN version.
+// detectSessionInUrl: required for magic link token exchange on mobile Safari
+// (iOS Mail opens magic links in a new tab — without this, the token in the URL
+// is never consumed and the user stays on the welcome screen).
+const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    detectSessionInUrl: true,
+    persistSession: true,
+    autoRefreshToken: true
+  }
+});
 
 // Current user JWT — set to anon key until magic link auth completes.
 // All REST fetch calls use this for the Authorization header so that
@@ -6938,7 +6948,13 @@ async function initApp(){
   // ?newuser=1 (magic link arrival): replace CTAs with invite loading state.
   // No-session users: visibility is restored below before showPage('welcome').
   const welcomeInner = document.querySelector('#page-welcome > div');
-  const isNewUser = new URLSearchParams(window.location.search).get('newuser') === '1';
+  const _urlParams2 = new URLSearchParams(window.location.search);
+  const isNewUser = _urlParams2.get('newuser') === '1';
+  // Also detect Supabase magic link tokens in the URL so we suppress the welcome
+  // screen while auth resolves. iOS Safari opens magic links in a new tab —
+  // token_hash is the PKCE query param; #access_token is the implicit-flow hash.
+  const hasMagicToken = !!_urlParams2.get('token_hash') ||
+                        window.location.hash.includes('access_token');
   if(welcomeInner){
     if(isNewUser){
       welcomeInner.innerHTML =
@@ -6948,7 +6964,8 @@ async function initApp(){
           '<div style="font-size:14px;color:#6b7280;">Just a moment — your invite is loading.</div>'+
         '</div>';
     } else {
-      // Hide buttons during session check — restored below if no session found
+      // Hide buttons during session check (covers both existing sessions and
+      // magic link arrivals). Restored below only if no session is found.
       welcomeInner.style.visibility = 'hidden';
     }
   }
