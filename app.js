@@ -12107,7 +12107,7 @@ function _openGroupModal(group, members){
   function _gGetAutoPool(mode){
     const filtered = _gGetLevelFilteredIC();
     const og = (myPlayer?.gender||'').toLowerCase();
-    if(mode==='gender')  return filtered.filter(p=>(p.gender||'').toLowerCase()===og);
+    if(mode==='same')  return filtered.filter(p=>(p.gender||'').toLowerCase()===og);
     if(mode==='mixed'){
       const men   = filtered.filter(p=>(p.gender||'').toLowerCase()==='male');
       const women = filtered.filter(p=>['female','woman'].includes((p.gender||'').toLowerCase()));
@@ -12121,6 +12121,88 @@ function _openGroupModal(group, members){
     openSelected.clear();
     pool.forEach(p=>openSelected.add(p.email));
   }
+  // ── Summary grid for group modal (mirrors buildSmInviteSummaryGrid) ─
+  function buildGroupSummaryGrid(){
+    const isOpen    = window.gModalType === 'random';
+    const mode      = window.gModalInviteMode;
+    const minNeeded = window.gModalSize - 1; // organizer already counted
+    const myGender  = (myPlayer?.gender || '').toLowerCase();
+
+    const rowBg  = ok => ok ? 'background:#f0fdf4;' : 'background:#fffbeb;';
+    const valClr = ok => ok ? 'color:#16a34a;'       : 'color:#d97706;';
+    const thS = 'padding:5px 8px;font-weight:700;color:#6b7280;font-size:11px;border-bottom:1px solid #e5e7eb;';
+    const tdL = 'padding:6px 8px;font-weight:600;color:#111;font-size:12px;border-bottom:1px solid #f3f4f6;';
+    const tdN = 'padding:6px 8px;text-align:center;font-weight:700;color:#374151;font-size:12px;border-bottom:1px solid #f3f4f6;';
+    const tdV = ok => `padding:6px 8px;text-align:center;font-weight:700;font-size:12px;border-bottom:1px solid #f3f4f6;${valClr(ok)}`;
+    const hdr = isOpen ? 'In Pool' : 'Selected';
+    const tableWrap =
+      '<div style="margin-bottom:12px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">'+
+      '<table style="width:100%;border-collapse:collapse;">'+
+      '<thead><tr style="background:#f9fafb;">'+
+      `<th style="${thS}text-align:left;"></th>`+
+      `<th style="${thS}text-align:center;">Needed</th>`+
+      `<th style="${thS}text-align:center;">${hdr}</th>`+
+      '</tr></thead><tbody>';
+    const tableClose = '</tbody></table></div>';
+
+    let html = '', allGreen = false;
+
+    if(isOpen){
+      // Open Group — advisory only, never gates button
+      const selCount = openSelected.size;
+      if(mode === 'mixed'){
+        let invMen = 0, invWomen = 0;
+        openSelected.forEach(email => {
+          const p = icPlayers.find(p => p.email === email);
+          if(!p) return;
+          const g = (p.gender||'').toLowerCase();
+          if(g === 'male') invMen++; else if(['female','woman'].includes(g)) invWomen++;
+        });
+        const half = Math.floor(window.gModalSize / 2);
+        let menNeeded, womenNeeded;
+        if(myGender === 'male')        { menNeeded = half - 1; womenNeeded = half; }
+        else if(myGender === 'female') { womenNeeded = half - 1; menNeeded = half; }
+        else                           { menNeeded = Math.floor(minNeeded / 2); womenNeeded = Math.ceil(minNeeded / 2); }
+        const menOk   = invMen   >= menNeeded;
+        const womenOk = invWomen >= womenNeeded;
+        allGreen = true; // advisory only
+        html = tableWrap +
+          `<tr style="${rowBg(menOk)}"><td style="${tdL}">👨 Men</td><td style="${tdN}">${menNeeded}</td><td style="${tdV(menOk)}">${invMen}</td></tr>`+
+          `<tr style="${rowBg(womenOk)}"><td style="${tdL}">👩 Women</td><td style="${tdN}">${womenNeeded}</td><td style="${tdV(womenOk)}">${invWomen}</td></tr>`+
+          tableClose;
+      } else if(mode === 'same'){
+        let invSame = 0;
+        openSelected.forEach(email => {
+          const p = icPlayers.find(p => p.email === email);
+          if(!p) return;
+          if((p.gender||'').toLowerCase() === myGender) invSame++;
+        });
+        const ok = invSame >= minNeeded;
+        allGreen = true; // advisory only
+        const lbl = myGender === 'male' ? '👨 Men' : myGender === 'female' ? '👩 Women' : '👥 Players';
+        html = tableWrap +
+          `<tr style="${rowBg(ok)}"><td style="${tdL}">${lbl}</td><td style="${tdN}">${minNeeded}</td><td style="${tdV(ok)}">${invSame}</td></tr>`+
+          tableClose;
+      } else {
+        const ok = selCount >= minNeeded;
+        allGreen = true; // advisory only
+        html = tableWrap +
+          `<tr style="${rowBg(ok)}"><td style="${tdL}">👥 Players</td><td style="${tdN}">${minNeeded}</td><td style="${tdV(ok)}">${selCount}</td></tr>`+
+          tableClose;
+      }
+    } else {
+      // Set Group — gates Create Group button
+      const selCount = selected.size;
+      const ok = selCount >= minNeeded;
+      allGreen = ok;
+      html = tableWrap +
+        `<tr style="${rowBg(ok)}"><td style="${tdL}">👥 Players</td><td style="${tdN}">${minNeeded}</td><td style="${tdV(ok)}">${selCount}</td></tr>`+
+        tableClose;
+    }
+
+    return { html, allGreen };
+  }
+
   // ── 5-column level grid for player selection (both group types) ─
   function buildGroupInviteGrid(){
     const isOpen   = window.gModalType === 'random';
@@ -12129,11 +12211,11 @@ function _openGroupModal(group, members){
     const myGender = (myPlayer?.gender || '').toLowerCase();
     const mode     = window.gModalInviteMode;
 
-    // Filter pool: Gender mode shows only matching gender; all other modes show all IC
+    // Filter pool: Same Gender mode shows only matching gender; Set Group excludes subs
     let pool;
     if(!isOpen){
-      pool = icPlayers;
-    } else if(mode === 'gender'){
+      pool = icPlayers.filter(p => !subs.has(p.email)); // mutual exclusivity: subs not in primary
+    } else if(mode === 'same'){
       pool = icPlayers.filter(p => (p.gender||'').toLowerCase() === myGender);
     } else {
       pool = icPlayers;
@@ -12217,7 +12299,8 @@ function _openGroupModal(group, members){
     };
 
     // Build grid HTML
-    let html = '<div style="overflow-x:auto;margin-bottom:10px;">';
+    const sg = buildGroupSummaryGrid();
+    let html = sg.html + '<div style="overflow-x:auto;margin-bottom:10px;">';
     html += '<table style="width:100%;border-collapse:separate;border-spacing:3px 0;table-layout:fixed;">';
     html += '<thead><tr>';
     buckets.forEach((bkt, i) => {
@@ -12278,6 +12361,121 @@ function _openGroupModal(group, members){
     return html;
   }
 
+  // ── 5-column level grid for sub pool (Set Group only) ─
+  function buildGroupSubPoolGrid(){
+    const mySkill = parseFloat(myPlayer?.skill_self || myPlayer?.skill_level || 0);
+    // Pool: IC members not in primary (selected) — mutual exclusivity
+    const pool = icPlayers.filter(p => !selected.has(p.email));
+
+    const buckets = [
+      { key:'far_below', label:'Far Below', members:[] },
+      { key:'below',     label:'Below',     members:[] },
+      { key:'my_level',  label:'My Level',  members:[], center:true },
+      { key:'above',     label:'Above',     members:[] },
+      { key:'far_above', label:'Far Above', members:[] },
+    ];
+    const unrated = [];
+    pool.forEach(p => {
+      const s = parseFloat(p.skill_self || p.skill_level || 0);
+      if(!s || !mySkill){ unrated.push(p); return; }
+      const diff = s - mySkill;
+      if     (diff <= -0.375) buckets[0].members.push(p);
+      else if(diff <= -0.125) buckets[1].members.push(p);
+      else if(diff <=  0.125) buckets[2].members.push(p);
+      else if(diff <=  0.375) buckets[3].members.push(p);
+      else                    buckets[4].members.push(p);
+    });
+
+    window._gToggleSubBucket = function(emailsJson){
+      const emails = JSON.parse(emailsJson);
+      const allSel = emails.every(e => subs.has(e));
+      if(allSel){ emails.forEach(e => subs.delete(e)); }
+      else       { emails.forEach(e => subs.add(e)); }
+      render();
+    };
+
+    const colState = bkt => {
+      if(!bkt.members.length) return 'empty';
+      const n = bkt.members.filter(p => subs.has(p.email)).length;
+      if(n === bkt.members.length) return 'all';
+      if(n === 0) return 'none';
+      return 'partial';
+    };
+
+    const fmtR = v => v.toFixed(2);
+    const ranges = mySkill ? [
+      `< ${fmtR(mySkill - 0.375)}`,
+      `${fmtR(mySkill - 0.375)} – ${fmtR(mySkill - 0.125)}`,
+      `${fmtR(mySkill - 0.125)} – ${fmtR(mySkill + 0.125)}`,
+      `${fmtR(mySkill + 0.125)} – ${fmtR(mySkill + 0.375)}`,
+      `> ${fmtR(mySkill + 0.375)}`,
+    ] : ['','','','',''];
+
+    const subPill = (email, name) => {
+      const on = subs.has(email);
+      const safeEmail = email.replace(/'/g,"\\'");
+      const safeName  = name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      const ps = on
+        ? 'background:#fef3c7;color:#92400e;border:1px solid #d97706;'
+        : 'background:#fff;color:#374151;border:1px solid #d1d5db;';
+      return `<div onclick="window._gToggleSub('${safeEmail}','${safeName}')" style="${ps}border-radius:999px;padding:3px 7px;font-size:11px;font-weight:600;margin-bottom:3px;cursor:pointer;text-align:center;user-select:none;">${name}</div>`;
+    };
+
+    let html = '<div style="overflow-x:auto;margin-bottom:10px;">';
+    html += '<table style="width:100%;border-collapse:separate;border-spacing:3px 0;table-layout:fixed;">';
+    html += '<thead><tr>';
+    buckets.forEach((bkt, i) => {
+      const state = colState(bkt);
+      const hBg = state === 'all'     ? 'background:#d97706;color:#fff;'
+                : state === 'partial' ? 'background:#fef3c7;border:1.5px solid #f59e0b;color:#92400e;'
+                : bkt.center          ? 'background:#fef9c3;color:#92400e;'
+                :                       'background:#f1f5f9;color:#374151;';
+      const emails     = bkt.members.map(p => p.email);
+      const emailsJson = JSON.stringify(emails);
+      const click  = emails.length ? `onclick="window._gToggleSubBucket('${emailsJson}')" ` : '';
+      const cursor = emails.length ? 'cursor:pointer;' : '';
+      html += `<th ${click}style="${hBg}${cursor}border-radius:8px 8px 0 0;padding:5px 3px;text-align:center;font-weight:800;user-select:none;">`;
+      html += `<div style="font-size:10px;">${bkt.label}</div>`;
+      if(ranges[i]) html += `<div style="font-size:9px;opacity:.65;margin-top:1px;">${ranges[i]}</div>`;
+      html += '</th>';
+    });
+    html += '</tr></thead>';
+    html += '<tbody><tr>';
+    buckets.forEach(bkt => {
+      html += '<td style="vertical-align:top;padding:4px 1px;">';
+      if(bkt.members.length){
+        bkt.members.forEach(p => {
+          const name = ((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim()||p.email;
+          html += subPill(p.email, name);
+        });
+      } else {
+        html += '<div style="font-size:10px;color:#9ca3af;text-align:center;padding-top:4px;">—</div>';
+      }
+      html += '</td>';
+    });
+    html += '</tr></tbody></table></div>';
+
+    if(unrated.length){
+      html += '<div style="margin-bottom:10px;">';
+      html += '<div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Unrated</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:4px;">';
+      unrated.forEach(p => {
+        const name = ((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim()||p.email;
+        html += subPill(p.email, name);
+      });
+      html += '</div></div>';
+    }
+
+    if(!pool.length){
+      html += '<div style="padding:10px;text-align:center;color:#9ca3af;font-size:13px;">All IC members are already in the primary group.</div>';
+    }
+
+    const subCount = subs.size;
+    html += `<div style="color:#d97706;font-weight:600;font-size:13px;text-align:center;margin-bottom:4px;">${subCount} sub${subCount!==1?'s':''} selected${subCount ? ' ✓' : ''}</div>`;
+
+    return html;
+  }
+
   function _gBuildOpenPlayerSection(){
     const mode = window.gModalInviteMode;
 
@@ -12292,7 +12490,7 @@ function _openGroupModal(group, members){
     // ROW 2 — Selection mode
     const modeBtns = [
       {key:'specific', label:'Specific Players'},
-      {key:'gender',   label:'Gender'},
+      {key:'same',     label:'Same Gender'},
       {key:'mixed',    label:'Mixed'},
       {key:'everyone', label:'Everyone'},
     ];
@@ -12401,27 +12599,13 @@ function _openGroupModal(group, members){
         ) +
       '</div>' +
 
-      // Sub Pool — Set group only
+      // Sub Pool — Set group only, rendered as 5-column level grid
       (window.gModalType !== 'random' ?
       '<div style="margin-bottom:20px;">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
           '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Sub Pool <span style="font-weight:400;text-transform:none;color:#9ca3af;">— optional backups</span></label>' +
-          (subs.size ? '<span style="font-size:12px;font-weight:700;color:#d97706;">'+subs.size+' sub'+(subs.size===1?'':'s')+'</span>' : '') +
         '</div>' +
-        '<div style="display:flex;flex-wrap:wrap;gap:8px;">' +
-          (icPlayers.filter(p=>!selected.has(p.email)).length
-            ? icPlayers.filter(p=>!selected.has(p.email)).map(p=>{
-                const nm  = ((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim()||p.email;
-                const on  = subs.has(p.email);
-                return '<button onclick="_gToggleSub(\''+p.email+'\',\''+nm.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\') "'+
-                  ' style="padding:7px 14px;border-radius:999px;border:2px solid '+(on?'#d97706':'#d1d5db')+
-                  ';background:'+(on?'#fef3c7':'#f9fafb')+
-                  ';color:'+(on?'#92400e':'#374151')+
-                  ';font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">'+nm+'</button>';
-              }).join('')
-            : '<span style="color:#6b7280;font-size:12px;padding:4px 0;">All IC members are already in the primary group.</span>'
-          ) +
-        '</div>' +
+        buildGroupSubPoolGrid() +
       '</div>'
       : '') +
 
@@ -12433,7 +12617,14 @@ function _openGroupModal(group, members){
 
       '<div id="gModalError" style="display:none;margin-bottom:12px;padding:10px 14px;background:#fff1f2;border:1px solid #fca5a5;border-radius:8px;font-size:13px;color:#dc2626;font-weight:600;"></div>' +
 
-      '<button onclick="_gSave(\''+( isEdit ? group.id : '' )+'\')" style="width:100%;padding:14px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-weight:800;font-size:15px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">'+(isEdit?'Save Changes':'Create Group')+'</button>';
+      (()=>{
+        const _isOpen   = window.gModalType === 'random';
+        const _btnOk    = _isOpen ? openSelected.size > 0 : buildGroupSummaryGrid().allGreen;
+        const _bg       = _btnOk ? '#1a7a3a' : '#9ca3af';
+        const _cursor   = _btnOk ? 'pointer'  : 'not-allowed';
+        const _disabled = _btnOk ? ''         : ' disabled';
+        return `<button onclick="_gSave('${isEdit ? group.id : ''}')"${_disabled} style="width:100%;padding:14px;border-radius:12px;border:none;background:${_bg};color:#fff;font-weight:800;font-size:15px;cursor:${_cursor};font-family:'DM Sans',sans-serif;">${isEdit?'Save Changes':'Create Group'}</button>`;
+      })();
 
     window._gRender = render;
   }
