@@ -12309,9 +12309,10 @@ function _openGroupModal(group, members){
                 : state === 'partial' ? 'background:#fef3c7;border:1.5px solid #f59e0b;color:#92400e;'
                 : bkt.center          ? 'background:#d1fae5;color:#1a7a3a;'
                 :                       'background:#f1f5f9;color:#374151;';
-      const emails     = bkt.members.map(p => p.email);
-      const emailsJson = JSON.stringify(emails);
-      const click  = emails.length ? `onclick="window._gToggleGroupBucket('${emailsJson}')" ` : '';
+      const emails          = bkt.members.map(p => p.email);
+      const emailsJson      = JSON.stringify(emails);
+      const emailsJsonAttr  = emailsJson.replace(/"/g, '&quot;'); // safe for double-quoted onclick attr
+      const click  = emails.length ? `onclick="window._gToggleGroupBucket('${emailsJsonAttr}')" ` : '';
       const cursor = emails.length ? 'cursor:pointer;' : '';
       html += `<th ${click}style="${hBg}${cursor}border-radius:8px 8px 0 0;padding:5px 3px;text-align:center;font-weight:800;user-select:none;">`;
       html += `<div style="font-size:10px;">${bkt.label}</div>`;
@@ -12430,9 +12431,10 @@ function _openGroupModal(group, members){
                 : state === 'partial' ? 'background:#fef3c7;border:1.5px solid #f59e0b;color:#92400e;'
                 : bkt.center          ? 'background:#fef9c3;color:#92400e;'
                 :                       'background:#f1f5f9;color:#374151;';
-      const emails     = bkt.members.map(p => p.email);
-      const emailsJson = JSON.stringify(emails);
-      const click  = emails.length ? `onclick="window._gToggleSubBucket('${emailsJson}')" ` : '';
+      const emails         = bkt.members.map(p => p.email);
+      const emailsJson     = JSON.stringify(emails);
+      const emailsJsonAttr = emailsJson.replace(/"/g, '&quot;'); // safe for double-quoted onclick attr
+      const click  = emails.length ? `onclick="window._gToggleSubBucket('${emailsJsonAttr}')" ` : '';
       const cursor = emails.length ? 'cursor:pointer;' : '';
       html += `<th ${click}style="${hBg}${cursor}border-radius:8px 8px 0 0;padding:5px 3px;text-align:center;font-weight:800;user-select:none;">`;
       html += `<div style="font-size:10px;">${bkt.label}</div>`;
@@ -12654,23 +12656,20 @@ function _openGroupModal(group, members){
 
   // ── Open Group handlers ──────────────────────────────────────
   window._gSwitchInviteMode = (mode)=>{
-    // Always clear all selections on every Who to Invite change — clean slate
+    // Clear all selections — clean slate. Filter controls visibility only, never auto-selects.
     openSelected.clear();
     selected.clear();
     subs.clear();
     window.gModalInviteMode = mode;
-    if(mode !== 'specific') _gAutoFillOpenSelected(mode);
     render();
   };
   window._gToggleLevelFilter = (useLevel)=>{
     window.gModalUseLevelFilter = useLevel;
-    if(window.gModalInviteMode !== 'specific') _gAutoFillOpenSelected(window.gModalInviteMode);
     render();
   };
   window._gToggleLevelBucket = (bucket)=>{
     if(window.gModalLevels.has(bucket)) window.gModalLevels.delete(bucket);
     else window.gModalLevels.add(bucket);
-    if(window.gModalInviteMode !== 'specific') _gAutoFillOpenSelected(window.gModalInviteMode);
     render();
   };
   window._gToggleOpenPlayer = (email)=>{
