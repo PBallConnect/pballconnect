@@ -6040,10 +6040,82 @@ function buildSmInviteGrid(){
   if(!MS.specificPlayers) MS.specificPlayers = new Set();
 
   const { buckets, unrated, mySkill } = _smGetInviteBuckets();
+  const isMixed = MS.genderPref === 'mixed';
   const playersPerCourt = MS.format === 'singles' ? 2 : 4;
   const minNeeded = (MS.numCourts * playersPerCourt) - 1;
   const selCount  = MS.specificPlayers.size;
   const metMin    = selCount >= minNeeded;
+
+  // ── Gender balance state (Mixed path only) ────────────
+  const myGender = (SESSION_PLAYER?.gender || S.gender || '').toLowerCase();
+  let menNeeded=0, womenNeeded=0, invMen=0, invWomen=0;
+  if(isMixed){
+    const n = MS.numCourts;
+    if(myGender === 'male'){
+      menNeeded = (n * 2) - 1;
+      womenNeeded = n * 2;
+    } else if(myGender === 'female'){
+      womenNeeded = (n * 2) - 1;
+      menNeeded = n * 2;
+    } else {
+      menNeeded = Math.floor(minNeeded / 2);
+      womenNeeded = Math.ceil(minNeeded / 2);
+    }
+    IC_MEMBERS.forEach(({player}) => {
+      const e = (player.email||'').toLowerCase();
+      if(!MS.specificPlayers.has(e)) return;
+      const g = (player.gender||'').toLowerCase();
+      if(g === 'male') invMen++;
+      else if(g === 'female') invWomen++;
+    });
+  }
+  const genderBalanceMet = !isMixed || (invMen >= menNeeded && invWomen >= womenNeeded);
+  const metAll = metMin && genderBalanceMet;
+
+  // ── Gender balance grid HTML (Mixed only) ─────────────
+  let balanceHtml = '';
+  if(isMixed){
+    const menOk   = invMen   >= menNeeded;
+    const womenOk = invWomen >= womenNeeded;
+    const rowBg   = ok => ok ? 'background:#f0fdf4;' : 'background:#fffbeb;';
+    const valClr  = ok => ok ? 'color:#16a34a;'      : 'color:#d97706;';
+    const thS = 'padding:5px 8px;font-weight:700;color:#6b7280;font-size:11px;border-bottom:1px solid #e5e7eb;';
+    const tdL = 'padding:6px 8px;font-weight:600;color:#111;font-size:12px;border-bottom:1px solid #f3f4f6;';
+    const tdN = 'padding:6px 8px;text-align:center;font-weight:700;color:#374151;font-size:12px;border-bottom:1px solid #f3f4f6;';
+    const tdV = (ok) => `padding:6px 8px;text-align:center;font-weight:700;font-size:12px;border-bottom:1px solid #f3f4f6;${valClr(ok)}`;
+    balanceHtml =
+      '<div style="margin-bottom:12px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">'+
+      '<table style="width:100%;border-collapse:collapse;">'+
+      '<thead><tr style="background:#f9fafb;">'+
+      `<th style="${thS}text-align:left;"></th>`+
+      `<th style="${thS}text-align:center;">Needed</th>`+
+      `<th style="${thS}text-align:center;">Invited</th>`+
+      '</tr></thead><tbody>'+
+      `<tr style="${rowBg(menOk)}">`+
+      `<td style="${tdL}">👨 Men</td>`+
+      `<td style="${tdN}">${menNeeded}</td>`+
+      `<td style="${tdV(menOk)}">${invMen}</td>`+
+      `</tr>`+
+      `<tr style="${rowBg(womenOk)}">`+
+      `<td style="${tdL}">👩 Women</td>`+
+      `<td style="${tdN}">${womenNeeded}</td>`+
+      `<td style="${tdV(womenOk)}">${invWomen}</td>`+
+      `</tr>`+
+      `<tr style="${rowBg(genderBalanceMet)}">`+
+      `<td style="padding:6px 8px;font-weight:700;color:#111;font-size:12px;">Total</td>`+
+      `<td style="padding:6px 8px;text-align:center;font-weight:700;color:#374151;font-size:12px;">${minNeeded}</td>`+
+      `<td style="padding:6px 8px;text-align:center;font-weight:700;font-size:12px;${valClr(genderBalanceMet)}">${selCount}</td>`+
+      `</tr>`+
+      '</tbody></table></div>';
+    if(genderBalanceMet){
+      balanceHtml += '<div style="color:#16a34a;font-weight:700;font-size:13px;text-align:center;margin-bottom:10px;">Gender balance met ✓</div>';
+    } else {
+      const parts = [];
+      if(invMen < menNeeded){ const d=menNeeded-invMen; parts.push(`${d} more ${d===1?'man':'men'}`); }
+      if(invWomen < womenNeeded){ const d=womenNeeded-invWomen; parts.push(`${d} more ${d===1?'woman':'women'}`); }
+      balanceHtml += `<div style="color:#d97706;font-weight:600;font-size:13px;text-align:center;margin-bottom:10px;">Need ${parts.join(' and ')} to continue</div>`;
+    }
+  }
 
   const fmtR = v => v.toFixed(2);
   const ranges = mySkill ? [
@@ -6063,17 +6135,20 @@ function buildSmInviteGrid(){
     return 'partial';
   };
 
-  const pill = (email, name) => {
+  // Pill — adds gender indicator on Mixed path
+  const pill = (email, name, gender) => {
     const sel = MS.specificPlayers.has(email);
     const ps  = sel
       ? 'background:#1a7a3a;color:#fff;border:1px solid #1a7a3a;'
       : 'background:#fff;color:#374151;border:1px solid #d1d5db;';
     const safeEmail = email.replace(/'/g,"\\'");
-    return `<div onclick="window._smToggleInvitePlayer('${safeEmail}')" style="${ps}border-radius:999px;padding:3px 7px;font-size:11px;font-weight:600;margin-bottom:3px;cursor:pointer;text-align:center;user-select:none;">${name}</div>`;
+    const prefix = isMixed ? (gender==='male'?'👨 ':gender==='female'?'👩 ':'') : '';
+    return `<div onclick="window._smToggleInvitePlayer('${safeEmail}')" style="${ps}border-radius:999px;padding:3px 7px;font-size:11px;font-weight:600;margin-bottom:3px;cursor:pointer;text-align:center;user-select:none;">${prefix}${name}</div>`;
   };
 
-  // Build 5-column grid HTML
-  let html = '<div style="overflow-x:auto;margin-bottom:10px;">';
+  // Build output: balance grid first, then 5-column skill grid
+  let html = balanceHtml;
+  html += '<div style="overflow-x:auto;margin-bottom:10px;">';
   html += '<table style="width:100%;border-collapse:separate;border-spacing:3px 0;table-layout:fixed;">';
   // Header row
   html += '<thead><tr>';
@@ -6097,9 +6172,10 @@ function buildSmInviteGrid(){
     html += '<td style="vertical-align:top;padding:4px 1px;">';
     if(bkt.members.length){
       bkt.members.forEach(m => {
-        const email = (m.player.email||'').toLowerCase();
-        const name  = ((m.player.first_name||'')+' '+(m.player.last_name||'')).trim() || '?';
-        html += pill(email, name);
+        const email  = (m.player.email||'').toLowerCase();
+        const name   = ((m.player.first_name||'')+' '+(m.player.last_name||'')).trim() || '?';
+        const gender = (m.player.gender||'').toLowerCase();
+        html += pill(email, name, gender);
       });
     } else {
       html += '<div style="font-size:10px;color:#9ca3af;text-align:center;padding-top:4px;">—</div>';
@@ -6114,9 +6190,10 @@ function buildSmInviteGrid(){
     html += '<div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Unrated</div>';
     html += '<div style="display:flex;flex-wrap:wrap;gap:4px;">';
     unrated.forEach(m => {
-      const email = (m.player.email||'').toLowerCase();
-      const name  = ((m.player.first_name||'')+' '+(m.player.last_name||'')).trim() || '?';
-      html += pill(email, name);
+      const email  = (m.player.email||'').toLowerCase();
+      const name   = ((m.player.first_name||'')+' '+(m.player.last_name||'')).trim() || '?';
+      const gender = (m.player.gender||'').toLowerCase();
+      html += pill(email, name, gender);
     });
     html += '</div></div>';
   }
@@ -6133,9 +6210,9 @@ function buildSmInviteGrid(){
   const counterClr = metMin ? 'color:#16a34a;font-weight:700;' : 'color:#6b7280;font-weight:600;';
   html += `<div id="smInviteCounter" style="${counterClr}font-size:13px;text-align:center;margin-bottom:10px;">${counterTxt}</div>`;
 
-  // Continue button
-  const btnStyle = `width:100%;padding:12px;border-radius:10px;border:none;background:#1a7a3a;color:#fff;font-size:14px;font-weight:800;font-family:inherit;transition:opacity .15s;opacity:${metMin?'1':'0.4'};cursor:${metMin?'pointer':'not-allowed'};`;
-  html += `<button id="smInviteContinueBtn" onclick="window._smInviteContinue()" ${metMin?'':'disabled'} style="${btnStyle}">Continue →</button>`;
+  // Continue button — disabled until both min count AND gender balance met (Mixed path)
+  const btnStyle = `width:100%;padding:12px;border-radius:10px;border:none;background:#1a7a3a;color:#fff;font-size:14px;font-weight:800;font-family:inherit;transition:opacity .15s;opacity:${metAll?'1':'0.4'};cursor:${metAll?'pointer':'not-allowed'};`;
+  html += `<button id="smInviteContinueBtn" onclick="window._smInviteContinue()" ${metAll?'':'disabled'} style="${btnStyle}">Continue →</button>`;
 
   section.innerHTML = html;
 }
@@ -6169,6 +6246,23 @@ window._smInviteContinue = function(){
   const playersPerCourt = MS.format === 'singles' ? 2 : 4;
   const minNeeded = (MS.numCourts * playersPerCourt) - 1;
   if(MS.specificPlayers.size < minNeeded) return;
+  // Mixed path: enforce gender balance before advancing
+  if(MS.genderPref === 'mixed'){
+    const myG = (SESSION_PLAYER?.gender || S.gender || '').toLowerCase();
+    const n = MS.numCourts;
+    let mN=0, wN=0;
+    if(myG==='male'){ mN=(n*2)-1; wN=n*2; }
+    else if(myG==='female'){ wN=(n*2)-1; mN=n*2; }
+    else { mN=Math.floor(minNeeded/2); wN=Math.ceil(minNeeded/2); }
+    let mI=0, wI=0;
+    IC_MEMBERS.forEach(({player})=>{
+      const e=(player.email||'').toLowerCase();
+      if(!MS.specificPlayers.has(e)) return;
+      const g=(player.gender||'').toLowerCase();
+      if(g==='male') mI++; else if(g==='female') wI++;
+    });
+    if(mI<mN || wI<wN) return;
+  }
   smUpdateProgress(5);
 };
 
@@ -6303,11 +6397,6 @@ function smUpdateNeededGrid(){
     const rs2='display:grid;grid-template-columns:1fr 72px 72px;padding:10px 12px;border-bottom:1px solid #f3f4f6;';
     const ls2='display:grid;grid-template-columns:1fr 72px 72px;padding:10px 12px;';
     rows.innerHTML='<div style="'+ls2+'"><div style="'+lb2+'">Players</div><div style="'+cn2+';color:#dc2626;">'+needed+'</div><div style="'+cn2+';color:#1a7a3a;">'+invTotal+'</div></div>';
-    const warn=document.getElementById('smOverInviteWarning');
-    if(warn){
-      if(invTotal>needed){ const extra=invTotal-needed; warn.style.display='block'; warn.textContent='⚡ '+invTotal+' players invited for '+needed+' spots — first to respond fill the slots. '+extra+' player'+(extra!==1?'s go':'goes')+' to the waitlist.'; }
-      else warn.style.display='none';
-    }
     return;
   }
   IC_MEMBERS.forEach(({player})=>{
@@ -6348,18 +6437,6 @@ function smUpdateNeededGrid(){
       '<div style="'+ls+'"><div style="'+lb+'">Women</div><div style="'+cn+';color:#dc2626;">'+nWom+'</div><div style="'+cn+';color:#1a7a3a;">'+invWomen+'</div></div>';
   }
 
-  const overInvited = invTotal > needed; // organizer excluded from invTotal, so compare directly to needed
-  const warn = document.getElementById('smOverInviteWarning');
-  if(warn){
-    if(overInvited){
-      const extra = invTotal - needed;
-      warn.style.display = 'block';
-      warn.textContent = '⚡ '+invTotal+' players invited for '+needed+' spots — first to respond fill the slots. '+
-        extra+' player'+(extra!==1?'s go':'goes')+' to the waitlist.';
-    } else {
-      warn.style.display = 'none';
-    }
-  }
 }
 
 async function smCheckConflict(){
