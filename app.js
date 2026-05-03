@@ -10933,7 +10933,7 @@ if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
     // Inline service worker via blob URL
     const swCode = `
-      const CACHE = 'pb-registry-v6';
+      const CACHE = 'pb-registry-v7';
       const OFFLINE_URLS = ['/'];
       self.addEventListener('install', e => {
         e.waitUntil(caches.open(CACHE).then(c => c.addAll(OFFLINE_URLS)));
