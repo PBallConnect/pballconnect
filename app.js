@@ -12061,10 +12061,15 @@ function _openGroupModal(group, members){
   const myPlayer = SESSION_PLAYER;
   const myName   = ((myPlayer?.first_name||'')+(myPlayer?.last_name?' '+myPlayer.last_name:'')).trim()||myEmail;
 
-  // Initialize size state once
-  window.gModalSize      = group?.max_players  || 4;
-  window.gModalType      = group?.group_type   || 'set';
-  window.gModalMatchType = group?.match_type   || 'doubles';
+  // Initialize state — size is derived from numCourts × matchType
+  window.gModalMatchType = group?.match_type  || 'doubles';
+  window.gModalType      = group?.group_type  || 'set';
+  {
+    const _ppc = window.gModalMatchType === 'doubles' ? 4 : 2;
+    const _savedMaxP = group?.max_players || 4;
+    window.gModalNumCourts = Math.max(1, Math.min(4, Math.round(_savedMaxP / _ppc)));
+    window.gModalSize      = window.gModalNumCourts * _ppc;
+  }
 
   // selected = IC member emails chosen as primary players (organizer is implicit, always slot 1)
   const selected = new Set(
@@ -12312,8 +12317,9 @@ function _openGroupModal(group, members){
       const emails          = bkt.members.map(p => p.email);
       const emailsJson      = JSON.stringify(emails);
       const emailsJsonAttr  = emailsJson.replace(/"/g, '&quot;'); // safe for double-quoted onclick attr
-      const click  = emails.length ? `onclick="window._gToggleGroupBucket('${emailsJsonAttr}')" ` : '';
-      const cursor = emails.length ? 'cursor:pointer;' : '';
+      // Open Group only — Set Group headers are visible but not tappable (CHANGE 2)
+      const click  = (emails.length && isOpen) ? `onclick="window._gToggleGroupBucket('${emailsJsonAttr}')" ` : '';
+      const cursor = (emails.length && isOpen) ? 'cursor:pointer;' : '';
       html += `<th ${click}style="${hBg}${cursor}border-radius:8px 8px 0 0;padding:5px 3px;text-align:center;font-weight:800;user-select:none;">`;
       html += `<div style="font-size:10px;">${bkt.label}</div>`;
       if(ranges[i]) html += `<div style="font-size:9px;opacity:.65;margin-top:1px;">${ranges[i]}</div>`;
@@ -12434,8 +12440,9 @@ function _openGroupModal(group, members){
       const emails         = bkt.members.map(p => p.email);
       const emailsJson     = JSON.stringify(emails);
       const emailsJsonAttr = emailsJson.replace(/"/g, '&quot;'); // safe for double-quoted onclick attr
-      const click  = emails.length ? `onclick="window._gToggleSubBucket('${emailsJsonAttr}')" ` : '';
-      const cursor = emails.length ? 'cursor:pointer;' : '';
+      // Sub pool is Set Group only — column headers not tappable (CHANGE 2)
+      const click  = '';
+      const cursor = '';
       html += `<th ${click}style="${hBg}${cursor}border-radius:8px 8px 0 0;padding:5px 3px;text-align:center;font-weight:800;user-select:none;">`;
       html += `<div style="font-size:10px;">${bkt.label}</div>`;
       if(ranges[i]) html += `<div style="font-size:9px;opacity:.65;margin-top:1px;">${ranges[i]}</div>`;
@@ -12523,6 +12530,8 @@ function _openGroupModal(group, members){
   sheet.style.cssText = 'background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;padding:24px 20px 32px;';
 
   function render(){
+    // Always recompute size from numCourts × matchType so they stay in sync
+    window.gModalSize = window.gModalNumCourts * (window.gModalMatchType === 'doubles' ? 4 : 2);
     const size      = window.gModalSize;
     const filled    = 1 + selected.size; // organizer + selected IC members
     const remaining = Math.max(0, size - filled);
@@ -12542,15 +12551,21 @@ function _openGroupModal(group, members){
         '<input id="gModalName" type="text" placeholder="e.g. Tuesday Crew" value="'+(group?.name||'')+'" style="margin-top:6px;width:100%;background:#f9fafb;border:1px solid #d1d5db;border-radius:10px;padding:10px 14px;color:#111;font-size:14px;font-family:\'DM Sans\',sans-serif;outline:none;box-sizing:border-box;"/>' +
       '</div>' +
 
-      // Group size chips
+      // Number of Courts selector (replaces manual Group Size)
       '<div style="margin-bottom:16px;">' +
-        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Group Size</label>' +
+        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Number of Courts</label>' +
         '<div style="display:flex;gap:8px;margin-top:8px;">' +
-          [4,8,12,16].map(n=>{
-            const on = (window.gModalSize === n);
-            return '<button onclick="window.gModalSize='+n+';window._gRender()" style="flex:1;padding:10px 0;border-radius:10px;border:2px solid '+(on?'#1a7a3a':'#d1d5db')+';background:'+(on?'#d1fae5':'#f9fafb')+';color:'+(on?'#1a7a3a':'#6b7280')+';font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;">'+n+'</button>';
+          [1,2,3,4].map(n=>{
+            const on = (window.gModalNumCourts === n);
+            return '<button onclick="window._gSetNumCourts('+n+')" style="flex:1;padding:10px 0;border-radius:10px;border:2px solid '+(on?'#1a7a3a':'#d1d5db')+';background:'+(on?'#d1fae5':'#f9fafb')+';color:'+(on?'#1a7a3a':'#6b7280')+';font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;">'+n+'</button>';
           }).join('') +
         '</div>' +
+        (()=>{
+          const ppc       = window.gModalMatchType === 'doubles' ? 4 : 2;
+          const totalP    = window.gModalNumCourts * ppc;
+          const spotsOpen = totalP - 1;
+          return '<div style="font-size:12px;color:#6b7280;margin-top:8px;">'+window.gModalNumCourts+' court'+(window.gModalNumCourts!==1?'s':'')+' · '+totalP+' players total · '+spotsOpen+' spots open</div>';
+        })() +
       '</div>' +
 
       // Group Type (Set / Open Group)
@@ -12574,7 +12589,7 @@ function _openGroupModal(group, members){
           ['doubles','singles'].map(t=>{
             const on = (window.gModalMatchType === t);
             const lbl = t==='doubles' ? '2v2 Doubles' : '1v1 Singles';
-            return '<button onclick="window.gModalMatchType=\''+t+'\';window._gRender()" style="flex:1;padding:10px 0;border-radius:10px;border:2px solid '+(on?'#1a7a3a':'#d1d5db')+';background:'+(on?'#d1fae5':'#f9fafb')+';color:'+(on?'#1a7a3a':'#6b7280')+';font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">'+lbl+'</button>';
+            return '<button onclick="window._gSetMatchType(\''+t+'\')" style="flex:1;padding:10px 0;border-radius:10px;border:2px solid '+(on?'#1a7a3a':'#d1d5db')+';background:'+(on?'#d1fae5':'#f9fafb')+';color:'+(on?'#1a7a3a':'#6b7280')+';font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">'+lbl+'</button>';
           }).join('') +
         '</div>' +
       '</div>' +
@@ -12656,13 +12671,29 @@ function _openGroupModal(group, members){
 
   // ── Open Group handlers ──────────────────────────────────────
   window._gSwitchInviteMode = (mode)=>{
-    // Clear all selections — clean slate. Filter controls visibility only, never auto-selects.
+    // Clear all selections — clean slate on every mode switch
     openSelected.clear();
     selected.clear();
     subs.clear();
     window.gModalInviteMode = mode;
+    // "Everyone" on Open Group: auto-select the full IC (CHANGE 3 & 4)
+    if(mode === 'everyone' && window.gModalType === 'random'){
+      icPlayers.forEach(p => openSelected.add(p.email));
+    }
     render();
   };
+  // Handlers that recalculate size then re-render (CHANGE 1)
+  window._gSetMatchType = (t)=>{
+    window.gModalMatchType = t;
+    // size auto-recalculated at top of render()
+    render();
+  };
+  window._gSetNumCourts = (n)=>{
+    window.gModalNumCourts = n;
+    // size auto-recalculated at top of render()
+    render();
+  };
+
   window._gToggleLevelFilter = (useLevel)=>{
     window.gModalUseLevelFilter = useLevel;
     render();
