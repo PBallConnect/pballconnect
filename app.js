@@ -2725,9 +2725,8 @@ function _smExitGroupMode(){
   MS.selectedGroupId=null; window._smGroupGridSelectedId=null; MS.allGroupsRoster=null;
   MS.namedGroupMemberEmails=new Set(); MS.namedGroupSubEmails=new Set();
   MS.namedGroupRoster={primary:[],subs:[]};
-  // Restore Step 4 invite container (empty — organizer must pick a Play Structure option)
-  const ic=document.getElementById('smInviteContainer');
-  if(ic) ic.style.display='';
+  // Restore Step 4 to interactive state
+  smUnlockStep4();
   const igs=document.getElementById('smInviteGridSection');
   if(igs) igs.innerHTML='';
   // Unlock Steps 2 & 3
@@ -2793,14 +2792,14 @@ function selectMatchGender(pref, el){
       wrap.style.display = 'block';
       smRenderStep3GroupPicker(wrap);
     }
-    // Set Group path: hide Step 4 invite container (skipped)
-    const ic = document.getElementById('smInviteContainer');
-    if(ic) ic.style.display = 'none';
+    // Set Group path: clear Step 4 grid — locked banner shown after a specific group is chosen
+    smUnlockStep4();
+    const _igs = document.getElementById('smInviteGridSection');
+    if(_igs) _igs.innerHTML='';
   } else {
     if(wrap) wrap.style.display = 'none';
-    // Non-Set-Group path: show Step 4 invite container and build invite grid
-    const ic = document.getElementById('smInviteContainer');
-    if(ic) ic.style.display = '';
+    // Non-Set-Group path: ensure Step 4 is in interactive (unlocked) state and build invite grid
+    smUnlockStep4();
     // Clear previous selections — filter may have changed (e.g. Open→Same Gender)
     MS.specificPlayers = new Set();
     buildSmInviteGrid();
@@ -2981,8 +2980,8 @@ window._smSelectGroupFromGrid = function(gId){
     const ia=document.getElementById('smInviteAll');
     if(ia){ ia.style.border='2px solid #1a7a3a'; ia.style.background='#f0fdf4'; }
     const wrap=document.getElementById('smGenderGroupWrap'); if(wrap) _smRenderGroupGrid(wrap);
-    // Restore Step 4 invite container (deselected from Set Group path)
-    const _ic=document.getElementById('smInviteContainer'); if(_ic) _ic.style.display='';
+    // Restore Step 4 to interactive (unlocked) state
+    smUnlockStep4();
     smUpdateNeededGrid(); smUpdateSummary(); smUpdateSendBtn(); smUpdateProgress(1);
     return;
   }
@@ -3028,10 +3027,10 @@ window._smSelectGroupFromGrid = function(gId){
 
   smUpdateNeededGrid(); smUpdateSummary(); smUpdateSendBtn();
   // Steps 1-4 are complete (Play Structure + auto-format + auto-courts + invite known from group).
-  // Advance to step 5 (Date & Time) as the next action for the organizer.
-  // Hide the invite container — Set Group path skips Step 4.
-  const _ic = document.getElementById('smInviteContainer');
-  if(_ic) _ic.style.display = 'none';
+  // Show Step 4 as a collapsed read-only banner — no gap in the scroll layout.
+  const _rosterCount = (MS.namedGroupRoster.primary.length + MS.namedGroupRoster.subs.length);
+  smLockStep4(_rosterCount);
+  // Advance progress to step 5 (Date & Time) as the next action for the organizer.
   smUpdateProgress(5);
 
   // CHANGE 3 / CHANGE 4: Show roster confirmation modal
@@ -6889,6 +6888,25 @@ function smLockSteps2And3(fmt, courts){
   }
 }
 
+// Lock Step 4 into read-only collapsed banner (Set Group path — specific group selected).
+function smLockStep4(count){
+  const lbl=document.getElementById('smStep4LockedLabel');
+  if(lbl){
+    lbl.textContent='Invites set by your group · '+count+' player'+(count!==1?'s':'');
+    lbl.style.display='block';
+  }
+  const igs=document.getElementById('smInviteGridSection');
+  if(igs) igs.style.display='none';
+}
+
+// Unlock Step 4 (call when group is deselected or user picks a non-group play structure).
+function smUnlockStep4(){
+  const lbl=document.getElementById('smStep4LockedLabel');
+  if(lbl){ lbl.style.display='none'; lbl.textContent=''; }
+  const igs=document.getElementById('smInviteGridSection');
+  if(igs) igs.style.display='';
+}
+
 // Unlock Steps 2 & 3 (call when user deselects group or picks a non-group play structure).
 function smUnlockSteps2And3(){
   const lbl2=document.getElementById('smStep2LockedLabel');
@@ -6991,7 +7009,7 @@ function initSetupMatch(){
   if(gs){ gs.style.border='1px solid #e5e7eb'; gs.style.background='#fff'; gs.classList.remove('sm-option-dimmed'); }
   if(gg){ gg.style.border='1px solid #e5e7eb'; gg.style.background='#fff'; }
   const gw=document.getElementById('smGenderGroupWrap'); if(gw){ gw.style.display='none'; gw.innerHTML=''; }
-  const icCont=document.getElementById('smInviteContainer'); if(icCont) icCont.style.display='';
+  smUnlockStep4();
   const igs=document.getElementById('smInviteGridSection'); if(igs) igs.innerHTML='';
   const rrw=document.getElementById('smReviewRosterWrap'); if(rrw){ rrw.style.display='none'; rrw.innerHTML=''; }
 
