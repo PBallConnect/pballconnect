@@ -6500,6 +6500,7 @@ function smUpdateCourtPickerView(){
   const priorityList = document.getElementById('smPriorityCourtsList');
   const showAllWrap  = document.getElementById('smShowAllCourtsWrap');
   const allSection   = document.getElementById('smAllCourtsSection');
+  const addBtn       = document.getElementById('smAddCourtBtn');
   const hasSel       = MS.selectedCourts && MS.selectedCourts.size > 0;
   if(hasSel){
     let court; MS.selectedCourts.forEach(c=>{ court=c; });
@@ -6520,11 +6521,13 @@ function smUpdateCourtPickerView(){
     if(priorityList) priorityList.style.display='none';
     if(showAllWrap)  showAllWrap.style.display='none';
     if(allSection)   allSection.style.display='none';
+    if(addBtn)       addBtn.style.display='none';
   } else {
     if(chip){ chip.style.display='none'; chip.innerHTML=''; }
     if(priorityList) priorityList.style.display='';
     if(showAllWrap)  showAllWrap.style.display='';
     if(allSection)   allSection.style.display=_smAllCourtsExpanded?'':'none';
+    if(addBtn)       addBtn.style.display='';
   }
 }
 
