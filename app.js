@@ -12654,6 +12654,10 @@ function _openGroupModal(group, members){
 
   // ── Open Group handlers ──────────────────────────────────────
   window._gSwitchInviteMode = (mode)=>{
+    // Always clear all selections on every Who to Invite change — clean slate
+    openSelected.clear();
+    selected.clear();
+    subs.clear();
     window.gModalInviteMode = mode;
     if(mode !== 'specific') _gAutoFillOpenSelected(mode);
     render();
