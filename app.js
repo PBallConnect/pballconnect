@@ -12121,34 +12121,165 @@ function _openGroupModal(group, members){
     openSelected.clear();
     pool.forEach(p=>openSelected.add(p.email));
   }
-  function _gBuildLevelGrid(){
-    const os = parseFloat(myPlayer?.skill_self || 0);
-    if(!os) return '<div style="font-size:12px;color:#9ca3af;padding:4px 0;">Add your skill level to your profile to use this filter.</div>';
-    const buckets = [
-      {key:'below_half',    label:'.5+ Below', val:'≤'+_gFmtSkill(os-0.5)},
-      {key:'below_quarter', label:'.25 Below',  val:_gFmtSkill(os-0.25)},
-      {key:'my_level',      label:'My Level ★', val:_gFmtSkill(os)},
-      {key:'above_quarter', label:'.25 Above',  val:_gFmtSkill(os+0.25)},
-      {key:'above_half',    label:'.5+ Above',  val:'≥'+_gFmtSkill(os+0.5)},
-    ];
-    return '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:8px;">'+
-      buckets.map(b=>{
-        const on = window.gModalLevels.has(b.key);
-        return '<button onclick="window._gToggleLevelBucket(\''+b.key+'\')" '+
-          'style="padding:6px 2px;border-radius:8px;border:2px solid '+(on?'#1a7a3a':'#d1d5db')+
-          ';background:'+(on?'#d1fae5':'#f9fafb')+
-          ';color:'+(on?'#065f46':'#6b7280')+
-          ';font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;text-align:center;">'+
-          '<div>'+b.label+'</div>'+
-          '<div style="font-size:9px;margin-top:2px;font-weight:600;color:'+(on?'#1a7a3a':'#9ca3af')+';">'+b.val+'</div>'+
-        '</button>';
-      }).join('')+
-    '</div>';
-  }
-  function _gBuildOpenPlayerSection(){
+  // ── 5-column level grid for player selection (both group types) ─
+  function buildGroupInviteGrid(){
+    const isOpen   = window.gModalType === 'random';
+    const selSet   = isOpen ? openSelected : selected;
+    const mySkill  = parseFloat(myPlayer?.skill_self || myPlayer?.skill_level || 0);
+    const myGender = (myPlayer?.gender || '').toLowerCase();
     const mode     = window.gModalInviteMode;
-    const useLevel = window.gModalUseLevelFilter;
-    const size     = window.gModalSize;
+
+    // Filter pool: Gender mode shows only matching gender; all other modes show all IC
+    let pool;
+    if(!isOpen){
+      pool = icPlayers;
+    } else if(mode === 'gender'){
+      pool = icPlayers.filter(p => (p.gender||'').toLowerCase() === myGender);
+    } else {
+      pool = icPlayers;
+    }
+
+    // Bucket players by skill relative to organizer
+    const buckets = [
+      { key:'far_below', label:'Far Below', members:[] },
+      { key:'below',     label:'Below',     members:[] },
+      { key:'my_level',  label:'My Level',  members:[], center:true },
+      { key:'above',     label:'Above',     members:[] },
+      { key:'far_above', label:'Far Above', members:[] },
+    ];
+    const unrated = [];
+    pool.forEach(p => {
+      const s = parseFloat(p.skill_self || p.skill_level || 0);
+      if(!s || !mySkill){ unrated.push(p); return; }
+      const diff = s - mySkill;
+      if     (diff <= -0.375) buckets[0].members.push(p);
+      else if(diff <= -0.125) buckets[1].members.push(p);
+      else if(diff <=  0.125) buckets[2].members.push(p);
+      else if(diff <=  0.375) buckets[3].members.push(p);
+      else                    buckets[4].members.push(p);
+    });
+
+    // Skill range labels
+    const fmtR = v => v.toFixed(2);
+    const ranges = mySkill ? [
+      `< ${fmtR(mySkill - 0.375)}`,
+      `${fmtR(mySkill - 0.375)} – ${fmtR(mySkill - 0.125)}`,
+      `${fmtR(mySkill - 0.125)} – ${fmtR(mySkill + 0.125)}`,
+      `${fmtR(mySkill + 0.125)} – ${fmtR(mySkill + 0.375)}`,
+      `> ${fmtR(mySkill + 0.375)}`,
+    ] : ['','','','',''];
+
+    // Column-header bucket toggle handler
+    window._gToggleGroupBucket = function(emailsJson){
+      const emails = JSON.parse(emailsJson);
+      const allSel = emails.every(e => selSet.has(e));
+      if(allSel){
+        emails.forEach(e => selSet.delete(e));
+      } else if(isOpen){
+        emails.forEach(e => selSet.add(e));
+      } else {
+        // Set Group: respect size limit
+        for(const e of emails){
+          if(!selSet.has(e)){
+            if(1 + selSet.size >= window.gModalSize){
+              showToast('Group is full — increase the size or deselect someone','#f59e0b');
+              break;
+            }
+            selSet.add(e);
+            subs.delete(e);
+          }
+        }
+      }
+      render();
+    };
+
+    // Column state helper
+    const colState = bkt => {
+      if(!bkt.members.length) return 'empty';
+      const n = bkt.members.filter(p => selSet.has(p.email)).length;
+      if(n === bkt.members.length) return 'all';
+      if(n === 0) return 'none';
+      return 'partial';
+    };
+
+    // Individual pill builder
+    const pill = (email, name) => {
+      const sel       = selSet.has(email);
+      const safeEmail = email.replace(/'/g,"\\'");
+      const safeName  = name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      const ps  = sel
+        ? 'background:#1a7a3a;color:#fff;border:1px solid #1a7a3a;'
+        : 'background:#fff;color:#374151;border:1px solid #d1d5db;';
+      const clickFn = isOpen
+        ? `window._gToggleOpenPlayer('${safeEmail}')`
+        : `window._gTogglePlayer('${safeEmail}','${safeName}')`;
+      return `<div onclick="${clickFn}" style="${ps}border-radius:999px;padding:3px 7px;font-size:11px;font-weight:600;margin-bottom:3px;cursor:pointer;text-align:center;user-select:none;">${name}</div>`;
+    };
+
+    // Build grid HTML
+    let html = '<div style="overflow-x:auto;margin-bottom:10px;">';
+    html += '<table style="width:100%;border-collapse:separate;border-spacing:3px 0;table-layout:fixed;">';
+    html += '<thead><tr>';
+    buckets.forEach((bkt, i) => {
+      const state = colState(bkt);
+      const hBg = state === 'all'     ? 'background:#1a7a3a;color:#fff;'
+                : state === 'partial' ? 'background:#fef3c7;border:1.5px solid #f59e0b;color:#92400e;'
+                : bkt.center          ? 'background:#d1fae5;color:#1a7a3a;'
+                :                       'background:#f1f5f9;color:#374151;';
+      const emails     = bkt.members.map(p => p.email);
+      const emailsJson = JSON.stringify(emails);
+      const click  = emails.length ? `onclick="window._gToggleGroupBucket('${emailsJson}')" ` : '';
+      const cursor = emails.length ? 'cursor:pointer;' : '';
+      html += `<th ${click}style="${hBg}${cursor}border-radius:8px 8px 0 0;padding:5px 3px;text-align:center;font-weight:800;user-select:none;">`;
+      html += `<div style="font-size:10px;">${bkt.label}</div>`;
+      if(ranges[i]) html += `<div style="font-size:9px;opacity:.65;margin-top:1px;">${ranges[i]}</div>`;
+      html += '</th>';
+    });
+    html += '</tr></thead>';
+    html += '<tbody><tr>';
+    buckets.forEach(bkt => {
+      html += '<td style="vertical-align:top;padding:4px 1px;">';
+      if(bkt.members.length){
+        bkt.members.forEach(p => {
+          const name = ((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim()||p.email;
+          html += pill(p.email, name);
+        });
+      } else {
+        html += '<div style="font-size:10px;color:#9ca3af;text-align:center;padding-top:4px;">—</div>';
+      }
+      html += '</td>';
+    });
+    html += '</tr></tbody></table></div>';
+
+    // Unrated row
+    if(unrated.length){
+      html += '<div style="margin-bottom:10px;">';
+      html += '<div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Unrated</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:4px;">';
+      unrated.forEach(p => {
+        const name = ((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim()||p.email;
+        html += pill(p.email, name);
+      });
+      html += '</div></div>';
+    }
+
+    // Empty state
+    if(!pool.length){
+      html += '<div style="padding:20px;text-align:center;color:#9ca3af;font-size:13px;">No Inner Circle members yet.</div>';
+    }
+
+    // Counter
+    const selCount  = selSet.size;
+    const minNeeded = window.gModalSize - 1; // organizer already counted
+    const cntOk     = isOpen ? selCount > window.gModalSize : selCount >= minNeeded;
+    const cntColor  = cntOk ? 'color:#16a34a;font-weight:700;' : 'color:#d97706;font-weight:600;';
+    html += `<div style="${cntColor}font-size:13px;text-align:center;margin-bottom:4px;">${selCount} player${selCount!==1?'s':''} selected${cntOk?' ✓':''}</div>`;
+
+    return html;
+  }
+
+  function _gBuildOpenPlayerSection(){
+    const mode = window.gModalInviteMode;
 
     // ROW 1 — Organizer
     const row1 =
@@ -12181,71 +12312,7 @@ function _openGroupModal(group, members){
       '</div>'+
       '<div style="border-top:2px solid #333;margin-bottom:14px;"></div>';
 
-    // ROW 3 — Level filter
-    const row3 =
-      '<div style="margin-bottom:14px;">'+
-        '<div style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Filter by Playing Level?</div>'+
-        '<div style="display:flex;gap:8px;">'+
-          '<button onclick="window._gToggleLevelFilter(true)" style="padding:8px 20px;border-radius:10px;border:2px solid '+(useLevel?'#1a7a3a':'#d1d5db')+';background:'+(useLevel?'#d1fae5':'#f9fafb')+';color:'+(useLevel?'#1a7a3a':'#6b7280')+';font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Yes</button>'+
-          '<button onclick="window._gToggleLevelFilter(false)" style="padding:8px 20px;border-radius:10px;border:2px solid '+(!useLevel?'#1a7a3a':'#d1d5db')+';background:'+(!useLevel?'#d1fae5':'#f9fafb')+';color:'+(!useLevel?'#1a7a3a':'#6b7280')+';font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">No</button>'+
-        '</div>'+
-        (useLevel ? _gBuildLevelGrid() : '') +
-      '</div>'+
-      '<div style="border-top:2px solid #333;margin-bottom:14px;"></div>';
-
-    // Dynamic pool
-    let poolHtml = '';
-    if(mode==='specific'){
-      const avail = _gGetLevelFilteredIC();
-      const cnt = openSelected.size;
-      const warn = cnt <= size
-        ? '<div style="margin-bottom:10px;padding:8px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px;color:#b45309;">⚠️ You have '+size+' spots but only '+cnt+' player'+(cnt!==1?'s':'')+' selected. Invite more than you need so subs are available.</div>'
-        : '';
-      poolHtml =
-        '<div>'+
-          '<div style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Select Players &nbsp;<span style="color:#1a7a3a;font-weight:800;">'+cnt+' in invite pool</span></div>'+
-          warn+
-          '<div style="display:flex;flex-wrap:wrap;gap:8px;">'+
-            (!avail.length
-              ? '<span style="color:#6b7280;font-size:12px;">No IC members match current filters.</span>'
-              : avail.map(p=>{
-                  const nm = ((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim()||p.email;
-                  const on = openSelected.has(p.email);
-                  return '<button onclick="window._gToggleOpenPlayer(\''+p.email+'\')" '+
-                    'style="padding:7px 14px;border-radius:999px;border:2px solid '+(on?'#1a7a3a':'#d1d5db')+
-                    ';background:'+(on?'#d1fae5':'#f9fafb')+
-                    ';color:'+(on?'#065f46':'#374151')+
-                    ';font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">'+nm+'</button>';
-                }).join('')
-            )+
-          '</div>'+
-        '</div>';
-    } else {
-      const autoPool  = _gGetAutoPool(mode);
-      const active    = autoPool.filter(p=>openSelected.has(p.email));
-      const cnt       = active.length;
-      const warn = cnt <= size
-        ? '<div style="margin-bottom:10px;padding:8px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px;color:#b45309;">⚠️ You have '+size+' spots but only '+cnt+' player'+(cnt!==1?'s':'')+' in your invite pool. Consider inviting more or selecting a broader filter.</div>'
-        : '';
-      poolHtml =
-        '<div>'+
-          '<div style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">'+cnt+' players in invite pool</div>'+
-          '<div style="font-size:11px;color:#6b7280;margin-bottom:8px;">We recommend inviting more than you need so subs are available.</div>'+
-          warn+
-          '<div style="display:flex;flex-wrap:wrap;gap:8px;">'+
-            (!active.length
-              ? '<span style="color:#6b7280;font-size:12px;">No IC members match current filters.</span>'
-              : active.map(p=>{
-                  const nm = ((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim()||p.email;
-                  return '<button onclick="window._gToggleOpenPlayer(\''+p.email+'\')" '+
-                    'style="padding:7px 14px;border-radius:999px;border:2px solid #1a7a3a;background:#d1fae5;color:#065f46;'+
-                    'font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">'+nm+' ✕</button>';
-                }).join('')
-            )+
-          '</div>'+
-        '</div>';
-    }
-    return row1 + row2 + row3 + poolHtml;
+    return row1 + row2 + buildGroupInviteGrid();
   }
 
   const overlay = document.createElement('div');
@@ -12318,29 +12385,18 @@ function _openGroupModal(group, members){
         (window.gModalType === 'random'
           ? _gBuildOpenPlayerSection()
           : (
-            // ── Set Group: existing layout ──────────────────────────
+            // ── Set Group: count header + organizer pill + level grid ─
             '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">' +
               '<span style="font-size:13px;font-weight:800;color:'+ctrColor+';">' +
                 (full ? '✅ Full &nbsp;'+size+' / '+size : filled+' / '+size+'&nbsp; · &nbsp;'+remaining+' spot'+(remaining===1?'':'s')+' remaining') +
               '</span>' +
             '</div>' +
-            '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">' +
+            '<div style="margin-bottom:10px;">' +
+              '<div style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Organizer (automatically included)</div>' +
               '<button disabled style="padding:7px 14px;border-radius:999px;border:2px solid #dc2626;background:#fee2e2;color:#991b1b;font-size:12px;font-weight:700;cursor:default;font-family:inherit;">'+myName+' · Organizer</button>' +
-              (icPlayers.length
-                ? icPlayers.map(p=>{
-                    const nm  = ((p.first_name||'')+(p.last_name?' '+p.last_name:'')).trim()||p.email;
-                    const on  = selected.has(p.email);
-                    const dis = !on && full;
-                    return '<button onclick="_gTogglePlayer(\''+p.email+'\',\''+nm.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\')\" '+(dis?'disabled':'')+
-                      ' style="padding:7px 14px;border-radius:999px;border:2px solid '+(on?'#1a7a3a':dis?'#e5e7eb':'#d1d5db')+
-                      ';background:'+(on?'#d1fae5':dis?'#f3f4f6':'#f9fafb')+
-                      ';color:'+(on?'#065f46':dis?'#9ca3af':'#374151')+
-                      ';font-size:12px;font-weight:600;cursor:'+(dis?'default':'pointer')+
-                      ';font-family:inherit;opacity:'+(dis?'0.5':'1')+';">'+nm+'</button>';
-                  }).join('')
-                : '<span style="color:#6b7280;font-size:12px;padding:4px 0;">No Inner Circle members yet.</span>'
-              ) +
-            '</div>'
+            '</div>' +
+            '<div style="border-top:2px solid #333;margin-bottom:14px;"></div>' +
+            buildGroupInviteGrid()
           )
         ) +
       '</div>' +
