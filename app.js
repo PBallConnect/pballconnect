@@ -12150,6 +12150,9 @@ function _openGroupModal(group, members){
       '</tr></thead><tbody>';
     const tableClose = '</tbody></table></div>';
 
+    // Build email→player map for reliable case-insensitive gender lookup (CHANGE 2)
+    const _playerByEmail = new Map(icPlayers.map(p => [(p.email||'').toLowerCase(), p]));
+
     let html = '', allGreen = false;
 
     if(isOpen){
@@ -12158,10 +12161,11 @@ function _openGroupModal(group, members){
       if(mode === 'mixed'){
         let invMen = 0, invWomen = 0;
         openSelected.forEach(email => {
-          const p = icPlayers.find(p => p.email === email);
+          const p = _playerByEmail.get((email||'').toLowerCase());
           if(!p) return;
           const g = (p.gender||'').toLowerCase();
-          if(g === 'male') invMen++; else if(['female','woman'].includes(g)) invWomen++;
+          if(g === 'male') invMen++;
+          else if(g === 'female' || g === 'woman') invWomen++;
         });
         const half = Math.floor(window.gModalSize / 2);
         let menNeeded, womenNeeded;
@@ -12178,7 +12182,7 @@ function _openGroupModal(group, members){
       } else if(mode === 'same'){
         let invSame = 0;
         openSelected.forEach(email => {
-          const p = icPlayers.find(p => p.email === email);
+          const p = _playerByEmail.get((email||'').toLowerCase());
           if(!p) return;
           if((p.gender||'').toLowerCase() === myGender) invSame++;
         });
@@ -12361,9 +12365,20 @@ function _openGroupModal(group, members){
     // Counter
     const selCount  = selSet.size;
     const minNeeded = window.gModalSize - 1; // organizer already counted
-    const cntOk     = isOpen ? selCount > window.gModalSize : selCount >= minNeeded;
+    const cntOk     = isOpen ? selCount >= minNeeded : selCount >= minNeeded;
     const cntColor  = cntOk ? 'color:#16a34a;font-weight:700;' : 'color:#d97706;font-weight:600;';
     html += `<div style="${cntColor}font-size:13px;text-align:center;margin-bottom:4px;">${selCount} player${selCount!==1?'s':''} selected${cntOk?' ✓':''}</div>`;
+
+    // Open Group advisory messaging (CHANGE 3) — no "subs" language
+    if(isOpen){
+      if(selCount < minNeeded){
+        const moreNeeded = minNeeded - selCount;
+        html += `<div style="margin-top:6px;padding:8px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px;color:#92400e;line-height:1.5;">Select at least ${moreNeeded} more player${moreNeeded!==1?'s':''} to continue.</div>`;
+      } else if(selCount < 2 * minNeeded){
+        html += `<div style="margin-top:6px;padding:8px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px;color:#92400e;line-height:1.5;">For best results, invite more players than the minimum. Open Groups fill spots first-come-first-serve — extra invites ensure you always have enough players for a great match.</div>`;
+      }
+      // 2× minimum or above: no advisory
+    }
 
     return html;
   }
@@ -12551,7 +12566,19 @@ function _openGroupModal(group, members){
         '<input id="gModalName" type="text" placeholder="e.g. Tuesday Crew" value="'+(group?.name||'')+'" style="margin-top:6px;width:100%;background:#f9fafb;border:1px solid #d1d5db;border-radius:10px;padding:10px 14px;color:#111;font-size:14px;font-family:\'DM Sans\',sans-serif;outline:none;box-sizing:border-box;"/>' +
       '</div>' +
 
-      // Number of Courts selector (replaces manual Group Size)
+      // Match Type (Doubles / Singles) — section 2
+      '<div style="margin-bottom:16px;">' +
+        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Match Type</label>' +
+        '<div style="display:flex;gap:8px;margin-top:8px;">' +
+          ['doubles','singles'].map(t=>{
+            const on = (window.gModalMatchType === t);
+            const lbl = t==='doubles' ? '2v2 Doubles' : '1v1 Singles';
+            return '<button onclick="window._gSetMatchType(\''+t+'\')" style="flex:1;padding:10px 0;border-radius:10px;border:2px solid '+(on?'#1a7a3a':'#d1d5db')+';background:'+(on?'#d1fae5':'#f9fafb')+';color:'+(on?'#1a7a3a':'#6b7280')+';font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">'+lbl+'</button>';
+          }).join('') +
+        '</div>' +
+      '</div>' +
+
+      // Number of Courts — section 3
       '<div style="margin-bottom:16px;">' +
         '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Number of Courts</label>' +
         '<div style="display:flex;gap:8px;margin-top:8px;">' +
@@ -12568,7 +12595,7 @@ function _openGroupModal(group, members){
         })() +
       '</div>' +
 
-      // Group Type (Set / Open Group)
+      // Group Type (Set / Open Group) — section 4
       '<div style="margin-bottom:16px;">' +
         '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Group Type</label>' +
         '<div style="display:flex;gap:8px;margin-top:8px;">' +
@@ -12580,18 +12607,6 @@ function _openGroupModal(group, members){
           }).join('') +
         '</div>' +
         '<div style="font-size:11px;color:#9ca3af;margin-top:5px;">'+(window.gModalType==='random'?'🎲 First to respond fills spots. Great for open rec play.':'🎯 Fixed roster — you control who plays each time.')+'</div>' +
-      '</div>' +
-
-      // Match Type (Doubles / Singles)
-      '<div style="margin-bottom:16px;">' +
-        '<label style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;">Match Type</label>' +
-        '<div style="display:flex;gap:8px;margin-top:8px;">' +
-          ['doubles','singles'].map(t=>{
-            const on = (window.gModalMatchType === t);
-            const lbl = t==='doubles' ? '2v2 Doubles' : '1v1 Singles';
-            return '<button onclick="window._gSetMatchType(\''+t+'\')" style="flex:1;padding:10px 0;border-radius:10px;border:2px solid '+(on?'#1a7a3a':'#d1d5db')+';background:'+(on?'#d1fae5':'#f9fafb')+';color:'+(on?'#1a7a3a':'#6b7280')+';font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">'+lbl+'</button>';
-          }).join('') +
-        '</div>' +
       '</div>' +
 
       // Players section — branches on group type
@@ -12635,11 +12650,12 @@ function _openGroupModal(group, members){
       '<div id="gModalError" style="display:none;margin-bottom:12px;padding:10px 14px;background:#fff1f2;border:1px solid #fca5a5;border-radius:8px;font-size:13px;color:#dc2626;font-weight:600;"></div>' +
 
       (()=>{
-        const _isOpen   = window.gModalType === 'random';
-        const _btnOk    = _isOpen ? openSelected.size > 0 : buildGroupSummaryGrid().allGreen;
-        const _bg       = _btnOk ? '#1a7a3a' : '#9ca3af';
-        const _cursor   = _btnOk ? 'pointer'  : 'not-allowed';
-        const _disabled = _btnOk ? ''         : ' disabled';
+        const _isOpen    = window.gModalType === 'random';
+        const _minNeeded = window.gModalSize - 1; // organizer already in
+        const _btnOk     = _isOpen ? openSelected.size >= _minNeeded : buildGroupSummaryGrid().allGreen;
+        const _bg        = _btnOk ? '#1a7a3a' : '#9ca3af';
+        const _cursor    = _btnOk ? 'pointer'  : 'not-allowed';
+        const _disabled  = _btnOk ? ''         : ' disabled';
         return `<button onclick="_gSave('${isEdit ? group.id : ''}')"${_disabled} style="width:100%;padding:14px;border-radius:12px;border:none;background:${_bg};color:#fff;font-weight:800;font-size:15px;cursor:${_cursor};font-family:'DM Sans',sans-serif;">${isEdit?'Save Changes':'Create Group'}</button>`;
       })();
 
@@ -12714,10 +12730,12 @@ function _openGroupModal(group, members){
     if(!name){ showToast('Please enter a group name','#f59e0b'); return; }
     const isOpenGroup = window.gModalType === 'random';
     const maxP = window.gModalSize;
-    // Open Group validation: pool must be > max_players
-    if(isOpenGroup && openSelected.size <= maxP){
+    const minNeeded = maxP - 1; // organizer already counted
+    // Open Group: ensure minimum player count is met (button gate should prevent this, but defensive check)
+    if(isOpenGroup && openSelected.size < minNeeded){
       const errEl = document.getElementById('gModalError');
-      const msg = 'Add more players so you have subs available. You need more than '+maxP+' in your invite pool.';
+      const moreNeeded = minNeeded - openSelected.size;
+      const msg = 'Please select at least '+moreNeeded+' more player'+(moreNeeded!==1?'s':'')+' to create this group.';
       if(errEl){ errEl.textContent=msg; errEl.style.display='block'; errEl.scrollIntoView({behavior:'smooth',block:'nearest'}); }
       else showToast(msg,'#f59e0b');
       return;
