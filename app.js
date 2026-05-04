@@ -6011,11 +6011,11 @@ function _smGetInviteBuckets(){
     MS.genderPref === 'same' ? (m.player.gender||'').toLowerCase() === myGender : true
   );
   const buckets = [
-    { key:'far_below', label:'Far Below', members:[] },
-    { key:'below',     label:'Below',     members:[] },
-    { key:'my_level',  label:'My Level',  members:[], center:true },
-    { key:'above',     label:'Above',     members:[] },
-    { key:'far_above', label:'Far Above', members:[] },
+    { key:'far_below', label:'.5+ Below My Level', members:[] },
+    { key:'below',     label:'.25 Below My Level', members:[] },
+    { key:'my_level',  label:'My Level',            members:[], center:true },
+    { key:'above',     label:'.25 Above My Level',  members:[] },
+    { key:'far_above', label:'.5+ Above My Level',  members:[] },
   ];
   const unrated = [];
   filtered.forEach(m => {
@@ -6142,13 +6142,14 @@ function buildSmInviteGrid(){
   const summaryGrid = buildSmInviteSummaryGrid();
   const metAll = summaryGrid.allGreen;
 
-  const fmtR = v => v.toFixed(2);
+  // Skill reference values shown under each column header — rounded to nearest 0.25
+  const _fmtSkillVal = v => { const r = Math.round(v * 4) / 4; return r % 1 === 0 ? r.toFixed(1) : String(r); };
   const ranges = mySkill ? [
-    `< ${fmtR(mySkill - 0.375)}`,
-    `${fmtR(mySkill - 0.375)} – ${fmtR(mySkill - 0.125)}`,
-    `${fmtR(mySkill - 0.125)} – ${fmtR(mySkill + 0.125)}`,
-    `${fmtR(mySkill + 0.125)} – ${fmtR(mySkill + 0.375)}`,
-    `> ${fmtR(mySkill + 0.375)}`,
+    `≤ ${_fmtSkillVal(mySkill - 0.50)}`,
+    `${_fmtSkillVal(mySkill - 0.25)}`,
+    `${_fmtSkillVal(mySkill)}`,
+    `${_fmtSkillVal(mySkill + 0.25)}`,
+    `≥ ${_fmtSkillVal(mySkill + 0.50)}`,
   ] : ['','','','',''];
 
   // Column selection state
@@ -12232,11 +12233,11 @@ function _openGroupModal(group, members){
 
     // Bucket players by skill relative to organizer
     const buckets = [
-      { key:'far_below', label:'Far Below', members:[] },
-      { key:'below',     label:'Below',     members:[] },
-      { key:'my_level',  label:'My Level',  members:[], center:true },
-      { key:'above',     label:'Above',     members:[] },
-      { key:'far_above', label:'Far Above', members:[] },
+      { key:'far_below', label:'.5+ Below My Level', members:[] },
+      { key:'below',     label:'.25 Below My Level', members:[] },
+      { key:'my_level',  label:'My Level',            members:[], center:true },
+      { key:'above',     label:'.25 Above My Level',  members:[] },
+      { key:'far_above', label:'.5+ Above My Level',  members:[] },
     ];
     const unrated = [];
     pool.forEach(p => {
@@ -12250,14 +12251,14 @@ function _openGroupModal(group, members){
       else                    buckets[4].members.push(p);
     });
 
-    // Skill range labels
-    const fmtR = v => v.toFixed(2);
+    // Skill reference values shown under each column header — rounded to nearest 0.25
+    const _fmtSkillVal = v => { const r = Math.round(v * 4) / 4; return r % 1 === 0 ? r.toFixed(1) : String(r); };
     const ranges = mySkill ? [
-      `< ${fmtR(mySkill - 0.375)}`,
-      `${fmtR(mySkill - 0.375)} – ${fmtR(mySkill - 0.125)}`,
-      `${fmtR(mySkill - 0.125)} – ${fmtR(mySkill + 0.125)}`,
-      `${fmtR(mySkill + 0.125)} – ${fmtR(mySkill + 0.375)}`,
-      `> ${fmtR(mySkill + 0.375)}`,
+      `≤ ${_fmtSkillVal(mySkill - 0.50)}`,
+      `${_fmtSkillVal(mySkill - 0.25)}`,
+      `${_fmtSkillVal(mySkill)}`,
+      `${_fmtSkillVal(mySkill + 0.25)}`,
+      `≥ ${_fmtSkillVal(mySkill + 0.50)}`,
     ] : ['','','','',''];
 
     // Column-header bucket toggle handler
