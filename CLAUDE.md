@@ -1,6 +1,6 @@
 # CLAUDE.md — PBallConnect Reference
 
-_Last updated: April 28, 2026_
+_Last updated: May 6, 2026_
 
 ---
 
@@ -388,7 +388,55 @@ Last updated: April 2026.
 `_openGroupModal()`:
 - `window.gModalType` — 'set' or 'random'
 - `window.gModalMatchType` — 'doubles' or 'singles'
+- `window.gModalNumCourts` — 1–4; `window.gModalSize` always derived from it at top of `render()`
 - Sub Pool section hidden when `gModalType === 'random'`
+
+### Create Group Modal — Section Order
+
+1. Group Name
+2. Match Type (Doubles / Singles)
+3. Number of Courts (1 / 2 / 3 / 4) → auto-calculates group size
+4. Group Type (Set / Open Group)
+5. Players → Organizer pill → Who to Invite (Specific / Same Gender / Mixed / Everyone) → Needed/Selected summary grid → Level grid → Sub pool (Set Group only)
+6. Notes
+7. Create Group button
+
+### Group Size Rules
+
+- No manual 4/8/12/16 size buttons — size is auto-calculated
+- Formula: `numCourts × playersPerCourt` (Doubles = 4/court, Singles = 2/court)
+- `render()` recalculates `gModalSize = gModalNumCourts * ppc` at the top of every call
+- Summary line: "X courts · Y players total · Z spots open"
+- Players header: "1 / Y · Z spots remaining" (organizer always fills slot 1)
+
+### Create Group Level Grid Rules
+
+- Column labels match IC Level Structure exactly: `.5+ Below My Level` / `.25 Below My Level` / `My Level` / `.25 Above My Level` / `.5+ Above My Level`
+- Reference values use `≤/≥` at nearest 0.25 increment (e.g. `≤ 3.75`, `4.0`, `4.25`, `4.5`, `≥ 4.75`)
+- Set Group: column headers NOT tappable — individual selection only
+- Open Group: column header tap-to-select-all enabled, no ceiling cap
+- "Everyone" selection auto-selects all pills immediately (Open Group only)
+- Switching invite filter clears all selections and re-renders grid (clean slate)
+- Mutually exclusive: player in primary grid cannot be in sub pool and vice versa
+
+### Sub Pool Rules (Set Group Only)
+
+- Not shown on Open Group path
+- Same 5-column level grid layout, individual selection only — no column tap-to-select
+- Labeled "SUB POOL · Optional Backups"
+- No minimum required
+
+### Open Group Messaging Rules
+
+- Never use the word "subs" on the Open Group path
+- At minimum: show "Select at least X more player(s) to continue."
+- Just above minimum: show "For best results, invite more players than the minimum. Open Groups fill spots first-come-first-serve — extra invites ensure you always have enough players for a great match."
+- Well above minimum: hide advisory
+
+### Create Group Button Rules
+
+- Set Group: disabled until summary grid all green AND group name not empty
+- Open Group: disabled until `openSelected.size >= (gModalSize - 1)` AND group name not empty
 
 **Auto-update in Set Up a Match** (`smOnStep3GroupSelect`, `toggleMatchGroup`):
 When a named group is selected, `MS.format` and `MS.numCourts` auto-update based on the group's `match_type` and `max_players`.
@@ -429,6 +477,62 @@ Sticky progress bar: `['Match Type','Number of Courts','Date & Time','Court','Pl
 
 ### Court Count Validation
 `null`/`0`/`undefined` court_count → gray neutral note only. Red warning only if confirmed positive number < `MS.numCourts`.
+
+### Wizard Step Order
+
+**Non-Set Group path (Open / Mixed / Same Gender):**
+1. Play Structure
+2. Match Type
+3. Number of Courts
+4. Invites (level grid)
+5. Date & Time
+6. Court
+7. Review & Send
+
+**Set Group path:**
+1. Play Structure (group selected)
+2. Auto-set Match Type
+3. Auto-set Courts & Players
+4. Auto-complete banner "Invites set by your group · X players"
+5. Date & Time
+6. Court
+7. Review & Send (shows group roster)
+
+### Play Structure Selection States
+
+- **State 1:** Nothing selected — all options lit
+- **State 2:** "One of My Set Groups" tapped but no group chosen — others dimmed, tap again to return to State 1
+- **State 3:** Specific group selected — fully locked, Steps 1–4 complete
+
+### Step 4 Invite Grid Rules
+
+- 5-column level grid using IC_MEMBERS
+- Column labels match IC Level Structure: `.5+ Below My Level` / `.25 Below My Level` / `My Level` / `.25 Above My Level` / `.5+ Above My Level`
+- Column header tap = select all / deselect all / partial (amber) state
+- Unrated row below grid for players with no `skill_self`
+- Summary grid above level grid for all paths:
+  - Open/Specific: `[👥 Players]` Needed / Invited
+  - Mixed: `[👨 Men]` + `[👩 Women]` + Total
+  - Same Gender: relevant gender row only
+- Continue locked until minimum met: `(numCourts × playersPerCourt) - 1`
+- Mixed path: hard stop until gender balance met
+- No "subs" language anywhere in match wizard
+
+### Court Step Rules
+
+- "+ Add a new court" hidden when a court is already selected
+- Court list shows max 3 most recent courts
+- Waterfall order: recent match history → My Courts alphabetical → all courts if no history
+- Single-line compact list format
+- "Show all courts ▼" toggle beneath short list
+- Once selected: collapsed card + Change button
+- Public/Private tabs apply to expanded view only
+
+### Browser Navigation
+
+- Browser back button logs user out entirely — no in-app browser navigation
+- In-wizard navigation is forward-only
+- Back buttons must be built explicitly if needed
 
 ---
 
@@ -506,6 +610,10 @@ Full width, `background:#1a7a3a`, `color:#fff`, `font-size:16px`, `font-weight:8
 
 Reusable modal showing 5 USA Pickleball skill levels (1.0–2.5 Beginner through 4.5+ Advanced/Elite). Opened by `window.showSkillGuide()`, closed by `window.hideSkillGuide()` or clicking the backdrop. Uses the existing `modal-overlay` / `modal` CSS class pattern (same as waiver modal). Displayed in the app via "❓ What's my level?" link (color `#16a34a`, font-size 0.85rem, underlined) placed directly below the Personal Skill Rating slider in registration step 2 and the Quick Connect skill slider. The link is also displayed inline (no modal) on `landing.html` as a dedicated "Know Your Game / Find Your Level" section between features and waitlist.
 
+### Build Badge
+
+Fixed bottom-right corner of every page. Format: `β build XXXXXXX` (7-char git hash, links to GitHub commit). Auto-injected by `inject-build.sh` on every `git push` via `.git/hooks/pre-push` (amend). Font size 10px, color `#999`, z-index 9999.
+
 ### ic-shake Animation
 CSS class `ic-shake` applied to recipient input on validation failure (blank name before invite creation):
 ```css
@@ -528,6 +636,8 @@ Applied via JS: `el.classList.add('ic-shake'); setTimeout(()=>el.classList.remov
 
 3. **Non-member match invite flow not built.** Organizers can only invite IC members. Inviting players outside the IC (by email or name) is not yet implemented.
 
+4. **Create Group: Mixed gender count may not update correctly in all cases.** `buildGroupSummaryGrid()` uses a case-insensitive email Map for gender lookup — verify that IC_MEMBERS gender fields are consistent across all IC members after the fix.
+
 **Resolved (do not re-introduce):**
 - ~~`invites` table RLS INSERT policy missing~~ — policy added in Supabase; invites now write correctly
 - ~~`invite_token` missing from INSERT payload~~ — client-side token generated via `crypto.getRandomValues` and included in payload
@@ -541,6 +651,7 @@ Applied via JS: `el.classList.add('ic-shake'); setTimeout(()=>el.classList.remov
 - ~~IC tab shows 0 on arrival from dashboard~~ — fixed by syncing counts in `showIcSection()`
 - ~~+ Add to my IC showing for existing IC members in outbound accepted group~~ — removed from that group
 - ~~Duplicate courts in nearby list~~ — `normalizeCourtName()` fuzzy match + double-dedup applied
+- ~~Level grid column headers showing raw diff ranges (`< 3.88`, `3.88 – 4.13`) instead of IC Level Structure labels~~ — fixed in `buildGroupInviteGrid()` and `buildSmInviteGrid()`; now shows `.5+ Below My Level` / `.25 Below My Level` / `My Level` / `.25 Above My Level` / `.5+ Above My Level` with `≤/≥` reference values at 0.25 increments
 
 ---
 
@@ -589,16 +700,21 @@ Applied via JS: `el.classList.add('ic-shake'); setTimeout(()=>el.classList.remov
 
 ## Next to Build
 
-1. **Fix mobile portrait left nav** — slide-in drawer via hamburger toggle not working on iPhone. CSS `position:fixed` + `transform:translateX` approach needs a clean-room pass.
-2. **Non-member match invite flow** — organizer enters email/name for players not in their IC; app sends invite email with magic link to join + RSVP.
-3. **Promote `landing.html` to root** — rename `index.html` → `app.html`, `landing.html` → `index.html`, update `_redirects`. Requires Cloudflare setup steps (Turnstile, waitlist table SQL, service key, KV binding) to be complete first.
-4. **Play Structure as Step 1 with branching** — Set Group path auto-calculates courts and skips steps 2–3; Open/Mixed/Same runs full 7-container wizard.
-5. **My Groups UI** — organizer chip red/white, gender lookup fix (`player_email` not `email`), Set vs Random toggle in create modal.
-6. **Match Invites — status pill dropdowns** — In/Pending/Waitlist/Out boxes reveal player name list. `_miResponseCache` and `toggleInvitePanel()` already scaffolded.
-7. **Onboarding flow for new users** — guided setup after first login.
-8. **Recurring matches v2** — gap alert delivery via Cloudflare Cron Worker.
-9. **Web push notifications** — browser push for match invites, IC requests, gap alerts.
-10. **Player statistics dashboard** — `playerStats` page needs data and UX.
+1. **End-to-end test: Set Up a Match** — test all four Play Structure paths (Open, Mixed, Same Gender, Set Group). Verify step order, invite grid, conflict detection, and post-send navigation on each path.
+2. **End-to-end test: Create Group** — test both Set Group and Open Group creation. Verify size auto-calculation, level grid selection, sub pool (Set), Open Group messaging, and button gate.
+3. **Review & Send step — group roster** — verify that the group roster displays correctly in Container 7 when a Set Group is selected.
+4. **Match detail page** — post-send experience after navigating to Dashboard; players need a way to view match details.
+5. **Dashboard amber tile pulse** — brief pulse animation on the amber "Pending" tile after a successful match creation (`submitMatch()` success).
+6. **Fix mobile portrait left nav** — slide-in drawer via hamburger toggle not working on iPhone. CSS `position:fixed` + `transform:translateX` approach needs a clean-room pass.
+7. **Non-member match invite flow** — organizer enters email/name for players not in their IC; app sends invite email with magic link to join + RSVP.
+8. **Promote `landing.html` to root** — rename `index.html` → `app.html`, `landing.html` → `index.html`, update `_redirects`. Requires Cloudflare setup steps (Turnstile, waitlist table SQL, service key, KV binding) to be complete first.
+9. **Play Structure as Step 1 with branching** — Set Group path auto-calculates courts and skips steps 2–3; Open/Mixed/Same runs full 7-container wizard.
+10. **My Groups UI** — organizer chip red/white, gender lookup fix (`player_email` not `email`), Set vs Random toggle in create modal.
+11. **Match Invites — status pill dropdowns** — In/Pending/Waitlist/Out boxes reveal player name list. `_miResponseCache` and `toggleInvitePanel()` already scaffolded.
+12. **Onboarding flow for new users** — guided setup after first login.
+13. **Recurring matches v2** — gap alert delivery via Cloudflare Cron Worker.
+14. **Web push notifications** — browser push for match invites, IC requests, gap alerts.
+15. **Player statistics dashboard** — `playerStats` page needs data and UX.
 
 ---
 
