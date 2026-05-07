@@ -13305,3 +13305,23 @@ async function deleteRecurring(id){
   showToast('Deleted','#6b7280');
   loadRecurringMatches();
 }
+
+// ── Build Badge — runtime hash from Cloudflare Pages deployment metadata ──
+document.addEventListener('DOMContentLoaded', ()=>{
+  fetch('/cdn-cgi/appinfo')
+    .then(r => r.json())
+    .then(data => {
+      // Log full response once so we can confirm the field name in production
+      console.log('[buildBadge] /cdn-cgi/appinfo:', data);
+      // Cloudflare Pages exposes the git commit hash in data.git.hash (full SHA)
+      const fullHash = data?.git?.hash || data?.git_hash || data?.hash || '';
+      if(!fullHash) return; // leave placeholder dots if field not found
+      const short = fullHash.slice(0, 7);
+      const link = document.getElementById('buildBadgeLink');
+      if(link){
+        link.textContent = short;
+        link.href = 'https://github.com/Thrive8/pickleball-registry/commit/' + short;
+      }
+    })
+    .catch(() => { /* fail silently — placeholder dots remain */ });
+});
