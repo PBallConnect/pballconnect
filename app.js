@@ -13306,21 +13306,17 @@ async function deleteRecurring(id){
   loadRecurringMatches();
 }
 
-// ── Build Badge — runtime hash from Cloudflare Pages deployment metadata ──
+// ── Build Badge — runtime hash from version.json (written by pre-push hook) ──
 document.addEventListener('DOMContentLoaded', ()=>{
-  fetch('/cdn-cgi/appinfo')
+  fetch('/version.json')
     .then(r => r.json())
     .then(data => {
-      // Log full response once so we can confirm the field name in production
-      console.log('[buildBadge] /cdn-cgi/appinfo:', data);
-      // Cloudflare Pages exposes the git commit hash in data.git.hash (full SHA)
-      const fullHash = data?.git?.hash || data?.git_hash || data?.hash || '';
-      if(!fullHash) return; // leave placeholder dots if field not found
-      const short = fullHash.slice(0, 7);
+      const hash = (data?.hash || '').slice(0, 7);
+      if(!hash || hash === 'GITHASH') return; // leave placeholder dots
       const link = document.getElementById('buildBadgeLink');
       if(link){
-        link.textContent = short;
-        link.href = 'https://github.com/Thrive8/pickleball-registry/commit/' + short;
+        link.textContent = hash;
+        link.href = 'https://github.com/Thrive8/pickleball-registry/commit/' + hash;
       }
     })
     .catch(() => { /* fail silently — placeholder dots remain */ });
