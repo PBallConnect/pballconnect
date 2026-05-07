@@ -732,7 +732,7 @@ Applied via JS: `el.classList.add('ic-shake'); setTimeout(()=>el.classList.remov
 2. Test locally with `npx serve .` or `python -m http.server`.
 3. For Supabase schema changes: run SQL in Supabase SQL editor, update `supabase_rls_policies.sql`, and update the `public_profiles` view if new columns need to be exposed.
 4. For Cloudflare Pages Function changes: edit files in `functions/api/`. Environment variables (`RESEND_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `TURNSTILE_SECRET_KEY`) are set in the Cloudflare Pages dashboard. `RATE_LIMIT_KV` is a KV namespace binding (not an env var — set under Settings → Functions → KV namespace bindings).
-5. Deploy: `git push origin main` → Cloudflare Pages auto-deploys.
+5. Deploy: `git push --force origin main` → Cloudflare Pages auto-deploys. **Always use `--force`** — the pre-push hook amends HEAD to inject the build badge hash, which diverges from remote and requires a force push. Never use `--force-with-lease` (the hook's amend invalidates the lease check). Never add `git push` inside the pre-push hook itself (causes an infinite loop).
 6. Verify deploy at https://pballconnect.com — Cloudflare typically deploys within 60 seconds.
 
 ### Session Handoff Pattern
