@@ -9643,6 +9643,7 @@ async function icCreateSingleUseInvite(recipient, method){
     if(!res.ok){
       const errBody = await res.text().catch(()=>'');
       console.error('Invite INSERT failed:', res.status, errBody);
+      showToast('INSERT '+res.status+': '+errBody.substring(0,120), '#f87171');
       throw new Error('Failed to save invite: '+res.status+' '+errBody);
     }
     const rows = await res.json();
@@ -9998,7 +9999,7 @@ async function sendIcTextInvite(){
     showToast('💬 Messages opened for '+name,'#60a5fa');
     if(nameEl){ nameEl.value=''; nameEl.style.borderColor='#9ca3af'; }
     loadIcInvites();
-  }catch(e){ showToast('Could not create invite','#f87171'); }
+  }catch(e){ showToast('Error: '+(e.message||JSON.stringify(e)),'#f87171'); }
 }
 window.sendIcTextInvite = sendIcTextInvite;
 
