@@ -91,6 +91,125 @@
     </p>
 
   </div>
+
+  <!-- SMS Registration Card — shown when channel=sms -->
+  <div id="smsRegCard" style="display:none;background:#ffffff;border-radius:20px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+
+    <!-- Logo -->
+    <div style="text-align:center;margin-bottom:4px;">
+      <span style="font-size:26px;font-weight:800;color:#1a7a3a;font-family:Arial,sans-serif;">PBall</span><span style="font-size:26px;font-weight:800;color:#111;font-family:Arial,sans-serif;">Connect</span>
+      <span style="display:inline-block;margin-left:6px;padding:2px 8px;border-radius:999px;background:#f3f4f6;color:#9ca3af;font-size:9px;font-weight:700;letter-spacing:.08em;vertical-align:middle;">BETA</span>
+    </div>
+    <p style="text-align:center;color:#9ca3af;font-style:italic;font-size:13px;margin:0 0 22px;">For the Love of Pickleball</p>
+
+    <!-- Headline -->
+    <div style="text-align:center;margin-bottom:22px;">
+      <div style="font-size:40px;margin-bottom:10px;">🎾</div>
+      <h2 id="smsHeadline" style="color:#111;font-size:19px;font-weight:800;margin:0 0 6px;line-height:1.35;"></h2>
+      <p style="color:#6b7280;font-size:13px;margin:0;">Let's get you set up — it only takes a minute.</p>
+    </div>
+
+    <!-- First Name -->
+    <label style="display:block;font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;">First Name <span style="color:#dc2626;">*</span></label>
+    <input id="smsFirstName" type="text" autocomplete="given-name" placeholder="Your first name"
+      style="width:100%;padding:12px 14px;border:2px solid #d1d5db;border-radius:10px;font-size:14px;color:#111;background:#fff;box-sizing:border-box;outline:none;margin-bottom:14px;"
+      oninput="pbSmsUpdateBtn()"
+      onfocus="this.style.borderColor='#1a7a3a'"
+      onblur="this.style.borderColor='#d1d5db'"/>
+
+    <!-- Last Name -->
+    <label style="display:block;font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;">Last Name <span style="color:#dc2626;">*</span></label>
+    <input id="smsLastName" type="text" autocomplete="family-name" placeholder="Your last name"
+      style="width:100%;padding:12px 14px;border:2px solid #d1d5db;border-radius:10px;font-size:14px;color:#111;background:#fff;box-sizing:border-box;outline:none;margin-bottom:14px;"
+      oninput="pbSmsUpdateBtn()"
+      onfocus="this.style.borderColor='#1a7a3a'"
+      onblur="this.style.borderColor='#d1d5db'"/>
+
+    <!-- Skill Level -->
+    <label style="display:block;font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;">Skill Level <span style="color:#dc2626;">*</span></label>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+      <input id="smsSkillSlider" type="range" min="0" max="21" value="8"
+        style="flex:1;height:6px;cursor:pointer;"
+        oninput="document.getElementById('smsSkillVal').textContent=SMS_DUPR_VALS[+this.value]||'4.0';pbSmsUpdateBtn()"/>
+      <span id="smsSkillVal" style="font-size:20px;font-weight:800;color:#1a7a3a;min-width:44px;text-align:right;">4.0</span>
+    </div>
+    <div style="font-size:11px;color:#9ca3af;text-align:center;margin-bottom:6px;">2.0 (beginner) → 7.0+ (pro)</div>
+    <div style="text-align:center;margin-bottom:6px;">
+      <a href="#" onclick="pbToggleSkillGuide();return false;" style="font-size:12px;color:#16a34a;text-decoration:underline;">❓ What's my skill level?</a>
+    </div>
+    <div id="smsSkillGuide" style="display:none;background:#f0fdf4;border:1px solid #d1fae5;border-radius:10px;padding:14px;margin-bottom:14px;font-size:12px;color:#065f46;line-height:1.7;">
+      <strong>2.0–2.5</strong> Beginner — just learning the game<br/>
+      <strong>3.0</strong> Can sustain rallies, working on placement<br/>
+      <strong>3.5</strong> Consistent ground strokes, learning strategy<br/>
+      <strong>4.0</strong> Solid fundamentals, competitive club play<br/>
+      <strong>4.5</strong> Tournament-level, strong all-around game<br/>
+      <strong>5.0+</strong> Advanced / Elite player
+    </div>
+
+    <!-- Email -->
+    <label style="display:block;font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;margin-top:8px;">Email Address <span style="color:#dc2626;">*</span></label>
+    <input id="smsEmail" type="email" autocomplete="email" placeholder="you@example.com"
+      style="width:100%;padding:12px 14px;border:2px solid #d1d5db;border-radius:10px;font-size:14px;color:#111;background:#fff;box-sizing:border-box;outline:none;margin-bottom:8px;"
+      oninput="pbSmsUpdateBtn()"
+      onfocus="this.style.borderColor='#1a7a3a'"
+      onblur="this.style.borderColor='#d1d5db'"/>
+    <p style="font-size:12px;color:#6b7280;line-height:1.5;margin:0 0 18px;padding:10px 12px;background:#fefce8;border-radius:8px;border:1px solid #fde68a;">
+      🎯 First dibs on cancellations, sub spots &amp; waitlist openings — don't be the last one on the court! 📬
+    </p>
+
+    <!-- Consent -->
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:700;color:#111;margin-bottom:12px;">Agreement &amp; Waiver</div>
+
+      <div onclick="pbSmsToggle('smsTos')" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin-bottom:12px;">
+        <div id="smsTosBox" style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:2px solid #d1d5db;background:#fff;display:flex;align-items:center;justify-content:center;margin-top:1px;transition:all .15s;"></div>
+        <span style="font-size:12px;color:#374151;line-height:1.5;">I agree to the <a href="https://pballconnect.com" onclick="event.stopPropagation()" target="_blank" style="color:#1a7a3a;font-weight:600;">Terms of Service</a> and Privacy Policy</span>
+      </div>
+
+      <div onclick="pbSmsToggle('smsRisk')" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
+        <div id="smsRiskBox" style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:2px solid #d1d5db;background:#fff;display:flex;align-items:center;justify-content:center;margin-top:1px;transition:all .15s;"></div>
+        <span style="font-size:12px;color:#374151;line-height:1.5;">I have read and agree to the
+          <span onclick="event.stopPropagation();pbToggleWaiver()" style="color:#1a7a3a;font-weight:600;cursor:pointer;text-decoration:underline;">Assumption of Risk &amp; Liability Waiver</span>.
+          I voluntarily assume all risks associated with playing pickleball.</span>
+      </div>
+
+      <div id="smsWaiverText" style="display:none;margin-top:14px;padding:12px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:11px;color:#374151;line-height:1.7;max-height:200px;overflow-y:auto;">
+        <strong>ASSUMPTION OF RISK, RELEASE, AND WAIVER OF LIABILITY</strong><br/><br/>
+        <strong>1. ACKNOWLEDGMENT OF RISK</strong><br/>
+        I understand that pickleball is a physical sport that involves inherent risks, including but not limited to: sprains, strains, fractures, eye injuries, heat illness, cardiac events, and other injuries that may result in disability or death. I voluntarily assume all such risks, both known and unknown.<br/><br/>
+        <strong>2. RELEASE OF LIABILITY</strong><br/>
+        I hereby release, waive, discharge, and covenant not to sue PBallConnect, its owners, officers, employees, agents, and volunteers (collectively "Released Parties") from any and all claims, demands, actions, or causes of action arising from my participation in any activity arranged through PBallConnect, including claims arising from the negligence of the Released Parties. This release is intended to be as broad and inclusive as permitted by the laws of the State of New Hampshire, including RSA 508:13.<br/><br/>
+        <strong>3. MEDICAL REPRESENTATION</strong><br/>
+        I represent that I am in adequate physical condition to participate in pickleball. I have no medical condition that would make participation unsafe.<br/><br/>
+        <strong>4. EMERGENCY MEDICAL AUTHORIZATION</strong><br/>
+        In the event of an emergency, I authorize Released Parties to seek medical treatment on my behalf.<br/><br/>
+        <strong>5. INDEMNIFICATION</strong><br/>
+        I agree to indemnify and hold harmless the Released Parties from any claims brought by third parties arising from my conduct during activities arranged through PBallConnect.<br/><br/>
+        <strong>6. SEVERABILITY</strong><br/>
+        If any provision of this waiver is found to be unenforceable, the remaining provisions shall remain in full force and effect.<br/><br/>
+        <strong>7. ACKNOWLEDGMENT</strong><br/>
+        I have read this waiver, understand its terms, and agree voluntarily. I am 18 years of age or older.
+      </div>
+    </div>
+
+    <!-- Error -->
+    <p id="smsError" style="display:none;color:#dc2626;font-size:12px;margin:0 0 12px;padding:10px;background:#fef2f2;border-radius:8px;"></p>
+
+    <!-- Submit -->
+    <button id="smsSubmitBtn" onclick="pbSmsSubmit()"
+      style="width:100%;padding:15px;background:#9ca3af;color:#fff;font-size:16px;font-weight:800;border:none;border-radius:12px;cursor:not-allowed;transition:background .2s;margin-bottom:10px;"
+      disabled>
+      Let's Play! 🎾
+    </button>
+
+    <p style="color:#9ca3af;font-size:11px;text-align:center;margin:0 0 16px;">🔒 Your info is secure — no spam, ever.</p>
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 14px;"/>
+    <p style="text-align:center;margin:0;">
+      <a href="https://pballconnect.com" style="color:#9ca3af;font-size:13px;text-decoration:none;">← Back to PBallConnect</a>
+    </p>
+
+  </div>
+
 </div>
 
 <script>
@@ -101,6 +220,7 @@
   var _params = new URLSearchParams(window.location.search);
   var _token  = _params.get('token');
   var _qrId   = _params.get('qr');
+  var _channel = _params.get('channel') || ''; // 'sms' triggers streamlined registration screen
 
   // Which flow we're in — set after invite loads
   var _inviteType   = 'single'; // 'single' or 'qr'
@@ -297,7 +417,11 @@
       }
 
       pbHide('loadingState');
-      pbShow('inviteCard');
+      if(_channel === 'sms'){
+        pbShowSmsRegScreen();
+      } else {
+        pbShow('inviteCard');
+      }
     }
 
   })();
@@ -319,6 +443,114 @@
 
     document.getElementById('headline').textContent = inviterName + ' has invited you to join PBallConnect!';
     document.getElementById('footerNote').textContent = 'You received this because ' + inviterName + ' invited you. If this was a mistake, simply ignore this page.';
+  }
+
+  // ── SMS STREAMLINED REGISTRATION ─────────────────────────────────────────
+
+  var SMS_DUPR_VALS = ['2.0','2.25','2.5','2.75','3.0','3.25','3.5','3.75','4.0','4.25','4.5','4.75',
+    '5.0','5.25','5.5','5.75','6.0','6.25','6.5','6.75','7.0','7.0+'];
+
+  var _smsTosOn  = false;
+  var _smsRiskOn = false;
+
+  function pbShowSmsRegScreen(){
+    var firstName = _inviterName ? _inviterName.split(' ')[0] : 'A friend';
+    var hl = document.getElementById('smsHeadline');
+    if(hl) hl.textContent = firstName + ' invited you to play pickleball! 🎾';
+    pbShow('smsRegCard');
+  }
+
+  function pbToggleSkillGuide(){
+    var el = document.getElementById('smsSkillGuide');
+    if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function pbToggleWaiver(){
+    var el = document.getElementById('smsWaiverText');
+    if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function pbSmsToggle(which){
+    if(which === 'smsTos'){
+      _smsTosOn = !_smsTosOn;
+      var box = document.getElementById('smsTosBox');
+      if(box){
+        box.innerHTML    = _smsTosOn ? '✓' : '';
+        box.style.background   = _smsTosOn ? '#1a7a3a' : '#fff';
+        box.style.borderColor  = _smsTosOn ? '#1a7a3a' : '#d1d5db';
+        box.style.color        = '#fff';
+        box.style.fontSize     = '13px';
+        box.style.fontWeight   = '800';
+      }
+    } else {
+      _smsRiskOn = !_smsRiskOn;
+      var box2 = document.getElementById('smsRiskBox');
+      if(box2){
+        box2.innerHTML   = _smsRiskOn ? '✓' : '';
+        box2.style.background  = _smsRiskOn ? '#1a7a3a' : '#fff';
+        box2.style.borderColor = _smsRiskOn ? '#1a7a3a' : '#d1d5db';
+        box2.style.color       = '#fff';
+        box2.style.fontSize    = '13px';
+        box2.style.fontWeight  = '800';
+      }
+    }
+    pbSmsUpdateBtn();
+  }
+
+  function pbSmsUpdateBtn(){
+    var fn    = (document.getElementById('smsFirstName') ? document.getElementById('smsFirstName').value : '').trim();
+    var ln    = (document.getElementById('smsLastName')  ? document.getElementById('smsLastName').value  : '').trim();
+    var email = (document.getElementById('smsEmail')     ? document.getElementById('smsEmail').value     : '').trim();
+    var atIdx = email.indexOf('@');
+    var emailOk = atIdx > 0 && email.lastIndexOf('.') > atIdx;
+    var ok = fn.length > 0 && ln.length > 0 && emailOk && _smsTosOn && _smsRiskOn;
+    var btn = document.getElementById('smsSubmitBtn');
+    if(!btn) return;
+    btn.disabled         = !ok;
+    btn.style.background = ok ? '#16a34a' : '#9ca3af';
+    btn.style.cursor     = ok ? 'pointer' : 'not-allowed';
+  }
+
+  async function pbSmsSubmit(){
+    var fn    = (document.getElementById('smsFirstName') ? document.getElementById('smsFirstName').value : '').trim();
+    var ln    = (document.getElementById('smsLastName')  ? document.getElementById('smsLastName').value  : '').trim();
+    var email = (document.getElementById('smsEmail')     ? document.getElementById('smsEmail').value     : '').trim().toLowerCase();
+    var sliderVal = document.getElementById('smsSkillSlider') ? document.getElementById('smsSkillSlider').value : 8;
+    var skill = SMS_DUPR_VALS[+sliderVal] || '4.0';
+    var errEl = document.getElementById('smsError');
+    var btn   = document.getElementById('smsSubmitBtn');
+
+    if(errEl) errEl.style.display = 'none';
+
+    if(!fn || !ln || !email || !_smsTosOn || !_smsRiskOn){
+      if(errEl){ errEl.textContent = 'Please fill in all fields and check both boxes.'; errEl.style.display = 'block'; }
+      return;
+    }
+
+    if(btn){ btn.disabled = true; btn.textContent = 'Setting up your account…'; btn.style.background = '#9ca3af'; btn.style.cursor = 'not-allowed'; }
+
+    try{
+      var res = await fetch('/api/sms-register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: _token, firstName: fn, lastName: ln, skill: skill, email: email })
+      });
+      var data = await res.json();
+
+      if(!res.ok || !data.ok){
+        var msg = (data && data.error) || 'Something went wrong. Please try again.';
+        if(errEl){ errEl.textContent = msg; errEl.style.display = ‘block’; }
+        if(btn){ btn.disabled = false; btn.textContent = "Let’s Play! 🎾"; btn.style.background = ‘#16a34a’; btn.style.cursor = ‘pointer’; }
+        return;
+      }
+
+      if(btn){ btn.textContent = "✅ You’re in! Heading to your dashboard…"; }
+      window.location.href = data.signInUrl;
+
+    }catch(e){
+      if(errEl){ errEl.textContent = ‘Network error. Please check your connection and try again.’; errEl.style.display = ‘block’; }
+      if(btn){ btn.disabled = false; btn.textContent = "Let’s Play! 🎾"; btn.style.background = ‘#16a34a’; btn.style.cursor = ‘pointer’; }
+    }
   }
 </script>
 

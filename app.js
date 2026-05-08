@@ -7839,7 +7839,14 @@ async function restoreSession(email, playerData){
   const _wbKey = 'pb_welcomed_' + (player.email||'').toLowerCase();
   const _isReturning = !!localStorage.getItem(_wbKey);
   localStorage.setItem(_wbKey, '1');
-  showToast((_isReturning ? 'Welcome back, ' : 'Welcome, ')+(player.first_name||'Player')+'! 🎾','#4CAF7D');
+  const _smswelcome = new URLSearchParams(window.location.search).get('sms_welcome') === '1';
+  if(_smswelcome){ history.replaceState(null,'',window.location.pathname); }
+  showToast(
+    _smswelcome
+      ? 'Welcome to PBallConnect, '+(player.first_name||'Player')+'! 🔥 You\'re all set.'
+      : (_isReturning ? 'Welcome back, ' : 'Welcome, ')+(player.first_name||'Player')+'! 🎾',
+    '#4CAF7D'
+  );
 
   // Top badge is set by loadAllMatchBadges (via refreshTopInviteBadge) with proper filtering
 
@@ -9985,9 +9992,10 @@ async function sendIcTextInvite(){
   try{
     const { token, url } = await icCreateSingleUseInvite({ name, email:null }, 'text');
     if(!url) throw new Error('Invite creation failed');
+    const smsUrl = url + '&channel=sms';
     await icPostPendingConnection(null, name, token);
     const myFirst = (getMyName()||'Someone').split(' ')[0];
-    const msg = encodeURIComponent(myFirst+' invited you to their Inner Circle on PBallConnect! Set up your free player profile: '+url+' 🎾');
+    const msg = encodeURIComponent(myFirst+' invited you to their Inner Circle on PBallConnect! Set up your free player profile: '+smsUrl+' 🎾');
     window.open('sms:?body='+msg, '_self');
     showToast('💬 Messages opened for '+name,'#60a5fa');
     if(nameEl){ nameEl.value=''; nameEl.style.borderColor='#9ca3af'; }
