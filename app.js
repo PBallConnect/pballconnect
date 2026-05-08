@@ -9822,19 +9822,15 @@ function selectIcChannel(channel){
   // Focus the first input in the selected group
   const firstInput = target && target.querySelector('input');
   if(firstInput) setTimeout(function(){ firstInput.focus(); }, 50);
-  // Email selected: hide other channel buttons and QR line for focus
-  const textBtn = document.getElementById('icChannelText');
-  const linkBtn = document.getElementById('icChannelLink');
-  const qrLine  = document.getElementById('icQrLine');
-  if(channel === 'email'){
-    if(textBtn) textBtn.style.display = 'none';
-    if(linkBtn) linkBtn.style.display = 'none';
-    if(qrLine)  qrLine.style.display  = 'none';
-  } else {
-    if(textBtn) textBtn.style.display = _icIsMobile ? 'flex' : 'none';
-    if(linkBtn) linkBtn.style.display = 'flex';
-    if(qrLine)  qrLine.style.display  = 'block';
-  }
+  // Any channel selected: hide all channel buttons and QR line for focus
+  const emailBtn = document.getElementById('icChannelEmail');
+  const textBtn  = document.getElementById('icChannelText');
+  const linkBtn  = document.getElementById('icChannelLink');
+  const qrLine   = document.getElementById('icQrLine');
+  if(emailBtn) emailBtn.style.display = 'none';
+  if(textBtn)  textBtn.style.display  = 'none';
+  if(linkBtn)  linkBtn.style.display  = 'none';
+  if(qrLine)   qrLine.style.display   = 'none';
 }
 window.selectIcChannel = selectIcChannel;
 
@@ -9850,12 +9846,14 @@ function resetIcChannelForm(){
   if(conf1) conf1.style.display = 'none';
   if(conf2) conf2.style.display = 'none';
   // Restore all channel buttons and QR line to default visibility
-  const textBtn = document.getElementById('icChannelText');
-  const linkBtn = document.getElementById('icChannelLink');
-  const qrLine  = document.getElementById('icQrLine');
-  if(textBtn) textBtn.style.display = _icIsMobile ? 'flex' : 'none';
-  if(linkBtn) linkBtn.style.display = 'flex';
-  if(qrLine)  qrLine.style.display  = 'block';
+  const emailBtn = document.getElementById('icChannelEmail');
+  const textBtn  = document.getElementById('icChannelText');
+  const linkBtn  = document.getElementById('icChannelLink');
+  const qrLine   = document.getElementById('icQrLine');
+  if(emailBtn) emailBtn.style.display = 'flex';
+  if(textBtn)  textBtn.style.display  = _icIsMobile ? 'flex' : 'none';
+  if(linkBtn)  linkBtn.style.display  = 'flex';
+  if(qrLine)   qrLine.style.display   = 'block';
 }
 window.resetIcChannelForm = resetIcChannelForm;
 

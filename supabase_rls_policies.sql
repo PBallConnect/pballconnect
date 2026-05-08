@@ -358,7 +358,7 @@ drop policy if exists "Authenticated users can insert invites" on invites;
 create policy "Authenticated users can read invites"
   on invites for select
   to authenticated
-  using (auth.email() = inviter_email or auth.email() = invitee_email);
+  using (auth.email() = inviter_email or (invitee_email is not null and auth.email() = invitee_email));
 
 create policy "Authenticated users can insert invites"
   on invites for insert
@@ -370,7 +370,7 @@ create policy "Authenticated users can update invites"
   to authenticated
   using (
     auth.email() = inviter_email
-    or auth.email() = invitee_email
+    or (invitee_email is not null and auth.email() = invitee_email)
   );
 
 

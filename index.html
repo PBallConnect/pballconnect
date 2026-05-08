@@ -1162,6 +1162,11 @@
             <!-- Per-channel form (shown when a channel is selected) -->
             <div id="icChannelForm" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid #d1fae5;">
 
+              <!-- Back link — always shown when a channel form is active -->
+              <div style="margin-bottom:10px;">
+                <span onclick="resetIcChannelForm()" style="font-size:12px;color:#6b7280;cursor:pointer;text-decoration:underline;">← Change method</span>
+              </div>
+
               <!-- Email fields -->
               <div id="icEmailFields" style="display:none;">
                 <input id="icFormName" type="text" placeholder="Their name"
