@@ -4210,7 +4210,7 @@ async function submitMatch(){
       });
     }
     if(allGroups.has('specific')){
-      IC_MEMBERS.forEach(({player})=>{ if(!seenEmails.has(player.email)&&MS.specificPlayers.has(player.email)&&playerPassesGenderFilter(player,sendGenderPref,sendMyGender)){ seenEmails.add(player.email); invitees.push(player); } });
+      IC_MEMBERS.forEach(({player})=>{ const eLC=(player.email||'').toLowerCase(); if(!seenEmails.has(player.email)&&MS.specificPlayers.has(eLC)&&playerPassesGenderFilter(player,sendGenderPref,sendMyGender)){ seenEmails.add(player.email); invitees.push(player); } });
       // Also handle non-IC specific players (e.g. invited from Find Players)
       const outerSpecific = [...MS.specificPlayers].filter(e=>!seenEmails.has(e));
       if(outerSpecific.length && matchId){
@@ -6127,8 +6127,11 @@ function buildSmInviteGrid(){
   const section = document.getElementById('smInviteGridSection');
   if(!section) return;
 
-  // Grid always uses explicit selection — set invite mode to specific
+  // Grid always uses explicit selection — lock allGroups to 'specific' so submitMatch
+  // only sends to hand-picked players, not the full IC.
   MS.inviteMode = 'specific';
+  MS.selectedGroups = new Set(['specific']);
+  MS.group = 'specific';
   if(!MS.specificPlayers) MS.specificPlayers = new Set();
 
   const { buckets, unrated, mySkill } = _smGetInviteBuckets();
@@ -11446,21 +11449,12 @@ async function loadDashTileCounts(myEmail){
     );
     // Fetch in-responses for roster-count candidates (joined + organized)
     const pmRosterIds=[...new Set([...pmJoined.map(m=>m.id),...pmOrgMatches2.map(m=>m.id)])];
-    const pmOrgIds=[...new Set(pmOrgMatches2.map(m=>m.id))];
     let pmInResps=[];
-    let orgAwaitingCount=0;
-    await Promise.all([
-      pmRosterIds.length?(async()=>{
-        const rr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${pmRosterIds.join(',')})&response=eq.in&select=match_id`,
-          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
-        if(rr.ok) pmInResps=await rr.json();
-      })():Promise.resolve(),
-      pmOrgIds.length?(async()=>{
-        const opr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${pmOrgIds.join(',')})&response=eq.pending&select=match_id`,
-          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
-        if(opr.ok){const rows=await opr.json();orgAwaitingCount=rows.length;}
-      })():Promise.resolve()
-    ]);
+    if(pmRosterIds.length){
+      const rr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${pmRosterIds.join(',')})&response=eq.in&select=match_id`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+      if(rr.ok) pmInResps=await rr.json();
+    }
     const pmInvitedPending=pmJoined.filter(m=>{
       const inCount=pmInResps.filter(r=>r.match_id===m.id).length;
       return inCount<(m.max_players||(m.match_type==='doubles'?4:2));
@@ -11484,14 +11478,6 @@ async function loadDashTileCounts(myEmail){
     if(sqEl) sqEl.textContent = pendingMatchCount;
     if(btnEl) btnEl.style.display = pendingMatchCount > 0 ? 'flex' : 'none';
 
-    const subOrgEl=document.getElementById('dashSubOrgPending');
-    const subOrgTxt=document.getElementById('dashSubOrgPendingText');
-    if(subOrgEl){
-      if(orgAwaitingCount>0){
-        if(subOrgTxt) subOrgTxt.textContent='⏳ '+orgAwaitingCount+' awaiting response';
-        subOrgEl.style.display='block';
-      } else { subOrgEl.style.display='none'; }
-    }
     const subMyEl=document.getElementById('dashSubMyPending');
     const subMyTxt=document.getElementById('dashSubMyPendingText');
     if(subMyEl){
