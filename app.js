@@ -9976,6 +9976,7 @@ function icDoneInviting(){
 window.icDoneInviting = icDoneInviting;
 
 async function sendIcTextInvite(){
+  alert('sendIcTextInvite called');
   const nameEl = document.getElementById('icFormNameText');
   const name   = nameEl?.value?.trim();
   if(!name){
