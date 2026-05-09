@@ -5521,16 +5521,25 @@ window.togglePillNames = togglePillNames;
 function toggleInvitePanel(matchId, status){ togglePillNames(matchId, status); }
 window.toggleInvitePanel = toggleInvitePanel;
 
-function buildPillNamesPanel(matchId, status, players){
+function buildPillNamesPanel(matchId, status, players, organizerEmail){
   const icons = {in:'✅', pending:'⏳', waitlist:'👥', out:'❌'};
   const icon = icons[status]||'';
+  const orgEmailLower=(organizerEmail||'').toLowerCase();
   let html='<div id="pillNames-'+matchId+'-'+status+'" style="display:none;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:10px 14px;margin-top:6px;">';
   if(!players.length){
     html+='<div style="font-size:13px;color:#9ca3af;">None yet</div>';
   } else {
     players.forEach(p=>{
       const name=p.player_name||p.player_email||'—';
-      html+='<div style="font-size:13px;font-weight:600;color:#111;padding:3px 0;">'+icon+' '+name+'</div>';
+      const isOrg=orgEmailLower&&(p.player_email||'').toLowerCase()===orgEmailLower;
+      if(isOrg){
+        html+='<div style="font-size:13px;font-weight:700;color:#dc2626;padding:3px 0;display:flex;align-items:center;gap:6px;border-left:3px solid #dc2626;padding-left:8px;margin-left:-8px;">'+
+          icon+' '+name+
+          '<span style="font-size:10px;font-weight:800;background:#dc2626;color:#fff;border-radius:999px;padding:1px 7px;letter-spacing:.04em;">Organizer</span>'+
+        '</div>';
+      } else {
+        html+='<div style="font-size:13px;font-weight:600;color:#111;padding:3px 0;">'+icon+' '+name+'</div>';
+      }
     });
   }
   return html+'</div>';
@@ -5790,10 +5799,10 @@ async function loadInvitedByOthersPage(){
                   makeResponsePill('Out',out,'#f87171',iboId,'out')+
                   makeRemainingPill(remaining,maxNeeded)+
                 '</div>'+
-                buildPillNamesPanel(iboId,'in',inP)+
-                buildPillNamesPanel(iboId,'pending',pend)+
-                buildPillNamesPanel(iboId,'waitlist',wait)+
-                buildPillNamesPanel(iboId,'out',out)+
+                buildPillNamesPanel(iboId,'in',inP,m.organizer_email)+
+                buildPillNamesPanel(iboId,'pending',pend,m.organizer_email)+
+                buildPillNamesPanel(iboId,'waitlist',wait,m.organizer_email)+
+                buildPillNamesPanel(iboId,'out',out,m.organizer_email)+
                 '<div style="display:flex;gap:10px;margin-top:12px;" id="iboRespRow_'+m.id+'">'+
                   '<button class="ibo-respond-btn" data-mid="'+m.id+'" data-resp="in" '+
                     'style="flex:1;padding:10px;background:#1a7a3a;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">'+
@@ -5856,10 +5865,10 @@ async function loadInvitedByOthersPage(){
                   makeResponsePill('Waitlist',wait,'#f59e0b',iboId,'waitlist')+
                   makeResponsePill('Out',out,'#f87171',iboId,'out')+
                 '</div>'+
-                buildPillNamesPanel(iboId,'in',inP)+
-                buildPillNamesPanel(iboId,'pending',pend)+
-                buildPillNamesPanel(iboId,'waitlist',wait)+
-                buildPillNamesPanel(iboId,'out',out)+
+                buildPillNamesPanel(iboId,'in',inP,m.organizer_email)+
+                buildPillNamesPanel(iboId,'pending',pend,m.organizer_email)+
+                buildPillNamesPanel(iboId,'waitlist',wait,m.organizer_email)+
+                buildPillNamesPanel(iboId,'out',out,m.organizer_email)+
                 '<div style="display:flex;gap:10px;margin-top:4px;">'+
                   '<button class="ibo-respond-btn" data-mid="'+m.id+'" data-resp="waitlist" '+
                     'style="flex:1;padding:10px;background:#f59e0b;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;">'+
@@ -5923,10 +5932,10 @@ async function loadInvitedByOthersPage(){
                   makeResponsePill('Out',out,'#f87171',iboId,'out')+
                   makeRemainingPill(remaining,maxNeeded)+
                 '</div>'+
-                buildPillNamesPanel(iboId,'in',inP)+
-                buildPillNamesPanel(iboId,'pending',pend)+
-                buildPillNamesPanel(iboId,'waitlist',wait)+
-                buildPillNamesPanel(iboId,'out',out)+
+                buildPillNamesPanel(iboId,'in',inP,m.organizer_email)+
+                buildPillNamesPanel(iboId,'pending',pend,m.organizer_email)+
+                buildPillNamesPanel(iboId,'waitlist',wait,m.organizer_email)+
+                buildPillNamesPanel(iboId,'out',out,m.organizer_email)+
               '</div>'
             :'');
         }
@@ -5980,10 +5989,10 @@ async function loadInvitedByOthersPage(){
                   makeResponsePill('Out',out,'#f87171',iboId,'out')+
                   makeRemainingPill(remaining,maxNeeded)+
                 '</div>'+
-                buildPillNamesPanel(iboId,'in',inP)+
-                buildPillNamesPanel(iboId,'pending',pend)+
-                buildPillNamesPanel(iboId,'waitlist',wait)+
-                buildPillNamesPanel(iboId,'out',out)+
+                buildPillNamesPanel(iboId,'in',inP,m.organizer_email)+
+                buildPillNamesPanel(iboId,'pending',pend,m.organizer_email)+
+                buildPillNamesPanel(iboId,'waitlist',wait,m.organizer_email)+
+                buildPillNamesPanel(iboId,'out',out,m.organizer_email)+
               '</div>'
             :'');
         }
