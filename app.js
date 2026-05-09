@@ -1011,7 +1011,18 @@ async function sendEmail({ to_email, type, personal_note, invite_url, subject, i
   }catch(e){ console.warn('sendEmail error:', e.message); }
 }
 
-
+async function sendSms({ player_email, message, match_id, event_type }){
+  if(!player_email || !player_email.includes('@')) return;
+  try{
+    const res = await fetch('/api/send-sms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ player_email, message, match_id: match_id||null, event_type: event_type||null })
+    });
+    if(!res.ok) console.warn('sendSms failed:', res.status);
+    return res;
+  }catch(e){ console.warn('sendSms error:', e.message); }
+}
 
 async function submitForm(){
   // If editing existing profile, show diff overlay first
@@ -4771,6 +4782,17 @@ async function loadConfirmedMatches(){
             '<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;">'+waitChips+'</div>'
           : '')+
         '</div>';
+      // Populate cache for Can't Make It flow
+      window._cmCache = window._cmCache || {};
+      window._cmCache[m.id] = {
+        dateStr: dateStr,
+        timeStr: timeStr,
+        courtName: resolvedCourtName || 'Court TBD',
+        organizerName: m.organizer_name || 'Unknown',
+        organizerEmail: m.organizer_email || '',
+        maxPlayers: maxNeeded,
+        matchDateTime: _mStart ? _mStart.getTime() : null
+      };
       // Organizer-only actions
       if(isOrganizer){
         const actRow = document.createElement('div');
@@ -4783,6 +4805,15 @@ async function loadConfirmedMatches(){
             'style="flex:1;padding:8px 12px;border-radius:8px;border:2px solid #dc2626;background:#fff1f2;color:#dc2626;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">'+
             '&#10005; Remove Player</button>';
         card.appendChild(actRow);
+      } else if(!inProgress){
+        // Non-organizer: show Can't Make It button
+        const dropRow = document.createElement('div');
+        dropRow.style.cssText='margin-top:10px;padding-top:10px;border-top:2px solid #e5e7eb;';
+        dropRow.innerHTML='<button onclick="window.cantMakeIt(\''+m.id+'\')" '+
+          'style="padding:7px 14px;border-radius:8px;border:1.5px solid #dc2626;background:transparent;color:#dc2626;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">'+
+          '&#10006; Can\'t Make It'+
+        '</button>';
+        card.appendChild(dropRow);
       }
       container.appendChild(card);
       if(showWeather) loadConfirmedMatchWeather(m.id, m.match_date, weatherLat, weatherLon);
@@ -5901,8 +5932,20 @@ async function loadInvitedByOthersPage(){
         const remaining=Math.max(0,maxNeeded-inP.length);
         const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-CA',{weekday:'short',month:'long',day:'numeric'}):'TBD';
         const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):''):'TBD';
+        const courtName=m.court_name&&m.court_name!=='TBD'?m.court_name:(m.court_address||'Court TBD');
         const courtDisplay=m.court_name&&m.court_name!=='TBD'?'📍 '+m.court_name:(m.court_address?'📍 '+m.court_address:'📍 Court TBD');
         const iboId='ibo-'+m.id;
+        // Cache for Can't Make It flow
+        window._cmCache = window._cmCache || {};
+        window._cmCache[m.id] = {
+          dateStr: dateStr,
+          timeStr: timeStr,
+          courtName: courtName,
+          organizerName: m.organizer_name || 'Unknown',
+          organizerEmail: m.organizer_email || '',
+          maxPlayers: maxNeeded,
+          matchDateTime: m.match_date&&m.time_start ? new Date(m.match_date+'T'+m.time_start).getTime() : null
+        };
         const card=document.createElement('div');
         card.style.cssText='background:#ffffff;border:3px solid #dc2626;border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);';
         if(getCountdown(m.match_date,m.time_start)?.urgent) card.classList.add('pb-card-urgent');
@@ -5936,6 +5979,12 @@ async function loadInvitedByOthersPage(){
                 buildPillNamesPanel(iboId,'pending',pend,m.organizer_email)+
                 buildPillNamesPanel(iboId,'waitlist',wait,m.organizer_email)+
                 buildPillNamesPanel(iboId,'out',out,m.organizer_email)+
+                '<div style="margin-top:12px;padding-top:10px;border-top:1px solid #f3f4f6;">'+
+                  '<button onclick="window.cantMakeIt(\''+m.id+'\')" '+
+                    'style="padding:7px 14px;border-radius:8px;border:1.5px solid #dc2626;background:transparent;color:#dc2626;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">'+
+                    '&#10006; Can\'t Make It'+
+                  '</button>'+
+                '</div>'+
               '</div>'
             :'');
         }
@@ -7605,6 +7654,183 @@ async function promoteFromWaitlist(matchId, match){
     }catch(emailErr){ console.warn('waitlist promote email failed:',emailErr); }
   }catch(e){ console.warn('promoteFromWaitlist error:',e); }
 }
+
+// ── Can't Make It drop flow ───────────────────────────────────────────────────
+// _cmCache stores match display data populated at card-render time.
+window._cmCache = window._cmCache || {};
+
+window.cantMakeIt = function(matchId){
+  const d = window._cmCache[matchId];
+  if(!d){ showToast('Match data not found — please reload.','#f87171'); return; }
+  const overlay = document.createElement('div');
+  overlay.id = 'cantMakeItOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+  overlay.innerHTML =
+    '<div style="background:#fff;border-radius:16px;padding:24px;max-width:340px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.25);">'+
+      '<h3 style="margin:0 0 14px;font-size:16px;font-weight:800;color:#111;">Are you sure you can\'t make it?</h3>'+
+      '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:2;">'+
+        '<div>&#128197; '+d.dateStr+(d.timeStr?' &middot; '+d.timeStr:'')+'</div>'+
+        '<div>&#128205; '+d.courtName+'</div>'+
+        '<div>&#128100; Organized by '+((d.organizerName||'').split(' ')[0]||'Unknown')+'</div>'+
+      '</div>'+
+      '<div style="font-size:13px;color:#6b7280;margin-bottom:20px;">The organizer will be notified immediately.</div>'+
+      '<div style="display:flex;gap:10px;">'+
+        '<button onclick="window.confirmCantMakeIt(\''+matchId+'\')" '+
+          'style="flex:1;padding:12px;background:#dc2626;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">'+
+          'Yes, I can\'t make it'+
+        '</button>'+
+        '<button onclick="document.getElementById(\'cantMakeItOverlay\')?.remove()" '+
+          'style="flex:1;padding:12px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">'+
+          'Never mind'+
+        '</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(overlay);
+};
+
+window.confirmCantMakeIt = async function(matchId){
+  const myEmail = getMyEmail();
+  const d = window._cmCache[matchId];
+
+  // Belt-and-suspenders organizer guard
+  if(d && d.organizerEmail && (d.organizerEmail||'').toLowerCase() === (myEmail||'').toLowerCase()){
+    showToast('As the organizer, use Edit Match to cancel this match.','#f59e0b');
+    document.getElementById('cantMakeItOverlay')?.remove();
+    return;
+  }
+
+  document.getElementById('cantMakeItOverlay')?.remove();
+
+  // ── 1. SET RESPONSE TO 'OUT' ─────────────────────────────────────────────
+  try{
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&player_email=eq.${encodeURIComponent(myEmail)}`,
+      {
+        method:'PATCH',
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+        body:JSON.stringify({ response:'out', responded_at:new Date().toISOString() })
+      }
+    );
+  }catch(e){
+    showToast('Could not update your response. Please try again.','#f87171');
+    return;
+  }
+
+  // ── 2. TOAST + RELOAD PAGE ───────────────────────────────────────────────
+  showToast("You've been removed from this match.",'#6b7280');
+  const activePage = document.querySelector('.page-section.active')?.id?.replace('page-','');
+  if(activePage==='confirmedMatches') setTimeout(()=>loadConfirmedMatches(), 600);
+  else if(activePage==='invitedByOthers') setTimeout(()=>loadInvitedByOthersPage(), 600);
+  setTimeout(()=>loadAllMatchBadges(), 700);
+
+  // ── 3. HOURS UNTIL MATCH ─────────────────────────────────────────────────
+  const hoursUntilMatch = d && d.matchDateTime ? (d.matchDateTime - Date.now()) / 36e5 : Infinity;
+
+  // ── 4. NOTIFY ORGANIZER ──────────────────────────────────────────────────
+  if(d && d.organizerEmail){
+    const myName = getMyName() || (myEmail||'').split('@')[0];
+    const dateStr = d.dateStr || '';
+    const courtStr = d.courtName && d.courtName !== 'Court TBD' ? d.courtName : '';
+    const matchUrl = window.location.origin + window.location.pathname + '?match=' + matchId;
+
+    // Current confirmed count (post-drop)
+    let confirmedCount = 0;
+    try{
+      const cr = await fetch(
+        `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.in&select=player_email`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+      );
+      const cRows = cr.ok ? await cr.json() : [];
+      confirmedCount = cRows.length;
+    }catch(_){}
+
+    try{
+      await sendEmail({
+        to_email: d.organizerEmail,
+        type: 'match_update',
+        subject: myName+' can\'t make your match on '+dateStr,
+        personal_note: myName+' can no longer make your '+dateStr+' match'+(courtStr?' at '+courtStr:'')+'. '+confirmedCount+' of '+(d.maxPlayers||'?')+' players confirmed. Log in to PBallConnect to manage your roster.',
+        invite_url: matchUrl,
+        inviter_name: myName,
+        match_date_str: dateStr
+      });
+    }catch(e){ console.warn('cantMakeIt org email failed:',e); }
+
+    try{
+      const orgSms = myName+' can\'t make your '+dateStr+' match'+(courtStr?' at '+courtStr:'')+'. '+confirmedCount+'/'+(d.maxPlayers||'?')+' confirmed. Open app to manage roster.';
+      await sendSms({ player_email:d.organizerEmail, message:orgSms.substring(0,160), match_id:matchId, event_type:'player_dropped' });
+    }catch(e){ console.warn('cantMakeIt org SMS failed:',e); }
+  }
+
+  // ── 5. WAITLIST PROMOTION ────────────────────────────────────────────────
+  let waitlisted = [];
+  try{
+    const wr = await fetch(
+      `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.waitlist&select=player_email,player_name&order=responded_at.asc`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+    );
+    waitlisted = wr.ok ? await wr.json() : [];
+  }catch(_){}
+
+  if(waitlisted.length){
+    const isScramble = hoursUntilMatch <= 24;
+    const toPromote = isScramble ? waitlisted : [waitlisted[0]];
+    const dateStr = d?.dateStr || '';
+    const courtStr = d?.courtName && d.courtName !== 'Court TBD' ? d.courtName : '';
+    const orgFirst = (d?.organizerName||'').split(' ')[0] || 'Your organizer';
+    const matchUrl = window.location.origin + window.location.pathname + '?match=' + matchId;
+
+    for(const w of toPromote){
+      try{
+        await fetch(
+          `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&player_email=eq.${encodeURIComponent(w.player_email)}`,
+          {
+            method:'PATCH',
+            headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+            body:JSON.stringify({ response:'pending', responded_at:new Date().toISOString() })
+          }
+        );
+      }catch(_){}
+
+      if(isScramble){
+        try{
+          await sendEmail({
+            to_email: w.player_email,
+            type: 'match_update',
+            subject: '⚡ Urgent: Spot opened in '+dateStr+' match!',
+            personal_note: '⚡ Time-sensitive: A spot just opened in '+orgFirst+'\'s match '+dateStr+(courtStr?' at '+courtStr:'')+'. This match is coming up very soon — first to accept gets the spot! Log in to PBallConnect now.',
+            invite_url: matchUrl,
+            inviter_name: d?.organizerName || '',
+            match_date_str: dateStr
+          });
+        }catch(e){ console.warn('scramble email failed:',e); }
+
+        try{
+          const sms = '⚡ Spot just opened in '+orgFirst+'\'s match'+(courtStr?' at '+courtStr:'')+'! First to accept gets it. Open app now!';
+          await sendSms({ player_email:w.player_email, message:sms.substring(0,160), match_id:matchId, event_type:'waitlist_scramble' });
+        }catch(e){ console.warn('scramble SMS failed:',e); }
+
+      }else{
+        try{
+          await sendEmail({
+            to_email: w.player_email,
+            type: 'match_update',
+            subject: 'A spot opened up in '+orgFirst+'\'s match on '+dateStr+'!',
+            personal_note: 'Good news — a spot just opened up in '+orgFirst+'\'s match on '+dateStr+(courtStr?' at '+courtStr:'')+'. Log in to PBallConnect to accept or decline. Respond soon — others may be waiting!',
+            invite_url: matchUrl,
+            inviter_name: d?.organizerName || '',
+            match_date_str: dateStr
+          });
+        }catch(e){ console.warn('waitlist promote email failed:',e); }
+
+        try{
+          const sms = 'A spot opened in '+orgFirst+'\'s '+dateStr+' match'+(courtStr?' at '+courtStr:'')+'! Open app to respond.';
+          await sendSms({ player_email:w.player_email, message:sms.substring(0,160), match_id:matchId, event_type:'waitlist_promote' });
+        }catch(e){ console.warn('waitlist promote SMS failed:',e); }
+      }
+    }
+  }
+};
 
 function addHours(timeStr, hrs){
   if(!timeStr) return '';
