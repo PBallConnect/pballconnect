@@ -568,17 +568,17 @@
 
       if(!res.ok || !data.ok){
         var msg = (data && data.error) || 'Something went wrong. Please try again.';
-        if(errEl){ errEl.textContent = msg; errEl.style.display = ‘block’; }
-        if(btn){ btn.disabled = false; btn.textContent = "Let’s Play! 🎾"; btn.style.background = ‘#16a34a’; btn.style.cursor = ‘pointer’; }
+        if(errEl){ errEl.textContent = msg; errEl.style.display = 'block'; }
+        if(btn){ btn.disabled = false; btn.textContent = "Let's Play! 🎾"; btn.style.background = '#16a34a'; btn.style.cursor = 'pointer'; }
         return;
       }
 
-      if(btn){ btn.textContent = "✅ You’re in! Heading to your dashboard…"; }
+      if(btn){ btn.textContent = "✅ You're in! Heading to your dashboard…"; }
       window.location.href = data.signInUrl;
 
     }catch(e){
-      if(errEl){ errEl.textContent = ‘Network error. Please check your connection and try again.’; errEl.style.display = ‘block’; }
-      if(btn){ btn.disabled = false; btn.textContent = "Let’s Play! 🎾"; btn.style.background = ‘#16a34a’; btn.style.cursor = ‘pointer’; }
+      if(errEl){ errEl.textContent = 'Network error. Please check your connection and try again.'; errEl.style.display = 'block'; }
+      if(btn){ btn.disabled = false; btn.textContent = "Let's Play! 🎾"; btn.style.background = '#16a34a'; btn.style.cursor = 'pointer'; }
     }
   }
 </script>
