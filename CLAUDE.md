@@ -1,6 +1,6 @@
 # CLAUDE.md — PBallConnect Reference
 
-_Last updated: May 6, 2026_
+_Last updated: May 8, 2026_
 
 ---
 
@@ -213,6 +213,16 @@ Handles both flows:
 `_redirectParam` set to `invite=TOKEN` or `qr=QR_ID` for magic link `emailRedirectTo`.
 
 No app.js dependency. Uses `var` + plain function declarations (no ES modules).
+
+### SMS / Text Invite Flow
+
+When `?channel=sms` is present in the URL, `invite.html` skips the magic link card entirely and shows the single-screen SMS registration form (`pbShowSmsRegScreen()`). The form collects First Name, Last Name, skill level, email, and dual consent, then POSTs to `/api/sms-register`.
+
+- `/api/sms-register` creates the Supabase auth user via Admin `generate_link` (no email sent), upserts `registrations`, marks invite used, patches the pending connection to the real email + `approved`, creates reciprocal connection, and returns `{ ok: true, signInUrl }`.
+- Browser follows `signInUrl` directly — establishes a session without email.
+- `invite_method` for SMS invites must be `'sms'` — the `invites_invite_method_check` constraint allows: `'email'`, `'link'`, `'qr'`, `'ic'`, `'sms'`, `'text'`.
+- New users arriving at `invite.html` are always unauthenticated — the `invites` table has an **anon SELECT policy** so the token can be validated without a JWT. Do not remove it.
+- `invite_tokens` is a **VIEW**, not a table — RLS policies cannot be applied to it directly. It exists as an anon-safe fallback for token reads.
 
 ### Invite Flow (full)
 
@@ -550,6 +560,20 @@ Gap alert options: 12h, 24h, 48h, 72h. Default 24h.
 
 ## UI Patterns
 
+### Mobile First
+
+The majority of users are on mobile (iPhone). All new features must be designed and tested mobile-first. Desktop is secondary. Key constraints:
+- All `<input>` elements must have `font-size: 16px` minimum — iOS Safari auto-zooms when font-size is below 16px, causing the viewport to unexpectedly enlarge on tap.
+- Tap targets must be large enough for thumbs (min 44px height).
+- Test on iPhone Safari before considering a feature done.
+
+### Known Constraints
+
+- **`invites_invite_method_check`** — allowed values: `'email'`, `'link'`, `'qr'`, `'ic'`, `'sms'`, `'text'`. Sending any other value causes a 400 constraint violation and the INSERT fails silently.
+- **iOS font-size auto-zoom** — any `<input>` with `font-size < 16px` triggers viewport zoom on focus in iOS Safari. Always use `font-size: 16px` minimum on inputs.
+- **Smart/curly quotes in inline JS** — U+2018 `'` and U+2019 `'` are not valid JS string delimiters. They cause a `SyntaxError` that silently prevents the entire `<script>` block from executing. Always use straight ASCII single quotes `'` in JavaScript. This is especially dangerous in inline HTML `<script>` blocks where the browser gives no visible error.
+- **`Prefer: return=representation`** — after a Supabase INSERT, this header causes PostgREST to SELECT the inserted row back. If the SELECT RLS policy blocks the row (e.g. `auth.email() = invitee_email` where `invitee_email IS NULL`), the response is `[]` — silent failure. Use `Prefer: return=minimal` and rely on client-side data when possible.
+
 ### Desktop Layout
 Max-width 600px centered. All pages: `max-width:600px;margin:0 auto`.
 
@@ -732,8 +756,12 @@ Applied via JS: `el.classList.add('ic-shake'); setTimeout(()=>el.classList.remov
 2. Test locally with `npx serve .` or `python -m http.server`.
 3. For Supabase schema changes: run SQL in Supabase SQL editor, update `supabase_rls_policies.sql`, and update the `public_profiles` view if new columns need to be exposed.
 4. For Cloudflare Pages Function changes: edit files in `functions/api/`. Environment variables (`RESEND_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `TURNSTILE_SECRET_KEY`) are set in the Cloudflare Pages dashboard. `RATE_LIMIT_KV` is a KV namespace binding (not an env var — set under Settings → Functions → KV namespace bindings).
-5. Deploy: `git push origin main` → Cloudflare Pages auto-deploys. The pre-commit hook automatically writes the current HEAD hash into `version.json` and stages it as part of every commit. No force push needed — normal fast-forward push every time.
+5. Deploy: `git push --force origin main` → Cloudflare Pages auto-deploys. The **pre-push hook** amends HEAD to inject the build badge hash into `version.json` — this rewrite requires `--force`. Never use `--force-with-lease` (it rejects the amended push). Never put a `git push` call inside the pre-push hook itself (causes infinite loop).
 6. Verify deploy at https://pballconnect.com — Cloudflare typically deploys within 60 seconds.
+
+### Debugging on Mobile
+
+No USB DevTools access on iPhone. Use an **on-screen debug panel** for mobile debugging — a fixed `<div>` at the bottom of the screen with monospace green text that appends log lines via JS. Remove it before the final commit. Private/incognito tabs bypass Cloudflare's edge cache when testing a fresh deploy.
 
 ### Session Handoff Pattern
 Design and planning happens in Claude.ai (claude.ai/code or chat). Implementation happens in Claude Code (CLI or desktop app). When handing off from a planning session:
@@ -805,4 +833,14 @@ Design and planning happens in Claude.ai (claude.ai/code or chat). Implementatio
 
 30. **`isMatchWizardDirty()` guard.** Any navigation away from `page-setupMatch` while the wizard has state (date set, court selected, invites configured, etc.) must show a leave-confirmation dialog before proceeding. The guard is bypassed only when `submitMatch()` completes successfully. Do not silently discard wizard state on nav.
 
-31. **Level filter math for Open Group uses `skill_self` as center.** `SESSION_PLAYER.skill_self` is the organizer's skill level. Bucket thresholds (matching the IC level grid): Far Below diff ≤ −0.375 · Below −0.375 < diff ≤ −0.125 · My Level −0.125 < diff ≤ 0.125 · Above 0.125 < diff ≤ 0.375 · Far Above diff > 0.375. Use `(ic_skill - organizer_skill)` for the diff. Players with no skill level set are excluded from all level-filtered pools.
+31. **Level filter math for Open Group uses `skill_self` as center.**
+
+32. **Always `git push --force origin main`.** The pre-push hook amends HEAD to write `version.json` — this rewrites the commit, requiring `--force`. Never use `--force-with-lease`. Never place a `git push` inside the pre-push hook.
+
+33. **SMS invite flow uses `invite_method: 'sms'`.** The `invites_invite_method_check` DB constraint defines the allowed set. Passing `'text'` causes a 400 error. Allowed values: `'email'`, `'link'`, `'qr'`, `'ic'`, `'sms'`, `'text'`.
+
+34. **All inputs must be `font-size: 16px` minimum.** iOS Safari auto-zooms any input below 16px. Never set input font-size to 13px or 14px.
+
+35. **Never use smart/curly quotes in JavaScript.** U+2018/U+2019 (`'`/`'`) cause a silent `SyntaxError` that prevents the entire script block from executing. Use straight ASCII `'` always. Run `node --check` on extracted JS to verify before committing inline scripts.
+
+36. **Use `Prefer: return=minimal` for Supabase INSERTs when you already have the data client-side.** `return=representation` triggers a SELECT-back that can silently return `[]` if the SELECT RLS policy blocks the row. Generate tokens client-side and use them directly — do not rely on reading them back from the DB. `SESSION_PLAYER.skill_self` is the organizer's skill level. Bucket thresholds (matching the IC level grid): Far Below diff ≤ −0.375 · Below −0.375 < diff ≤ −0.125 · My Level −0.125 < diff ≤ 0.125 · Above 0.125 < diff ≤ 0.375 · Far Above diff > 0.375. Use `(ic_skill - organizer_skill)` for the diff. Players with no skill level set are excluded from all level-filtered pools.
