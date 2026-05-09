@@ -19,6 +19,10 @@ alter table registrations add column if not exists avail_weekday_afternoon boole
 alter table registrations add column if not exists avail_weekday_evening   boolean default false;
 alter table registrations add column if not exists avail_weekends          boolean default false;
 
+-- Add SMS notification columns
+alter table registrations add column if not exists phone     text;
+alter table registrations add column if not exists sms_opt_in boolean default false;
+
 drop view if exists public_profiles;
 
 create view public_profiles as
@@ -68,7 +72,9 @@ create view public_profiles as
     avail_weekday_morning,
     avail_weekday_afternoon,
     avail_weekday_evening,
-    avail_weekends
+    avail_weekends,
+    -- sms opt-in flag (phone number intentionally excluded — PII, self-reads use /rest/v1/registrations)
+    sms_opt_in
   from registrations;
 
 

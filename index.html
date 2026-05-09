@@ -407,8 +407,17 @@
     </div>
     <div class="grid2">
       <div class="field">
-        <label>Phone Number <span style="color:#dc2626;font-weight:700;">*</span></label>
-        <input type="tel" id="phone" placeholder="(555) 000-0000" autocomplete="off" oninput="formatPhone(this)" maxlength="14"/>
+        <label>📱 Mobile Number <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— optional</span></label>
+        <input type="tel" id="phone" placeholder="+1 (xxx) xxx-xxxx" autocomplete="tel" oninput="formatPhone(this);window.onPhoneChange()" maxlength="14" style="font-size:16px;"/>
+        <div id="smsOptInRow" style="display:none;margin-top:10px;">
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:14px;font-weight:400;text-transform:none;letter-spacing:0;">
+            <input type="checkbox" id="smsOptIn" onchange="window.onSmsOptInChange()" style="width:18px;height:18px;flex-shrink:0;margin-top:2px;accent-color:#1a7a3a;cursor:pointer;"/>
+            <span>
+              <span style="font-weight:700;color:#111;">✅ Send me match notifications via SMS</span><br/>
+              <span style="font-size:11px;color:#6b7280;">Urgent alerts only — waitlist spots, match changes</span>
+            </span>
+          </label>
+        </div>
       </div>
       <div class="field">
         <label style="text-decoration:underline;">Age Range as of Jan 1 this Year</label>
@@ -756,7 +765,8 @@
           </div>
         </div>
         <div class="summary-row"><span>Email</span><span id="sumEmail">—</span></div>
-        <div class="summary-row"><span>Phone</span><span id="sumPhone">—</span></div>
+        <div class="summary-row" id="sumPhoneRow" style="display:none"><span>📱 Mobile</span><span id="sumPhone">—</span></div>
+        <div class="summary-row" id="sumSmsRow" style="display:none"><span>📲 SMS</span><span id="sumSms" style="color:#16a34a;font-weight:700;">Notifications: On</span></div>
         <div class="summary-row"><span>Age Range</span><span id="sumDob">—</span></div>
         <div class="summary-row"><span>Gender</span><span id="sumGender">—</span></div>
         <div class="summary-row"><span>Zip</span><span id="sumZip">—</span></div>

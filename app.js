@@ -777,10 +777,17 @@ function populateSummary(){
   // — Personal info rows —
   set('sumEmail', email || '—');
   const digits = phone.replace(/\D/g,'');
-  const fmtPhone = digits.length===10
-    ? '('+digits.substring(0,3)+') '+digits.substring(3,6)+'-'+digits.substring(6)
-    : digits || formatPhoneForDisplay(S.phone) || '—';
-  set('sumPhone', fmtPhone);
+  // Masked phone: show only last 4 digits in summary view
+  const phoneRow=document.getElementById('sumPhoneRow');
+  const smsRow2=document.getElementById('sumSmsRow');
+  if(digits.length===10){
+    set('sumPhone','***-***-'+digits.substring(6));
+    if(phoneRow) phoneRow.style.display='flex';
+  } else {
+    if(phoneRow) phoneRow.style.display='none';
+  }
+  const smsChecked=!!(document.getElementById('smsOptIn')?.checked);
+  if(smsRow2) smsRow2.style.display=(digits.length===10&&smsChecked)?'flex':'none';
   set('sumDob',    ageRange || '—');
   set('sumGender', gender   || '—');
   set('sumCity',   city     || '—');
@@ -920,6 +927,17 @@ function formatPhoneForDisplay(encoded){
   if(digits.length===10)return '('+digits.substring(0,3)+') '+digits.substring(3,6)+'-'+digits.substring(6);
   return digits;
 }
+window.onPhoneChange=function(){
+  const phoneEl=document.getElementById('phone');
+  const smsRow=document.getElementById('smsOptInRow');
+  const smsCb=document.getElementById('smsOptIn');
+  const hasPhone=!!(phoneEl&&phoneEl.value.replace(/\D/g,'').length>=10);
+  if(smsRow) smsRow.style.display=hasPhone?'block':'none';
+  if(!hasPhone&&smsCb) smsCb.checked=false;
+};
+window.onSmsOptInChange=function(){
+  // Nothing extra needed — checkbox state is read at save time
+};
 
 function showToast(msg, color='#ef4444'){
   const t = document.createElement('div');
@@ -1010,6 +1028,7 @@ function showProfileDiff(){
     {label:'Age Range',     old:player.dob||'',                       nw:document.getElementById('playerAge')?.value||''},
     {label:'Zip',           old:player.zip_code||'',                  nw:v('addrZip')},
     {label:'Phone',         old:decodePhone(player.phone||''),         nw:(v('phone')||'').replace(/\D/g,'')},
+    {label:'SMS Opt-In',   old:String(!!(player.sms_opt_in)),          nw:String(!!(document.getElementById('phone')?.value.replace(/\D/g,'').length>=10 && document.getElementById('smsOptIn')?.checked))},
     {label:'Gender',        old:player.gender||'',                    nw:S.gender||''},
     {label:'Handedness',    old:player.handedness||'',                nw:S.handedness||''},
     {label:'Play Format',   old:player.play_format||'Both',           nw:S.playFormat||player.play_format||'Both'},
@@ -1127,7 +1146,8 @@ async function doSaveProfile(){
       last_name:           v('lastName'),
       nickname:            v('nickname')||null,
       email:               v('email'),
-      phone:               (v('phone')||'').replace(/\D/g,''),
+      phone:               (v('phone')||'').replace(/\D/g,'')||null,
+      sms_opt_in:          !!(document.getElementById('phone')?.value.replace(/\D/g,'').length>=10 && document.getElementById('smsOptIn')?.checked),
       dob:                 document.getElementById('playerAge')?.value||S.dob||'',
       gender:              S.gender,
       city:                S.city || '',
@@ -8308,10 +8328,20 @@ function restoreProfileForm(player){
 
   // Restore phone (decoded)
   const phoneEl=document.getElementById('phone');
-  if(phoneEl&&player.phone){
-    const digits=decodePhone(player.phone);
-    phoneEl.value=digits.length===10?'('+digits.substring(0,3)+') '+digits.substring(3,6)+'-'+digits.substring(6):digits;
+  if(phoneEl){
+    if(player.phone){
+      const digits=decodePhone(player.phone);
+      phoneEl.value=digits.length===10?'('+digits.substring(0,3)+') '+digits.substring(3,6)+'-'+digits.substring(6):digits;
+    } else {
+      phoneEl.value='';
+    }
   }
+  // Restore SMS opt-in
+  const smsRow=document.getElementById('smsOptInRow');
+  const smsCb=document.getElementById('smsOptIn');
+  const hasPhone=!!(phoneEl&&phoneEl.value.trim());
+  if(smsRow) smsRow.style.display=hasPhone?'block':'none';
+  if(smsCb) smsCb.checked=!!(player.sms_opt_in);
 
   // Restore consent checkboxes — once a player has agreed, always keep checked
   S._tosConsent     = !!(player.waiver_agreed || player.privacy_consent || SESSION_PLAYER);
@@ -8389,6 +8419,7 @@ function startChangeDetection(){
       v('nickname')!==(p.nickname||'')||
       v('addrZip')!==(p.zip_code||'')||
       (v('phone')||'').replace(/\D/g,'')!==decodePhone(p.phone||'')||
+      !!(document.getElementById('phone')?.value.replace(/\D/g,'').length>=10 && document.getElementById('smsOptIn')?.checked)!==!!(p.sms_opt_in)||
       S.gender!==(p.gender||'')||
       S.handedness!==(p.handedness||'')||
       S.playFormat!==(p.play_format||'Both')||
