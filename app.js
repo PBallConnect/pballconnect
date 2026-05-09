@@ -11405,49 +11405,28 @@ async function loadDashTileCounts(myEmail){
     setTile('dashTileIC', IC_INCOMING_COUNT>0 ? IC_INCOMING_COUNT+' request'+(IC_INCOMING_COUNT>1?'s':'')+' pending' : 'None pending');
     setTile('dashIcIncomingCount', IC_INCOMING_COUNT||0);
 
-    // Pending matches — identical criteria to loadInvitedByOthersPage:
-    //   Open invites:      response='pending', upcoming, not cancelled, organizer !== me
-    //   Joined not full:   response='in', upcoming, not cancelled, organizer !== me, inCount < maxP
-    //   Organized not full: organizer_email=me, upcoming, not cancelled, inCount < maxP
-    // No DB-level status filter — PostgREST neq excludes NULL-status rows; filter in JS instead.
+    // Blue sub-card: matches where I said 'in' but roster isn't full yet
     const myEmailLower2 = myEmail.toLowerCase();
-    const pendInviteIds = pendRows.map(r=>r.match_id).filter(Boolean);
     const inRespIds = cfResp.map(r=>r.match_id).filter(Boolean);
-    const [pmPendingMatches, pmInvitedMatches, pmOrgMatchesRaw2] = await Promise.all([
-      // Open invites — matches where I have response='pending'
-      // Must include time_start,time_end so isMatchPast() uses real end time, not 23:59 fallback
-      pendInviteIds.length
-        ? fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${pendInviteIds.join(',')})&select=id,match_date,time_start,time_end,match_type,max_players,organizer_email,status`,
-            {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
-            .then(r=>r.ok?r.json():[])
-        : Promise.resolve([]),
+    const [pmInvitedMatches, pmOrgMatchesRaw2] = await Promise.all([
       // Joined — matches where I have response='in'
-      // Must include time_start,time_end so isMatchPast() uses real end time, not 23:59 fallback
       inRespIds.length
         ? fetch(`${SUPABASE_URL}/rest/v1/matches?id=in.(${inRespIds.join(',')})&select=id,match_date,time_start,time_end,match_type,max_players,organizer_email,status`,
             {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
             .then(r=>r.ok?r.json():[])
         : Promise.resolve([]),
-      // Organized — all matches I organized
-      // Must include time_start,time_end so isMatchPast() uses real end time, not 23:59 fallback
+      // Organized — needed to exclude my own matches from pmJoined
       fetch(`${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&select=id,match_date,time_start,time_end,match_type,max_players,organizer_email,status`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
         .then(r=>r.ok?r.json():[])
     ]);
-    // JS-side filters — mirrors loadInvitedByOthersPage exactly
-    const pmOpenInvites = pmPendingMatches.filter(m=>
-      !isMatchPast(m)&&(m.status||'')!=='cancelled'&&(m.organizer_email||'').toLowerCase()!==myEmailLower2
-    );
-    const pmOrgMatches2 = pmOrgMatchesRaw2.filter(m=>
-      !isMatchPast(m)&&(m.status||'')!=='cancelled'
-    );
+    const pmOrgMatches2 = pmOrgMatchesRaw2.filter(m=>!isMatchPast(m)&&(m.status||'')!=='cancelled');
     const pmOrgIds2 = new Set(pmOrgMatches2.map(m=>m.id));
     const pmJoined = pmInvitedMatches.filter(m=>
       !isMatchPast(m)&&(m.status||'')!=='cancelled'&&
       (m.organizer_email||'').toLowerCase()!==myEmailLower2&&
       !pmOrgIds2.has(m.id)
     );
-    // Fetch in-responses for roster-count candidates (joined + organized)
     const pmRosterIds=[...new Set([...pmJoined.map(m=>m.id),...pmOrgMatches2.map(m=>m.id)])];
     let pmInResps=[];
     if(pmRosterIds.length){
@@ -11459,24 +11438,6 @@ async function loadDashTileCounts(myEmail){
       const inCount=pmInResps.filter(r=>r.match_id===m.id).length;
       return inCount<(m.max_players||(m.match_type==='doubles'?4:2));
     });
-    const pmOrgPending=pmOrgMatches2.filter(m=>{
-      const inCount=pmInResps.filter(r=>r.match_id===m.id).length;
-      return inCount<(m.max_players||(m.match_type==='doubles'?4:2));
-    });
-    // Deduplicate across all three sources
-    const pmAllIds=new Set();
-    let pendingMatchCount=0;
-    [...pmOpenInvites,...pmInvitedPending,...pmOrgPending].forEach(m=>{
-      if(!pmAllIds.has(m.id)){pmAllIds.add(m.id);pendingMatchCount++;}
-    });
-    console.log('DASHBOARD pending - openInvites:',pmOpenInvites.length,pmOpenInvites);
-    console.log('DASHBOARD pending - invitedPending:',pmInvitedPending.length,pmInvitedPending);
-    console.log('DASHBOARD pending - orgPending:',pmOrgPending.length,pmOrgPending);
-    console.log('DASHBOARD pending - deduplicated total:',pendingMatchCount);
-    const sqEl = document.getElementById('dashSqPending');
-    const btnEl = document.getElementById('dashTilePendingBtn');
-    if(sqEl) sqEl.textContent = pendingMatchCount;
-    if(btnEl) btnEl.style.display = pendingMatchCount > 0 ? 'flex' : 'none';
 
     const subMyEl=document.getElementById('dashSubMyPending');
     const subMyTxt=document.getElementById('dashSubMyPendingText');
