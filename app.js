@@ -11495,8 +11495,8 @@ async function loadDashTileCounts(myEmail){
     const subMyEl=document.getElementById('dashSubMyPending');
     const subMyTxt=document.getElementById('dashSubMyPendingText');
     if(subMyEl){
-      if(pmOpenInvites.length>0){
-        if(subMyTxt) subMyTxt.textContent='⏳ '+pmOpenInvites.length+' response needed';
+      if(pmInvitedPending.length>0){
+        if(subMyTxt) subMyTxt.textContent='⏳ '+pmInvitedPending.length+' match'+(pmInvitedPending.length>1?'es':'')+' not yet full';
         subMyEl.style.display='block';
       } else { subMyEl.style.display='none'; }
     }
