@@ -212,21 +212,10 @@
 
 </div>
 
-<!-- On-screen debug panel (mobile-visible) -->
-<div id="debugPanel" style="position:fixed;bottom:0;left:0;right:0;max-height:220px;overflow-y:auto;background:rgba(0,0,0,0.85);color:#4ade80;font-size:11px;font-family:monospace;padding:8px 10px;z-index:9999;line-height:1.6;">
-  <div style="color:#facc15;font-weight:700;margin-bottom:4px;">DEBUG LOG</div>
   <ul id="debugList" style="margin:0;padding:0;list-style:none;"></ul>
 </div>
 
 <script>
-  function dbg(msg){
-    console.log(msg);
-    var li = document.createElement('li');
-    li.textContent = msg;
-    var list = document.getElementById('debugList');
-    if(list){ list.appendChild(li); var p = document.getElementById('debugPanel'); if(p) p.scrollTop = p.scrollHeight; }
-  }
-
   var SUPABASE_URL = 'https://dltiirdjfbjtydazrmvr.supabase.co';
   var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsdGlpcmRqZmJqdHlkYXpybXZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MDQxNzgsImV4cCI6MjA4OTA4MDE3OH0.oBDtS3RZlGxMkqon-r1wdfYR6jPTSPGWIa8cZh7fLWA';
 
@@ -319,10 +308,8 @@
 
   (async function pbInit(){
 
-    dbg('DEBUG params: token=' + _token + ' channel=' + _channel + ' qr=' + _qrId);
 
     if(!_token && !_qrId){
-      dbg('DEBUG error: no token and no qrId');
       pbHide('loadingState');
       pbShow('errorState');
       return;
@@ -342,7 +329,6 @@
           headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY }
         });
         var rows = await r.json();
-        dbg('DEBUG qr fetch status:' + r.status + ' rows:' + JSON.stringify(rows));
         if(!rows || !rows.length){
           pbHide('loadingState');
           pbShowError('Invalid QR code.', 'This QR code was not found. Ask the organizer to share their current QR code.');
@@ -356,7 +342,6 @@
         document.getElementById('footerNote').textContent = 'Scanned from ' + _inviterName + '\'s QR code. Each scan creates a fresh connection.';
         qrOk = true;
       }catch(e){
-        dbg('DEBUG error (qr fetch): ' + e.message);
         pbHide('loadingState');
         pbShow('errorState');
         return;
@@ -365,7 +350,6 @@
       // Check session
       var sessionResult = await sessionPromise;
       var session = sessionResult.data && sessionResult.data.session;
-      dbg('DEBUG session: ' + (session ? 'exists' : 'none'));
       if(session){
         var firstName = await pbGetFirstName(session);
         pbShowSuccessAndRedirect(firstName);
@@ -386,14 +370,12 @@
           headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY }
         });
         var rows = await r.json();
-        dbg('DEBUG fetch status:' + r.status + ' rows:' + JSON.stringify(rows));
         if(!rows || !rows.length){
           // Fall back to invite_tokens view (anon-safe)
           var r2 = await fetch(SUPABASE_URL + '/rest/v1/invite_tokens?invite_token=eq.' + encodeURIComponent(_token), {
             headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY }
           });
           var rows2 = await r2.json();
-          dbg('DEBUG fallback view rows:' + JSON.stringify(rows2));
           if(!rows2 || !rows2.length){
             pbHide('loadingState');
             pbShow('errorState');
@@ -412,22 +394,17 @@
             return;
           }
         }
-        dbg('DEBUG render complete, channel:' + _channel);
         pbRenderTokenCard(inv);
       }catch(e){
-        dbg('DEBUG error (token fetch): ' + e.message);
         // RLS failure — fall back to view
         try{
           var r3 = await fetch(SUPABASE_URL + '/rest/v1/invite_tokens?invite_token=eq.' + encodeURIComponent(_token), {
             headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY }
           });
           var rows3 = await r3.json();
-          dbg('DEBUG fallback r3 rows:' + JSON.stringify(rows3));
           if(!rows3 || !rows3.length){ pbHide('loadingState'); pbShow('errorState'); return; }
-          dbg('DEBUG render complete (fallback), channel:' + _channel);
           pbRenderTokenCard(rows3[0]);
         }catch(e2){
-          dbg('DEBUG error (fallback fetch): ' + e2.message);
           pbHide('loadingState');
           pbShow('errorState');
           return;
@@ -437,7 +414,6 @@
       // Check session (invite data already loaded / _inviterName set)
       var sessionResult = await sessionPromise;
       var session = sessionResult.data && sessionResult.data.session;
-      dbg('DEBUG session: ' + (session ? 'exists' : 'none'));
       if(session){
         var firstName = await pbGetFirstName(session);
         pbShowSuccessAndRedirect(firstName);
@@ -445,7 +421,6 @@
       }
 
       pbHide('loadingState');
-      dbg('DEBUG showing screen for channel:' + _channel);
       if(_channel === 'sms'){
         pbShowSmsRegScreen();
       } else {
