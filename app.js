@@ -11446,12 +11446,21 @@ async function loadDashTileCounts(myEmail){
     );
     // Fetch in-responses for roster-count candidates (joined + organized)
     const pmRosterIds=[...new Set([...pmJoined.map(m=>m.id),...pmOrgMatches2.map(m=>m.id)])];
+    const pmOrgIds=[...new Set(pmOrgMatches2.map(m=>m.id))];
     let pmInResps=[];
-    if(pmRosterIds.length){
-      const rr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${pmRosterIds.join(',')})&response=eq.in&select=match_id`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
-      if(rr.ok) pmInResps=await rr.json();
-    }
+    let orgAwaitingCount=0;
+    await Promise.all([
+      pmRosterIds.length?(async()=>{
+        const rr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${pmRosterIds.join(',')})&response=eq.in&select=match_id`,
+          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+        if(rr.ok) pmInResps=await rr.json();
+      })():Promise.resolve(),
+      pmOrgIds.length?(async()=>{
+        const opr=await fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=in.(${pmOrgIds.join(',')})&response=eq.pending&select=match_id`,
+          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+        if(opr.ok){const rows=await opr.json();orgAwaitingCount=rows.length;}
+      })():Promise.resolve()
+    ]);
     const pmInvitedPending=pmJoined.filter(m=>{
       const inCount=pmInResps.filter(r=>r.match_id===m.id).length;
       return inCount<(m.max_players||(m.match_type==='doubles'?4:2));
@@ -11474,6 +11483,23 @@ async function loadDashTileCounts(myEmail){
     const btnEl = document.getElementById('dashTilePendingBtn');
     if(sqEl) sqEl.textContent = pendingMatchCount;
     if(btnEl) btnEl.style.display = pendingMatchCount > 0 ? 'flex' : 'none';
+
+    const subOrgEl=document.getElementById('dashSubOrgPending');
+    const subOrgTxt=document.getElementById('dashSubOrgPendingText');
+    if(subOrgEl){
+      if(orgAwaitingCount>0){
+        if(subOrgTxt) subOrgTxt.textContent='⏳ '+orgAwaitingCount+' awaiting response';
+        subOrgEl.style.display='block';
+      } else { subOrgEl.style.display='none'; }
+    }
+    const subMyEl=document.getElementById('dashSubMyPending');
+    const subMyTxt=document.getElementById('dashSubMyPendingText');
+    if(subMyEl){
+      if(pmOpenInvites.length>0){
+        if(subMyTxt) subMyTxt.textContent='⏳ '+pmOpenInvites.length+' response needed';
+        subMyEl.style.display='block';
+      } else { subMyEl.style.display='none'; }
+    }
 
   }catch(e){ console.warn('loadDashTileCounts error:',e); }
 }
