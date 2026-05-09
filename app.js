@@ -933,10 +933,24 @@ window.onPhoneChange=function(){
   const smsCb=document.getElementById('smsOptIn');
   const hasPhone=!!(phoneEl&&phoneEl.value.replace(/\D/g,'').length>=10);
   if(smsRow) smsRow.style.display=hasPhone?'block':'none';
-  if(!hasPhone&&smsCb) smsCb.checked=false;
+  if(!hasPhone&&smsCb){
+    smsCb.checked=false;
+    window.onSmsOptInChange();
+  }
 };
 window.onSmsOptInChange=function(){
-  // Nothing extra needed — checkbox state is read at save time
+  const cb=document.getElementById('smsOptIn');
+  const lbl=document.getElementById('smsOptInLabel');
+  if(!lbl) return;
+  if(cb&&cb.checked){
+    lbl.textContent='✅ Send me match notifications via SMS';
+    lbl.style.fontWeight='700';
+    lbl.style.color='#16a34a';
+  } else {
+    lbl.textContent='Send me match notifications via SMS';
+    lbl.style.fontWeight='400';
+    lbl.style.color='#6b7280';
+  }
 };
 
 function showToast(msg, color='#ef4444'){
@@ -8342,6 +8356,7 @@ function restoreProfileForm(player){
   const hasPhone=!!(phoneEl&&phoneEl.value.trim());
   if(smsRow) smsRow.style.display=hasPhone?'block':'none';
   if(smsCb) smsCb.checked=!!(player.sms_opt_in);
+  window.onSmsOptInChange();
 
   // Restore consent checkboxes — once a player has agreed, always keep checked
   S._tosConsent     = !!(player.waiver_agreed || player.privacy_consent || SESSION_PLAYER);
