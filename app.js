@@ -5183,7 +5183,7 @@ async function loadAllMatchBadges(){
     if(pendingResps.length){
       const pendIds = pendingResps.map(r=>r.match_id);
       const openMatchRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/matches?id=in.(${pendIds.join(',')})&status=neq.full&status=neq.cancelled&select=id,match_date,time_start,time_end,organizer_email`,
+        `${SUPABASE_URL}/rest/v1/matches?id=in.(${pendIds.join(',')})&status=neq.cancelled&select=id,match_date,time_start,time_end,organizer_email`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
       const openMatches = openMatchRes.ok ? await openMatchRes.json() : [];
       iboCount = openMatches.filter(m=>!isMatchPast(m) && (m.organizer_email||'').toLowerCase()!==myEmail.toLowerCase()).length;
@@ -5676,17 +5676,27 @@ async function loadInvitedByOthersPage(){
       const inCount=allInResps.filter(r=>r.match_id===m.id&&r.response==='in').length;
       return inCount<(m.max_players||(m.match_type==='doubles'?4:2));
     });
-    console.log('PAGE pending - openInvites:',openInvites.length,openInvites);
+    // Split open invites: not-full (accept/decline) vs full (waitlist offer)
+    const activeInvites=openInvites.filter(m=>{
+      const inCount=allInResps.filter(r=>r.match_id===m.id&&r.response==='in').length;
+      return inCount<(m.max_players||(m.match_type==='doubles'?4:2));
+    });
+    const fullInvites=openInvites.filter(m=>{
+      const inCount=allInResps.filter(r=>r.match_id===m.id&&r.response==='in').length;
+      return inCount>=(m.max_players||(m.match_type==='doubles'?4:2));
+    });
+
+    console.log('PAGE pending - activeInvites:',activeInvites.length,'fullInvites:',fullInvites.length);
     console.log('PAGE pending - invitedPending:',invitedPending.length,invitedPending);
     console.log('PAGE pending - orgPending:',orgPending.length,orgPending);
 
     container.innerHTML='';
-    if(!openInvites.length&&!invitedPending.length&&!orgPending.length){
+    if(!activeInvites.length&&!fullInvites.length&&!invitedPending.length&&!orgPending.length){
       container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;text-align:center;">No active match invites or pending matches.</div>';
       return;
     }
 
-    const sectionCount=[openInvites.length>0,invitedPending.length>0,orgPending.length>0].filter(Boolean).length;
+    const sectionCount=[activeInvites.length>0,fullInvites.length>0,invitedPending.length>0,orgPending.length>0].filter(Boolean).length;
     const showHeadings=sectionCount>1;
 
     function makeBlueHeading(label,topMargin){
@@ -5703,9 +5713,9 @@ async function loadInvitedByOthersPage(){
     }
 
     // ── Section 1: Open Invites ──────────────────────────
-    if(openInvites.length){
+    if(activeInvites.length){
       if(showHeadings) container.appendChild(makeBlueHeading('Open Invites — Action Required',false));
-      openInvites.forEach(m=>{
+      activeInvites.forEach(m=>{
         const allMatchResps=allInResps.filter(r=>r.match_id===m.id);
         const inP=allMatchResps.filter(r=>r.response==='in');
         const pend=allMatchResps.filter(r=>r.response==='pending');
@@ -5765,6 +5775,72 @@ async function loadInvitedByOthersPage(){
         }
         card._toggle=function(){expanded=!expanded;renderOpenCard();};
         renderOpenCard();
+        container.appendChild(card);
+      });
+    }
+
+    // ── Section 1b: Full Matches — Waitlist Offer ────────
+    if(fullInvites.length){
+      if(showHeadings) container.appendChild(makeAmberHeading('Match Full — Waitlist Available',activeInvites.length>0));
+      fullInvites.forEach(m=>{
+        const allMatchResps=allInResps.filter(r=>r.match_id===m.id);
+        const inP=allMatchResps.filter(r=>r.response==='in');
+        const pend=allMatchResps.filter(r=>r.response==='pending');
+        const wait=allMatchResps.filter(r=>r.response==='waitlist');
+        const out=allMatchResps.filter(r=>r.response==='out');
+        const maxNeeded=m.max_players||(m.match_type==='doubles'?4:2);
+        const dateStr=m.match_date?new Date(m.match_date+'T12:00').toLocaleDateString('en-CA',{weekday:'short',month:'long',day:'numeric'}):'TBD';
+        const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):''):'TBD';
+        const courtDisplay=m.court_name&&m.court_name!=='TBD'?'&#128205; '+m.court_name:(m.court_address?'&#128205; '+m.court_address:'&#128205; Court TBD');
+        const iboId='ibo-'+m.id;
+        const card=document.createElement('div');
+        card.style.cssText='background:#ffffff;border:3px solid #f59e0b;border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);';
+        let expanded=true;
+        function renderFullCard(){
+          card.innerHTML=
+            '<div onclick="this.parentElement._toggle()" style="display:flex;align-items:flex-start;gap:10px;padding:14px 16px;cursor:pointer;">'+
+              '<span style="font-size:22px;flex-shrink:0;">'+(m.match_type==='doubles'?'<img src="icon-192.png" class="pb-icon" alt="pickleball"/><img src="icon-192.png" class="pb-icon" alt="pickleball"/>':'<img src="icon-192.png" class="pb-icon" alt="pickleball"/>')+'</span>'+
+              '<div style="flex:1;min-width:0;">'+
+                '<div style="color:#111;font-size:14px;font-weight:700;">'+dateStr+'</div>'+
+                '<div style="color:#374151;font-size:12px;font-weight:600;margin-top:1px;">'+timeStr+'</div>'+
+                '<div style="color:#6b7280;font-size:12px;margin-top:2px;">'+courtDisplay+'</div>'+
+                '<div style="font-size:11px;color:#555;margin-top:2px;">By <strong style="color:#111;">'+(m.organizer_name||'Unknown')+'</strong> &middot; '+(m.match_type==='singles'?'Singles':'Doubles')+'</div>'+
+              '</div>'+
+              '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">'+
+                '<div style="font-size:11px;font-weight:700;color:#f59e0b;">Match Full</div>'+
+                '<div style="font-size:10px;color:#6b7280;">'+(expanded?'&#9650; less':'&#9660; details')+'</div>'+
+              '</div>'+
+            '</div>'+
+            (expanded?
+              '<div style="padding:0 16px 14px;border-top:1px solid #e5e7eb;">'+
+                '<div style="background:#fffbeb;border:1.5px solid #f59e0b;border-radius:10px;padding:10px 12px;margin:10px 0 12px;font-size:13px;font-weight:600;color:#92400e;">'+
+                  '&#9888; This match is now full.'+
+                '</div>'+
+                '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px;margin-bottom:12px;">'+
+                  makeResponsePill('In',inP,'#1a7a3a',iboId,'in')+
+                  makeResponsePill('Pending',pend,'#b45309',iboId,'pending')+
+                  makeResponsePill('Waitlist',wait,'#f59e0b',iboId,'waitlist')+
+                  makeResponsePill('Out',out,'#f87171',iboId,'out')+
+                '</div>'+
+                buildPillNamesPanel(iboId,'in',inP)+
+                buildPillNamesPanel(iboId,'pending',pend)+
+                buildPillNamesPanel(iboId,'waitlist',wait)+
+                buildPillNamesPanel(iboId,'out',out)+
+                '<div style="display:flex;gap:10px;margin-top:4px;">'+
+                  '<button class="ibo-respond-btn" data-mid="'+m.id+'" data-resp="waitlist" '+
+                    'style="flex:1;padding:10px;background:#f59e0b;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;">'+
+                    '&#8987; Join Waitlist'+
+                  '</button>'+
+                  '<button class="ibo-respond-btn" data-mid="'+m.id+'" data-resp="out" '+
+                    'style="flex:0 0 auto;padding:10px 16px;background:transparent;color:#6b7280;border:1px solid #d1d5db;border-radius:10px;font-size:16px;cursor:pointer;font-family:inherit;">'+
+                    'No Thanks'+
+                  '</button>'+
+                '</div>'+
+              '</div>'
+            :'');
+        }
+        card._toggle=function(){expanded=!expanded;renderFullCard();};
+        renderFullCard();
         container.appendChild(card);
       });
     }
@@ -7300,7 +7376,7 @@ async function respondToMatch(matchId, response){
   try{
     // Check current match + confirmed count
     const [matchRes, confirmedRes] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}&select=match_type,status,max_players,match_date,time_start,time_end,court_name,court_address`,
+      fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}&select=match_type,status,max_players,match_date,time_start,time_end,court_name,court_address,organizer_name`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}),
       fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.in&select=player_email`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
@@ -7390,6 +7466,9 @@ async function respondToMatch(matchId, response){
     } else {
       showToast('Declined','var(--dim)');
       notifyOrganizerOfDecline(matchId, myEmail);
+      const wasIn = confirmed.some(r=>r.player_email===myEmail);
+      const newInCount = wasIn ? confirmed.length - 1 : confirmed.length;
+      if(newInCount < needed) await promoteFromWaitlist(matchId, match);
     }
     // Refresh current page
     const activePage = document.querySelector('.page-section.active')?.id?.replace('page-','');
@@ -7444,6 +7523,44 @@ async function notifyOrganizerOfDecline(matchId, declinerEmail){
 
     sendEmail({ to_email:match.organizer_email, type:'match_decline', personal_note:declinerEmail+' declined your '+match.match_type+' match invite for '+dateStr+'. You have an open spot — invite someone from your Inner Circle to fill it!', invite_url:window.location.origin+window.location.pathname+'?setupmatch=1' });
   }catch(e){}
+}
+
+async function promoteFromWaitlist(matchId, match){
+  try{
+    // Find the first waitlisted player (earliest responded_at = first in line)
+    const wRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.waitlist&select=player_email,player_name&order=responded_at.asc&limit=1`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+    );
+    const waitlisted = wRes.ok ? await wRes.json() : [];
+    if(!waitlisted.length) return;
+    const next = waitlisted[0];
+    // Promote to pending — they now have an active invite to accept or decline
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&player_email=eq.${encodeURIComponent(next.player_email)}`,
+      {
+        method:'PATCH',
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+        body:JSON.stringify({response:'pending', responded_at:new Date().toISOString()})
+      }
+    );
+    // Notify the promoted player
+    const dateStr = match.match_date
+      ? new Date(match.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) : '';
+    const timeStr = match.time_start ? fmt12(match.time_start)+(match.time_end?' – '+fmt12(match.time_end):'') : '';
+    const courtStr = match.court_name && match.court_name!=='TBD' ? ' @ '+match.court_name : '';
+    const matchUrl = window.location.origin+window.location.pathname+'?match='+matchId;
+    try{
+      await sendEmail({
+        to_email: next.player_email,
+        type: 'match_update',
+        personal_note: 'Good news — a spot just opened up! '+(match.organizer_name||'Your organizer')+' has a '+match.match_type+' match on '+dateStr+(timeStr?' at '+timeStr:'')+courtStr+'. Open the app and accept before the spot fills again.',
+        invite_url: matchUrl,
+        inviter_name: match.organizer_name || '',
+        match_date_str: dateStr
+      });
+    }catch(emailErr){ console.warn('waitlist promote email failed:',emailErr); }
+  }catch(e){ console.warn('promoteFromWaitlist error:',e); }
 }
 
 function addHours(timeStr, hrs){
