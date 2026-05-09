@@ -9990,7 +9990,7 @@ async function sendIcTextInvite(){
     const smsUrl = url + '&channel=sms';
     await icPostPendingConnection(null, name, token);
     const myFirst = (getMyName()||'Someone').split(' ')[0];
-    const msg = encodeURIComponent(myFirst+' invited you to their Inner Circle on PBallConnect! Set up your free player profile: '+smsUrl+' 🎾');
+    const msg = encodeURIComponent('Hey '+name+'! '+myFirst+' invited you to play pickleball on PBallConnect 🎾 Set up your free profile here:\n'+smsUrl);
     window.open('sms:?body='+msg, '_self');
     showToast('💬 Messages opened for '+name,'#60a5fa');
     if(nameEl){ nameEl.value=''; nameEl.style.borderColor='#9ca3af'; }
