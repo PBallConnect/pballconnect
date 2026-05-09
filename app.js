@@ -9994,7 +9994,7 @@ async function sendIcTextInvite(){
     showToast('💬 Messages opened for '+name,'#60a5fa');
     if(nameEl){ nameEl.value=''; nameEl.style.borderColor='#9ca3af'; }
     loadIcInvites();
-  }catch(e){ alert('Invite error: ' + (e.message || JSON.stringify(e))); }
+  }catch(e){ showToast('Could not send invite — please try again','#f87171'); }
 }
 window.sendIcTextInvite = sendIcTextInvite;
 
