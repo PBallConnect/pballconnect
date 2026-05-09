@@ -8502,6 +8502,9 @@ function lockProfileForm(){
     const row=cb?.closest('.check-row');
     if(row){ row.style.pointerEvents=''; row.style.opacity=''; }
   });
+  // SMS opt-in row — lock entire row so label click can't toggle checkbox
+  const smsOptRow=document.getElementById('smsOptInRow');
+  if(smsOptRow){smsOptRow.style.pointerEvents='none';smsOptRow.style.opacity='0.6';}
   const h2=document.querySelector('#step1 h2');
   if(h2&&!document.getElementById('readOnlyBanner')){
     const b=document.createElement('div');b.id='readOnlyBanner';
@@ -8520,6 +8523,9 @@ function unlockProfileForm(){
     step.querySelectorAll('input[type="range"]').forEach(el=>{el.disabled=false;});
     step.querySelectorAll('.btn-next,.btn-back').forEach(el=>{el.style.display='';});
   });
+  // SMS opt-in row — restore interactivity
+  const smsOptRow=document.getElementById('smsOptInRow');
+  if(smsOptRow){smsOptRow.style.pointerEvents='';smsOptRow.style.opacity='';}
   // Also unlock chips inside hidden subsections (coach section is display:none by default)
   const coachSec=document.getElementById('coachSection');
   if(coachSec){
