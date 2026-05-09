@@ -9637,7 +9637,7 @@ async function icCreateSingleUseInvite(recipient, method){
   try{
     const res = await fetch(`${SUPABASE_URL}/rest/v1/invites`,{
       method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=representation'},
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
       body:JSON.stringify(payload)
     });
     if(!res.ok){
@@ -9645,9 +9645,6 @@ async function icCreateSingleUseInvite(recipient, method){
       console.error('Invite INSERT failed:', res.status, errBody);
       throw new Error('Failed to save invite: '+res.status+' '+errBody);
     }
-    const rows = await res.json();
-    const token = rows[0]?.invite_token;
-    if(!token) throw new Error('No invite_token returned from DB');
     const url = 'https://pballconnect.com/invite.html?token=' + token;
     return { token, url };
   }catch(e){
