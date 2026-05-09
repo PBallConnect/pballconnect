@@ -9985,7 +9985,7 @@ async function sendIcTextInvite(){
     return;
   }
   try{
-    const { token, url } = await icCreateSingleUseInvite({ name, email:null }, 'text');
+    const { token, url } = await icCreateSingleUseInvite({ name, email:null }, 'sms');
     if(!url) throw new Error('Invite creation failed');
     const smsUrl = url + '&channel=sms';
     await icPostPendingConnection(null, name, token);
