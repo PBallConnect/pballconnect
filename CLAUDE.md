@@ -1,6 +1,6 @@
 # CLAUDE.md — PBallConnect Reference
 
-_Last updated: May 9, 2026_
+_Last updated: May 10, 2026_
 
 ---
 
@@ -221,7 +221,9 @@ No app.js dependency. Uses `var` + plain function declarations (no ES modules).
 
 ### SMS / Text Invite Flow
 
-When `?channel=sms` is present in the URL, `invite.html` skips the magic link card entirely and shows the single-screen SMS registration form (`pbShowSmsRegScreen()`). The form collects First Name, Last Name, skill level, email, and dual consent, then POSTs to `/api/sms-register`.
+When `?channel=sms` is present in the URL, `invite.html` skips the magic link card entirely and shows the single-screen SMS registration form (`pbShowSmsRegScreen()`). The form collects First Name, Last Name, skill level, **gender** (chip: Man / Woman / Prefer not to say, required), email, and dual consent, then POSTs to `/api/sms-register`.
+
+Gender state is tracked in `_smsGender` (module-level var in invite.html). `pbSmsSelectGender(val, el)` updates `_smsGender` and toggles chip highlight. `pbSmsUpdateBtn()` requires `_smsGender !== ''`. `pbSmsSubmit()` validates and includes `gender: _smsGender || null` in the POST body. `sms-register.js` reads `gender` from the body and saves it as `gender: genderClean` in the registrations upsert.
 
 - `/api/sms-register` creates the Supabase auth user via Admin `generate_link` (no email sent), upserts `registrations`, marks invite used, patches the pending connection to the real email + `approved`, creates reciprocal connection, and returns `{ ok: true, signInUrl }`.
 - Browser follows `signInUrl` directly — establishes a session without email.
@@ -330,7 +332,9 @@ Two separate checkboxes required before Submit:
 UI: `toggleAvail(key)`, `updateAvailToggles()`.
 
 ### Quick Connect
-Minimal overlay — email (readonly), **First Name** (label: "First Name", placeholder: "Your first name", required), phone, zip, skill slider, age, playing since, waivers. Saves to `registrations`. No `quick_connect` column exists — do not add one. Goes directly to dashboard with welcome toast. No organizer question. No nickname field — do not add one.
+Minimal overlay — email (readonly), **First Name** (label: "First Name", placeholder: "Your first name", required), phone, zip, skill slider, age, **gender** (chip: Man / Woman / Prefer not to say, required), playing since, waivers. Saves to `registrations`. No `quick_connect` column exists — do not add one. Goes directly to dashboard with welcome toast. No organizer question. No nickname field — do not add one.
+
+`S.gender` is reset to `''` at the start of `showQuickConnectForm()`. The submit button is gated on `S.gender !== ''` in addition to name, phone, zip, and waivers. `gender: S.gender || null` is included in the `saveRegistration()` payload.
 
 ---
 
@@ -750,7 +754,7 @@ Applied via JS: `el.classList.add('ic-shake'); setTimeout(()=>el.classList.remov
 13. **Recurring matches v2** — gap alert delivery via Cloudflare Cron Worker.
 14. **Web push notifications** — browser push for match invites, IC requests, gap alerts.
 15. **Player statistics dashboard** — `playerStats` page needs data and UX.
-16. **Emergency Fill screen** — organizer tool when a spot opens with no waitlist; lets organizer quickly re-invite from IC.
+16. ~~**Emergency Fill screen**~~ ✅ — organizer tool built; see Emergency Fill Screen section below.
 
 ---
 
@@ -800,6 +804,43 @@ _Added May 9, 2026_
 2. Toast + page reload
 3. Notifies organizer (email + SMS, both in separate try/catch)
 4. Fetches waitlist; if `hoursUntilMatch <= 24` → scramble (all waitlisted → `'pending'`, urgent notifications); if `>= 24h` → standard (first only)
+5. If waitlist is empty **and** `SESSION_PLAYER` is the organizer → calls `window.showEmergencyFill(matchId, null)` after 800ms
+
+A red **🚨 Emergency Fill** button also appears on the organizer's confirmed match card whenever `inPlayers.length < maxNeeded`. Clicking it opens `showEmergencyFill(matchId, null)` directly.
+
+### Emergency Fill Screen
+
+_Added May 10, 2026_
+
+Full-screen organizer tool for quickly filling an open spot when the waitlist is empty.
+
+**Overlay:** `#emergencyFillOverlay` — `position:fixed; inset:0; z-index:9500; background:#fff; display:none; overflow-y:auto`
+
+**Entry points:**
+- Auto-triggered at the end of `confirmCantMakeIt()` when waitlist is empty and `SESSION_PLAYER` is the organizer (800ms delay after reload)
+- Manual: 🚨 **Emergency Fill** button on organizer's confirmed match card when `inPlayers.length < maxNeeded`
+
+**Gender filter logic (`_efGenderNeeded`):**
+- `format = 'mixed'` → dropped player's gender (pass `null` if not on file → screen falls back to full IC)
+- `format = 'mens'` → `'Man'`
+- `format = 'womens'` → `'Woman'`
+- `format = 'open'` → no filter (`null`)
+
+**Candidate pool:** `IC_MEMBERS` filtered to players whose `email` is NOT already in `match_responses` with `response IN ('in','pending','waitlist')` for this match. IC_MEMBERS is fetched on demand if empty.
+
+**4 modes (tiles):**
+| Mode | Icon | Behavior |
+|---|---|---|
+| `'gender'` | 👫 | Filters pool to `_efGenderNeeded` gender; falls back to full IC if no matches |
+| `'level'` | 🎯 | Filters pool to `|skill_self - organizer_skill| ≤ 0.5`; falls back to full IC if no matches |
+| `'all'` | 👥 | Shows full candidate pool |
+| `'text'` | 💬 | Opens `sms:?body=...` URI immediately; no list shown |
+
+**`efSendInvites()`:** For each selected email — (1) upserts `match_responses` as `'pending'` with `resolution=merge-duplicates`; (2) sends email invite (`type:'match_invite'`); (3) sends SMS (`event_type:'emergency_fill'`), both in separate try/catch. Dismisses overlay and shows success toast on completion.
+
+**Window globals:** `showEmergencyFill`, `efSelectMode`, `efTogglePlayer`, `efSendInvites`
+
+**Internal state (module-level):** `_efMatchId`, `_efCandidates`, `_efSelected` (Set), `_efGenderNeeded`
 
 ---
 
@@ -915,3 +956,5 @@ Design and planning happens in Claude.ai (claude.ai/code or chat). Implementatio
 44. **"Can't Make It" never shows to the organizer.** Organizer uses Edit Match to cancel. If organizer somehow triggers `cantMakeIt()` — block with toast, do not process the drop.
 
 45. **Organizer is always notified when a player drops.** Email + SMS (if `sms_opt_in`). Both in separate `try/catch`. Drop completes even if both notifications fail.
+
+46. **Gender is required across all registration paths (full profile, Quick Connect, SMS).** Do not remove the gender field from any path. Emergency Fill reads the dropped player's gender (via `_efGenderNeeded`) to surface same-gender IC members for a vacancy in a Mixed or gendered match format. Never skip gender collection at registration.
