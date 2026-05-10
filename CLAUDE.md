@@ -1,6 +1,6 @@
 # CLAUDE.md — PBallConnect Reference
 
-_Last updated: May 8, 2026_
+_Last updated: May 9, 2026_
 
 ---
 
@@ -26,6 +26,7 @@ Deployed on **Cloudflare Pages** at `pballconnect.com`. No build step, no bundle
 | PWA | Service worker + inline manifest |
 | Bot Protection | Cloudflare Turnstile (on waitlist form) |
 | Rate Limiting | Cloudflare KV (`RATE_LIMIT_KV` binding) — used by both Pages Functions |
+| SMS | Twilio — outbound via `/api/send-sms.js`; STOP/HELP/START handled by `/api/twilio-webhook.js` |
 
 ---
 
@@ -39,6 +40,9 @@ Deployed on **Cloudflare Pages** at `pballconnect.com`. No build step, no bundle
 | `landing.html` | — | Public marketing landing page — standalone, no app.js/styles.css dependency. Hero, features, skill level guide, waitlist form with Turnstile bot protection. |
 | `invite.html` | — | Standalone invite landing page — no app.js dependency |
 | `functions/api/send-email.js` | — | Cloudflare Pages Function for transactional email via Resend. IP rate-limited (5/hr) via `RATE_LIMIT_KV`. |
+| `functions/api/send-sms.js` | — | Cloudflare Pages Function for SMS via Twilio. Consent-gated (`sms_opt_in` required), three-tier rate limited (player/match/global via KV), logs all attempts to `sms_log`. Always returns 200 — SMS errors never crash callers. |
+| `functions/api/twilio-webhook.js` | — | Receives Twilio STOP/HELP/START keyword callbacks. Validates X-Twilio-Signature (HMAC-SHA1), syncs `sms_opt_in` in Supabase, logs to `sms_log`. |
+| `functions/api/sms-register.js` | — | Handles SMS-invite registration: validates token, creates Supabase auth user (no email sent), saves registration row, auto-approves IC connection, returns sign-in URL. |
 | `functions/api/waitlist.js` | — | Cloudflare Pages Function for waitlist form submissions. IP rate-limited (3/hr), Turnstile-verified, saves to `waitlist` table via service role key, sends confirmation email via Resend. |
 | `supabase_rls_policies.sql` | — | RLS policy definitions + waitlist table DDL — run in Supabase SQL editor after schema changes |
 | `manifest.json` | — | PWA manifest (also injected inline at runtime in app.js) |
@@ -68,7 +72,8 @@ No tests, no linter, no build commands.
 
 | Table | Purpose | Key Columns |
 |---|---|---|
-| `registrations` | Player profiles — primary record, keyed by `email` | `email`, `first_name`, `last_name`, `zip_code`, `city`, `state`, `lat`, `lon`, `skill_self`, `dupr_rating`, `gender`, `age_range`, `play_style`, `is_organizer`, `wants_organizer`, `profile_complete`, `qr_invite_id`, `avail_weekday_morning`, `avail_weekday_afternoon`, `avail_weekday_evening`, `avail_weekends` |
+| `registrations` | Player profiles — primary record, keyed by `email` | `email`, `first_name`, `last_name`, `zip_code`, `city`, `state`, `lat`, `lon`, `skill_self`, `dupr_rating`, `gender`, `age_range`, `play_style`, `is_organizer`, `wants_organizer`, `profile_complete`, `qr_invite_id`, `avail_weekday_morning`, `avail_weekday_afternoon`, `avail_weekday_evening`, `avail_weekends`, `phone` (10-digit string), `sms_opt_in` (boolean, default false) |
+| `sms_log` | Audit trail for all SMS attempts | `player_email`, `match_id`, `event_type`, `status` ('sent'/'failed'/'rate_limited'/'not_opted_in'/'no_phone'/'no_player'), `sent_at`, `error_code` |
 | `connections` | Inner Circle relationships | `player_email`, `connection_email`, `status` |
 | `matches` | Match events | `id`, `organizer_email`, `match_date`, `time_start`, `time_end`, `court_id`, `court_name`, `format`, `num_courts`, `gender_pref`, `max_players` |
 | `match_responses` | Per-player responses | `match_id`, `player_email`, `response` ('in'/'out'/'pending'/'waitlist') |
@@ -694,10 +699,16 @@ Applied via JS: `el.classList.add('ic-shake'); setTimeout(()=>el.classList.remov
 - [x] `/api/waitlist` Cloudflare Pages Function — rate-limited, Turnstile-verified, saves to Supabase
 - [x] Rate limiting on `/api/send-email` (5/hr per IP via KV)
 - [x] Skill level guide modal (`skillGuideModal`) + "What's my level?" trigger on all skill sliders
+- [x] SMS notification system — `send-sms.js` + `twilio-webhook.js` + TCPA opt-in UI
+- [x] "Can't Make It" drop flow — organizer notified, waitlist promoted (scramble mode if <24h)
 - [ ] **Run waitlist table SQL** — SQL is in `supabase_rls_policies.sql`; must be run manually in Supabase SQL editor before waitlist goes live
 - [ ] **Complete Turnstile setup** — replace `TURNSTILE_SITE_KEY_PLACEHOLDER` in `landing.html`; add `TURNSTILE_SECRET_KEY` to Cloudflare Pages env vars
 - [ ] **Add `SUPABASE_SERVICE_KEY` to Cloudflare Pages env vars** — needed by `/api/waitlist`
 - [ ] **Bind `RATE_LIMIT_KV`** — create KV namespace in Cloudflare, bind as `RATE_LIMIT_KV` in Pages settings
+- [ ] **Twilio: upgrade to Pay as you go** — trial mode only sends to verified numbers; required before launch
+- [ ] **Twilio: A2P 10DLC registration** — required for production US SMS sending
+- [ ] **End-to-end SMS test** — test send-sms.js with verified numbers, verify sms_log entries
+- [ ] **Twilio STOP webhook test** — send STOP, verify sms_opt_in=false in Supabase; send START, verify sms_opt_in=true
 - [ ] **Fix mobile portrait left nav** — slide-in drawer not working on iPhone
 - [ ] **Non-member match invite flow** — invite players outside IC by email
 - [ ] **Test full invite flow end to end:**
@@ -739,6 +750,7 @@ Applied via JS: `el.classList.add('ic-shake'); setTimeout(()=>el.classList.remov
 13. **Recurring matches v2** — gap alert delivery via Cloudflare Cron Worker.
 14. **Web push notifications** — browser push for match invites, IC requests, gap alerts.
 15. **Player statistics dashboard** — `playerStats` page needs data and UX.
+16. **Emergency Fill screen** — organizer tool when a spot opens with no waitlist; lets organizer quickly re-invite from IC.
 
 ---
 
@@ -750,12 +762,53 @@ Applied via JS: `el.classList.add('ic-shake'); setTimeout(()=>el.classList.remov
 
 ---
 
+## SMS Notification System
+
+_Added May 9, 2026_
+
+### Twilio Account
+- **Account email:** app@pballconnect.com
+- **Sending number:** +1 978 945 3787
+- **Cloudflare env vars:** `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER` (all Secret)
+- **Status:** Trial mode — can only SMS verified numbers. Upgrade to Pay as you go before launch.
+
+### Google Workspace
+- **Primary:** zorro@pballconnect.com
+- **Aliases:** app@, noreply@, david@, support@pballconnect.com
+
+### SMS Architecture
+- `sendSms({ player_email, message, match_id, event_type })` — client-side wrapper in `app.js` that POSTs to `/api/send-sms`
+- `/api/send-sms` — consent-gated (checks `sms_opt_in`), rate-limited, sends via Twilio REST API, logs to `sms_log`
+- `/api/twilio-webhook` — receives Twilio keyword callbacks; STOP sets `sms_opt_in=false`, START sets `sms_opt_in=true`
+- Signature validation: HMAC-SHA1 over `url + sorted(key+value)` via Web Crypto API — skips gracefully if `TWILIO_AUTH_TOKEN` is missing/placeholder
+- Webhook URL: `https://pballconnect.com/api/twilio-webhook` (configure in Twilio Console → Phone Numbers → +1 978 945 3787)
+
+### SMS Rate Limits (via `RATE_LIMIT_KV`)
+- Per-player: `sms_player_{email}` — 10/24h (86400s TTL)
+- Per-match: `sms_match_{match_id}` — 20/match total (604800s TTL)
+- Global daily: `sms_global_{YYYY-MM-DD}` — 500/day; logs warning above 400 but continues sending
+
+### Phone Storage Convention
+- Stored as **10-digit string** (digits only, no +1, no formatting) in `registrations.phone`
+- `/api/send-sms` normalizes to E.164 (`+1xxxxxxxxxx`) before calling Twilio
+- Do not change this convention
+
+### Can't Make It Drop Flow
+`window.cantMakeIt(matchId)` — shows confirmation dialog using `window._cmCache[matchId]` (populated at card render time).
+`window.confirmCantMakeIt(matchId)` — full drop flow:
+1. PATCHes `match_responses` → `'out'`
+2. Toast + page reload
+3. Notifies organizer (email + SMS, both in separate try/catch)
+4. Fetches waitlist; if `hoursUntilMatch <= 24` → scramble (all waitlisted → `'pending'`, urgent notifications); if `>= 24h` → standard (first only)
+
+---
+
 ## Development Workflow
 
 1. Edit `app.js`, `index.html`, or `styles.css` directly — no build step.
 2. Test locally with `npx serve .` or `python -m http.server`.
 3. For Supabase schema changes: run SQL in Supabase SQL editor, update `supabase_rls_policies.sql`, and update the `public_profiles` view if new columns need to be exposed.
-4. For Cloudflare Pages Function changes: edit files in `functions/api/`. Environment variables (`RESEND_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `TURNSTILE_SECRET_KEY`) are set in the Cloudflare Pages dashboard. `RATE_LIMIT_KV` is a KV namespace binding (not an env var — set under Settings → Functions → KV namespace bindings).
+4. For Cloudflare Pages Function changes: edit files in `functions/api/`. Environment variables (`RESEND_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `TURNSTILE_SECRET_KEY`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`) are set in the Cloudflare Pages dashboard. `RATE_LIMIT_KV` is a KV namespace binding (not an env var — set under Settings → Functions → KV namespace bindings).
 5. Deploy: `git push --force origin main` → Cloudflare Pages auto-deploys. The **pre-push hook** amends HEAD to inject the build badge hash into `version.json` — this rewrite requires `--force`. Never use `--force-with-lease` (it rejects the amended push). Never put a `git push` call inside the pre-push hook itself (causes infinite loop).
 6. Verify deploy at https://pballconnect.com — Cloudflare typically deploys within 60 seconds.
 
@@ -844,3 +897,21 @@ Design and planning happens in Claude.ai (claude.ai/code or chat). Implementatio
 35. **Never use smart/curly quotes in JavaScript.** U+2018/U+2019 (`'`/`'`) cause a silent `SyntaxError` that prevents the entire script block from executing. Use straight ASCII `'` always. Run `node --check` on extracted JS to verify before committing inline scripts.
 
 36. **Use `Prefer: return=minimal` for Supabase INSERTs when you already have the data client-side.** `return=representation` triggers a SELECT-back that can silently return `[]` if the SELECT RLS policy blocks the row. Generate tokens client-side and use them directly — do not rely on reading them back from the DB. `SESSION_PLAYER.skill_self` is the organizer's skill level. Bucket thresholds (matching the IC level grid): Far Below diff ≤ −0.375 · Below −0.375 < diff ≤ −0.125 · My Level −0.125 < diff ≤ 0.125 · Above 0.125 < diff ≤ 0.375 · Far Above diff > 0.375. Use `(ic_skill - organizer_skill)` for the diff. Players with no skill level set are excluded from all level-filtered pools.
+
+37. **Never send SMS without verifying `sms_opt_in = true`.** Always check consent before calling `send-sms.js`. The function returns a silent 200 if not opted in — caller falls back to email. Never pre-check or auto-enable the checkbox.
+
+38. **SMS is always best-effort.** Never let SMS failure break the calling flow. Every `sendSms()` call must be in its own `try/catch`. Always `await` — never fire and forget.
+
+39. **TCPA compliance is non-negotiable.** `sms_opt_in` must be set explicitly by the player via an unchecked-by-default checkbox with full consent disclosure language. Never pre-check or auto-enable SMS opt-in.
+
+40. **Phone numbers stored as 10 digits.** No `+1`, no formatting — raw digits only (e.g. `9789453787`) in `registrations.phone`. `send-sms.js` normalizes to E.164 (`+1xxxxxxxxxx`) before calling Twilio. Do not change this convention.
+
+41. **Twilio trial mode — verified numbers only.** Upgrade to Pay as you go before launch. A2P 10DLC registration required for production US SMS sending.
+
+42. **STOP/HELP/START are handled by `twilio-webhook.js` automatically.** STOP sets `sms_opt_in = false` in Supabase. START sets `sms_opt_in = true`. Never handle these manually in app code.
+
+43. **Scramble mode threshold is exactly 24 hours.** If match is less than 24 hours away and a spot opens — notify ALL waitlisted players simultaneously (all → `'pending'`). If 24+ hours — notify first waitlisted player only.
+
+44. **"Can't Make It" never shows to the organizer.** Organizer uses Edit Match to cancel. If organizer somehow triggers `cantMakeIt()` — block with toast, do not process the drop.
+
+45. **Organizer is always notified when a player drops.** Email + SMS (if `sms_opt_in`). Both in separate `try/catch`. Drop completes even if both notifications fail.
