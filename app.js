@@ -2818,11 +2818,9 @@ function selectMatchGender(pref, el){
       MS.namedGroupRoster={primary:[],subs:[]}; MS.selectedGroupId=null; window._smGroupGridSelectedId=null;
       const display=document.getElementById('smGroupRosterDisplay');
       if(display){ display.style.display='none'; display.innerHTML=''; }
-      ['smInviteAll','smInviteSpecific','smInviteGroup'].forEach(id=>{
+      ['smInviteSpecific','smInviteGroup'].forEach(id=>{
         const d=document.getElementById(id); if(d) d.style.display='';
       });
-      const ia=document.getElementById('smInviteAll');
-      if(ia){ ia.style.border='2px solid #1a7a3a'; ia.style.background='#f0fdf4'; }
       ['smInviteSpecific','smInviteGroup'].forEach(id=>{
         const d=document.getElementById(id);
         if(d){ d.style.border='1px solid #e5e7eb'; d.style.background='#fff'; }
@@ -3019,11 +3017,9 @@ window._smSelectGroupFromGrid = function(gId){
     smUnlockSteps2And3();
     const display = document.getElementById('smGroupRosterDisplay');
     if(display){ display.style.display='none'; display.innerHTML=''; }
-    ['smInviteAll','smInviteSpecific','smInviteGroup'].forEach(id=>{
+    ['smInviteSpecific','smInviteGroup'].forEach(id=>{
       const d=document.getElementById(id); if(d) d.style.display='';
     });
-    const ia=document.getElementById('smInviteAll');
-    if(ia){ ia.style.border='2px solid #1a7a3a'; ia.style.background='#f0fdf4'; }
     const wrap=document.getElementById('smGenderGroupWrap'); if(wrap) _smRenderGroupGrid(wrap);
     // Restore Step 4 to interactive (unlocked) state
     smUnlockStep4();
@@ -6420,7 +6416,7 @@ function buildSmInviteGrid(){
 
   // Continue button — disabled until both min count AND gender balance met (Mixed path)
   const btnStyle = `width:100%;padding:12px;border-radius:10px;border:none;background:#1a7a3a;color:#fff;font-size:14px;font-weight:800;font-family:inherit;transition:opacity .15s;opacity:${metAll?'1':'0.4'};cursor:${metAll?'pointer':'not-allowed'};`;
-  html += `<button id="smInviteContinueBtn" onclick="window._smInviteContinue()" ${metAll?'':'disabled'} style="${btnStyle}">Continue →</button>`;
+  html += `<button id="smInviteContinueBtn" onclick="window._smInviteContinue()" ${metAll?'':'disabled'} style="${btnStyle}">Send Invites →</button>`;
 
   section.innerHTML = html;
 }
@@ -6451,8 +6447,9 @@ window._smToggleInvitePlayer = function(email){
 };
 
 window._smInviteContinue = function(){
-  if(!buildSmInviteSummaryGrid().allGreen) return;
   smUpdateProgress(5);
+  const next = document.getElementById('matchDate');
+  if(next) next.scrollIntoView({ behavior:'smooth', block:'start' });
 };
 
 // ── Step 7 Invite Pool review (non-Set-Group path) ─────
@@ -7201,7 +7198,7 @@ function smRenderStep6GroupRoster(){
   const primCount=MS.namedGroupMemberEmails?.size||0;
   const subCount=MS.namedGroupSubEmails?.size||0;
   // Hide invite-mode picker cards
-  ['smInviteAll','smInviteSpecific','smInviteGroup'].forEach(id=>{
+  ['smInviteSpecific','smInviteGroup'].forEach(id=>{
     const el=document.getElementById(id);
     if(el) el.style.display='none';
   });
@@ -7234,7 +7231,7 @@ async function smOnGroupSelect(value){
     const display=document.getElementById('smGroupRosterDisplay');
     if(display){ display.style.display='none'; display.innerHTML=''; }
     // Restore invite-mode picker cards
-    ['smInviteAll','smInviteSpecific','smInviteGroup'].forEach(id=>{
+    ['smInviteSpecific','smInviteGroup'].forEach(id=>{
       const d=document.getElementById(id); if(d) d.style.display='';
     });
   } else {
@@ -7283,8 +7280,7 @@ function initSetupMatch(){
   const rrw=document.getElementById('smReviewRosterWrap'); if(rrw){ rrw.style.display='none'; rrw.innerHTML=''; }
 
   // Invite mode buttons
-  const ia=document.getElementById('smInviteAll'), isp=document.getElementById('smInviteSpecific'), ig=document.getElementById('smInviteGroup');
-  if(ia){ ia.style.border='2px solid #1a7a3a'; ia.style.background='#f0fdf4'; }
+  const isp=document.getElementById('smInviteSpecific'), ig=document.getElementById('smInviteGroup');
   if(isp){ isp.style.border='1px solid #e5e7eb'; isp.style.background='#fff'; }
   if(ig){ ig.style.border='1px solid #e5e7eb'; ig.style.background='#fff'; }
 
@@ -7296,7 +7292,7 @@ function initSetupMatch(){
   // Reset group roster display and unlock steps 2 & 3
   const rosterDisp=document.getElementById('smGroupRosterDisplay');
   if(rosterDisp){ rosterDisp.style.display='none'; rosterDisp.innerHTML=''; }
-  ['smInviteAll','smInviteSpecific','smInviteGroup'].forEach(id=>{
+  ['smInviteSpecific','smInviteGroup'].forEach(id=>{
     const d=document.getElementById(id); if(d) d.style.display='';
   });
   smUnlockSteps2And3();
@@ -7329,10 +7325,6 @@ function initSetupMatch(){
   smUpdateNeededGrid();
   smUpdateSummary();
   smUpdateSendBtn();
-
-  // IC count badge
-  const countEl=document.getElementById('smInviteAllCount');
-  if(countEl) countEl.textContent=IC_MEMBERS.length ? IC_MEMBERS.length+' players' : '';
 
   _smInitializing = false;
   _smCurrentStep = 1;
