@@ -27,7 +27,7 @@ export async function onRequestPost(context) {
   try { body = await context.request.json(); }
   catch (_) { return err('Invalid request body.', 400, corsHeaders); }
 
-  const { token, firstName, lastName, skill, email } = body || {};
+  const { token, firstName, lastName, skill, email, gender } = body || {};
 
   if (!token || typeof token !== 'string') return err('Invalid invite token.', 400, corsHeaders);
   if (!firstName || !firstName.trim()) return err('First name is required.', 400, corsHeaders);
@@ -70,6 +70,7 @@ export async function onRequestPost(context) {
   const lastNameClean  = lastName.trim();
   const fullName       = `${firstNameClean} ${lastNameClean}`.trim();
   const skillClean     = typeof skill === 'string' && skill ? skill : '4.0';
+  const genderClean    = typeof gender === 'string' && gender ? gender : null;
 
   // ── 4. CREATE AUTH USER + GENERATE SIGN-IN LINK ───────────────────────────
   // Admin generate_link creates the auth user (no email sent) and returns a
@@ -111,6 +112,7 @@ export async function onRequestPost(context) {
       match_gender_pref: 'Both',
       play_format:       'Both',
       profile_complete:  false,
+      gender:            genderClean,
     };
 
     await fetch(

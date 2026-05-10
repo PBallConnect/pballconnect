@@ -4805,6 +4805,17 @@ async function loadConfirmedMatches(){
             'style="flex:1;padding:8px 12px;border-radius:8px;border:2px solid #dc2626;background:#fff1f2;color:#dc2626;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">'+
             '&#10005; Remove Player</button>';
         card.appendChild(actRow);
+        // Emergency Fill button — shown when roster has open spots
+        if(inPlayers.length < maxNeeded){
+          const efRow = document.createElement('div');
+          efRow.style.cssText = 'margin-top:8px;';
+          efRow.innerHTML =
+            '<button onclick="window.showEmergencyFill(\''+m.id+'\',null)" '+
+              'style="width:100%;padding:9px 12px;border-radius:8px;border:2px solid #dc2626;background:#fef2f2;color:#dc2626;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;">'+
+              '&#128680; Emergency Fill — '+inPlayers.length+'/'+maxNeeded+' confirmed'+
+            '</button>';
+          card.appendChild(efRow);
+        }
       } else if(!inProgress){
         // Non-organizer: show Can't Make It button
         const dropRow = document.createElement('div');
@@ -7772,6 +7783,13 @@ window.confirmCantMakeIt = async function(matchId){
     waitlisted = wr.ok ? await wr.json() : [];
   }catch(_){}
 
+  // ── 6. EMERGENCY FILL (organizer only — when waitlist exhausted) ─────────
+  const _myEmailFinal = (getMyEmail()||'').toLowerCase();
+  const _orgEmailFinal = (d?.organizerEmail||'').toLowerCase();
+  if(!waitlisted.length && _orgEmailFinal && _myEmailFinal === _orgEmailFinal){
+    setTimeout(()=>window.showEmergencyFill(matchId, null), 800);
+  }
+
   if(waitlisted.length){
     const isScramble = hoursUntilMatch <= 24;
     const toPromote = isScramble ? waitlisted : [waitlisted[0]];
@@ -7830,6 +7848,232 @@ window.confirmCantMakeIt = async function(matchId){
       }
     }
   }
+};
+
+// ── Emergency Fill ───────────────────────────────────────────────────────────
+let _efMatchId = null;
+let _efCandidates = [];
+let _efSelected = new Set();
+let _efGenderNeeded = null;
+
+window.showEmergencyFill = async function(matchId, droppedGender){
+  _efMatchId = matchId;
+  _efGenderNeeded = droppedGender || null;
+  _efSelected = new Set();
+
+  const d = window._cmCache[matchId] || {};
+  const matchInfo = [d.dateStr, d.timeStr, d.courtName && d.courtName !== 'Court TBD' ? d.courtName : null]
+    .filter(Boolean).join(' · ');
+
+  // Fetch players already in or pending for this match
+  const alreadyIn = new Set();
+  try{
+    const inRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=in.(in,pending,waitlist)&select=player_email`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+    );
+    const rows = inRes.ok ? await inRes.json() : [];
+    rows.forEach(r => alreadyIn.add((r.player_email||'').toLowerCase()));
+  }catch(_){}
+
+  // Use IC_MEMBERS already in memory; fetch if empty
+  if(!IC_MEMBERS || !IC_MEMBERS.length){
+    try{
+      const myEmail = getMyEmail();
+      const cRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/connections?or=(requester_email.eq.${encodeURIComponent(myEmail)},recipient_email.eq.${encodeURIComponent(myEmail)})&status=eq.approved&select=requester_email,recipient_email`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+      );
+      const conns = cRes.ok ? await cRes.json() : [];
+      const icEmails = conns.map(c => c.requester_email === myEmail ? c.recipient_email : c.requester_email);
+      if(icEmails.length){
+        const pRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/public_profiles?email=in.(${icEmails.map(e=>encodeURIComponent(e)).join(',')})&select=email,first_name,last_name,skill_self,gender`,
+          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+        );
+        IC_MEMBERS = pRes.ok ? await pRes.json() : [];
+      }
+    }catch(_){}
+  }
+
+  _efCandidates = (IC_MEMBERS||[]).filter(p => !alreadyIn.has((p.email||'').toLowerCase()));
+
+  const overlay = document.getElementById('emergencyFillOverlay');
+  if(!overlay) return;
+
+  overlay.innerHTML =
+    '<div style="max-width:520px;margin:0 auto;padding:20px 16px 80px;">'+
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">'+
+        '<div style="font-size:24px;">&#128680;</div>'+
+        '<div>'+
+          '<div style="font-size:17px;font-weight:800;color:#111;">Emergency Fill</div>'+
+          '<div style="font-size:12px;color:#6b7280;">'+matchInfo+'</div>'+
+        '</div>'+
+        '<button onclick="document.getElementById(\'emergencyFillOverlay\').style.display=\'none\'" '+
+          'style="margin-left:auto;background:none;border:none;font-size:22px;color:#9ca3af;cursor:pointer;padding:4px 8px;">&#10005;</button>'+
+      '</div>'+
+      '<div style="font-size:13px;color:#dc2626;font-weight:600;margin-bottom:16px;">Waitlist is empty — reach out to fill this spot fast.</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px;" id="efModeTiles">'+
+        _buildEfModeTile('gender','&#128107;',droppedGender?'Same Gender':'Any Gender',droppedGender?'Match dropped player':'All IC members')+
+        _buildEfModeTile('level','&#127919;','My Level','IC members at your skill')+
+        _buildEfModeTile('all','&#128101;','All IC Members','Anyone not already invited')+
+        _buildEfModeTile('text','&#128172;','Send a Text','Open your messages app')+
+      '</div>'+
+      '<div id="efList" style="display:none;"></div>'+
+      '<div id="efSendBar" style="display:none;position:fixed;bottom:0;left:0;right:0;padding:12px 16px;background:#fff;border-top:2px solid #e5e7eb;z-index:10001;">'+
+        '<button onclick="window.efSendInvites()" id="efSendBtn" '+
+          'style="width:100%;max-width:520px;display:block;margin:0 auto;padding:14px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;">'+
+          'Send Invites'+
+        '</button>'+
+      '</div>'+
+    '</div>';
+
+  overlay.style.display = 'block';
+};
+
+function _buildEfModeTile(mode, icon, title, sub){
+  return '<div onclick="window.efSelectMode(\''+mode+'\')" id="efTile_'+mode+'" '+
+    'style="cursor:pointer;border:2px solid #e5e7eb;border-radius:14px;padding:14px 12px;text-align:center;background:#fff;transition:all .15s;">'+
+    '<div style="font-size:26px;margin-bottom:6px;">'+icon+'</div>'+
+    '<div style="font-size:13px;font-weight:800;color:#111;margin-bottom:3px;">'+title+'</div>'+
+    '<div style="font-size:11px;color:#6b7280;line-height:1.4;">'+sub+'</div>'+
+  '</div>';
+}
+
+window.efSelectMode = function(mode){
+  _efSelected = new Set();
+
+  ['gender','level','all','text'].forEach(m=>{
+    const tile = document.getElementById('efTile_'+m);
+    if(!tile) return;
+    tile.style.borderColor = m===mode ? '#1a7a3a' : '#e5e7eb';
+    tile.style.background  = m===mode ? '#f0fdf4' : '#fff';
+  });
+
+  const listEl  = document.getElementById('efList');
+  const sendBar = document.getElementById('efSendBar');
+  if(!listEl) return;
+
+  if(mode === 'text'){
+    listEl.style.display = 'none';
+    if(sendBar) sendBar.style.display = 'none';
+    const d = window._cmCache[_efMatchId] || {};
+    const matchInfo2 = [d.dateStr, d.timeStr, d.courtName && d.courtName !== 'Court TBD' ? d.courtName : null]
+      .filter(Boolean).join(' ');
+    const orgFirst = ((d.organizerName||'').split(' ')[0]) || 'a friend';
+    const msg = 'Hey! We need one more player for pickleball on '+matchInfo2+'. Interested? Join PBallConnect: '+window.location.origin+'/';
+    window.open('sms:?body='+encodeURIComponent(msg.substring(0,160)), '_self');
+    return;
+  }
+
+  const mySkill = parseFloat(SESSION_PLAYER?.skill_self || SESSION_PLAYER?.skill_level || '0') || 0;
+  let pool = _efCandidates.slice();
+
+  if(mode === 'gender' && _efGenderNeeded){
+    const gLower = _efGenderNeeded.toLowerCase();
+    const genderedPool = pool.filter(p => (p.gender||'').toLowerCase() === gLower);
+    if(genderedPool.length) pool = genderedPool;
+  } else if(mode === 'level' && mySkill > 0){
+    const levelPool = pool.filter(p => {
+      const ps = parseFloat(p.skill_self || p.skill_level || '0') || 0;
+      return ps > 0 && Math.abs(ps - mySkill) <= 0.5;
+    });
+    if(levelPool.length) pool = levelPool;
+  }
+
+  if(!pool.length){
+    listEl.innerHTML = '<div style="text-align:center;padding:24px;color:#9ca3af;font-size:13px;">No available IC members — try another mode or send a text.</div>';
+    listEl.style.display = 'block';
+    if(sendBar) sendBar.style.display = 'none';
+    return;
+  }
+
+  let html = '<div style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Select players to invite</div>';
+  pool.forEach(p => {
+    const keyId = (p.email||'').replace(/[@.]/g,'_');
+    const name = ((p.first_name||'')+' '+(p.last_name||'')).trim() || p.email;
+    const skill = p.skill_self || p.skill_level || '—';
+    html +=
+      '<div id="efPlayer_'+keyId+'" onclick="window.efTogglePlayer(\''+p.email+'\')" '+
+        'style="display:flex;align-items:center;gap:10px;padding:11px 12px;margin-bottom:6px;border-radius:10px;border:2px solid #e5e7eb;background:#fff;cursor:pointer;transition:all .12s;">'+
+        '<div id="efChk_'+keyId+'" style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:2px solid #d1d5db;background:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;transition:all .12s;"></div>'+
+        '<div style="flex:1;">'+
+          '<div style="font-size:14px;font-weight:700;color:#111;">'+name+'</div>'+
+          '<div style="font-size:11px;color:#9ca3af;">'+skill+'</div>'+
+        '</div>'+
+      '</div>';
+  });
+
+  listEl.innerHTML = html;
+  listEl.style.display = 'block';
+  if(sendBar) sendBar.style.display = 'none';
+};
+
+window.efTogglePlayer = function(email){
+  const keyId = (email||'').replace(/[@.]/g,'_');
+  const chk = document.getElementById('efChk_'+keyId);
+  const row = document.getElementById('efPlayer_'+keyId);
+
+  if(_efSelected.has(email)){
+    _efSelected.delete(email);
+    if(chk){ chk.style.background='#fff'; chk.style.borderColor='#d1d5db'; chk.textContent=''; }
+    if(row){ row.style.borderColor='#e5e7eb'; row.style.background='#fff'; }
+  } else {
+    _efSelected.add(email);
+    if(chk){ chk.style.background='#1a7a3a'; chk.style.borderColor='#1a7a3a'; chk.textContent='✓'; }
+    if(row){ row.style.borderColor='#1a7a3a'; row.style.background='#f0fdf4'; }
+  }
+
+  const sendBar = document.getElementById('efSendBar');
+  const btn = document.getElementById('efSendBtn');
+  if(sendBar) sendBar.style.display = _efSelected.size > 0 ? 'block' : 'none';
+  if(btn) btn.textContent = 'Send Invites ('+_efSelected.size+')';
+};
+
+window.efSendInvites = async function(){
+  if(!_efSelected.size) return;
+  const btn = document.getElementById('efSendBtn');
+  if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
+
+  const d = window._cmCache[_efMatchId] || {};
+  const myName = SESSION_PLAYER ? ((SESSION_PLAYER.first_name||'')+(SESSION_PLAYER.last_name?' '+SESSION_PLAYER.last_name:'')).trim() : '';
+  const dateStr  = d.dateStr  || '';
+  const courtStr = d.courtName && d.courtName !== 'Court TBD' ? d.courtName : '';
+  const matchUrl = window.location.origin + window.location.pathname + '?match=' + _efMatchId;
+
+  let sent = 0;
+  for(const email of _efSelected){
+    const player = _efCandidates.find(p => p.email === email);
+    const pName  = player ? ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim() : email;
+
+    try{
+      await fetch(`${SUPABASE_URL}/rest/v1/match_responses`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal,resolution=merge-duplicates'},
+        body:JSON.stringify({match_id:_efMatchId,player_email:email,player_name:pName,response:'pending',responded_at:new Date().toISOString()})
+      });
+    }catch(_){}
+
+    try{
+      await sendEmail({
+        to_email:email,type:'match_invite',
+        personal_note:'⚡ A spot just opened up — can you make it? '+dateStr+(courtStr?' at '+courtStr:'')+'. Join us!',
+        invite_url:matchUrl,inviter_name:myName,invitee_name:pName,match_date_str:dateStr
+      });
+    }catch(e){ console.warn('ef email failed:',e); }
+
+    try{
+      const myFirst = (myName.split(' ')[0])||'Your organizer';
+      const sms = '⚡ Spot opened in '+myFirst+'\'s match on '+dateStr+(courtStr?' at '+courtStr:'')+'! Open app to respond.';
+      await sendSms({player_email:email,message:sms.substring(0,160),match_id:_efMatchId,event_type:'emergency_fill'});
+    }catch(e){ console.warn('ef SMS failed:',e); }
+
+    sent++;
+  }
+
+  const overlay = document.getElementById('emergencyFillOverlay');
+  if(overlay) overlay.style.display = 'none';
+  showToast('Invites sent to '+sent+' player'+(sent!==1?'s':'')+' 🎾','#1a7a3a');
 };
 
 function addHours(timeStr, hrs){
@@ -10894,6 +11138,7 @@ function _doStartFullProfile(email, toastMsg){
 }
 
 function showQuickConnectForm(email, inv){
+  S.gender = '';
   const inviterName = (inv || PENDING_INVITE)?.inviter_name || 'Your friend';
 
   const overlay = document.createElement('div');
@@ -10951,6 +11196,14 @@ function showQuickConnectForm(email, inv){
         '<label style="'+lbl+'">Age Range</label>'+
         '<select id="qcAge" style="'+inp+'background:#fff;">'+ageOpts+'</select>'+
       '</div>'+
+      '<div style="margin-bottom:16px;">'+
+        '<label style="'+lbl+'">Gender <span style="color:#dc2626;">*</span></label>'+
+        '<div id="qcGenderChips" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:2px;">'+
+          '<button type="button" class="chip" onclick="selChip(\'qcGenderChips\',this,\'gender\');window._qcUpdateBtn()">Man</button>'+
+          '<button type="button" class="chip" onclick="selChip(\'qcGenderChips\',this,\'gender\');window._qcUpdateBtn()">Woman</button>'+
+          '<button type="button" class="chip" onclick="selChip(\'qcGenderChips\',this,\'gender\');window._qcUpdateBtn()">Prefer not to say</button>'+
+        '</div>'+
+      '</div>'+
       '<div style="margin-bottom:20px;">'+
         '<label style="'+lbl+'">Playing Since</label>'+
         '<select id="qcSince" style="'+inp+'background:#fff;">'+yearOpts+'</select>'+
@@ -10984,7 +11237,7 @@ function showQuickConnectForm(email, inv){
     const fn  = document.getElementById('qcFirstName')?.value?.trim() || '';
     const ph  = (document.getElementById('qcPhone')?.value||'').replace(/\D/g,'');
     const zip = (document.getElementById('qcZip')?.value||'').replace(/\D/g,'');
-    const ok  = fn.length > 0 && ph.length >= 10 && zip.length === 5 && _qcPrivacyOn && _qcRiskOn;
+    const ok  = fn.length > 0 && ph.length >= 10 && zip.length === 5 && S.gender !== '' && _qcPrivacyOn && _qcRiskOn;
     const btn = document.getElementById('qcSaveBtn');
     if(btn){
       btn.disabled    = !ok;
@@ -11030,6 +11283,7 @@ function showQuickConnectForm(email, inv){
         waiver_agreed:     true,
         match_gender_pref: 'Both',
         play_format:       'Both',
+        gender:            S.gender || null,
       });
       _newUserRegistrationStarted = false;
       document.getElementById('quickConnectOverlay')?.remove();
