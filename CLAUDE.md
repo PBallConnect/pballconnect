@@ -555,6 +555,32 @@ Sticky progress bar: `['Match Type','Number of Courts','Date & Time','Court','Pl
 
 ---
 
+## Match Cards
+
+### Format + Gender Label
+
+All match cards (confirmed matches, myInvites, orgPending) show a secondary label line below the organizer name displaying match type + gender preference. The `_fmtGenderPref(pref)` helper maps DB `gender_pref` values:
+- `'open'` / `'either'` → `'Open'`
+- `'mixed'` → `'Mixed'`
+- `'same'` → `'Same Gender'`
+- `'mens'` → `"Men's"`
+- `'womens'` → `"Women's"`
+
+Label format: `Doubles · Mixed` (or `Singles · Open`, `Doubles · Men's`, etc.). Rendered as: `(m.match_type === 'singles' ? 'Singles' : 'Doubles') + (_fmtGenderPref(m.gender_pref) ? ' · ' + _fmtGenderPref(m.gender_pref) : '')`.
+
+### Counter Chips (Response Status)
+
+`makeResponsePill(matchId, status, count, color)` renders In / Pending / Waitlist / Out counter chips. Each chip has `id="pill-{matchId}-{status}"` for direct DOM access.
+
+Tapping a chip calls `togglePillNames(matchId, status)`, which:
+- Closes all other panels and resets their chips to background `#f9fafb`
+- Toggles the tapped panel open/closed
+- Sets the open chip's background to its active color (In → `#d1fae5`, Pending → `#fef3c7`, Waitlist → `#fef9c3`, Out → `#fff1f2`)
+
+Chip has `transition:background .12s` for smooth highlight. Active background = chip border color (lighter fill). Tapping again closes the panel and resets chip background to `#f9fafb`.
+
+---
+
 ## Recurring Matches
 
 `_openRecurringModal()` — async, fetches courts before rendering.
@@ -755,6 +781,8 @@ Applied via JS: `el.classList.add('ic-shake'); setTimeout(()=>el.classList.remov
 14. **Web push notifications** — browser push for match invites, IC requests, gap alerts.
 15. **Player statistics dashboard** — `playerStats` page needs data and UX.
 16. ~~**Emergency Fill screen**~~ ✅ — organizer tool built; see Emergency Fill Screen section below.
+17. **Verify: organizer SMS on player cancellation** — Part 1 of May 10 build. Test with a verified Twilio number: drop a player, confirm organizer receives SMS notification. Check `sms_log` for `event_type:'player_dropped'` row.
+18. **Verify: match time in cancellation notification email** — Part 2 of May 10 build. Confirm the organizer notification email includes match time (not just date). Check the email template rendered by `send-email.js` for the `match_update` type.
 
 ---
 
@@ -819,6 +847,8 @@ Full-screen organizer tool for quickly filling an open spot when the waitlist is
 **Entry points:**
 - Auto-triggered at the end of `confirmCantMakeIt()` when waitlist is empty and `SESSION_PLAYER` is the organizer (800ms delay after reload)
 - Manual: 🚨 **Emergency Fill** button on organizer's confirmed match card when `inPlayers.length < maxNeeded`
+- Manual: 🚨 **Fill This Spot →** button in the expanded view of orgPending Section 3 cards when `remaining > 0` and waitlist is empty (orgPending also populates `window._cmCache[matchId]` at render time)
+- Deep-link: `?action=emergency_fill&match=MATCH_ID` — `checkMatchToken` skips processing when `action=emergency_fill`; `restoreSession` fires `showEmergencyFill()` after login. For unauthenticated arrivals, match ID is stored in `sessionStorage('pb_ef_matchId')` and consumed by `restoreSession` after login. URL is cleared via `history.replaceState` after processing.
 
 **Gender filter logic (`_efGenderNeeded`):**
 - `format = 'mixed'` → dropped player's gender (pass `null` if not on file → screen falls back to full IC)
@@ -826,7 +856,9 @@ Full-screen organizer tool for quickly filling an open spot when the waitlist is
 - `format = 'womens'` → `'Woman'`
 - `format = 'open'` → no filter (`null`)
 
-**Candidate pool:** `IC_MEMBERS` filtered to players whose `email` is NOT already in `match_responses` with `response IN ('in','pending','waitlist')` for this match. IC_MEMBERS is fetched on demand if empty.
+**Gender override:** When `_efGenderNeeded` is set, the overlay shows "Showing [Gender]s only · Show all IC instead →". Tapping the link calls `efOverrideGender()`, which clears `_efGenderNeeded`, hides the toggle (`id="efGenderToggle"`), and re-renders the current mode (`_efCurrentMode`) without the gender filter.
+
+**Candidate pool:** IC members are extracted from `IC_MEMBERS` via `m.player` wrappers into a local `_efMemberFlat` array — `IC_MEMBERS` itself is never overwritten. If `IC_MEMBERS` is empty, connections + profiles are fetched directly from Supabase into `_efMemberFlat`. Pool is then filtered to players whose `email` is NOT already in `match_responses` with `response IN ('in','pending','waitlist')` for this match.
 
 **4 modes (tiles):**
 | Mode | Icon | Behavior |
@@ -836,11 +868,13 @@ Full-screen organizer tool for quickly filling an open spot when the waitlist is
 | `'all'` | 👥 | Shows full candidate pool |
 | `'text'` | 💬 | Opens `sms:?body=...` URI immediately; no list shown |
 
+**Mobile UX:** Mode tiles stack vertically (1-column grid, `grid-template-columns:1fr`), `min-height:56px`, icon + text in horizontal flex layout (`display:flex; align-items:center; gap:14px`). Send bar is `position:fixed; bottom:0; left:0; right:0; z-index:10001` so it stays above the overlay scroll area. Send button: `width:100%; max-width:520px; display:block; margin:0 auto`.
+
 **`efSendInvites()`:** For each selected email — (1) upserts `match_responses` as `'pending'` with `resolution=merge-duplicates`; (2) sends email invite (`type:'match_invite'`); (3) sends SMS (`event_type:'emergency_fill'`), both in separate try/catch. Dismisses overlay and shows success toast on completion.
 
-**Window globals:** `showEmergencyFill`, `efSelectMode`, `efTogglePlayer`, `efSendInvites`
+**Window globals:** `showEmergencyFill`, `efSelectMode`, `efTogglePlayer`, `efSendInvites`, `efOverrideGender`
 
-**Internal state (module-level):** `_efMatchId`, `_efCandidates`, `_efSelected` (Set), `_efGenderNeeded`
+**Internal state (module-level):** `_efMatchId`, `_efCandidates`, `_efSelected` (Set), `_efGenderNeeded`, `_efCurrentMode`
 
 ---
 
@@ -957,4 +991,6 @@ Design and planning happens in Claude.ai (claude.ai/code or chat). Implementatio
 
 45. **Organizer is always notified when a player drops.** Email + SMS (if `sms_opt_in`). Both in separate `try/catch`. Drop completes even if both notifications fail.
 
-46. **Gender is required across all registration paths (full profile, Quick Connect, SMS).** Do not remove the gender field from any path. Emergency Fill reads the dropped player's gender (via `_efGenderNeeded`) to surface same-gender IC members for a vacancy in a Mixed or gendered match format. Never skip gender collection at registration.
+46. **Gender values must be `'Man'`, `'Woman'`, or `'Prefer not to say'` — never `'Male'` or `'Female'`.** Gender is required across all registration paths (full profile, Quick Connect, SMS). A one-time migration was run on existing rows to normalize to this convention. Emergency Fill reads `SESSION_PLAYER.gender` to determine which IC members to surface for a Mixed match vacancy. Never skip gender collection at registration.
+
+47. **`IC_MEMBERS` structure is `{player:{...}, conn:{...}, lastPlayed:null}` — never overwrite with flat objects.** `IC_MEMBERS` is a shared global array populated by `loadInnerCircle()`. Any feature that needs flat player data for local use must store it in its own local variable (e.g. `_efMemberFlat` in Emergency Fill). Always access player properties via `m.player.field_name`, never `m.field_name` directly. When fetching IC members on demand, fetch into a local flat array — do not write back to `IC_MEMBERS`.
