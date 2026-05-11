@@ -4742,8 +4742,8 @@ async function loadConfirmedMatches(){
             '<div style="color:#1a7a3a;font-size:15px;font-weight:700;">'+dateStr+'</div>'+
             '<div style="color:#555;font-size:12px;font-weight:600;">'+timeStr+'</div>'+
             renderCountdown(m.match_date,m.time_start)+
-            (isOrganizer?'<div style="font-size:11px;color:#1a7a3a;font-weight:700;margin-top:2px;">Organized by '+(((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim()||'You')+'</div>':
-              '<div style="font-size:10px;color:#555;font-weight:600;margin-top:2px;">Organized by '+((m.organizer_name||'').split(' ')[0]||'Unknown')+'</div>')+
+            (isOrganizer?'<div style="font-size:11px;color:#1a7a3a;font-weight:700;margin-top:2px;">Organized by '+(((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim()||'You')+' &middot; '+(m.match_type==='singles'?'Singles':'Doubles')+(_fmtGenderPref(m.gender_pref)?' &middot; '+_fmtGenderPref(m.gender_pref):'')+'</div>':
+              '<div style="font-size:10px;color:#555;font-weight:600;margin-top:2px;">Organized by '+((m.organizer_name||'').split(' ')[0]||'Unknown')+' &middot; '+(m.match_type==='singles'?'Singles':'Doubles')+(_fmtGenderPref(m.gender_pref)?' &middot; '+_fmtGenderPref(m.gender_pref):'')+'</div>')+
           '</div>'+
           (inProgress?'<div style="display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;background:#d1fae5;border:2px solid #16a34a;color:#166534;font-size:10px;font-weight:800;white-space:nowrap;"><span class="pb-pulse-green"></span>In Progress</div>':
             urgency==='TODAY'||urgency==='TOMORROW'?'<div style="padding:3px 10px;border-radius:999px;background:#fee2e2;border:2px solid #dc2626;color:#dc2626;font-size:10px;font-weight:800;white-space:nowrap;">'+urgency+'</div>':
@@ -5405,7 +5405,7 @@ async function loadMyInvitesPage(){
           '<div style="color:'+(isPast?'#6b7280':'#111')+';font-size:14px;font-weight:700;">'+(isPast?'<s>':'')+dateStr+(isPast?'</s>':'')+'</div>'+
           '<div style="color:#374151;font-size:12px;margin-top:1px;font-weight:600;">'+timeStr+'</div>'+
           '<div style="color:#6b7280;font-size:12px;margin-top:2px;">'+courtDisplay+'</div>'+
-          '<div style="font-size:11px;color:#1a7a3a;font-weight:700;margin-top:2px;">Organized by '+(((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim()||getMyEmail().split('@')[0])+'</div>'+
+          '<div style="font-size:11px;color:#1a7a3a;font-weight:700;margin-top:2px;">Organized by '+(((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim()||getMyEmail().split('@')[0])+' &middot; '+(m.match_type==='singles'?'Singles':'Doubles')+(_fmtGenderPref(m.gender_pref)?' &middot; '+_fmtGenderPref(m.gender_pref):'')+'</div>'+
           (!isPast?renderCountdown(m.match_date,m.time_start):'')+
         '</div>'+
         '<div style="text-align:right;flex-shrink:0;">'+
@@ -5543,15 +5543,26 @@ function togglePill(el){
 // Response data cache keyed by matchId — populated by loadMyInvitesPage, read by toggleInvitePanel
 const _miResponseCache = {};
 
+function _fmtGenderPref(pref){
+  const m={open:'Open',either:'Open',mixed:'Mixed',same:'Same Gender',mens:"Men's",womens:"Women's"};
+  return m[(pref||'').toLowerCase()]||'';
+}
+
 function togglePillNames(matchId, status){
+  const activeBgs={in:'#d1fae5',pending:'#fef3c7',waitlist:'#fef9c3',out:'#fff1f2'};
   ['in','pending','waitlist','out'].forEach(s=>{
     if(s===status) return;
     const el=document.getElementById('pillNames-'+matchId+'-'+s);
+    const pill=document.getElementById('pill-'+matchId+'-'+s);
     if(el) el.style.display='none';
+    if(pill) pill.style.background='#f9fafb';
   });
   const panel=document.getElementById('pillNames-'+matchId+'-'+status);
+  const pill=document.getElementById('pill-'+matchId+'-'+status);
   if(!panel) return;
-  panel.style.display = panel.style.display==='none' ? 'block' : 'none';
+  const isOpening=panel.style.display==='none';
+  panel.style.display=isOpening?'block':'none';
+  if(pill) pill.style.background=isOpening?(activeBgs[status]||'#f3f4f6'):'#f9fafb';
 }
 window.togglePillNames = togglePillNames;
 
@@ -5585,8 +5596,8 @@ function buildPillNamesPanel(matchId, status, players, organizerEmail){
 
 function makeResponsePill(label, players, color, matchId, status){
   if(matchId && status){
-    return '<div onclick="togglePillNames(\''+matchId+'\',\''+status+'\')" '+
-      'style="text-align:center;padding:8px 4px;border-radius:8px;background:#f9fafb;border:2px solid '+color+';cursor:pointer;">'+
+    return '<div id="pill-'+matchId+'-'+status+'" onclick="togglePillNames(\''+matchId+'\',\''+status+'\')" '+
+      'style="text-align:center;padding:8px 4px;border-radius:8px;background:#f9fafb;border:2px solid '+color+';cursor:pointer;transition:background .12s;">'+
       '<div style="font-size:16px;font-weight:800;color:'+color+';">'+players.length+'</div>'+
       '<div style="font-size:9px;color:#444;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">'+label+' &#9660;</div>'+
     '</div>';
@@ -5820,7 +5831,7 @@ async function loadInvitedByOthersPage(){
                 '<div style="color:#1d4ed8;font-size:14px;font-weight:700;">'+dateStr+'</div>'+
                 '<div style="color:#374151;font-size:12px;font-weight:600;margin-top:1px;">'+timeStr+'</div>'+
                 '<div style="color:#6b7280;font-size:12px;margin-top:2px;">'+courtDisplay+'</div>'+
-                '<div style="font-size:11px;color:#555;margin-top:2px;">By <strong style="color:#111;">'+(m.organizer_name||'Unknown')+'</strong> &middot; '+(m.match_type==='singles'?'Singles':'Doubles')+'</div>'+
+                '<div style="font-size:11px;color:#555;margin-top:2px;">By <strong style="color:#111;">'+(m.organizer_name||'Unknown')+'</strong> &middot; '+(m.match_type==='singles'?'Singles':'Doubles')+(_fmtGenderPref(m.gender_pref)?' &middot; '+_fmtGenderPref(m.gender_pref):'')+'</div>'+
                 renderCountdown(m.match_date,m.time_start)+
               '</div>'+
               '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">'+
@@ -5885,7 +5896,7 @@ async function loadInvitedByOthersPage(){
                 '<div style="color:#111;font-size:14px;font-weight:700;">'+dateStr+'</div>'+
                 '<div style="color:#374151;font-size:12px;font-weight:600;margin-top:1px;">'+timeStr+'</div>'+
                 '<div style="color:#6b7280;font-size:12px;margin-top:2px;">'+courtDisplay+'</div>'+
-                '<div style="font-size:11px;color:#555;margin-top:2px;">By <strong style="color:#111;">'+(m.organizer_name||'Unknown')+'</strong> &middot; '+(m.match_type==='singles'?'Singles':'Doubles')+'</div>'+
+                '<div style="font-size:11px;color:#555;margin-top:2px;">By <strong style="color:#111;">'+(m.organizer_name||'Unknown')+'</strong> &middot; '+(m.match_type==='singles'?'Singles':'Doubles')+(_fmtGenderPref(m.gender_pref)?' &middot; '+_fmtGenderPref(m.gender_pref):'')+'</div>'+
               '</div>'+
               '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">'+
                 '<div style="font-size:11px;font-weight:700;color:#f59e0b;">Match Full</div>'+
@@ -5965,7 +5976,7 @@ async function loadInvitedByOthersPage(){
                 '<div style="color:#111;font-size:14px;font-weight:700;">'+dateStr+'</div>'+
                 '<div style="color:#374151;font-size:12px;font-weight:600;margin-top:1px;">'+timeStr+'</div>'+
                 '<div style="color:#6b7280;font-size:12px;margin-top:2px;">'+courtDisplay+'</div>'+
-                '<div style="font-size:11px;color:#555;margin-top:2px;">By <strong style="color:#111;">'+(m.organizer_name||'Unknown')+'</strong> &middot; '+(m.match_type==='singles'?'Singles':'Doubles')+'</div>'+
+                '<div style="font-size:11px;color:#555;margin-top:2px;">By <strong style="color:#111;">'+(m.organizer_name||'Unknown')+'</strong> &middot; '+(m.match_type==='singles'?'Singles':'Doubles')+(_fmtGenderPref(m.gender_pref)?' &middot; '+_fmtGenderPref(m.gender_pref):'')+'</div>'+
                 renderCountdown(m.match_date,m.time_start)+
               '</div>'+
               '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">'+
@@ -6016,6 +6027,16 @@ async function loadInvitedByOthersPage(){
         const timeStr=m.time_start?fmt12(m.time_start)+(m.time_end?' – '+fmt12(m.time_end):''):'TBD';
         const courtDisplay=m.court_name&&m.court_name!=='TBD'?'📍 '+m.court_name:(m.court_address?'📍 '+m.court_address:'📍 Court TBD');
         const iboId='ibo-'+m.id;
+        window._cmCache = window._cmCache || {};
+        window._cmCache[m.id] = {
+          dateStr: dateStr,
+          timeStr: timeStr,
+          courtName: m.court_name || 'Court TBD',
+          organizerName: ((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim() || '',
+          organizerEmail: m.organizer_email || '',
+          maxPlayers: maxNeeded,
+          matchDateTime: m.match_date && m.time_start ? new Date(m.match_date+'T'+m.time_start).getTime() : null
+        };
         const card=document.createElement('div');
         card.style.cssText='background:#ffffff;border:3px solid #f59e0b;border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);';
         if(getCountdown(m.match_date,m.time_start)?.urgent) card.classList.add('pb-card-urgent');
@@ -6028,7 +6049,7 @@ async function loadInvitedByOthersPage(){
                 '<div style="color:#111;font-size:14px;font-weight:700;">'+dateStr+'</div>'+
                 '<div style="color:#374151;font-size:12px;font-weight:600;margin-top:1px;">'+timeStr+'</div>'+
                 '<div style="color:#6b7280;font-size:12px;margin-top:2px;">'+courtDisplay+'</div>'+
-                '<div style="font-size:11px;color:#1a7a3a;font-weight:700;margin-top:2px;">Organized by '+((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim()+'</div>'+
+                '<div style="font-size:11px;color:#1a7a3a;font-weight:700;margin-top:2px;">Organized by '+((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim()+' &middot; '+(m.match_type==='singles'?'Singles':'Doubles')+(_fmtGenderPref(m.gender_pref)?' &middot; '+_fmtGenderPref(m.gender_pref):'')+'</div>'+
                 renderCountdown(m.match_date,m.time_start)+
               '</div>'+
               '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">'+
@@ -6049,6 +6070,7 @@ async function loadInvitedByOthersPage(){
                 buildPillNamesPanel(iboId,'pending',pend,m.organizer_email)+
                 buildPillNamesPanel(iboId,'waitlist',wait,m.organizer_email)+
                 buildPillNamesPanel(iboId,'out',out,m.organizer_email)+
+                (remaining>0&&!wait.length?'<button onclick="event.stopPropagation();window.showEmergencyFill(\''+m.id+'\',null)" style="width:100%;margin-top:10px;background:#dc2626;color:#fff;border:none;border-radius:12px;padding:14px 0;font-size:16px;font-weight:800;min-height:56px;cursor:pointer;">&#128680; Fill This Spot &#8594;</button>':'')+
               '</div>'
             :'');
         }
@@ -7348,6 +7370,7 @@ function applyPendingMatchInvitee(){
 
 async function checkMatchToken(){
   const params   = new URLSearchParams(window.location.search);
+  if(params.get('action') === 'emergency_fill') return; // handled by restoreSession
   const matchId  = params.get('match');
   if(!matchId) return;
 
@@ -7732,9 +7755,11 @@ window.confirmCantMakeIt = async function(matchId){
   // ── 4. NOTIFY ORGANIZER ──────────────────────────────────────────────────
   if(d && d.organizerEmail){
     const myName = getMyName() || (myEmail||'').split('@')[0];
+    const myFirst = (myName.split(' ')[0]) || myName;
     const dateStr = d.dateStr || '';
+    const timeStr = d.timeStr || '';
     const courtStr = d.courtName && d.courtName !== 'Court TBD' ? d.courtName : '';
-    const matchUrl = window.location.origin + window.location.pathname + '?match=' + matchId;
+    const matchUrl = window.location.origin + window.location.pathname + '?action=emergency_fill&match=' + matchId;
 
     // Current confirmed count (post-drop)
     let confirmedCount = 0;
@@ -7752,7 +7777,7 @@ window.confirmCantMakeIt = async function(matchId){
         to_email: d.organizerEmail,
         type: 'match_update',
         subject: myName+' can\'t make your match on '+dateStr,
-        personal_note: myName+' can no longer make your '+dateStr+' match'+(courtStr?' at '+courtStr:'')+'. '+confirmedCount+' of '+(d.maxPlayers||'?')+' players confirmed. Log in to PBallConnect to manage your roster.',
+        personal_note: myName+' can no longer make your '+dateStr+(timeStr?' at '+timeStr:'')+' match'+(courtStr?' at '+courtStr:'')+'. '+confirmedCount+' of '+(d.maxPlayers||'?')+' players confirmed. Log in to fill the spot.',
         invite_url: matchUrl,
         inviter_name: myName,
         match_date_str: dateStr
@@ -7760,7 +7785,7 @@ window.confirmCantMakeIt = async function(matchId){
     }catch(e){ console.warn('cantMakeIt org email failed:',e); }
 
     try{
-      const orgSms = myName+' can\'t make your '+dateStr+' match'+(courtStr?' at '+courtStr:'')+'. '+confirmedCount+'/'+(d.maxPlayers||'?')+' confirmed. Open app to manage roster.';
+      const orgSms = myFirst+' cancelled your '+dateStr+(timeStr?' at '+timeStr:'')+' match'+(courtStr?' at '+courtStr:'')+'. Log in to fill the spot.';
       await sendSms({ player_email:d.organizerEmail, message:orgSms.substring(0,160), match_id:matchId, event_type:'player_dropped' });
     }catch(e){ console.warn('cantMakeIt org SMS failed:',e); }
   }
@@ -7847,6 +7872,7 @@ let _efMatchId = null;
 let _efCandidates = [];
 let _efSelected = new Set();
 let _efGenderNeeded = null;
+let _efCurrentMode = null;
 
 window.showEmergencyFill = async function(matchId, droppedGender){
   _efMatchId = matchId;
@@ -7904,17 +7930,20 @@ window.showEmergencyFill = async function(matchId, droppedGender){
         '<button onclick="document.getElementById(\'emergencyFillOverlay\').style.display=\'none\'" '+
           'style="margin-left:auto;background:none;border:none;font-size:22px;color:#9ca3af;cursor:pointer;padding:4px 8px;">&#10005;</button>'+
       '</div>'+
-      '<div style="font-size:13px;color:#dc2626;font-weight:600;margin-bottom:16px;">Waitlist is empty — reach out to fill this spot fast.</div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px;" id="efModeTiles">'+
+      '<div style="font-size:13px;color:#dc2626;font-weight:600;margin-bottom:8px;">Waitlist is empty — reach out to fill this spot fast.</div>'+
+      (_efGenderNeeded?
+        '<div id="efGenderToggle" style="font-size:13px;color:#6b7280;margin-bottom:14px;">Showing <strong>'+_efGenderNeeded+'s</strong> only &middot; <span onclick="window.efOverrideGender()" style="color:#1a7a3a;cursor:pointer;text-decoration:underline;">Show all IC instead &#8594;</span></div>'
+        :'<div style="margin-bottom:14px;"></div>')+
+      '<div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:18px;" id="efModeTiles">'+
         _buildEfModeTile('gender','&#128107;',droppedGender?'Same Gender':'Any Gender',droppedGender?'Match dropped player':'All IC members')+
         _buildEfModeTile('level','&#127919;','My Level','IC members at your skill')+
         _buildEfModeTile('all','&#128101;','All IC Members','Anyone not already invited')+
         _buildEfModeTile('text','&#128172;','Send a Text','Open your messages app')+
       '</div>'+
       '<div id="efList" style="display:none;"></div>'+
-      '<div id="efSendBar" style="display:none;position:fixed;bottom:0;left:0;right:0;padding:12px 16px;background:#fff;border-top:2px solid #e5e7eb;z-index:10001;">'+
+      '<div id="efSendBar" style="display:none;position:fixed;bottom:0;left:0;right:0;padding:16px;background:#fff;border-top:2px solid #e5e7eb;box-shadow:0 -2px 8px rgba(0,0,0,0.12);z-index:10001;">'+
         '<button onclick="window.efSendInvites()" id="efSendBtn" '+
-          'style="width:100%;max-width:520px;display:block;margin:0 auto;padding:14px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;">'+
+          'style="width:100%;max-width:520px;display:block;margin:0 auto;padding:0;min-height:64px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;">'+
           'Send Invites'+
         '</button>'+
       '</div>'+
@@ -7925,14 +7954,17 @@ window.showEmergencyFill = async function(matchId, droppedGender){
 
 function _buildEfModeTile(mode, icon, title, sub){
   return '<div onclick="window.efSelectMode(\''+mode+'\')" id="efTile_'+mode+'" '+
-    'style="cursor:pointer;border:2px solid #e5e7eb;border-radius:14px;padding:14px 12px;text-align:center;background:#fff;transition:all .15s;">'+
-    '<div style="font-size:26px;margin-bottom:6px;">'+icon+'</div>'+
-    '<div style="font-size:13px;font-weight:800;color:#111;margin-bottom:3px;">'+title+'</div>'+
-    '<div style="font-size:11px;color:#6b7280;line-height:1.4;">'+sub+'</div>'+
+    'style="cursor:pointer;border:2px solid #e5e7eb;border-radius:14px;padding:16px 12px;min-height:56px;display:flex;align-items:center;gap:14px;background:#fff;transition:all .15s;">'+
+    '<div style="font-size:26px;flex-shrink:0;">'+icon+'</div>'+
+    '<div style="text-align:left;">'+
+      '<div style="font-size:15px;font-weight:800;color:#111;margin-bottom:2px;">'+title+'</div>'+
+      '<div style="font-size:13px;color:#6b7280;line-height:1.4;">'+sub+'</div>'+
+    '</div>'+
   '</div>';
 }
 
 window.efSelectMode = function(mode){
+  _efCurrentMode = mode;
   _efSelected = new Set();
 
   ['gender','level','all','text'].forEach(m=>{
@@ -8066,6 +8098,13 @@ window.efSendInvites = async function(){
   const overlay = document.getElementById('emergencyFillOverlay');
   if(overlay) overlay.style.display = 'none';
   showToast('Invites sent to '+sent+' player'+(sent!==1?'s':'')+' 🎾','#1a7a3a');
+};
+
+window.efOverrideGender = function(){
+  _efGenderNeeded = null;
+  const toggle = document.getElementById('efGenderToggle');
+  if(toggle) toggle.style.display = 'none';
+  if(_efCurrentMode) window.efSelectMode(_efCurrentMode);
 };
 
 function addHours(timeStr, hrs){
@@ -8390,6 +8429,12 @@ async function initApp(){
   }
   // No valid session — restore welcome content visibility then show the page
   if(welcomeInner && !isNewUser) welcomeInner.style.visibility = '';
+  // Preserve emergency_fill deep-link across login for unauthenticated users
+  const _efAction = _urlParams2.get('action');
+  const _efMatchParam = _urlParams2.get('match');
+  if(_efAction === 'emergency_fill' && _efMatchParam){
+    sessionStorage.setItem('pb_ef_matchId', _efMatchParam);
+  }
   if(!SESSION_PLAYER && !_newUserRegistrationStarted){
     showPage('welcome');
   }
@@ -8514,6 +8559,17 @@ async function restoreSession(email, playerData){
 
   if(!S.addrLat && player.city && player.state) geocodeCityForSession(player.city, player.state);
   showPage('dashboard');
+
+  // Deep-link: ?action=emergency_fill&match=ID (from organizer cancellation email)
+  const _rsParams = new URLSearchParams(window.location.search);
+  const _rsEfMatchId = (_rsParams.get('action') === 'emergency_fill' && _rsParams.get('match'))
+    ? _rsParams.get('match')
+    : sessionStorage.getItem('pb_ef_matchId');
+  if(_rsEfMatchId){
+    history.replaceState(null, '', window.location.pathname);
+    sessionStorage.removeItem('pb_ef_matchId');
+    setTimeout(()=>window.showEmergencyFill(_rsEfMatchId, null), 600);
+  }
 }
 
 async function geocodeCityForSession(city, state){
