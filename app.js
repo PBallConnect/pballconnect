@@ -7894,8 +7894,12 @@ window.showEmergencyFill = async function(matchId, droppedGender){
     rows.forEach(r => alreadyIn.add((r.player_email||'').toLowerCase()));
   }catch(_){}
 
-  // Use IC_MEMBERS already in memory; fetch if empty
-  if(!IC_MEMBERS || !IC_MEMBERS.length){
+  // Build flat player list for Emergency Fill — never overwrite IC_MEMBERS (it uses
+  // {player, conn, lastPlayed} wrappers; corrupting it would break the invite grid).
+  let _efMemberFlat = [];
+  if(IC_MEMBERS && IC_MEMBERS.length){
+    _efMemberFlat = IC_MEMBERS.map(m => m.player).filter(Boolean);
+  } else {
     try{
       const myEmail = getMyEmail();
       const cRes = await fetch(
@@ -7906,15 +7910,15 @@ window.showEmergencyFill = async function(matchId, droppedGender){
       const icEmails = conns.map(c => c.requester_email === myEmail ? c.recipient_email : c.requester_email);
       if(icEmails.length){
         const pRes = await fetch(
-          `${SUPABASE_URL}/rest/v1/public_profiles?email=in.(${icEmails.map(e=>encodeURIComponent(e)).join(',')})&select=email,first_name,last_name,skill_self,gender`,
+          `${SUPABASE_URL}/rest/v1/public_profiles?email=in.(${icEmails.map(e=>encodeURIComponent(e)).join(',')})&select=email,first_name,last_name,skill_self,skill_level,gender`,
           {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
         );
-        IC_MEMBERS = pRes.ok ? await pRes.json() : [];
+        _efMemberFlat = pRes.ok ? await pRes.json() : [];
       }
     }catch(_){}
   }
 
-  _efCandidates = (IC_MEMBERS||[]).filter(p => !alreadyIn.has((p.email||'').toLowerCase()));
+  _efCandidates = _efMemberFlat.filter(p => !alreadyIn.has((p.email||'').toLowerCase()));
 
   const overlay = document.getElementById('emergencyFillOverlay');
   if(!overlay) return;
