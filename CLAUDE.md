@@ -1,6 +1,6 @@
 # CLAUDE.md — PBallConnect Reference
 
-_Last updated: May 10, 2026_
+_Last updated: May 13, 2026_
 
 ---
 
@@ -536,6 +536,10 @@ Sticky progress bar: `['Match Type','Number of Courts','Date & Time','Court','Pl
 - Continue locked until minimum met: `(numCourts × playersPerCourt) - 1`
 - Mixed path: hard stop until gender balance met
 - No "subs" language anywhere in match wizard
+- "Continue →" button is labeled **"Send Invites →"** (renamed from "Continue →")
+- Stale raw IC count label (e.g. "19 players") removed — count is derived live from the grid
+- Desktop click handler fixed (was previously touch-only; now handles both mouse and touch)
+- `window._cmCache[matchId]` is populated for organizer pending cards at render time so Emergency Fill has match context available
 
 ### Court Step Rules
 
@@ -578,6 +582,8 @@ Tapping a chip calls `togglePillNames(matchId, status)`, which:
 - Sets the open chip's background to its active color (In → `#d1fae5`, Pending → `#fef3c7`, Waitlist → `#fef9c3`, Out → `#fff1f2`)
 
 Chip has `transition:background .12s` for smooth highlight. Active background = chip border color (lighter fill). Tapping again closes the panel and resets chip background to `#f9fafb`.
+
+Waitlist chip is hidden from non-organizers when count = 0. Always shown to the organizer regardless of count.
 
 ---
 
@@ -711,6 +717,7 @@ Applied via JS: `el.classList.add('ic-shake'); setTimeout(()=>el.classList.remov
 - ~~+ Add to my IC showing for existing IC members in outbound accepted group~~ — removed from that group
 - ~~Duplicate courts in nearby list~~ — `normalizeCourtName()` fuzzy match + double-dedup applied
 - ~~Level grid column headers showing raw diff ranges (`< 3.88`, `3.88 – 4.13`) instead of IC Level Structure labels~~ — fixed in `buildGroupInviteGrid()` and `buildSmInviteGrid()`; now shows `.5+ Below My Level` / `.25 Below My Level` / `My Level` / `.25 Above My Level` / `.5+ Above My Level` with `≤/≥` reference values at 0.25 increments
+- ~~Emergency Fill overwrote `IC_MEMBERS` with flat objects when IC data was fetched on demand~~ — fixed by using local `_efMemberFlat` variable; `IC_MEMBERS` global is never written to by Emergency Fill. See Rule 47.
 
 ---
 
@@ -860,21 +867,41 @@ Full-screen organizer tool for quickly filling an open spot when the waitlist is
 
 **Candidate pool:** IC members are extracted from `IC_MEMBERS` via `m.player` wrappers into a local `_efMemberFlat` array — `IC_MEMBERS` itself is never overwritten. If `IC_MEMBERS` is empty, connections + profiles are fetched directly from Supabase into `_efMemberFlat`. Pool is then filtered to players whose `email` is NOT already in `match_responses` with `response IN ('in','pending','waitlist')` for this match.
 
-**4 modes (tiles):**
+**4 modes (tiles):** Operating on the gender-filtered IC, excluding already-confirmed players.
 | Mode | Icon | Behavior |
 |---|---|---|
-| `'gender'` | 👫 | Filters pool to `_efGenderNeeded` gender; falls back to full IC if no matches |
-| `'level'` | 🎯 | Filters pool to `|skill_self - organizer_skill| ≤ 0.5`; falls back to full IC if no matches |
-| `'all'` | 👥 | Shows full candidate pool |
-| `'text'` | 💬 | Opens `sms:?body=...` URI immediately; no list shown |
+| Same Gender | 👫 | Filters pool to `_efGenderNeeded` gender; falls back to full IC if no matches |
+| My Level | 🎯 | IC sorted by proximity to `SESSION_PLAYER.skill_self`; falls back to full IC if no matches |
+| All IC Members | 👥 | Shows full candidate pool, alpha sorted |
+| Send a Text | 💬 | Opens `sms:?body=...` URI immediately; no list shown |
 
 **Mobile UX:** Mode tiles stack vertically (1-column grid, `grid-template-columns:1fr`), `min-height:56px`, icon + text in horizontal flex layout (`display:flex; align-items:center; gap:14px`). Send bar is `position:fixed; bottom:0; left:0; right:0; z-index:10001` so it stays above the overlay scroll area. Send button: `width:100%; max-width:520px; display:block; margin:0 auto`.
 
-**`efSendInvites()`:** For each selected email — (1) upserts `match_responses` as `'pending'` with `resolution=merge-duplicates`; (2) sends email invite (`type:'match_invite'`); (3) sends SMS (`event_type:'emergency_fill'`), both in separate try/catch. Dismisses overlay and shows success toast on completion.
+**`efSendInvites()`:** For each selected email — (1) upserts `match_responses` as `'pending'` with `resolution=merge-duplicates`; (2) sends email invite (`type:'match_invite'`); (3) sends SMS (opt-in gated, best-effort per Rule 38), both in separate try/catch. Auto-dismisses overlay after 2500ms and shows success toast.
 
-**Window globals:** `showEmergencyFill`, `efSelectMode`, `efTogglePlayer`, `efSendInvites`, `efOverrideGender`
+**Window globals:** `showEmergencyFill`, `efSelectMode`, `efTogglePlayer`, `efSendInvites`, `efBack`, `efDismiss`, `efOverrideGender`
 
-**Internal state (module-level):** `_efMatchId`, `_efCandidates`, `_efSelected` (Set), `_efGenderNeeded`, `_efCurrentMode`
+**Internal state (module-level):** `_efMatchId`, `_efMemberFlat`, `_efGenderNeeded`, `_efSelectedEmails`, `_efMatchData`
+
+---
+
+## Infrastructure & Business
+
+### Twilio
+- Spending alerts set at $10 (email) and 100 outbound SMS
+- Running on prepaid balance model — natural hard stop when balance hits $0
+- Auto-recharge is OFF — do not enable
+- Load $20–30 at a time manually via Twilio Console
+
+### Google Workspace
+- Business Starter plan at `zorro@pballconnect.com`
+- MX records configured in Cloudflare DNS for Google Workspace (5 records: `aspmx.l.google.com` + 4 alt records)
+- Resend bounce MX record preserved separately — do not overwrite
+
+### Business Entity
+- PBallConnect LLC filed with NH Secretary of State — under review
+- EIN obtained from IRS
+- NAICS code: 713990 (Other Amusement and Recreation Industries)
 
 ---
 
@@ -991,6 +1018,6 @@ Design and planning happens in Claude.ai (claude.ai/code or chat). Implementatio
 
 45. **Organizer is always notified when a player drops.** Email + SMS (if `sms_opt_in`). Both in separate `try/catch`. Drop completes even if both notifications fail.
 
-46. **Gender values must be `'Man'`, `'Woman'`, or `'Prefer not to say'` — never `'Male'` or `'Female'`.** Gender is required across all registration paths (full profile, Quick Connect, SMS). A one-time migration was run on existing rows to normalize to this convention. Emergency Fill reads `SESSION_PLAYER.gender` to determine which IC members to surface for a Mixed match vacancy. Never skip gender collection at registration.
+46. **Gender is required across all registration paths (full profile, Quick Connect, SMS).** Values must be `'Man'`, `'Woman'`, or `'Prefer not to say'` — never `'Male'` or `'Female'`. A one-time migration was run on existing rows to normalize to this convention. Emergency Fill reads `SESSION_PLAYER.gender` to determine which IC members to surface for a Mixed match vacancy.
 
-47. **`IC_MEMBERS` structure is `{player:{...}, conn:{...}, lastPlayed:null}` — never overwrite with flat objects.** `IC_MEMBERS` is a shared global array populated by `loadInnerCircle()`. Any feature that needs flat player data for local use must store it in its own local variable (e.g. `_efMemberFlat` in Emergency Fill). Always access player properties via `m.player.field_name`, never `m.field_name` directly. When fetching IC members on demand, fetch into a local flat array — do not write back to `IC_MEMBERS`.
+47. **`IC_MEMBERS` is a shared global array with structure `{player:{...}, conn:{...}, lastPlayed:null}`.** Never overwrite `IC_MEMBERS` with flat objects. Any feature that needs flat player data for local use must store it in its own local variable (e.g. `_efMemberFlat` for Emergency Fill). When reading from `IC_MEMBERS` always access `.player` properties via `m.player.field_name`, never `m.field_name` directly.
