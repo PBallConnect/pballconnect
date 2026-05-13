@@ -6263,15 +6263,15 @@ function buildSmInviteSummaryGrid(){
   if(pref === 'mixed'){
     const n = MS.numCourts;
     let menNeeded = 0, womenNeeded = 0;
-    if(myGender === 'male')        { menNeeded = (n * 2) - 1; womenNeeded = n * 2; }
-    else if(myGender === 'female') { womenNeeded = (n * 2) - 1; menNeeded = n * 2; }
+    if(myGender === 'man')        { menNeeded = (n * 2) - 1; womenNeeded = n * 2; }
+    else if(myGender === 'woman') { womenNeeded = (n * 2) - 1; menNeeded = n * 2; }
     else                           { menNeeded = Math.floor(minNeeded / 2); womenNeeded = Math.ceil(minNeeded / 2); }
     let invMen = 0, invWomen = 0;
     IC_MEMBERS.forEach(({player}) => {
       const e = (player.email||'').toLowerCase();
       if(!MS.specificPlayers || !MS.specificPlayers.has(e)) return;
       const g = (player.gender||'').toLowerCase();
-      if(g === 'male') invMen++; else if(g === 'female') invWomen++;
+      if(g === 'man') invMen++; else if(g === 'woman') invWomen++;
     });
     const menOk   = invMen   >= menNeeded;
     const womenOk = invWomen >= womenNeeded;
