@@ -12850,13 +12850,13 @@ function _openGroupModal(group, members){
           const p = _playerByEmail.get((email||'').toLowerCase());
           if(!p) return;
           const g = (p.gender||'').toLowerCase();
-          if(g === 'male') invMen++;
-          else if(g === 'female' || g === 'woman') invWomen++;
+          if(g === 'man') invMen++;
+          else if(g === 'woman') invWomen++;
         });
         const half = Math.floor(window.gModalSize / 2);
         let menNeeded, womenNeeded;
-        if(myGender === 'male')        { menNeeded = half - 1; womenNeeded = half; }
-        else if(myGender === 'female') { womenNeeded = half - 1; menNeeded = half; }
+        if(myGender === 'man')        { menNeeded = half - 1; womenNeeded = half; }
+        else if(myGender === 'woman') { womenNeeded = half - 1; menNeeded = half; }
         else                           { menNeeded = Math.floor(minNeeded / 2); womenNeeded = Math.ceil(minNeeded / 2); }
         const menOk   = invMen   >= menNeeded;
         const womenOk = invWomen >= womenNeeded;
@@ -12874,7 +12874,7 @@ function _openGroupModal(group, members){
         });
         const ok = invSame >= minNeeded;
         allGreen = true; // advisory only
-        const lbl = myGender === 'male' ? '👨 Men' : myGender === 'female' ? '👩 Women' : '👥 Players';
+        const lbl = myGender === 'man' ? '👨 Men' : myGender === 'woman' ? '👩 Women' : '👥 Players';
         html = tableWrap +
           `<tr style="${rowBg(ok)}"><td style="${tdL}">${lbl}</td><td style="${tdN}">${minNeeded}</td><td style="${tdV(ok)}">${invSame}</td></tr>`+
           tableClose;
