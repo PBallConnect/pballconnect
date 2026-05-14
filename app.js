@@ -7299,6 +7299,8 @@ function initSetupMatch(){
   const gw=document.getElementById('smGenderGroupWrap'); if(gw){ gw.style.display='none'; gw.innerHTML=''; }
   smUnlockStep4();
   const igs=document.getElementById('smInviteGridSection'); if(igs) igs.innerHTML='';
+  MS.genderPref = 'either';
+  buildSmInviteGrid();
   const rrw=document.getElementById('smReviewRosterWrap'); if(rrw){ rrw.style.display='none'; rrw.innerHTML=''; }
 
   // Invite mode buttons
