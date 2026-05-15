@@ -4186,6 +4186,15 @@ function getMatchStatusDisplay(match){
 async function submitMatch(){
   const myEmail = getMyEmail();
   if(!myEmail){ showToast('Please sign in first','#f59e0b'); return; }
+  const _isSpecific = (MS.selectedGroups && MS.selectedGroups.has('specific')) || MS.inviteMode === 'specific';
+  const _isNamed    = !!(MS.group && MS.group.startsWith('named_'));
+  if(_isSpecific && !_isNamed){
+    const needed = matchMaxNeeded();
+    if(!MS.specificPlayers || MS.specificPlayers.size < needed){
+      showToast('Select at least '+needed+' player'+(needed!==1?'s':'')+' to continue.','#f59e0b');
+      return;
+    }
+  }
   const btn=document.getElementById('matchSendBtn');
   const status=document.getElementById('matchSendStatus');
   btn.disabled=true; btn.textContent='Sending…';
