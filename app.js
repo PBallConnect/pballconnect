@@ -4334,18 +4334,26 @@ async function submitMatch(){
       }
     }
     // SMS invite loop — runs alongside email, best-effort, never blocks the flow.
-    // player.sms_opt_in and player.phone come from public_profiles; if not yet
-    // exposed there, both will be falsy and all players are silently skipped.
+    // Phone and sms_opt_in are fetched server-side per player so they never pass
+    // through public_profiles or the client data model.
     const orgFirstName = (SESSION_PLAYER?.first_name || '').trim();
     for(const player of invitees){
-      if(!player.sms_opt_in || !player.phone || String(player.phone).replace(/\D/g,'').length !== 10) continue;
+      if(!player.email) continue;
       try{
+        const smsDataRes = await fetch('/api/match-invite-sms-data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playerEmail: player.email })
+        });
+        const smsData = smsDataRes.ok ? await smsDataRes.json() : null;
+        if(!smsData || !smsData.sms_opt_in || !smsData.phone || String(smsData.phone).replace(/\D/g,'').length !== 10) continue;
+        const phone10 = String(smsData.phone).replace(/\D/g,'');
         const tokenRes = await fetch('/api/match-invite-token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             matchId: String(matchId),
-            inviteePhone: String(player.phone).replace(/\D/g,''),
+            inviteePhone: phone10,
             inviteeName: (player.first_name || player.email || '').trim(),
             organizerEmail: myEmail
           })
@@ -4363,7 +4371,7 @@ async function submitMatch(){
           await sendSms({ player_email: player.email, message: smsMsg, match_id: matchId, event_type: 'match_invite' });
           console.log('SMS match invite sent:', player.email);
         }catch(smsErr){ console.warn('SMS failed for', player.email, smsErr); }
-      }catch(tokenErr){ console.warn('match-invite-token error for', player.email, tokenErr); }
+      }catch(playerErr){ console.warn('SMS invite error for', player.email, playerErr); }
     }
     // Success: toast first, then navigate to dashboard
     showToast('🎾 Invites sent! Your match is set.','#4CAF7D');
