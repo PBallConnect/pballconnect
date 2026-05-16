@@ -4348,6 +4348,22 @@ async function submitMatch(){
         const smsData = smsDataRes.ok ? await smsDataRes.json() : null;
         if(!smsData || !smsData.sms_opt_in || !smsData.phone || String(smsData.phone).replace(/\D/g,'').length !== 10) continue;
         const phone10 = String(smsData.phone).replace(/\D/g,'');
+        // Insert invite tracking row so match-invite-respond can update status
+        // by matching on match_id + invitee_phone (no invite_token used here).
+        await fetch(`${SUPABASE_URL}/rest/v1/invites`, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+          body: JSON.stringify({
+            inviter_email: myEmail,
+            inviter_name:  myName,
+            invitee_email: player.email,
+            invitee_phone: phone10,
+            match_id:      matchId,
+            invite_method: 'sms',
+            invite_type:   'single',
+            is_used:       false
+          })
+        }).catch(e => console.warn('invite row insert failed for', player.email, e.message));
         const tokenRes = await fetch('/api/match-invite-token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

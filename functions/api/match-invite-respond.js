@@ -96,20 +96,20 @@ export async function onRequestPost(context) {
     return err('Could not record your response. Please try again.', 500, corsHeaders);
   }
 
-  // ── 8. UPDATE INVITE STATUS (best-effort) ─────────────────────────────────
-  // invites rows for SMS match invites are keyed by invite_token — the token
-  // here is an HMAC payload, not an invite_token, so we match on invitee_email.
+  // ── 8. UPDATE INVITE STATUS ───────────────────────────────────────────────
   const inviteStatus = response === 'in' ? 'accepted' : 'declined';
-  try {
-    await fetch(
-      `${SUPABASE_URL}/rest/v1/invites?invitee_email=eq.${encodeURIComponent(playerEmail)}`,
-      {
-        method: 'PATCH',
-        headers: { ...svcHdrs, 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ status: inviteStatus }),
-      }
-    );
-  } catch (_) {}
+  const patchRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/invites?match_id=eq.${encodeURIComponent(matchId)}&invitee_phone=eq.${encodeURIComponent(inviteePhone)}`,
+    {
+      method: 'PATCH',
+      headers: { ...svcHdrs, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ status: inviteStatus }),
+    }
+  );
+  if (!patchRes.ok) {
+    const patchText = await patchRes.text().catch(() => '');
+    console.error('Failed to update invite status:', patchRes.status, patchText);
+  }
 
   // ── 9. RESPOND ────────────────────────────────────────────────────────────
   return new Response(JSON.stringify({ success: true, response }), {
