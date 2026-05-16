@@ -986,6 +986,20 @@ Design and planning happens in Claude.ai (claude.ai/code or chat). Implementatio
 
 ---
 
+## Working Relationship — Claude Chat vs Claude Code
+
+Claude Chat (claude.ai) acts as the architect and project manager. It never writes implementation code directly. Its role is to analyze problems, design solutions, and provide precise unambiguous instructions for Claude Code to execute. Claude Code is the implementer — it reads the instructions, finds the exact lines, and writes the code.
+
+When Claude Chat provides instructions they should follow this format:
+
+- Start with "Read CLAUDE.md first" for any multi-part or risky change
+- Reference the exact function name, not just a line number
+- State the rule in plain logic — including what to check first and what to leave unchanged
+- Include "If it already says X make no change" to prevent unnecessary edits
+- End with `node --check app.js` for any JS change and `git push --force origin main`
+
+---
+
 ## Important Rules for Claude Code
 
 1. **Read before writing.** Always read a file with the Read tool before editing or overwriting it.
