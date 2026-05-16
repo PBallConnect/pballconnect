@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Match Invite - PBallConnect</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f3f4f6;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 24px 16px 64px;
+    }
+    #app { width: 100%; max-width: 420px; }
+
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 28px 24px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+    }
+
+    .logo { text-align: center; margin-bottom: 20px; }
+    .logo-text { font-size: 20px; font-weight: 800; color: #1a7a3a; letter-spacing: -0.5px; }
+    .logo-ball { color: #f59e0b; }
+
+    /* Loading */
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid #e5e7eb;
+      border-top-color: #1a7a3a;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 40px auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Error */
+    .error-icon { font-size: 40px; text-align: center; margin-bottom: 12px; }
+    .error-title { font-size: 18px; font-weight: 700; color: #1f2937; text-align: center; margin-bottom: 8px; }
+    .error-body { font-size: 15px; color: #6b7280; text-align: center; line-height: 1.5; }
+
+    /* Invite card */
+    .greeting { font-size: 24px; font-weight: 800; color: #1f2937; margin-bottom: 4px; }
+    .invite-subtitle { font-size: 15px; color: #6b7280; margin-bottom: 20px; }
+
+    .match-details {
+      background: #f9fafb;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+    .detail-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+    .detail-row:last-child { margin-bottom: 0; }
+    .detail-icon { font-size: 16px; flex-shrink: 0; margin-top: 2px; }
+    .detail-label { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.06em; }
+    .detail-value { font-size: 15px; font-weight: 600; color: #1f2937; }
+
+    /* Buttons */
+    .btn {
+      display: block;
+      width: 100%;
+      min-height: 52px;
+      border-radius: 14px;
+      border: none;
+      font-size: 17px;
+      font-weight: 800;
+      font-family: inherit;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      margin-bottom: 12px;
+      padding: 0 16px;
+    }
+    .btn:last-child { margin-bottom: 0; }
+    .btn:active { opacity: 0.8; }
+    .btn-primary { background: #1a7a3a; color: #fff; }
+    .btn-outline { background: #fff; color: #374151; border: 2px solid #d1d5db; }
+    .btn-ghost { background: #f3f4f6; color: #6b7280; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Form */
+    .form-title { font-size: 20px; font-weight: 800; color: #1f2937; margin-bottom: 4px; }
+    .form-subtitle { font-size: 14px; color: #6b7280; margin-bottom: 20px; line-height: 1.4; }
+
+    .field-group { margin-bottom: 20px; }
+    .field-label {
+      font-size: 12px; font-weight: 700; color: #374151;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      margin-bottom: 8px; display: block;
+    }
+
+    /* Gender chips */
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip {
+      padding: 10px 16px;
+      border-radius: 100px;
+      border: 2px solid #d1d5db;
+      background: #fff;
+      font-size: 15px; font-weight: 600; color: #374151;
+      cursor: pointer;
+      font-family: inherit;
+      min-height: 44px;
+      display: flex; align-items: center;
+      transition: all 0.15s;
+    }
+    .chip.active { background: #1a7a3a; border-color: #1a7a3a; color: #fff; }
+
+    /* Skill slider */
+    .slider-row { display: flex; align-items: center; gap: 12px; }
+    .skill-val { font-size: 22px; font-weight: 800; color: #1a7a3a; min-width: 40px; text-align: right; }
+    input[type=range] {
+      flex: 1; -webkit-appearance: none;
+      height: 6px; border-radius: 3px;
+      background: #d1d5db; outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      background: #1a7a3a;
+      cursor: pointer;
+    }
+
+    /* Text / email inputs */
+    .text-input {
+      width: 100%;
+      padding: 13px 14px;
+      border-radius: 10px;
+      border: 2px solid #d1d5db;
+      font-size: 16px;
+      font-family: inherit;
+      color: #1f2937;
+      outline: none;
+      transition: border-color 0.15s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .text-input:focus { border-color: #1a7a3a; }
+
+    /* Compact match summary (in reg form) */
+    .match-summary {
+      background: #f0fdf4;
+      border: 1.5px solid #bbf7d0;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      color: #374151;
+      line-height: 1.5;
+    }
+
+    /* Confirm / No-thanks */
+    .big-icon { font-size: 52px; text-align: center; margin-bottom: 14px; }
+    .confirm-title { font-size: 22px; font-weight: 800; color: #1f2937; text-align: center; margin-bottom: 8px; }
+    .confirm-msg { font-size: 15px; color: #6b7280; text-align: center; line-height: 1.5; margin-bottom: 24px; }
+    .pitch-box {
+      background: #f0fdf4;
+      border: 1.5px solid #bbf7d0;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .pitch-box p { font-size: 14px; color: #374151; line-height: 1.5; text-align: center; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Loading -->
+  <div id="stateLoading">
+    <div class="card" style="margin-top:40px;">
+      <div class="logo"><span class="logo-text">PBall<span class="logo-ball">Connect</span></span></div>
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div id="stateError" class="hidden">
+    <div class="card" style="margin-top:40px;">
+      <div class="logo"><span class="logo-text">PBall<span class="logo-ball">Connect</span></span></div>
+      <div class="error-icon">🔗</div>
+      <div class="error-title">Link unavailable</div>
+      <div class="error-body" id="errorMsg">This invite link has expired or is invalid.</div>
+    </div>
+  </div>
+
+  <!-- State 1 + entry point for State 2/3: Invite card -->
+  <div id="stateInvite" class="hidden">
+    <div class="card">
+      <div class="logo"><span class="logo-text">PBall<span class="logo-ball">Connect</span></span></div>
+      <div class="greeting" id="inviteGreeting">Hey!</div>
+      <div class="invite-subtitle" id="inviteSubtitle">You've been invited to play pickleball</div>
+      <div class="match-details" id="matchDetailsFull"></div>
+      <button class="btn btn-primary" id="btnYes" onclick="handleYes()">Yes, I'm In! ✓</button>
+      <button class="btn btn-outline" id="btnNo" onclick="handleNo()">No Thanks</button>
+    </div>
+  </div>
+
+  <!-- State 2: Mini registration form (unregistered, tapped YES) -->
+  <div id="stateRegForm" class="hidden">
+    <div class="card">
+      <div class="logo"><span class="logo-text">PBall<span class="logo-ball">Connect</span></span></div>
+      <div class="match-summary" id="matchSummaryCompact"></div>
+      <div class="form-title">Almost there!</div>
+      <div class="form-subtitle">Quick setup so we can get you in the game.</div>
+
+      <div class="field-group">
+        <span class="field-label">Gender</span>
+        <div class="chips">
+          <button class="chip" id="chipMan" onclick="selectGender('Man', this)">Man</button>
+          <button class="chip" id="chipWoman" onclick="selectGender('Woman', this)">Woman</button>
+          <button class="chip" id="chipPrefer" onclick="selectGender('Prefer not to say', this)">Prefer not to say</button>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <span class="field-label">Skill Level</span>
+        <div class="slider-row">
+          <input type="range" id="skillSlider" min="2" max="5" step="0.25" value="3.0"
+            oninput="updateSkill(this.value)" style="font-size:16px;">
+          <span class="skill-val" id="skillVal">3.0</span>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <span class="field-label">Zip Code</span>
+        <input class="text-input" type="text" id="zipInput" inputmode="numeric" pattern="[0-9]*"
+          placeholder="12345" maxlength="5" autocomplete="postal-code">
+      </div>
+
+      <div class="field-group">
+        <span class="field-label">Email</span>
+        <input class="text-input" type="email" id="emailInput" inputmode="email"
+          placeholder="you@example.com" autocomplete="email">
+      </div>
+
+      <button class="btn btn-primary" id="regSubmitBtn" onclick="submitRegistration()" disabled>Count Me In!</button>
+      <button class="btn btn-outline" style="margin-top:8px;" onclick="showState('stateInvite')">Back</button>
+    </div>
+  </div>
+
+  <!-- State 3: No thanks (unregistered) -->
+  <div id="stateNoThanks" class="hidden">
+    <div class="card" style="margin-top:40px;">
+      <div class="logo"><span class="logo-text">PBall<span class="logo-ball">Connect</span></span></div>
+      <div class="big-icon">👋</div>
+      <div class="confirm-title">No worries!</div>
+      <div class="confirm-msg">Hope to see you on the court another time!</div>
+      <div class="pitch-box">
+        <p>Want to organize and join pickleball matches with people you know? PBallConnect is free!</p>
+      </div>
+      <button class="btn btn-primary" onclick="window.location.href='invite.html'">Sign Me Up!</button>
+      <button class="btn btn-outline" style="margin-top:8px;" onclick="showGracefulExit()">Maybe Later</button>
+    </div>
+  </div>
+
+  <!-- Confirmation (all paths) -->
+  <div id="stateConfirm" class="hidden">
+    <div class="card" style="margin-top:40px;">
+      <div class="logo"><span class="logo-text">PBall<span class="logo-ball">Connect</span></span></div>
+      <div class="big-icon" id="confirmIcon">🎾</div>
+      <div class="confirm-title" id="confirmTitle">You're in!</div>
+      <div class="confirm-msg" id="confirmMsg">See you on the court!</div>
+    </div>
+  </div>
+
+</div>
+<script>
+  var _token = '';
+  var _sig = '';
+  var _inviteeName = '';
+  var _registered = false;
+  var _gender = '';
+  var _matchDetails = null;
+
+  var ALL_STATES = ['stateLoading','stateError','stateInvite','stateRegForm','stateNoThanks','stateConfirm'];
+
+  function showState(id) {
+    ALL_STATES.forEach(function(s) {
+      document.getElementById(s).classList.toggle('hidden', s !== id);
+    });
+  }
+
+  function showError(msg) {
+    document.getElementById('errorMsg').textContent = msg || 'This invite link has expired or is invalid.';
+    showState('stateError');
+  }
+
+  function showConfirm(icon, title, msg) {
+    document.getElementById('confirmIcon').textContent = icon;
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMsg').textContent = msg;
+    showState('stateConfirm');
+  }
+
+  function esc(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function fmtDate(dateStr) {
+    if (!dateStr) return '';
+    var d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  }
+
+  function fmtTime(timeStr) {
+    if (!timeStr) return '';
+    var parts = timeStr.split(':');
+    var h = parseInt(parts[0], 10);
+    var m = parts[1] || '00';
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return h + ':' + m + ' ' + ampm;
+  }
+
+  function fmtMatchType(matchType) {
+    if (matchType === 'singles') return 'Singles';
+    if (matchType === 'doubles') return 'Doubles';
+    return matchType || '';
+  }
+
+  function fmtGenderPref(format) {
+    var map = { open: 'Open', either: 'Open', mixed: 'Mixed', same: 'Same Gender', mens: "Men's", womens: "Women's" };
+    return map[format] || '';
+  }
+
+  function buildDetailRows(details, organizerEmail) {
+    if (!details) return '<div style="color:#9ca3af;font-size:14px;">Match details unavailable.</div>';
+    var org = organizerEmail ? organizerEmail.split('@')[0] : 'Your organizer';
+    var html = '';
+    html += detailRow('👤', 'Organizer', org);
+    if (details.location) html += detailRow('📍', 'Location', details.location);
+    if (details.match_date) html += detailRow('📅', 'Date', fmtDate(details.match_date));
+    if (details.start_time) html += detailRow('⏰', 'Time', fmtTime(details.start_time));
+    var typeLabel = [fmtMatchType(details.match_type), fmtGenderPref(details.format)].filter(Boolean).join(' · ');
+    if (typeLabel) html += detailRow('🏓', 'Format', typeLabel);
+    return html;
+  }
+
+  function detailRow(icon, label, value) {
+    return '<div class="detail-row">' +
+      '<span class="detail-icon">' + icon + '</span>' +
+      '<div><div class="detail-label">' + esc(label) + '</div>' +
+      '<div class="detail-value">' + esc(value) + '</div></div>' +
+      '</div>';
+  }
+
+  function buildMatchSummary(details) {
+    if (!details) return '';
+    var parts = [];
+    if (details.match_date) parts.push(fmtDate(details.match_date));
+    if (details.start_time) parts.push(fmtTime(details.start_time));
+    if (details.location) parts.push(details.location);
+    return '<strong>Match details:</strong> ' + esc(parts.join(' · '));
+  }
+
+  // ── Gender chips ──────────────────────────────────────────────────────────
+  function selectGender(val, el) {
+    _gender = val;
+    ['chipMan','chipWoman','chipPrefer'].forEach(function(id) {
+      document.getElementById(id).classList.remove('active');
+    });
+    el.classList.add('active');
+    checkRegForm();
+  }
+
+  // ── Skill slider ──────────────────────────────────────────────────────────
+  function updateSkill(val) {
+    var v = parseFloat(val);
+    var display = v % 1 === 0 ? v.toFixed(1) : String(v);
+    document.getElementById('skillVal').textContent = display;
+  }
+
+  // ── Form validation ───────────────────────────────────────────────────────
+  function checkRegForm() {
+    var zip = (document.getElementById('zipInput').value || '').trim();
+    var email = (document.getElementById('emailInput').value || '').trim();
+    var valid = _gender !== '' &&
+      /^\d{5}$/.test(zip) &&
+      email.indexOf('@') !== -1 && email.indexOf('.') !== -1;
+    document.getElementById('regSubmitBtn').disabled = !valid;
+  }
+
+  // ── YES / NO handlers ─────────────────────────────────────────────────────
+  function handleYes() {
+    document.getElementById('btnYes').disabled = true;
+    document.getElementById('btnNo').disabled = true;
+    if (_registered) {
+      respond('in');
+    } else {
+      document.getElementById('matchSummaryCompact').innerHTML = buildMatchSummary(_matchDetails);
+      showState('stateRegForm');
+    }
+  }
+
+  function handleNo() {
+    document.getElementById('btnYes').disabled = true;
+    document.getElementById('btnNo').disabled = true;
+    if (_registered) {
+      respond('out');
+    } else {
+      showState('stateNoThanks');
+    }
+  }
+
+  // ── Respond (registered players) ─────────────────────────────────────────
+  function respond(response) {
+    fetch('/api/match-invite-respond', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: _token, signature: _sig, response: response })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        if (response === 'in') {
+          showConfirm('🎾', "You're in!", "See you on the court!");
+        } else {
+          showConfirm('👋', 'No worries!', 'Maybe next time!');
+        }
+      } else {
+        showError(data.error || 'Something went wrong. Please try again.');
+      }
+    })
+    .catch(function() {
+      showError('Could not record your response. Please try again.');
+    });
+  }
+
+  // ── Submit registration (unregistered YES path) ───────────────────────────
+  function submitRegistration() {
+    var btn = document.getElementById('regSubmitBtn');
+    if (btn.disabled) return;
+    var zip = (document.getElementById('zipInput').value || '').trim();
+    var email = (document.getElementById('emailInput').value || '').trim().toLowerCase();
+    var skill = document.getElementById('skillSlider').value;
+    var parts = _inviteeName.split(' ');
+    var firstName = parts[0] || '';
+    var lastName = parts.slice(1).join(' ') || '';
+
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+
+    fetch('/api/sms-register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: _token,
+        signature: _sig,
+        firstName: firstName,
+        lastName: lastName,
+        skill: skill,
+        email: email,
+        gender: _gender,
+        zip: zip
+      })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok) {
+        showConfirm('🎾', "You're in!", "Welcome to PBallConnect! See you on the court.");
+        if (data.signInUrl) {
+          setTimeout(function() { window.location.href = data.signInUrl; }, 2000);
+        }
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Count Me In!';
+        alert(data.error || 'Something went wrong. Please try again.');
+      }
+    })
+    .catch(function() {
+      btn.disabled = false;
+      btn.textContent = 'Count Me In!';
+      alert('Could not submit. Please try again.');
+    });
+  }
+
+  // ── Graceful exit ─────────────────────────────────────────────────────────
+  function showGracefulExit() {
+    showConfirm('🙌', 'No problem!', 'You can always join PBallConnect later. See you on the court!');
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  (function init() {
+    var params = new URLSearchParams(window.location.search);
+    _token = params.get('t') || '';
+    _sig = params.get('s') || '';
+
+    if (!_token || !_sig) {
+      showError('This invite link has expired or is invalid.');
+      return;
+    }
+
+    fetch('/api/match-invite-lookup?t=' + encodeURIComponent(_token) + '&s=' + encodeURIComponent(_sig))
+    .then(function(r) {
+      if (!r.ok) {
+        return r.json().then(function(d) { throw new Error(d.error || 'Invalid link.'); });
+      }
+      return r.json();
+    })
+    .then(function(data) {
+      _registered = !!data.registered;
+      _inviteeName = data.inviteeName || '';
+      _matchDetails = data.matchDetails || null;
+
+      var firstName = _inviteeName.split(' ')[0] || 'Hey';
+      var orgEmail = (_matchDetails && _matchDetails.organizer_email) || '';
+      var orgName = orgEmail ? orgEmail.split('@')[0] : 'someone';
+
+      document.getElementById('inviteGreeting').textContent = 'Hey ' + firstName + '!';
+      document.getElementById('inviteSubtitle').textContent = orgName + ' invited you to play pickleball';
+      document.getElementById('matchDetailsFull').innerHTML = buildDetailRows(_matchDetails, orgEmail);
+
+      // Wire up form validation events
+      document.getElementById('zipInput').addEventListener('input', checkRegForm);
+      document.getElementById('emailInput').addEventListener('input', checkRegForm);
+
+      showState('stateInvite');
+    })
+    .catch(function(e) {
+      showError((e && e.message) || 'This invite link has expired or is invalid.');
+    });
+  }());
+</script>
+</body>
+</html>
