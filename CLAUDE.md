@@ -1,6 +1,6 @@
 # CLAUDE.md — PBallConnect Reference
 
-_Last updated: May 13, 2026_
+_Last updated: May 16, 2026_
 
 ---
 
@@ -43,6 +43,11 @@ Deployed on **Cloudflare Pages** at `pballconnect.com`. No build step, no bundle
 | `functions/api/send-sms.js` | — | Cloudflare Pages Function for SMS via Twilio. Consent-gated (`sms_opt_in` required), three-tier rate limited (player/match/global via KV), logs all attempts to `sms_log`. Always returns 200 — SMS errors never crash callers. |
 | `functions/api/twilio-webhook.js` | — | Receives Twilio STOP/HELP/START keyword callbacks. Validates X-Twilio-Signature (HMAC-SHA1), syncs `sms_opt_in` in Supabase, logs to `sms_log`. |
 | `functions/api/sms-register.js` | — | Handles SMS-invite registration: validates token, creates Supabase auth user (no email sent), saves registration row, auto-approves IC connection, returns sign-in URL. |
+| `functions/api/match-invite-token.js` | — | Generates a signed HMAC-SHA256 token for match invites. Accepts `{ matchId, inviteePhone, inviteeName, organizerEmail }`, returns `{ token, signature, url }`. Uses `MATCH_INVITE_SECRET`. |
+| `functions/api/match-invite-lookup.js` | — | Validates a match invite token + signature, checks expiry, returns invitee registration status and match details. Called by `match-invite.html` on load. |
+| `functions/api/match-invite-respond.js` | — | Records a YES/NO response to a match invite via HMAC token. Upserts `match_responses`, updates `invites` row by `match_id` + `invitee_phone`. |
+| `functions/api/match-invite-sms-data.js` | — | Server-side lookup of `phone` and `sms_opt_in` for a player by email using `SUPABASE_SERVICE_KEY`. Keeps sensitive fields off `public_profiles` and out of the client. |
+| `match-invite.html` | — | Standalone mobile-first RSVP page for SMS match invites. Three states: (1) registered player — YES/NO buttons; (2) unregistered YES — mini registration form; (3) unregistered NO — warm decline + sign-up pitch. No app.js dependency. |
 | `functions/api/waitlist.js` | — | Cloudflare Pages Function for waitlist form submissions. IP rate-limited (3/hr), Turnstile-verified, saves to `waitlist` table via service role key, sends confirmation email via Resend. |
 | `supabase_rls_policies.sql` | — | RLS policy definitions + waitlist table DDL — run in Supabase SQL editor after schema changes |
 | `manifest.json` | — | PWA manifest (also injected inline at runtime in app.js) |
@@ -80,7 +85,7 @@ No tests, no linter, no build commands.
 | `match_results` / `match_scores` | Recorded scores | — |
 | `courts` | Court locations | `id`, `name`, `address`, `is_private`, `court_count`, `lat`, `lon` |
 | `player_courts` | Courts a player uses | `player_email`, `court_id` |
-| `invites` | App invite links | `invite_token`, `invite_type` ('single'/'qr'), `is_used` (boolean, default false), `inviter_email`, `inviter_name`, `invitee_email`, `invitee_name`, `invite_method`, `status` |
+| `invites` | App invite links | `invite_token`, `invite_type` ('single'/'qr'), `is_used` (boolean, default false), `inviter_email`, `inviter_name`, `invitee_email`, `invitee_name`, `invite_method`, `status`, `invitee_phone` (text), `match_id` (uuid FK → matches) |
 | `waitlist` | Public marketing waitlist | `id`, `first_name`, `email` (unique), `zip_code`, `requested_at`, `invited_at` (nullable — set when invite sent), `notes` (internal) |
 | `player_feedback` | Post-match feedback | — |
 | `player_groups` | Named groups | `id`, `organizer_email`, `name`, `max_players`, `group_type` ('set'/'random'), `match_type` ('singles'/'doubles') |
@@ -885,6 +890,61 @@ Full-screen organizer tool for quickly filling an open spot when the waitlist is
 
 ---
 
+## Match Invite SMS System
+
+_Added May 16, 2026_
+
+Sends a signed SMS to opted-in IC members when an organizer creates a match. The recipient can RSVP YES or NO directly from the link — no app login required.
+
+### Env var
+- `MATCH_INVITE_SECRET` — 32-byte random hex secret (set in Cloudflare Pages → Settings → Environment variables, both Production and Preview). Used to sign and verify all match invite HMAC tokens.
+
+### Token format
+`${matchId}|${inviteePhone}|${inviteeName}|${organizerEmail}|${expiry}`
+
+- Signed with HMAC-SHA256 using `MATCH_INVITE_SECRET`
+- Expiry = `Date.now() + 7 days`
+- URL: `/match-invite.html?t=ENCODED_TOKEN&s=HEX_SIGNATURE`
+
+### Pages Functions
+
+| Function | Method | Purpose |
+|---|---|---|
+| `/api/match-invite-token` | POST `{ matchId, inviteePhone, inviteeName, organizerEmail }` | Builds and signs the token, returns `{ token, signature, url }` |
+| `/api/match-invite-sms-data` | POST `{ playerEmail }` | Looks up `phone` and `sms_opt_in` via service key — never exposes these through `public_profiles` |
+| `/api/match-invite-lookup` | GET `?t=TOKEN&s=SIG` | Validates signature + expiry, returns `{ registered, inviteeName, inviteePhone, inviteeData, matchDetails }` |
+| `/api/match-invite-respond` | POST `{ token, signature, response }` | Verifies token, upserts `match_responses`, PATCHes `invites` row by `match_id + invitee_phone` |
+
+### SMS loop in `submitMatch()`
+
+After the email invite loop, for each invitee:
+1. POST `/api/match-invite-sms-data` to get `{ phone, sms_opt_in }` — skip if not opted in or phone invalid
+2. INSERT invite tracking row into `invites` with `match_id`, `invitee_phone`, `invitee_email`, `invite_method: 'sms'`
+3. POST `/api/match-invite-token` to get the signed URL
+4. Build SMS message: `"Hey [first_name]! [organizer] invited you to pickleball on [date] @ [time] at [location]. Tap to respond: [url]"`
+5. `await sendSms({ player_email, message, match_id, event_type: 'match_invite' })` — best-effort, own try/catch
+
+### `match-invite.html`
+
+Standalone page (no app.js). On load calls `GET /api/match-invite-lookup`. Three states:
+- **Registered player** — shows match details + YES/NO buttons → POST `/api/match-invite-respond`
+- **Unregistered, taps YES** — shows compact match summary + 4-field mini form (gender chips, skill slider, zip, email) → POST `/api/sms-register`
+- **Unregistered, taps NO** — warm decline message + soft pitch with "Sign Me Up!" (→ `invite.html`) and "Maybe Later"
+
+### `invites` table changes
+Two new columns added (May 16, 2026):
+- `invitee_phone text` — 10-digit phone, populated for SMS match invite rows
+- `match_id uuid references matches(id) on delete cascade` — populated for SMS match invite rows
+
+`match-invite-respond.js` PATCHes `invites` using `match_id=eq.X&invitee_phone=eq.Y` (not `invitee_email`) — this is why both columns exist.
+
+### Critical constraints
+- **`phone` and `sms_opt_in` must never be added to `public_profiles`** — use `/api/match-invite-sms-data` (service key) for any server-side lookup of these fields. See Rule 48.
+- Token signature must be verified before any DB write — `match-invite-lookup` and `match-invite-respond` both verify HMAC before acting.
+- SMS is always best-effort. Token/lookup failures per player are caught and logged; they never abort the match creation flow.
+
+---
+
 ## Infrastructure & Business
 
 ### Twilio
@@ -910,7 +970,7 @@ Full-screen organizer tool for quickly filling an open spot when the waitlist is
 1. Edit `app.js`, `index.html`, or `styles.css` directly — no build step.
 2. Test locally with `npx serve .` or `python -m http.server`.
 3. For Supabase schema changes: run SQL in Supabase SQL editor, update `supabase_rls_policies.sql`, and update the `public_profiles` view if new columns need to be exposed.
-4. For Cloudflare Pages Function changes: edit files in `functions/api/`. Environment variables (`RESEND_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `TURNSTILE_SECRET_KEY`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`) are set in the Cloudflare Pages dashboard. `RATE_LIMIT_KV` is a KV namespace binding (not an env var — set under Settings → Functions → KV namespace bindings).
+4. For Cloudflare Pages Function changes: edit files in `functions/api/`. Environment variables (`RESEND_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `TURNSTILE_SECRET_KEY`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`, `MATCH_INVITE_SECRET`) are set in the Cloudflare Pages dashboard. `RATE_LIMIT_KV` is a KV namespace binding (not an env var — set under Settings → Functions → KV namespace bindings).
 5. Deploy: `git push --force origin main` → Cloudflare Pages auto-deploys. The **pre-push hook** amends HEAD to inject the build badge hash into `version.json` — this rewrite requires `--force`. Never use `--force-with-lease` (it rejects the amended push). Never put a `git push` call inside the pre-push hook itself (causes infinite loop).
 6. Verify deploy at https://pballconnect.com — Cloudflare typically deploys within 60 seconds.
 
@@ -1021,3 +1081,5 @@ Design and planning happens in Claude.ai (claude.ai/code or chat). Implementatio
 46. **Gender is required across all registration paths (full profile, Quick Connect, SMS).** Values must be `'Man'`, `'Woman'`, or `'Prefer not to say'` — never `'Male'` or `'Female'`. A one-time migration was run on existing rows to normalize to this convention. Emergency Fill reads `SESSION_PLAYER.gender` to determine which IC members to surface for a Mixed match vacancy.
 
 47. **`IC_MEMBERS` is a shared global array with structure `{player:{...}, conn:{...}, lastPlayed:null}`.** Never overwrite `IC_MEMBERS` with flat objects. Any feature that needs flat player data for local use must store it in its own local variable (e.g. `_efMemberFlat` for Emergency Fill). When reading from `IC_MEMBERS` always access `.player` properties via `m.player.field_name`, never `m.field_name` directly.
+
+48. **`phone` and `sms_opt_in` must never be added to `public_profiles`.** These are sensitive fields. Any feature that needs them server-side must call `POST /api/match-invite-sms-data` (uses `SUPABASE_SERVICE_KEY`) or query `registrations` directly in a Pages Function. Never expose them through the `public_profiles` view or return them in client-readable API responses.
