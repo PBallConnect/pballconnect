@@ -27,7 +27,7 @@ export async function onRequestPost(context) {
   try { body = await context.request.json(); }
   catch (_) { return err('Invalid request body.', 400, corsHeaders); }
 
-  const { token, firstName, lastName, skill, email, gender, phone, sms_opt_in, sms_opt_in_at } = body || {};
+  const { token, firstName, lastName, skill, email, gender, phone, sms_opt_in, sms_opt_in_at, zip } = body || {};
 
   if (!token || typeof token !== 'string') return err('Invalid invite token.', 400, corsHeaders);
   if (!firstName || !firstName.trim()) return err('First name is required.', 400, corsHeaders);
@@ -133,6 +133,24 @@ export async function onRequestPost(context) {
   } catch (_) {
     // Registration save failed — still return signInUrl so user isn't stuck; they can complete profile later
   }
+
+  // ── 5a. ADMIN REGISTRATION ALERT ─────────────────────────────────────────
+  try {
+    const RESEND_API_KEY = context.env.RESEND_API_KEY;
+    if (RESEND_API_KEY) {
+      const alertHtml = `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;padding:24px;color:#111;"><h2 style="color:#1a7a3a;margin-bottom:16px;">New PBallConnect Registration</h2><table style="border-collapse:collapse;"><tr><td style="padding:4px 16px 4px 0;font-weight:700;">Name</td><td>${firstNameClean} ${lastNameClean}</td></tr><tr><td style="padding:4px 16px 4px 0;font-weight:700;">Email</td><td>${emailLower}</td></tr><tr><td style="padding:4px 16px 4px 0;font-weight:700;">Path</td><td>SMS Invite Registration</td></tr><tr><td style="padding:4px 16px 4px 0;font-weight:700;">Skill Level</td><td>${skillClean}</td></tr><tr><td style="padding:4px 16px 4px 0;font-weight:700;">Zip</td><td>${zip || '—'}</td></tr><tr><td style="padding:4px 16px 4px 0;font-weight:700;">Gender</td><td>${genderClean || '—'}</td></tr><tr><td style="padding:4px 16px 4px 0;font-weight:700;">SMS Opt-In</td><td>${smsOptIn ? 'Yes' : 'No'}</td></tr><tr><td style="padding:4px 16px 4px 0;font-weight:700;">Registered At</td><td>${new Date().toISOString()}</td></tr></table></body></html>`;
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from:    'PBallConnect <noreply@pballconnect.com>',
+          to:      ['david@pballconnect.com'],
+          subject: `🎾 New PBallConnect Registration — ${firstNameClean} ${lastNameClean}`,
+          html:    alertHtml,
+        }),
+      });
+    }
+  } catch (_) {}
 
   // ── 6. MARK INVITE AS USED ────────────────────────────────────────────────
   try {

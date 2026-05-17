@@ -1219,6 +1219,14 @@ async function doSaveProfile(){
       match_gender_pref:   S.matchGenderPref || 'Both',
     });
     console.log('✅ Registration saved');
+    if (!SESSION_PLAYER) {
+      sendEmail({
+        to_email: 'david@pballconnect.com',
+        type:     'admin_registration_alert',
+        subject:  `🎾 New PBallConnect Registration — ${(v('firstName')||'').trim()} ${(v('lastName')||'').trim()}`,
+        personal_note: `Name: ${(v('firstName')||'').trim()} ${(v('lastName')||'').trim()}<br>Email: ${v('email')||''}<br>Path: Full Profile Registration<br>Skill Level: ${S.skill||'—'}<br>Zip: ${v('addrZip')||'—'}<br>Gender: ${S.gender||'—'}<br>SMS Opt-In: ${_smsOptIn ? 'Yes' : 'No'}<br>Registered At: ${new Date().toISOString()}`,
+      });
+    }
     _newUserRegistrationStarted = false; // registration complete — allow normal profile restore
     showToast('✅ Profile saved!', '#4CAF7D');
     // Capture current values before any navigation
@@ -11437,6 +11445,12 @@ function showQuickConnectForm(email, inv){
         gender:            S.gender || null,
         sms_opt_in:        _qcSmsOptIn,
         sms_opt_in_at:     _qcSmsOptIn ? new Date().toISOString() : undefined,
+      });
+      sendEmail({
+        to_email: 'david@pballconnect.com',
+        type:     'admin_registration_alert',
+        subject:  `🎾 New PBallConnect Registration — ${fn}`,
+        personal_note: `Name: ${fn}<br>Email: ${email}<br>Path: Quick Connect Registration<br>Skill Level: ${skill}<br>Zip: ${zip||'—'}<br>Gender: ${S.gender||'—'}<br>SMS Opt-In: ${_qcSmsOptIn ? 'Yes' : 'No'}<br>Registered At: ${new Date().toISOString()}`,
       });
       _newUserRegistrationStarted = false;
       document.getElementById('quickConnectOverlay')?.remove();
