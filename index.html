@@ -54,6 +54,34 @@
   .pb-icon { width:1.2em; height:1.2em; object-fit:contain; vertical-align:middle; display:inline-block; }
   .pb-icon-lg { width:1.8em; height:1.8em; object-fit:contain; vertical-align:middle; display:inline-block; }
   .pb-icon-xl { width:2.5em; height:2.5em; object-fit:contain; vertical-align:middle; display:inline-block; }
+
+  /* SMS opt-in checkbox — custom appearance so checked state is visible on iOS */
+  #smsOptIn {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    border: 2px solid #9ca3af;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-top: 2px;
+    transition: background-color 0.15s, border-color 0.15s;
+  }
+  #smsOptIn:checked {
+    background-color: #2d6a4f;
+    border-color: #2d6a4f;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 8l3.5 3.5L13 5' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-size: 15px 15px;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+  #smsOptIn:focus-visible {
+    outline: 3px solid #2d6a4f;
+    outline-offset: 2px;
+  }
 </style>
 </head>
 <body>
@@ -410,7 +438,7 @@
       <input type="tel" id="phone" placeholder="+1 (xxx) xxx-xxxx" autocomplete="tel" oninput="formatPhone(this);window.onPhoneChange()" maxlength="14" style="font-size:16px;"/>
       <div id="smsOptInRow" style="display:none;margin-top:12px;">
         <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:16px;font-weight:400;text-transform:none;letter-spacing:0;">
-          <input type="checkbox" id="smsOptIn" onchange="window.onSmsOptInChange()" style="width:20px;height:20px;flex-shrink:0;margin-top:2px;accent-color:#1a7a3a;cursor:pointer;"/>
+          <input type="checkbox" id="smsOptIn" onchange="window.onSmsOptInChange()"/>
           <span id="smsOptInLabel" style="font-weight:400;color:#374151;line-height:1.5;">I agree to receive match invites, reminders, and updates from PBallConnect by text message. Message frequency varies. Message &amp; data rates may apply. Reply STOP to unsubscribe or HELP for help.</span>
         </label>
         <div style="font-size:13px;color:#9ca3af;margin-top:6px;margin-left:30px;line-height:1.5;">By checking this box you provide express written consent for PBallConnect to send automated text messages to the number provided. Consent is not a condition of registration or use of the service.</div>
