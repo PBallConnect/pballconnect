@@ -1164,13 +1164,16 @@ async function doSaveProfile(){
 
   // Save to Supabase via direct REST call
   try{
+    const _phoneDigits = (v('phone')||'').replace(/\D/g,'');
+    const _smsOptIn    = _phoneDigits.length === 10 && !!(document.getElementById('smsOptIn')?.checked);
     await saveRegistration({
       first_name:          v('firstName'),
       last_name:           v('lastName'),
       nickname:            v('nickname')||null,
       email:               v('email'),
-      phone:               (v('phone')||'').replace(/\D/g,'')||null,
-      sms_opt_in:          !!(document.getElementById('phone')?.value.replace(/\D/g,'').length>=10 && document.getElementById('smsOptIn')?.checked),
+      phone:               _phoneDigits || null,
+      sms_opt_in:          _smsOptIn,
+      sms_opt_in_at:       _smsOptIn ? new Date().toISOString() : undefined,
       dob:                 document.getElementById('playerAge')?.value||S.dob||'',
       gender:              S.gender,
       city:                S.city || '',
@@ -11413,6 +11416,7 @@ function showQuickConnectForm(email, inv){
 
     const zip = document.getElementById('qcZip')?.value?.trim() || null;
     try{
+      const _qcSmsOptIn = ph.length === 10 && !!(document.getElementById('qcSmsOptIn')?.checked);
       await saveRegistration({
         email:             email.toLowerCase(),
         first_name:        fn,
@@ -11425,7 +11429,8 @@ function showQuickConnectForm(email, inv){
         match_gender_pref: 'Both',
         play_format:       'Both',
         gender:            S.gender || null,
-        sms_opt_in:        !!(ph.length===10 && document.getElementById('qcSmsOptIn')?.checked),
+        sms_opt_in:        _qcSmsOptIn,
+        sms_opt_in_at:     _qcSmsOptIn ? new Date().toISOString() : undefined,
       });
       _newUserRegistrationStarted = false;
       document.getElementById('quickConnectOverlay')?.remove();

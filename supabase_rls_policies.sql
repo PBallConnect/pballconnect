@@ -20,8 +20,9 @@ alter table registrations add column if not exists avail_weekday_evening   boole
 alter table registrations add column if not exists avail_weekends          boolean default false;
 
 -- Add SMS notification columns
-alter table registrations add column if not exists phone     text;
-alter table registrations add column if not exists sms_opt_in boolean default false;
+alter table registrations add column if not exists phone        text;
+alter table registrations add column if not exists sms_opt_in  boolean default false;
+alter table registrations add column if not exists sms_opt_in_at timestamptz;
 
 drop view if exists public_profiles;
 
