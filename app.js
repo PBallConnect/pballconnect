@@ -1169,7 +1169,6 @@ async function doSaveProfile(){
     const _wasOptedIn    = !!(SESSION_PLAYER?.sms_opt_in);
     const _isOptingOut   = _wasOptedIn && !_smsOptIn;
     const _phoneRemoved  = _phoneDigits.length !== 10;
-    console.log('[sms-debug] SESSION_PLAYER.sms_opt_in:', SESSION_PLAYER?.sms_opt_in, '| _wasOptedIn:', _wasOptedIn, '| _smsOptIn:', _smsOptIn, '| _isOptingOut:', _isOptingOut);
     await saveRegistration({
       first_name:          v('firstName'),
       last_name:           v('lastName'),
@@ -8793,6 +8792,7 @@ async function fetchAndRestoreProfile(email){
         if(S.nickname)     SESSION_PLAYER.nickname     =S.nickname;
         if(S.avatarEmoji)  SESSION_PLAYER.avatar_emoji =S.avatarEmoji;
         if(S.skill)        SESSION_PLAYER.skill_level  =S.skill;
+        SESSION_PLAYER.sms_opt_in = rows[0].sms_opt_in; // always take fresh DB value, never stale local state
         updateTopBar(SESSION_PLAYER);
         showPage('playerProfile');
         // Restore form fields from fetched data
