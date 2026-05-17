@@ -1220,12 +1220,16 @@ async function doSaveProfile(){
     });
     console.log('✅ Registration saved');
     if (!SESSION_PLAYER) {
-      sendEmail({
-        to_email: 'david@pballconnect.com',
-        type:     'admin_registration_alert',
-        subject:  `🎾 New PBallConnect Registration — ${(v('firstName')||'').trim()} ${(v('lastName')||'').trim()}`,
-        personal_note: `Name: ${(v('firstName')||'').trim()} ${(v('lastName')||'').trim()}<br>Email: ${v('email')||''}<br>Path: Full Profile Registration<br>Skill Level: ${S.skill||'—'}<br>Zip: ${v('addrZip')||'—'}<br>Gender: ${S.gender||'—'}<br>SMS Opt-In: ${_smsOptIn ? 'Yes' : 'No'}<br>Registered At: ${new Date().toISOString()}`,
-      });
+      try {
+        await sendEmail({
+          to_email: 'david@pballconnect.com',
+          type:     'admin_registration_alert',
+          subject:  `🎾 New PBallConnect Registration — ${(v('firstName')||'').trim()} ${(v('lastName')||'').trim()}`,
+          personal_note: `Name: ${(v('firstName')||'').trim()} ${(v('lastName')||'').trim()}<br>Email: ${v('email')||''}<br>Path: Full Profile Registration<br>Skill Level: ${S.skill||'—'}<br>Zip: ${v('addrZip')||'—'}<br>Gender: ${S.gender||'—'}<br>SMS Opt-In: ${_smsOptIn ? 'Yes' : 'No'}<br>Registered At: ${new Date().toISOString()}`,
+        });
+      } catch (e) {
+        console.warn('Admin alert failed:', e);
+      }
     }
     _newUserRegistrationStarted = false; // registration complete — allow normal profile restore
     showToast('✅ Profile saved!', '#4CAF7D');
@@ -11446,12 +11450,16 @@ function showQuickConnectForm(email, inv){
         sms_opt_in:        _qcSmsOptIn,
         sms_opt_in_at:     _qcSmsOptIn ? new Date().toISOString() : undefined,
       });
-      sendEmail({
-        to_email: 'david@pballconnect.com',
-        type:     'admin_registration_alert',
-        subject:  `🎾 New PBallConnect Registration — ${fn}`,
-        personal_note: `Name: ${fn}<br>Email: ${email}<br>Path: Quick Connect Registration<br>Skill Level: ${skill}<br>Zip: ${zip||'—'}<br>Gender: ${S.gender||'—'}<br>SMS Opt-In: ${_qcSmsOptIn ? 'Yes' : 'No'}<br>Registered At: ${new Date().toISOString()}`,
-      });
+      try {
+        await sendEmail({
+          to_email: 'david@pballconnect.com',
+          type:     'admin_registration_alert',
+          subject:  `🎾 New PBallConnect Registration — ${fn}`,
+          personal_note: `Name: ${fn}<br>Email: ${email}<br>Path: Quick Connect Registration<br>Skill Level: ${skill}<br>Zip: ${zip||'—'}<br>Gender: ${S.gender||'—'}<br>SMS Opt-In: ${_qcSmsOptIn ? 'Yes' : 'No'}<br>Registered At: ${new Date().toISOString()}`,
+        });
+      } catch (e) {
+        console.warn('Admin alert failed:', e);
+      }
       _newUserRegistrationStarted = false;
       document.getElementById('quickConnectOverlay')?.remove();
       await restoreSession(email.toLowerCase());
