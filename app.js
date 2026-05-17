@@ -1169,6 +1169,7 @@ async function doSaveProfile(){
     const _wasOptedIn    = !!(SESSION_PLAYER?.sms_opt_in);
     const _isOptingOut   = _wasOptedIn && !_smsOptIn;
     const _phoneRemoved  = _phoneDigits.length !== 10;
+    console.log('[sms-debug] SESSION_PLAYER.sms_opt_in:', SESSION_PLAYER?.sms_opt_in, '| _wasOptedIn:', _wasOptedIn, '| _smsOptIn:', _smsOptIn, '| _isOptingOut:', _isOptingOut);
     await saveRegistration({
       first_name:          v('firstName'),
       last_name:           v('lastName'),
@@ -8711,7 +8712,7 @@ function openProfileMenu(){
   const editRow=document.createElement('div');
   editRow.className='profile-menu-item';
   editRow.textContent='✏️ Edit Profile';
-  editRow.onclick=()=>{ menu.remove(); showPage('playerProfile'); };
+  editRow.onclick=()=>{ menu.remove(); openEditProfile(); };
   menu.appendChild(editRow);
   const divider=document.createElement('div');
   divider.style.cssText='height:1px;background:var(--border);margin:4px 0;';
