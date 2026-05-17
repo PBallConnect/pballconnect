@@ -75,7 +75,11 @@ export async function onRequestPost(context) {
         {
           method: 'PATCH',
           headers: { ...svcHdrs, 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ sms_opt_in: false }),
+          body: JSON.stringify({
+            sms_opt_in:         false,
+            sms_opt_out_at:     new Date().toISOString(),
+            sms_opt_out_method: 'stop_reply',
+          }),
         }
       );
     } catch (_) {}

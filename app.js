@@ -1164,8 +1164,11 @@ async function doSaveProfile(){
 
   // Save to Supabase via direct REST call
   try{
-    const _phoneDigits = (v('phone')||'').replace(/\D/g,'');
-    const _smsOptIn    = _phoneDigits.length === 10 && !!(document.getElementById('smsOptIn')?.checked);
+    const _phoneDigits   = (v('phone')||'').replace(/\D/g,'');
+    const _smsOptIn      = _phoneDigits.length === 10 && !!(document.getElementById('smsOptIn')?.checked);
+    const _wasOptedIn    = !!(SESSION_PLAYER?.sms_opt_in);
+    const _isOptingOut   = _wasOptedIn && !_smsOptIn;
+    const _phoneRemoved  = _phoneDigits.length !== 10;
     await saveRegistration({
       first_name:          v('firstName'),
       last_name:           v('lastName'),
@@ -1173,7 +1176,9 @@ async function doSaveProfile(){
       email:               v('email'),
       phone:               _phoneDigits || null,
       sms_opt_in:          _smsOptIn,
-      sms_opt_in_at:       _smsOptIn ? new Date().toISOString() : undefined,
+      sms_opt_in_at:       _smsOptIn   ? new Date().toISOString() : undefined,
+      sms_opt_out_at:      _isOptingOut ? new Date().toISOString() : undefined,
+      sms_opt_out_method:  _isOptingOut ? (_phoneRemoved ? 'phone_removed' : 'profile') : undefined,
       dob:                 document.getElementById('playerAge')?.value||S.dob||'',
       gender:              S.gender,
       city:                S.city || '',
