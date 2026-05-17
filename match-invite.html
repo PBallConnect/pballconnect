@@ -169,6 +169,30 @@
     .pitch-box p { font-size: 14px; color: #374151; line-height: 1.5; text-align: center; }
 
     .hidden { display: none !important; }
+
+    /* SMS opt-in checkbox — custom appearance so :checked is visible on iOS */
+    #smsOptIn {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      min-width: 24px;
+      border: 2px solid #9ca3af;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      flex-shrink: 0;
+      margin-top: 3px;
+      transition: background-color 0.15s, border-color 0.15s;
+    }
+    #smsOptIn:checked {
+      background-color: #1a7a3a;
+      border-color: #1a7a3a;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 8l3.5 3.5L13 5' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-size: 15px 15px;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
   </style>
 </head>
 <body>
@@ -242,6 +266,13 @@
           placeholder="you@example.com" autocomplete="email">
       </div>
 
+      <div class="field-group hidden" id="smsOptInRow" style="display:flex;align-items:flex-start;gap:10px;">
+        <input type="checkbox" id="smsOptIn">
+        <label for="smsOptIn" style="font-size:16px;color:#374151;line-height:1.4;cursor:pointer;">
+          Text me match updates from PBallConnect. Msg &amp; data rates may apply. Reply STOP anytime.
+        </label>
+      </div>
+
       <button class="btn btn-primary" id="regSubmitBtn" onclick="submitRegistration()" disabled>Count Me In!</button>
       <button class="btn btn-outline" style="margin-top:8px;" onclick="showState('stateInvite')">Back</button>
     </div>
@@ -280,6 +311,7 @@
   var _registered = false;
   var _gender = '';
   var _matchDetails = null;
+  var _inviteePhone = '';
 
   var ALL_STATES = ['stateLoading','stateError','stateInvite','stateRegForm','stateNoThanks','stateConfirm'];
 
@@ -397,6 +429,7 @@
       respond('in');
     } else {
       document.getElementById('matchSummaryCompact').innerHTML = buildMatchSummary(_matchDetails);
+      document.getElementById('smsOptInRow').classList.toggle('hidden', !_inviteePhone);
       showState('stateRegForm');
     }
   }
@@ -446,6 +479,9 @@
     var firstName = parts[0] || '';
     var lastName = parts.slice(1).join(' ') || '';
 
+    var smsOptIn = _inviteePhone.length === 10 &&
+      !!(document.getElementById('smsOptIn') && document.getElementById('smsOptIn').checked);
+
     btn.disabled = true;
     btn.textContent = 'Submitting...';
 
@@ -460,7 +496,10 @@
         skill: skill,
         email: email,
         gender: _gender,
-        zip: zip
+        zip: zip,
+        phone: _inviteePhone || undefined,
+        sms_opt_in: smsOptIn,
+        sms_opt_in_at: smsOptIn ? new Date().toISOString() : undefined
       })
     })
     .then(function(r) { return r.json(); })
@@ -510,6 +549,7 @@
       _registered = !!data.registered;
       _inviteeName = data.inviteeName || '';
       _matchDetails = data.matchDetails || null;
+      _inviteePhone = data.inviteePhone || '';
 
       var firstName = _inviteeName.split(' ')[0] || 'Hey';
       var orgEmail = (_matchDetails && _matchDetails.organizer_email) || '';

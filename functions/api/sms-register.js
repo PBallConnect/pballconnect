@@ -27,7 +27,7 @@ export async function onRequestPost(context) {
   try { body = await context.request.json(); }
   catch (_) { return err('Invalid request body.', 400, corsHeaders); }
 
-  const { token, firstName, lastName, skill, email, gender } = body || {};
+  const { token, firstName, lastName, skill, email, gender, phone, sms_opt_in, sms_opt_in_at } = body || {};
 
   if (!token || typeof token !== 'string') return err('Invalid invite token.', 400, corsHeaders);
   if (!firstName || !firstName.trim()) return err('First name is required.', 400, corsHeaders);
@@ -71,6 +71,8 @@ export async function onRequestPost(context) {
   const fullName       = `${firstNameClean} ${lastNameClean}`.trim();
   const skillClean     = typeof skill === 'string' && skill ? skill : '4.0';
   const genderClean    = typeof gender === 'string' && gender ? gender : null;
+  const phoneClean     = typeof phone === 'string' ? phone.replace(/\D/g, '').slice(-10) : '';
+  const smsOptIn       = sms_opt_in === true;
 
   // ── 4. CREATE AUTH USER + GENERATE SIGN-IN LINK ───────────────────────────
   // Admin generate_link creates the auth user (no email sent) and returns a
@@ -113,6 +115,9 @@ export async function onRequestPost(context) {
       play_format:       'Both',
       profile_complete:  false,
       gender:            genderClean,
+      ...(phoneClean.length === 10 ? { phone: phoneClean } : {}),
+      sms_opt_in:        smsOptIn,
+      ...(smsOptIn && sms_opt_in_at ? { sms_opt_in_at: sms_opt_in_at } : {}),
     };
 
     await fetch(
