@@ -943,13 +943,11 @@ window.onSmsOptInChange=function(){
   const lbl=document.getElementById('smsOptInLabel');
   if(!lbl) return;
   if(cb&&cb.checked){
-    lbl.textContent='✅ Send me match notifications via SMS';
     lbl.style.fontWeight='700';
-    lbl.style.color='#16a34a';
+    lbl.style.color='#1a7a3a';
   } else {
-    lbl.textContent='Send me match notifications via SMS';
     lbl.style.fontWeight='400';
-    lbl.style.color='#6b7280';
+    lbl.style.color='#374151';
   }
 };
 
@@ -11295,8 +11293,15 @@ function showQuickConnectForm(email, inv){
         '<input id="qcFirstName" type="text" placeholder="Your first name" autocomplete="given-name" style="'+inp+'" oninput="window._qcUpdateBtn()"/>'+
       '</div>'+
       '<div style="margin-bottom:16px;">'+
-        '<label style="'+lbl+'">Phone Number <span style="color:#dc2626;">*</span></label>'+
-        '<input id="qcPhone" type="tel" placeholder="(555) 555-5555" maxlength="14" style="'+inp+'" oninput="window._qcUpdateBtn()"/>'+
+        '<label style="'+lbl+'">Phone Number <span style="color:#9ca3af;font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— optional</span></label>'+
+        '<input id="qcPhone" type="tel" placeholder="(555) 555-5555" maxlength="14" style="'+inp+'" oninput="formatPhone(this);window._qcOnPhoneChange()"/>'+
+        '<div id="qcSmsOptInRow" style="display:none;margin-top:12px;">'+
+          '<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:14px;font-weight:400;text-transform:none;letter-spacing:0;">'+
+            '<input type="checkbox" id="qcSmsOptIn" onchange="window._qcOnSmsChange()" style="width:20px;height:20px;flex-shrink:0;margin-top:2px;accent-color:#1a7a3a;cursor:pointer;"/>'+
+            '<span id="qcSmsOptInLabel" style="font-weight:400;color:#374151;line-height:1.5;">I agree to receive match invites, reminders, and updates from PBallConnect by text message. Message frequency varies. Message &amp; data rates may apply. Reply STOP to unsubscribe or HELP for help.</span>'+
+          '</label>'+
+          '<div style="font-size:13px;color:#9ca3af;margin-top:6px;margin-left:30px;line-height:1.5;">By checking this box you provide express written consent for PBallConnect to send automated text messages to the number provided. Consent is not a condition of registration or use of the service.</div>'+
+        '</div>'+
       '</div>'+
       '<div style="margin-bottom:16px;">'+
         '<label style="'+lbl+'">Zip Code <span style="color:#dc2626;">*</span></label>'+
@@ -11356,7 +11361,7 @@ function showQuickConnectForm(email, inv){
     const fn  = document.getElementById('qcFirstName')?.value?.trim() || '';
     const ph  = (document.getElementById('qcPhone')?.value||'').replace(/\D/g,'');
     const zip = (document.getElementById('qcZip')?.value||'').replace(/\D/g,'');
-    const ok  = fn.length > 0 && ph.length >= 10 && zip.length === 5 && S.gender !== '' && _qcPrivacyOn && _qcRiskOn;
+    const ok  = fn.length > 0 && zip.length === 5 && S.gender !== '' && _qcPrivacyOn && _qcRiskOn;
     const btn = document.getElementById('qcSaveBtn');
     if(btn){
       btn.disabled    = !ok;
@@ -11375,6 +11380,23 @@ function showQuickConnectForm(email, inv){
     box.style.borderColor = on ? '#1a7a3a' : '#d1d5db';
     box.innerHTML = on ? '<span style="color:#fff;font-size:12px;font-weight:800;">✓</span>' : '';
     window._qcUpdateBtn();
+  };
+
+  window._qcOnPhoneChange = function(){
+    const ph=(document.getElementById('qcPhone')?.value||'').replace(/\D/g,'');
+    const smsRow=document.getElementById('qcSmsOptInRow');
+    const smsCb=document.getElementById('qcSmsOptIn');
+    if(smsRow) smsRow.style.display=ph.length===10?'block':'none';
+    if(ph.length!==10&&smsCb){smsCb.checked=false;window._qcOnSmsChange();}
+    window._qcUpdateBtn();
+  };
+
+  window._qcOnSmsChange = function(){
+    const cb=document.getElementById('qcSmsOptIn');
+    const lbl=document.getElementById('qcSmsOptInLabel');
+    if(!lbl) return;
+    if(cb&&cb.checked){lbl.style.fontWeight='700';lbl.style.color='#1a7a3a';}
+    else{lbl.style.fontWeight='400';lbl.style.color='#374151';}
   };
 
   window._qcSave = async function(){
@@ -11403,6 +11425,7 @@ function showQuickConnectForm(email, inv){
         match_gender_pref: 'Both',
         play_format:       'Both',
         gender:            S.gender || null,
+        sms_opt_in:        !!(ph.length===10 && document.getElementById('qcSmsOptIn')?.checked),
       });
       _newUserRegistrationStarted = false;
       document.getElementById('quickConnectOverlay')?.remove();
