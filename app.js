@@ -11336,7 +11336,7 @@ function showQuickConnectForm(email, inv){
         '<div style="font-size:12px;font-weight:700;color:#111;margin-bottom:10px;">Agreement & Waiver</div>'+
         '<div onclick="window._qcToggle(\'qcPrivacy\')" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin-bottom:10px;">'+
           '<div id="qcPrivacy" style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:2px solid #d1d5db;background:#fff;display:flex;align-items:center;justify-content:center;margin-top:1px;"></div>'+
-          '<span style="font-size:12px;color:#374151;line-height:1.5;">I agree to the Privacy Policy and Terms of Use</span>'+
+          '<span style="font-size:12px;color:#374151;line-height:1.5;">I agree to the <a href="privacy.html" target="_blank" onclick="event.stopPropagation()" style="color:#2d6a4f;">Privacy Policy</a> and <a href="terms.html" target="_blank" onclick="event.stopPropagation()" style="color:#2d6a4f;">Terms of Service</a></span>'+
         '</div>'+
         '<div onclick="window._qcToggle(\'qcRisk\')" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">'+
           '<div id="qcRisk" style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:2px solid #d1d5db;background:#fff;display:flex;align-items:center;justify-content:center;margin-top:1px;"></div>'+
