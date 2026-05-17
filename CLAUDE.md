@@ -238,3 +238,19 @@ When Claude Chat provides instructions they should follow this format:
 - State the rule in plain logic — including what to check first and what to leave unchanged
 - Include "If it already says X make no change" to prevent unnecessary edits
 - End with `node --check app.js` for any JS change and `git push --force origin main`
+
+### Session learnings — May 16, 2026
+
+Claude Chat must proactively identify compliance gaps without waiting to be asked. When a feature involves legal or financial exposure — SMS, TCPA, data privacy, consent records — Claude Chat must think three steps ahead and flag issues before they become problems. Examples from this session that should have been caught proactively:
+
+- **`sms_opt_out_at` timestamp** — when `sms_opt_in_at` was added, the matching opt-out timestamp should have been specified in the same instruction without the user asking.
+- **Supabase SQL must always be listed FIRST** in any instruction that requires a schema change — Claude Code cannot run SQL, only the user can. If the column does not exist when the code tries to write to it, the insert fails silently. Format is: _"Do this in Supabase SQL Editor FIRST before Claude Code touches any code."_
+- **Verification steps must always follow every significant change** — Layer 1 (Supabase dashboard), Layer 2 (live functional test), Layer 3 (SQL query). Always specify all three layers explicitly in the instruction.
+- **When a session runs long, precision degrades.** If context is running low, say so and recommend starting a fresh session rather than continuing with reduced accuracy.
+
+Instruction format reminders:
+
+- SQL schema changes always listed first with explicit "Do this in Supabase SQL Editor FIRST" heading
+- Verification steps always included at the end of every instruction
+- Never ask the user to dig through Network tabs or DevTools unless absolutely necessary — add `console.log` via Claude Code instead
+- Always include `node --check app.js` and `git push --force origin main` at the end
