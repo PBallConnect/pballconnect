@@ -130,6 +130,20 @@ export async function onRequestPost(context) {
         body: JSON.stringify(regPayload),
       }
     );
+    if (smsOptIn) {
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/sms_consent_log`, {
+          method: 'POST',
+          headers: { ...svcHdrs, 'Prefer': 'return=minimal' },
+          body: JSON.stringify({
+            player_email: emailLower,
+            event:        'opt_in',
+            method:       'sms_registration',
+            created_at:   new Date().toISOString(),
+          }),
+        });
+      } catch (e) { console.warn('sms_consent_log insert failed:', e); }
+    }
   } catch (_) {
     // Registration save failed — still return signInUrl so user isn't stuck; they can complete profile later
   }

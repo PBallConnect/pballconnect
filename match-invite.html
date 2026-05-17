@@ -506,6 +506,15 @@
     .then(function(data) {
       if (data.ok) {
         showConfirm('🎾', "You're in!", "Welcome to PBallConnect! See you on the court.");
+        if (smsOptIn) {
+          try {
+            fetch('/api/log-sms-consent', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ player_email: email, event: 'opt_in', method: 'sms_registration' })
+            }).catch(function(e) { console.warn('consent log failed:', e); });
+          } catch (e) { console.warn('consent log failed:', e); }
+        }
         if (data.signInUrl) {
           setTimeout(function() { window.location.href = data.signInUrl; }, 2000);
         }

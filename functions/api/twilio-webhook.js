@@ -95,6 +95,18 @@ export async function onRequestPost(context) {
           status:        'opted_out',
         }),
       });
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/sms_consent_log`, {
+          method: 'POST',
+          headers: { ...svcHdrs, 'Prefer': 'return=minimal' },
+          body: JSON.stringify({
+            player_email: playerEmail || null,
+            event:        'opt_out',
+            method:       'STOP',
+            created_at:   new Date().toISOString(),
+          }),
+        });
+      } catch (e) { console.warn('sms_consent_log insert failed:', e); }
     } catch (_) {}
 
     return twiml('');
@@ -127,6 +139,18 @@ export async function onRequestPost(context) {
           status:        'opted_in',
         }),
       });
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/sms_consent_log`, {
+          method: 'POST',
+          headers: { ...svcHdrs, 'Prefer': 'return=minimal' },
+          body: JSON.stringify({
+            player_email: playerEmail || null,
+            event:        'opt_in',
+            method:       'START',
+            created_at:   new Date().toISOString(),
+          }),
+        });
+      } catch (e) { console.warn('sms_consent_log insert failed:', e); }
     } catch (_) {}
 
     return twiml(
