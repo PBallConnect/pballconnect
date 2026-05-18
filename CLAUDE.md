@@ -156,7 +156,7 @@ No tests, no linter, no build commands.
 - [ ] App tested on iOS Safari + Android Chrome
 - [ ] PWA install prompt tested
 - [x] **Consent log wired to all paths** — `doSaveProfile()`, `_qcSave()`, and `sms-register.js` all write to `sms_consent_log` on opt-in
-- [ ] **Staging environment configured** — test Twilio flows before upgrading to Pay-as-you-go
+- [x] **Staging environment configured** — staging branch live on Cloudflare Pages
 - [ ] **ToS placeholders filled** — replace `[OWNER NAME / LLC NAME]` and `[YOUR EMAIL ADDRESS]`
 - [ ] **Android + cross-browser test pass**
 
@@ -185,7 +185,7 @@ No tests, no linter, no build commands.
 19. ~~**Consent log Part 2**~~ ✅ — `doSaveProfile()` and `_qcSave()` both call `POST /api/log-sms-consent` on opt-in. All three registration paths now write to `sms_consent_log`.
 20. ~~**Fix stray Send Invites button in Step 4 of Set Up a Match wizard**~~ ✅ — `smInviteContinueBtn` removed from `buildSmInviteGrid()`; real send button is `matchSendBtn` in the sticky progress bar.
 21. ~~**End-to-end SMS invite test**~~ ✅ — full flow verified with a verified Twilio number: organizer sends match invite → SMS delivered → recipient RSVPs → `match_responses` updated → `invites` row updated.
-22. **Staging environment** — configure a staging branch/deployment on Cloudflare Pages before upgrading Twilio to Pay-as-you-go.
+22. ~~**Staging environment**~~ ✅ — staging branch/deployment configured on Cloudflare Pages.
 
 ---
 
