@@ -132,7 +132,7 @@ No tests, no linter, no build commands.
 - [ ] **Bind `RATE_LIMIT_KV`** — create KV namespace in Cloudflare, bind as `RATE_LIMIT_KV` in Pages settings
 - [ ] **Twilio: upgrade to Pay as you go** — trial mode only sends to verified numbers; required before launch
 - [ ] **Twilio: A2P 10DLC registration** — required for production US SMS sending
-- [ ] **End-to-end SMS test** — test send-sms.js with verified numbers, verify sms_log entries
+- [x] **End-to-end SMS test** — full match invite flow verified end-to-end with verified Twilio number
 - [ ] **Twilio STOP webhook test** — send STOP, verify sms_opt_in=false in Supabase; send START, verify sms_opt_in=true
 - [ ] **Fix mobile portrait left nav** — slide-in drawer not working on iPhone
 - [ ] **Non-member match invite flow** — invite players outside IC by email
@@ -157,11 +157,8 @@ No tests, no linter, no build commands.
 - [ ] PWA install prompt tested
 - [x] **Consent log wired to all paths** — `doSaveProfile()`, `_qcSave()`, and `sms-register.js` all write to `sms_consent_log` on opt-in
 - [ ] **Staging environment configured** — test Twilio flows before upgrading to Pay-as-you-go
-- [ ] **Twilio: upgrade to Pay-as-you-go** — trial mode only sends to verified numbers; required before launch
-- [ ] **Twilio: A2P 10DLC registration** — required for production US SMS sending
 - [ ] **ToS placeholders filled** — replace `[OWNER NAME / LLC NAME]` and `[YOUR EMAIL ADDRESS]`
 - [ ] **Android + cross-browser test pass**
-- [ ] **Error monitoring** — Sentry or Cloudflare Logpush
 
 ---
 
@@ -290,4 +287,5 @@ Instruction format reminders:
 - **Always confirm each part is complete and pushed before sending the next part.** Never queue Part 2 until Part 1 is verified (node --check passes, push confirmed, live behavior tested).
 - **Fire-and-forget `sendEmail()` and `fetch()` calls keep reappearing.** Before accepting any new implementation, explicitly check every `sendEmail()` and outbound `fetch()` call for `await` and `try/catch`. This is a recurring pattern — do not assume it was done correctly without checking.
 - **`doSaveProfile()` — SMS opt-in flag is `_smsOptIn`, not `S.smsOptIn`.** `_smsOptIn` is a local variable computed at ~line 1168 (`_phoneDigits.length === 10 && !!(smsOptIn checkbox checked)`). `S.smsOptIn` does not exist. Use `_smsOptIn` in any future edits to this function.
+- **When investigating a stray or misplaced button, check `onclick` before trusting the label.** `smInviteContinueBtn` was labeled "Send Invites →" but its `onclick` was `_smInviteContinue()` which only called `smUpdateProgress(5)` and scrolled to the next step — a Continue button, not a send. The comment in the code even said "Continue button." Read what the button does, not what it says.
 - **`_qcSave()` — SMS opt-in flag is `_qcSmsOptIn`; player email is `email.toLowerCase()`; consent log method is `'quick_connect'`.** `_qcSmsOptIn` is a local variable computed at ~line 11453 (`ph.length === 10 && !!(qcSmsOptIn checkbox checked)`). Player email comes from the outer closure variable `email` — use `email.toLowerCase()`, not `S.email` or `v('email')`. Consent log `method` field must be `'quick_connect'`, not `'registration'`.
