@@ -46,12 +46,6 @@ export async function onRequestPost(context) {
       status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
   }
-  if (message.length > 160) {
-    return new Response(JSON.stringify({ error: 'message exceeds 160 characters.' }), {
-      status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-    });
-  }
-
   // Always prepend brand prefix so recipients know who is texting them.
   const smsBody = message.startsWith('PBallConnect:')
     ? message
