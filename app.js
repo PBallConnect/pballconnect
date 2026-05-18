@@ -11485,7 +11485,7 @@ function showQuickConnectForm(email, inv){
             body: JSON.stringify({
               player_email: email.toLowerCase(),
               event: 'opt_in',
-              method: 'registration'
+              method: 'quick_connect'
             })
           });
         } catch (e) {
