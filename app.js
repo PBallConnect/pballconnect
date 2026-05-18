@@ -6535,10 +6535,6 @@ function buildSmInviteGrid(){
   const counterClr = metMin ? 'color:#16a34a;font-weight:700;' : 'color:#6b7280;font-weight:600;';
   html += `<div id="smInviteCounter" style="${counterClr}font-size:13px;text-align:center;margin-bottom:10px;">${counterTxt}</div>`;
 
-  // Continue button — disabled until both min count AND gender balance met (Mixed path)
-  const btnStyle = `width:100%;padding:12px;border-radius:10px;border:none;background:#1a7a3a;color:#fff;font-size:14px;font-weight:800;font-family:inherit;transition:opacity .15s;opacity:${metAll?'1':'0.4'};cursor:${metAll?'pointer':'not-allowed'};`;
-  html += `<button id="smInviteContinueBtn" onclick="window._smInviteContinue()" ${metAll?'':'disabled'} style="${btnStyle}">Send Invites →</button>`;
-
   section.innerHTML = html;
 }
 
