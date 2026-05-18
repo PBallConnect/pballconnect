@@ -1,6 +1,6 @@
 # CLAUDE-RULES.md — Important Rules for Claude Code
 
-_All 48 rules. No trimming. Cross-reference with CLAUDE.md, CLAUDE-SCHEMA.md, CLAUDE-SMS.md._
+_All 50 rules. No trimming. Cross-reference with CLAUDE.md, CLAUDE-SCHEMA.md, CLAUDE-SMS.md._
 
 ---
 
@@ -99,3 +99,7 @@ _All 48 rules. No trimming. Cross-reference with CLAUDE.md, CLAUDE-SCHEMA.md, CL
 47. **`IC_MEMBERS` is a shared global array with structure `{player:{...}, conn:{...}, lastPlayed:null}`.** Never overwrite `IC_MEMBERS` with flat objects. Any feature that needs flat player data for local use must store it in its own local variable (e.g. `_efMemberFlat` for Emergency Fill). When reading from `IC_MEMBERS` always access `.player` properties via `m.player.field_name`, never `m.field_name` directly.
 
 48. **`phone` and `sms_opt_in` must never be added to `public_profiles`.** These are sensitive fields. Any feature that needs them server-side must call `POST /api/match-invite-sms-data` (uses `SUPABASE_SERVICE_KEY`) or query `registrations` directly in a Pages Function. Never expose them through the `public_profiles` view or return them in client-readable API responses.
+
+49. **`sms_consent_log` is append-only.** Never UPDATE or DELETE rows. Every opt-in and opt-out event anywhere in the system — registration, Quick Connect, SMS invite flow, STOP/START webhook — writes a new INSERT row. Use `SUPABASE_SERVICE_KEY` for all inserts. Use `Prefer: return=minimal`.
+
+50. **Admin registration alert emails fire to `david@pballconnect.com` on every new registration across all three paths** — `doSaveProfile` (full profile), `_qcSave` (Quick Connect), and `sms-register.js` (SMS invite). Always `await sendEmail()` in `try/catch`. Never fire-and-forget.

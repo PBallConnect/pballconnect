@@ -25,6 +25,25 @@ _Added May 9, 2026_
 - `/api/twilio-webhook` — receives Twilio keyword callbacks; STOP sets `sms_opt_in=false`, START sets `sms_opt_in=true`
 - Signature validation: HMAC-SHA1 over `url + sorted(key+value)` via Web Crypto API — skips gracefully if `TWILIO_AUTH_TOKEN` is missing/placeholder
 - Webhook URL: `https://pballconnect.com/api/twilio-webhook` (configure in Twilio Console → Phone Numbers → +1 978 945 3787)
+- `/api/log-sms-consent` — POST endpoint added May 17, 2026. Validates request body and inserts a row into `sms_consent_log` via `SUPABASE_SERVICE_KEY`. Called by client after any opt-in or opt-out action.
+
+### TCPA Consent Audit Log (`sms_consent_log`)
+
+_Added May 17, 2026_
+
+Append-only table recording every SMS consent event for TCPA compliance.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid | PK, auto-generated |
+| `player_email` | text | Player who consented or opted out |
+| `event` | text | `'opt_in'` or `'opt_out'` |
+| `method` | text | Source of event (e.g. `'registration'`, `'quick_connect'`, `'sms_invite'`, `'twilio_stop'`, `'twilio_start'`) |
+| `ip_address` | text | Request IP (from CF-Connecting-IP header) |
+| `user_agent` | text | Request User-Agent |
+| `created_at` | timestamptz | Auto set to `now()` |
+
+**RLS:** Players can SELECT their own rows (`player_email = auth.email()`). Service role only for INSERT. Never UPDATE or DELETE. See Rule 49.
 
 ### SMS Rate Limits (via `RATE_LIMIT_KV`)
 - Per-player: `sms_player_{email}` — 10/24h (86400s TTL)
