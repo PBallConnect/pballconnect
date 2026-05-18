@@ -155,7 +155,7 @@ No tests, no linter, no build commands.
 - [ ] Backup / point-in-time recovery confirmed in Supabase
 - [ ] App tested on iOS Safari + Android Chrome
 - [ ] PWA install prompt tested
-- [ ] **Consent log wired to all paths (Part 2 still needed)** — `doSaveProfile()` and `_qcSave()` in `app.js` need consent log calls on opt-in/opt-out
+- [x] **Consent log wired to all paths** — `doSaveProfile()`, `_qcSave()`, and `sms-register.js` all write to `sms_consent_log` on opt-in
 - [ ] **Staging environment configured** — test Twilio flows before upgrading to Pay-as-you-go
 - [ ] **Twilio: upgrade to Pay-as-you-go** — trial mode only sends to verified numbers; required before launch
 - [ ] **Twilio: A2P 10DLC registration** — required for production US SMS sending
@@ -185,7 +185,7 @@ No tests, no linter, no build commands.
 16. ~~**Emergency Fill screen**~~ ✅ — organizer tool built; see CLAUDE-SMS.md Emergency Fill Screen section.
 17. **Verify: organizer SMS on player cancellation** — Part 1 of May 10 build. Test with a verified Twilio number: drop a player, confirm organizer receives SMS notification. Check `sms_log` for `event_type:'player_dropped'` row.
 18. **Verify: match time in cancellation notification email** — Part 2 of May 10 build. Confirm the organizer notification email includes match time (not just date). Check the email template rendered by `send-email.js` for the `match_update` type.
-19. **Consent log Part 2** — wire `doSaveProfile()` and `_qcSave()` in `app.js` to call `POST /api/log-sms-consent` on opt-in and opt-out. Consent log for `sms-register.js` path was completed May 17.
+19. ~~**Consent log Part 2**~~ ✅ — `doSaveProfile()` and `_qcSave()` both call `POST /api/log-sms-consent` on opt-in. All three registration paths now write to `sms_consent_log`.
 20. ~~**Fix stray Send Invites button in Step 4 of Set Up a Match wizard**~~ ✅ — `smInviteContinueBtn` removed from `buildSmInviteGrid()`; real send button is `matchSendBtn` in the sticky progress bar.
 21. **End-to-end SMS invite test** — test full flow with a verified Twilio number: organizer sends match invite → SMS delivered → recipient RSVPs → `match_responses` updated → `invites` row updated.
 22. **Staging environment** — configure a staging branch/deployment on Cloudflare Pages before upgrading Twilio to Pay-as-you-go.
