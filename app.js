@@ -1231,6 +1231,22 @@ async function doSaveProfile(){
         console.warn('Admin alert failed:', e);
       }
     }
+    // TCPA consent log
+    if (_smsOptIn === true) {
+      try {
+        await fetch('/api/log-sms-consent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            player_email: S.email,
+            event: 'opt_in',
+            method: 'registration'
+          })
+        });
+      } catch (e) {
+        console.warn('Consent log failed (doSaveProfile):', e);
+      }
+    }
     _newUserRegistrationStarted = false; // registration complete — allow normal profile restore
     showToast('✅ Profile saved!', '#4CAF7D');
     // Capture current values before any navigation
