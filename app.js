@@ -4371,9 +4371,8 @@ async function submitMatch(){
     // Phone and sms_opt_in are fetched server-side per player so they never pass
     // through public_profiles or the client data model.
     const orgFirstName = (SESSION_PLAYER?.first_name || '').trim();
-    console.log('[SMS loop] starting — invitee list:', invitees.map(p => p.email));
     for(const player of invitees){
-      if(!player.email){ console.log('[SMS loop] skip — no email:', player.first_name||'(unknown)'); continue; }
+      if(!player.email) continue;
       try{
         const smsDataRes = await fetch('/api/match-invite-sms-data', {
           method: 'POST',
@@ -4381,12 +4380,7 @@ async function submitMatch(){
           body: JSON.stringify({ playerEmail: player.email })
         });
         const smsData = smsDataRes.ok ? await smsDataRes.json() : null;
-        console.log('[SMS loop] sms-data for', player.email, { phone: smsData?.phone, sms_opt_in: smsData?.sms_opt_in });
-        if(!smsData || !smsData.sms_opt_in || !smsData.phone || String(smsData.phone).replace(/\D/g,'').length !== 10){
-          const skipReason = !smsData ? 'sms-data null' : !smsData.sms_opt_in ? 'not opted in' : !smsData.phone ? 'no phone' : 'phone invalid ('+smsData.phone+')';
-          console.log('[SMS loop] skip', player.email, '—', skipReason);
-          continue;
-        }
+        if(!smsData || !smsData.sms_opt_in || !smsData.phone || String(smsData.phone).replace(/\D/g,'').length !== 10) continue;
         const phone10 = String(smsData.phone).replace(/\D/g,'');
         // Insert invite tracking row so match-invite-respond can update status
         // by matching on match_id + invitee_phone (no invite_token used here).
