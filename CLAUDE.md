@@ -187,7 +187,7 @@ No tests, no linter, no build commands.
 18. **Verify: match time in cancellation notification email** — Part 2 of May 10 build. Confirm the organizer notification email includes match time (not just date). Check the email template rendered by `send-email.js` for the `match_update` type.
 19. ~~**Consent log Part 2**~~ ✅ — `doSaveProfile()` and `_qcSave()` both call `POST /api/log-sms-consent` on opt-in. All three registration paths now write to `sms_consent_log`.
 20. ~~**Fix stray Send Invites button in Step 4 of Set Up a Match wizard**~~ ✅ — `smInviteContinueBtn` removed from `buildSmInviteGrid()`; real send button is `matchSendBtn` in the sticky progress bar.
-21. **End-to-end SMS invite test** — test full flow with a verified Twilio number: organizer sends match invite → SMS delivered → recipient RSVPs → `match_responses` updated → `invites` row updated.
+21. ~~**End-to-end SMS invite test**~~ ✅ — full flow verified with a verified Twilio number: organizer sends match invite → SMS delivered → recipient RSVPs → `match_responses` updated → `invites` row updated.
 22. **Staging environment** — configure a staging branch/deployment on Cloudflare Pages before upgrading Twilio to Pay-as-you-go.
 
 ---
