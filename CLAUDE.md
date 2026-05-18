@@ -289,3 +289,4 @@ Instruction format reminders:
 - **Call for a fresh Claude Code session at 20% context remaining** — not at 7%. Precision degrades before the context limit is reached. Start fresh early enough to re-brief cleanly.
 - **Always confirm each part is complete and pushed before sending the next part.** Never queue Part 2 until Part 1 is verified (node --check passes, push confirmed, live behavior tested).
 - **Fire-and-forget `sendEmail()` and `fetch()` calls keep reappearing.** Before accepting any new implementation, explicitly check every `sendEmail()` and outbound `fetch()` call for `await` and `try/catch`. This is a recurring pattern — do not assume it was done correctly without checking.
+- **`doSaveProfile()` — SMS opt-in flag is `_smsOptIn`, not `S.smsOptIn`.** `_smsOptIn` is a local variable computed at ~line 1168 (`_phoneDigits.length === 10 && !!(smsOptIn checkbox checked)`). `S.smsOptIn` does not exist. Use `_smsOptIn` in any future edits to this function.
