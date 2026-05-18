@@ -11476,6 +11476,22 @@ function showQuickConnectForm(email, inv){
       } catch (e) {
         console.warn('Admin alert failed:', e);
       }
+      // TCPA consent log
+      if (_qcSmsOptIn === true) {
+        try {
+          await fetch('/api/log-sms-consent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              player_email: email.toLowerCase(),
+              event: 'opt_in',
+              method: 'registration'
+            })
+          });
+        } catch (e) {
+          console.warn('Consent log failed (_qcSave):', e);
+        }
+      }
       _newUserRegistrationStarted = false;
       document.getElementById('quickConnectOverlay')?.remove();
       await restoreSession(email.toLowerCase());
