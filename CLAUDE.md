@@ -183,7 +183,7 @@ No tests, no linter, no build commands.
 14. **Web push notifications** — browser push for match invites, IC requests, gap alerts.
 15. **Player statistics dashboard** — `playerStats` page needs data and UX.
 16. ~~**Emergency Fill screen**~~ ✅ — organizer tool built; see CLAUDE-SMS.md Emergency Fill Screen section.
-17. **Verify: organizer SMS on player cancellation** — Part 1 of May 10 build. Test with a verified Twilio number: drop a player, confirm organizer receives SMS notification. Check `sms_log` for `event_type:'player_dropped'` row.
+17. ~~**Verify: organizer SMS on player cancellation**~~ ✅ — verified with a verified Twilio number: drop a player, organizer receives SMS notification, `sms_log` shows `event_type:'player_dropped'`.
 18. **Verify: match time in cancellation notification email** — Part 2 of May 10 build. Confirm the organizer notification email includes match time (not just date). Check the email template rendered by `send-email.js` for the `match_update` type.
 19. ~~**Consent log Part 2**~~ ✅ — `doSaveProfile()` and `_qcSave()` both call `POST /api/log-sms-consent` on opt-in. All three registration paths now write to `sms_consent_log`.
 20. ~~**Fix stray Send Invites button in Step 4 of Set Up a Match wizard**~~ ✅ — `smInviteContinueBtn` removed from `buildSmInviteGrid()`; real send button is `matchSendBtn` in the sticky progress bar.
