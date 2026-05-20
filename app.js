@@ -26,7 +26,7 @@
   document.head.appendChild(link);
 })();
 
-const S={gender:'',skill:'',schedule:new Set(),anytime:false,partner:false,
+const S={gender:'',skill:'',anytime:false,partner:false,
   waiver:false,photoSrc:null,state:'',stateFips:'',county:'',city:'',email:'',
   court:'',courtName:'',duprVal:null,venues:new Set(),driveDistance:'25 miles',
   playStyle:'',playFormat:'Both',matchGenderPref:'Both',handedness:'',avatarEmoji:'🎾',venuePref:'',playingSince:'',nickname:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null,_tosConsent:false,_privacyConsent:false,_riskConsent:false,isCoach:'',coachCerts:new Set(),coachLessonTypes:new Set(),coachFormats:new Set(),isOrganizer:'',
@@ -37,24 +37,6 @@ const TIMES=['Early AM','Morning','Afternoon','Evening'];
 const DUPR_VALS=['2.0','2.25','2.5','2.75','3.0','3.25','3.5','3.75','4.0','4.25','4.5','4.75',
   '5.0','5.25','5.5','5.75','6.0','6.25','6.5','6.75','7.0','7.0+'];
 
-(function(){
-  const tb=document.getElementById('schedBody');
-  if(!tb) return; // schedule grid removed in favour of availability toggles
-  DAYS.forEach(d=>{
-    const tr=document.createElement('tr');
-    const td0=document.createElement('td');
-    td0.style.cssText='padding:8px 10px;color:#1a5c32;font-size:12px;font-weight:700;background:#d1fae5;border:2px solid #1a7a3a;white-space:nowrap';
-    td0.textContent=d; tr.appendChild(td0);
-    TIMES.forEach(t=>{
-      const td=document.createElement('td');
-      const sp=document.createElement('span');
-      sp.className='sched-cell'; sp.dataset.key=d+'|'+t;
-      sp.textContent=t.split(' ')[0]; sp.onclick=function(){toggleCell(this);};
-      td.appendChild(sp); tr.appendChild(td);
-    });
-    tb.appendChild(tr);
-  });
-})();
 
 const STATE_INFO={
   "01":["AL","Alabama"],"02":["AK","Alaska"],"04":["AZ","Arizona"],"05":["AR","Arkansas"],
@@ -573,15 +555,6 @@ function selChip(gid,el,key){
     if(goalField) goalField.style.display = (val==='Competitive'||val==='Both') ? 'block' : 'none';
     if(val!=='Competitive'&&val!=='Both'){ S.goalRating=null; }
   }
-}
-
-// ── Schedule ──────────────────────────────────────────
-function toggleCell(el){
-  if(S.anytime) return;
-  el.classList.toggle('on');
-  if(el.classList.contains('on')) S.schedule.add(el.dataset.key);
-  else S.schedule.delete(el.dataset.key);
-  chk2();
 }
 
 // ── Coach multi-select chips ─────────────────────────────
@@ -1122,14 +1095,6 @@ async function doSaveProfile(){
     uploadedPhotoUrl = await uploadProfilePhoto(v('email') || getMyEmail());
   }
 
-  // Build schedule string
-  let schedStr = 'Not specified';
-  if(S.anytime) schedStr = 'Anytime';
-  else if(S.schedule.size > 0){
-    // Save full keys (Mon|Morning, Mon|Afternoon etc) to preserve time detail
-    schedStr = [...S.schedule].join(', ');
-  }
-
   // Geocode from zip code — derive city, state, lat/lon via Nominatim
   const zipVal = v('addrZip')?.trim();
   if(zipVal && (!S.addrLat || !S.addrLon || !S.city)){
@@ -1188,7 +1153,6 @@ async function doSaveProfile(){
       court_name:          S.courtName || null,
       skill_level:         S.skill || SESSION_PLAYER?.skill_level || null,
       dupr_rating:         S.duprVal || null,
-      schedule:            schedStr,
       anytime:             S.anytime,
       photo_url:           uploadedPhotoUrl || SESSION_PLAYER?.photo_url || null,
       photo_consent_at:    consentTimestamp || SESSION_PLAYER?.photo_consent_at || null,
@@ -1360,7 +1324,7 @@ async function doSaveProfile(){
 
 function resetForm(){
   document.getElementById('confirmOverlay').style.display='none';
-  Object.assign(S,{gender:'',skill:'',schedule:new Set(),anytime:false,partner:false,waiver:false,photoSrc:null,state:'',stateFips:'',county:'',city:'',court:'',courtName:'',duprVal:null,venues:new Set(),driveDistance:'25 miles',playStyle:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null});
+  Object.assign(S,{gender:'',skill:'',anytime:false,partner:false,waiver:false,photoSrc:null,state:'',stateFips:'',county:'',city:'',court:'',courtName:'',duprVal:null,venues:new Set(),driveDistance:'25 miles',playStyle:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null});
 
   ['firstName','lastName','nickname','email','phone','age_range','addrZip','addrCity','addrState'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const zipStatus=document.getElementById('zipGeoStatus');if(zipStatus)zipStatus.textContent='';
@@ -2631,39 +2595,6 @@ function onZipChange(val){
     if(statusEl) statusEl.textContent = S.city ? `📍 ${S.city}, ${S.state}` : '';
   })
   .catch(()=>{ if(statusEl) statusEl.textContent='⚠️ Location lookup failed'; });
-}
-
-// ── Schedule column select all ─────────────────────────
-function toggleColumn(cb){
-  if(S.anytime) return;
-  const col = cb.dataset.col;
-  const on = cb.checked;
-  document.querySelectorAll('.sched-cell').forEach(cell=>{
-    if(cell.dataset.key && cell.dataset.key.includes('|'+col)){
-      if(on && !cell.classList.contains('on')){
-        cell.classList.add('on'); S.schedule.add(cell.dataset.key);
-      } else if(!on && cell.classList.contains('on')){
-        cell.classList.remove('on'); S.schedule.delete(cell.dataset.key);
-      }
-    }
-  });
-  chk2();
-}
-
-// ── Schedule day select all ────────────────────────────
-function toggleDay(day, btn){
-  if(S.anytime) return;
-  const isOn = btn.classList.toggle('on');
-  document.querySelectorAll('.sched-cell').forEach(cell=>{
-    if(cell.dataset.key && cell.dataset.key.startsWith(day+'|')){
-      if(isOn && !cell.classList.contains('on')){
-        cell.classList.add('on'); S.schedule.add(cell.dataset.key);
-      } else if(!isOn && cell.classList.contains('on')){
-        cell.classList.remove('on'); S.schedule.delete(cell.dataset.key);
-      }
-    }
-  });
-  chk2();
 }
 
 // ── Lesson questions ───────────────────────────────────────────
