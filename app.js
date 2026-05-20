@@ -11450,7 +11450,7 @@ function showQuickConnectForm(email, inv){
       await saveRegistration({
         email:             email.toLowerCase(),
         first_name:        fn,
-        phone:             encodePhone(ph),
+        phone:             ph || null,
         zip_code:          zip,
         skill_level:       skill,
         dob:               age   || null,
