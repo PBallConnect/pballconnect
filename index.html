@@ -722,29 +722,6 @@
         <option>1960</option>
       </select>
     </div>
-    <div class="divider"></div>
-    <div class="field">
-      <label>When do you generally play?</label>
-      <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">
-        <button class="avail-toggle" id="availWeekdayMorningBtn" onclick="toggleAvail('availWeekdayMorning')" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:13px 16px;border-radius:12px;border:1.5px solid #d1d5db;background:#f9fafb;cursor:pointer;text-align:left;font-family:inherit;box-sizing:border-box;">
-          <span style="font-size:14px;font-weight:600;color:#374151;">Weekday mornings <span style="font-size:11px;font-weight:400;color:#9ca3af;">(6am – noon)</span></span>
-          <div class="avail-track" style="width:44px;height:24px;border-radius:12px;background:#d1d5db;position:relative;flex-shrink:0;transition:background .2s;"><div class="avail-thumb" style="width:20px;height:20px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,0.25);"></div></div>
-        </button>
-        <button class="avail-toggle" id="availWeekdayAfternoonBtn" onclick="toggleAvail('availWeekdayAfternoon')" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:13px 16px;border-radius:12px;border:1.5px solid #d1d5db;background:#f9fafb;cursor:pointer;text-align:left;font-family:inherit;box-sizing:border-box;">
-          <span style="font-size:14px;font-weight:600;color:#374151;">Weekday afternoons <span style="font-size:11px;font-weight:400;color:#9ca3af;">(noon – 5pm)</span></span>
-          <div class="avail-track" style="width:44px;height:24px;border-radius:12px;background:#d1d5db;position:relative;flex-shrink:0;transition:background .2s;"><div class="avail-thumb" style="width:20px;height:20px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,0.25);"></div></div>
-        </button>
-        <button class="avail-toggle" id="availWeekdayEveningBtn" onclick="toggleAvail('availWeekdayEvening')" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:13px 16px;border-radius:12px;border:1.5px solid #d1d5db;background:#f9fafb;cursor:pointer;text-align:left;font-family:inherit;box-sizing:border-box;">
-          <span style="font-size:14px;font-weight:600;color:#374151;">Weekday evenings <span style="font-size:11px;font-weight:400;color:#9ca3af;">(5pm – 9pm)</span></span>
-          <div class="avail-track" style="width:44px;height:24px;border-radius:12px;background:#d1d5db;position:relative;flex-shrink:0;transition:background .2s;"><div class="avail-thumb" style="width:20px;height:20px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,0.25);"></div></div>
-        </button>
-        <button class="avail-toggle" id="availWeekendsBtn" onclick="toggleAvail('availWeekends')" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:13px 16px;border-radius:12px;border:1.5px solid #d1d5db;background:#f9fafb;cursor:pointer;text-align:left;font-family:inherit;box-sizing:border-box;">
-          <span style="font-size:14px;font-weight:600;color:#374151;">Weekends <span style="font-size:11px;font-weight:400;color:#9ca3af;">(Sat &amp; Sun, any time)</span></span>
-          <div class="avail-track" style="width:44px;height:24px;border-radius:12px;background:#d1d5db;position:relative;flex-shrink:0;transition:background .2s;"><div class="avail-thumb" style="width:20px;height:20px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,0.25);"></div></div>
-        </button>
-      </div>
-      <div class="hint" style="margin-top:10px;">We'll check in quarterly to see if this has changed</div>
-    </div>
 
     <div class="btn-row">
       <button class="btn-back" onclick="goTo(1)">← Back</button>
@@ -813,10 +790,6 @@
         <div class="summary-row"><span>Play Style</span><span id="sumStyle">—</span></div>
         <div class="summary-row"><span>Venue Preference</span><span id="sumVenuePref">—</span></div>
         <div class="summary-row"><span>Drive Distance</span><span id="sumDrive">—</span></div>
-        <div style="margin-top:10px;">
-          <div style="font-size:12px;color:var(--dim);font-weight:600;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;">Availability</div>
-          <div id="sumSchedGrid"></div>
-        </div>
       </div>
 
       <!-- Section 3: Playing Levels -->

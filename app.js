@@ -588,35 +588,6 @@ function toggleAnytime(){
   chk2();
 }
 
-// ── Availability toggles (replaces schedule grid) ─────────────
-function toggleAvail(key){
-  S[key] = !S[key];
-  updateAvailToggles();
-  chk2();
-}
-
-function updateAvailToggles(){
-  const map = {
-    availWeekdayMorning:   'availWeekdayMorningBtn',
-    availWeekdayAfternoon: 'availWeekdayAfternoonBtn',
-    availWeekdayEvening:   'availWeekdayEveningBtn',
-    availWeekends:         'availWeekendsBtn',
-  };
-  Object.entries(map).forEach(([key, btnId])=>{
-    const btn   = document.getElementById(btnId);
-    if(!btn) return;
-    const on    = !!S[key];
-    const track = btn.querySelector('.avail-track');
-    const thumb = btn.querySelector('.avail-thumb');
-    if(track) track.style.background = on ? '#1a7a3a' : '#d1d5db';
-    if(thumb) thumb.style.left       = on ? '22px'   : '2px';
-    btn.style.borderColor = on ? '#1a7a3a' : '#d1d5db';
-    btn.style.background  = on ? '#f0fdf4' : '#f9fafb';
-    const labelSpan = btn.querySelector('span');
-    if(labelSpan) labelSpan.style.color = on ? '#065f46' : '#374151';
-  });
-}
-
 // ── Improve / fun selection ────────────────────────────────────
 function selectImproveGoal(val){
   S.wantsToImprove = val;
@@ -775,24 +746,6 @@ function populateSummary(){
   set('sumVenuePref', venue  || '—');
   const driveEl = document.getElementById('driveDistance');
   set('sumDrive', driveEl ? driveEl.value+' miles' : '—');
-
-  // — Availability —
-  const schedGrid = document.getElementById('sumSchedGrid');
-  if(schedGrid){
-    const windows=[
-      {key:'availWeekdayMorning',  label:'Weekday mornings',   btnId:'availWeekdayMorningBtn'},
-      {key:'availWeekdayAfternoon',label:'Weekday afternoons',  btnId:'availWeekdayAfternoonBtn'},
-      {key:'availWeekdayEvening',  label:'Weekday evenings',    btnId:'availWeekdayEveningBtn'},
-      {key:'availWeekends',        label:'Weekends',            btnId:'availWeekendsBtn'},
-    ];
-    const active = windows.filter(w=>{
-      const btn = document.getElementById(w.btnId);
-      return S[w.key] || btn?.classList.contains('on') || btn?.dataset?.active==='true';
-    });
-    schedGrid.innerHTML = active.length
-      ? active.map(w=>'<span style="display:inline-block;padding:3px 9px;border-radius:999px;background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.4);color:#4CAF7D;font-size:11px;font-weight:600;margin:2px;">'+w.label+'</span>').join('')
-      : '<span style="color:var(--dim);font-size:12px;">None selected</span>';
-  }
 
   // — Playing levels —
   set('sumSkill',  skill || '—');
@@ -1033,10 +986,7 @@ function showProfileDiff(){
     {label:'Skill Level',   old:String(player.skill_level||''),       nw:String(S.skill||player.skill_level||'')},
     {label:'DUPR Rating',   old:String(player.dupr_rating||''),       nw:String(S.duprVal||'')},
     {label:'Target Level',  old:String(player.goal_rating||''),       nw:String(S.goalRating||'')},
-    {label:'Wkdy Mornings', old:String(!!(player.avail_weekday_morning)),   nw:String(!!S.availWeekdayMorning)},
-    {label:'Wkdy Afternoons',old:String(!!(player.avail_weekday_afternoon)),nw:String(!!S.availWeekdayAfternoon)},
-    {label:'Wkdy Evenings', old:String(!!(player.avail_weekday_evening)),   nw:String(!!S.availWeekdayEvening)},
-    {label:'Weekends',      old:String(!!(player.avail_weekends)),           nw:String(!!S.availWeekends)},
+
     {label:'Is Organizer',  old:String(player.is_organizer||false),    nw:String(S.isOrganizer==='Yes')},
     {label:'Is Coach',      old:String(player.is_coach||false),       nw:String(S.isCoach==='Yes')},
     {label:'Coach Certs',   old:player.coach_certifications||'',      nw:S.coachCerts&&S.coachCerts.size>0?[...S.coachCerts].join(', '):''},
@@ -8851,12 +8801,6 @@ function restoreProfileForm(player){
     }
   }
 
-  // Restore 4 availability toggles
-  S.availWeekdayMorning   = !!player.avail_weekday_morning;
-  S.availWeekdayAfternoon = !!player.avail_weekday_afternoon;
-  S.availWeekdayEvening   = !!player.avail_weekday_evening;
-  S.availWeekends         = !!player.avail_weekends;
-  updateAvailToggles();
 
   if(player.drive_distance_miles){
     const dd=document.getElementById('driveDistance');
@@ -9000,10 +8944,7 @@ function startChangeDetection(){
       S.playFormat!==(p.play_format||'Both')||
       S.playStyle!==(p.play_style||'')||
       S.venuePref!==(p.play_venues||'')||
-      !!S.availWeekdayMorning!==!!(p.avail_weekday_morning)||
-      !!S.availWeekdayAfternoon!==!!(p.avail_weekday_afternoon)||
-      !!S.availWeekdayEvening!==!!(p.avail_weekday_evening)||
-      !!S.availWeekends!==!!(p.avail_weekends)||
+
       // Organizer flag
       (S.isOrganizer==='Yes')!==(p.is_organizer||false)||
       // Coach fields
