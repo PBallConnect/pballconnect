@@ -14,7 +14,7 @@ _Cross-reference: CLAUDE.md (overview), CLAUDE-RULES.md (rules), CLAUDE-SMS.md (
 | `registrations` | Player profiles — primary record, keyed by `email` | `email`, `first_name`, `last_name`, `zip_code`, `city`, `state`, `lat`, `lon`, `skill_self`, `dupr_rating`, `gender`, `age_range`, `play_style`, `is_organizer`, `wants_organizer`, `profile_complete`, `qr_invite_id`, `avail_weekday_morning`, `avail_weekday_afternoon`, `avail_weekday_evening`, `avail_weekends`, `phone` (10-digit string), `sms_opt_in` (boolean, default false) |
 | `sms_log` | Audit trail for all SMS attempts | `player_email`, `match_id`, `event_type`, `status` ('sent'/'failed'/'rate_limited'/'not_opted_in'/'no_phone'/'no_player'), `sent_at`, `error_code` |
 | `sms_consent_log` | Append-only TCPA consent audit trail (added May 17, 2026) | `player_email`, `event` ('opt_in'/'opt_out'), `method`, `ip_address`, `user_agent`, `created_at` — never UPDATE or DELETE; service role INSERT only |
-| `connections` | Inner Circle relationships | `player_email`, `connection_email`, `status` |
+| `connections` | Inner Circle relationships | `requester_email`, `recipient_email`, `status`, `requester_name`, `recipient_name`, `message`, `responded_at`, `is_favorite` |
 | `matches` | Match events | `id`, `organizer_email`, `match_date`, `time_start`, `time_end`, `court_id`, `court_name`, `format`, `num_courts`, `gender_pref`, `max_players` |
 | `match_responses` | Per-player responses | `match_id`, `player_email`, `response` ('in'/'out'/'pending'/'waitlist') |
 | `match_results` / `match_scores` | Recorded scores | — |
