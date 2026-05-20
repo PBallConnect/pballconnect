@@ -13677,7 +13677,7 @@ async function injectNamedGroupOptions(){
     let allMembers = [];
     try{
       const mRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/player_group_members?group_id=in.(${ids.join(',')})&select=group_id,email`,
+        `${SUPABASE_URL}/rest/v1/player_group_members?group_id=in.(${ids.join(',')})&select=group_id,player_email`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
       );
       if(mRes.ok) allMembers = await mRes.json();
