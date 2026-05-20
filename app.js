@@ -736,7 +736,7 @@ function populateSummary(){
   const lastName  = document.getElementById('lastName')?.value?.trim()  || '';
   const email     = document.getElementById('email')?.value?.trim()     || S.email || getMyEmail() || '';
   const phone     = document.getElementById('phone')?.value?.trim()     || '';
-  const ageRange  = document.getElementById('playerAge')?.value         || S.dob   || '';
+  const ageRange  = document.getElementById('playerAge')?.value         || S.age_range   || '';
   const gender    = S.gender    || '';
   const city      = S.city  || '';
   const state     = S.state || '';
@@ -1048,7 +1048,7 @@ function showProfileDiff(){
     {label:'Emoji',         old:player.avatar_emoji||'🎾',           nw:currentEmoji},
     {label:'First Name',    old:player.first_name||'',               nw:v('firstName')},
     {label:'Nickname',      old:player.nickname||'',                  nw:v('nickname')},
-    {label:'Age Range',     old:player.dob||'',                       nw:document.getElementById('playerAge')?.value||''},
+    {label:'Age Range',     old:player.age_range||'',                       nw:document.getElementById('playerAge')?.value||''},
     {label:'Zip',           old:player.zip_code||'',                  nw:v('addrZip')},
     {label:'Phone',         old:decodePhone(player.phone||''),         nw:(v('phone')||'').replace(/\D/g,'')},
     {label:'SMS Opt-In',   old:String(!!(player.sms_opt_in)),          nw:String(!!(document.getElementById('phone')?.value.replace(/\D/g,'').length>=10 && document.getElementById('smsOptIn')?.checked))},
@@ -1179,7 +1179,7 @@ async function doSaveProfile(){
       sms_opt_in_at:       _smsOptIn   ? new Date().toISOString() : undefined,
       sms_opt_out_at:      _isOptingOut ? new Date().toISOString() : undefined,
       sms_opt_out_method:  _isOptingOut ? (_phoneRemoved ? 'phone_removed' : 'profile') : undefined,
-      dob:                 document.getElementById('playerAge')?.value||S.dob||'',
+      age_range:                 document.getElementById('playerAge')?.value||S.age_range||'',
       gender:              S.gender,
       city:                S.city || '',
       state:               S.state || '',
@@ -1362,7 +1362,7 @@ function resetForm(){
   document.getElementById('confirmOverlay').style.display='none';
   Object.assign(S,{gender:'',skill:'',schedule:new Set(),anytime:false,partner:false,waiver:false,photoSrc:null,state:'',stateFips:'',county:'',city:'',court:'',courtName:'',duprVal:null,venues:new Set(),driveDistance:'25 miles',playStyle:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null});
 
-  ['firstName','lastName','nickname','email','phone','dob','addrZip','addrCity','addrState'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['firstName','lastName','nickname','email','phone','age_range','addrZip','addrCity','addrState'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const zipStatus=document.getElementById('zipGeoStatus');if(zipStatus)zipStatus.textContent='';
   const sl=document.getElementById('duprSlider');if(sl){sl.value=0;sl.style.setProperty('--pct','0%');}
   const prs=document.getElementById('personalRatingSlider');if(prs){prs.value=0;prs.style.setProperty('--pct','0%');}
@@ -8861,7 +8861,7 @@ function restoreProfileForm(player){
     firstName:player.first_name,lastName:player.last_name,
     nickname:player.nickname||S.nickname||"",email:player.email,
     phone:player.phone?formatPhoneDisplay(player.phone):'',
-    dob:player.dob,
+    age_range:player.age_range,
     addrZip:player.zip_code,
     addrCity:player.city,
     addrState:(()=>{const st=player.state||'';if(st.length===2)return st.toUpperCase();const found=Object.values(STATE_INFO).find(([a,n])=>n&&n.toLowerCase()===st.toLowerCase());return found?found[0]:st;})(),
@@ -8967,7 +8967,7 @@ function restoreProfileForm(player){
 
   // Restore age
   const ageEl=document.getElementById('playerAge');
-  if(ageEl&&player.dob) ageEl.value=player.dob;
+  if(ageEl&&player.age_range) ageEl.value=player.age_range;
 
   // Restore phone (decoded)
   const phoneEl=document.getElementById('phone');
@@ -9087,7 +9087,7 @@ function startChangeDetection(){
       String(S.skill||'')!==String(p.skill_level||'')||
       String(S.goalRating||'')!==String(p.goal_rating||'')||
       String(S.duprVal||'')!==String(p.dupr_rating||'')||
-      (document.getElementById('playerAge')?.value||'')!==(p.dob||'');
+      (document.getElementById('playerAge')?.value||'')!==(p.age_range||'');
     if(changed){btn.classList.add('has-changes');btn.disabled=false;}
     else{btn.classList.remove('has-changes');btn.disabled=true;}
   },400);
@@ -11453,7 +11453,7 @@ function showQuickConnectForm(email, inv){
         phone:             ph || null,
         zip_code:          zip,
         skill_level:       skill,
-        dob:               age   || null,
+        age_range:               age   || null,
         playing_since:     since || null,
         waiver_agreed:     true,
         match_gender_pref: 'Both',
