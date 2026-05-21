@@ -1,6 +1,6 @@
 # CLAUDE.md — PBallConnect Reference
 
-_Last updated: May 17, 2026_
+_Last updated: May 20, 2026_
 
 ---
 
@@ -96,7 +96,7 @@ No tests, no linter, no build commands.
 - ~~`icPostPendingConnection()` 409 Conflict on duplicate~~ — handled with `resolution=ignore-duplicates`
 - ~~`sendEmail()` missing `return` keyword~~ — fixed; function now returns the fetch response
 - ~~IC connection stays `pending` after new user accepts invite~~ — original row now PATCHed to `approved`; reciprocal row created as `approved`; `inviteMutualOverlay` with broken requester logic removed
-- ~~Duplicate invite cards in incoming requests view~~ — `loadIcPending()` deduplicates by `requester_email` before rendering
+- ~~Duplicate invite cards in incoming requests view~~ — `loadIcPending()` deduplicates by `requester_email` before rendering; race condition fixed (May 20) by removing redundant call in `showIcSection()` and adding `_icPendingLoading` in-flight guard with `finally` block
 - ~~"Welcome back" shown on first login~~ — per-email `localStorage` flag (`pb_welcomed_<email>`) distinguishes first vs. returning logins
 - ~~Full Profile button doing nothing on registration choice screen~~ — `startNewRegistration` now sets `_newUserRegistrationStarted = true` on first call; dual auth events (both `onAuthStateChange` and `getSession()` fire on magic link arrival) no longer stack two overlays
 - ~~IC tab shows 0 on arrival from dashboard~~ — fixed by syncing counts in `showIcSection()`
@@ -289,3 +289,41 @@ Instruction format reminders:
 - **`doSaveProfile()` — SMS opt-in flag is `_smsOptIn`, not `S.smsOptIn`.** `_smsOptIn` is a local variable computed at ~line 1168 (`_phoneDigits.length === 10 && !!(smsOptIn checkbox checked)`). `S.smsOptIn` does not exist. Use `_smsOptIn` in any future edits to this function.
 - **When investigating a stray or misplaced button, check `onclick` before trusting the label.** `smInviteContinueBtn` was labeled "Send Invites →" but its `onclick` was `_smInviteContinue()` which only called `smUpdateProgress(5)` and scrolled to the next step — a Continue button, not a send. The comment in the code even said "Continue button." Read what the button does, not what it says.
 - **`_qcSave()` — SMS opt-in flag is `_qcSmsOptIn`; player email is `email.toLowerCase()`; consent log method is `'quick_connect'`.** `_qcSmsOptIn` is a local variable computed at ~line 11453 (`ph.length === 10 && !!(qcSmsOptIn checkbox checked)`). Player email comes from the outer closure variable `email` — use `email.toLowerCase()`, not `S.email` or `v('email')`. Consent log `method` field must be `'quick_connect'`, not `'registration'`.
+
+### Session learnings — May 20, 2026
+
+**Schema changes:**
+- **`dob` renamed to `age_range`** in `registrations` — stores bucket strings like `'41-45'`, not a date of birth. Actual DOB not collected (PII concern). `age_range` is the authoritative column name everywhere — `dob` is gone.
+- **`schedule` column dropped** from `registrations` and removed from `public_profiles` view — replaced by `avail_*` booleans. All dead code (`toggleCell`, `toggleColumn`, `toggleDay`, schedule IIFE, `S.schedule`, `schedStr`, `schedule:` write) removed from `app.js` and `index.html`.
+- **`avail_weekday_morning/afternoon/evening`, `avail_weekends`** — DB columns kept, UI removed to reduce registration friction. `doSaveProfile()` still writes `false` for all four on every save. Restore UI when match scheduling logic is built.
+
+**Bug fixes:**
+- **Base64 phone encoding in `_qcSave()`** — `encodePhone(ph)` replaced with `ph || null`. `decodePhone()` left in place to handle existing encoded rows gracefully.
+- **Duplicate IC request cards** — removed redundant `loadIcPending()` call in `showIcSection()`; added `_icPendingLoading` in-flight guard with `finally` block. Root cause was two concurrent async calls racing on `list.innerHTML`.
+- **Stray Send Invites button in Step 4** — `smInviteContinueBtn` removed from `buildSmInviteGrid()`.
+- **160-character SMS limit removed** — `send-sms.js` no longer caps message length; Twilio handles multipart SMS automatically.
+- **Age range selector** — individual year options (18–25) replaced with uniform `'18-25'` bucket in both `index.html` (`#playerAge`) and Quick Connect form in `app.js`.
+
+**SMS pipeline status:**
+- End-to-end flow verified and working — token signed, SMS sent, Twilio accepted.
+- Blocked only by Twilio trial mode (Error 30034 — A2P 10DLC unregistered number).
+- Fix: upgrade Twilio to Pay-as-you-go + complete A2P 10DLC brand registration (~$4 one-time) and campaign registration (~$15 one-time + ~$10/month) before launch.
+
+**TCPA consent log — all three paths confirmed wired:**
+- `doSaveProfile()` — method: `'registration'`, flag: `_smsOptIn`
+- `_qcSave()` — method: `'quick_connect'`, flag: `_qcSmsOptIn`, email: `email.toLowerCase()`
+- `sms-register.js` — method: `'sms_invite'`
+
+**Database cleanup:**
+- 19 fake/test registrations deleted; 78 `match_responses` and 7 `connections` rows removed.
+- **`connections` table** — correct column names are `requester_email` and `recipient_email`. NOT `player_email` or `connection_email`. CLAUDE-SCHEMA.md corrected. Do not revert.
+- **`player_group_members`** — correct column is `player_email`. Confirmed in Supabase.
+
+**Pre-launch checklist additions:**
+- Upgrade Twilio trial → Pay-as-you-go before any production SMS.
+- Complete A2P 10DLC brand registration (~$4 one-time) and campaign registration (~$15 one-time + ~$10/month).
+- Configure and verify staging environment on Cloudflare Pages before Twilio upgrade.
+
+**UI simplification decisions:**
+- Availability toggles removed from profile registration form — too much friction for onboarding. DB columns preserved for future match scheduling logic. Do not re-add until match scheduling requires them.
+- `schedule` field fully removed — dead code, superseded by `avail_*` booleans (which are themselves hidden for now).
