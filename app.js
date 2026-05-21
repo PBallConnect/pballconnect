@@ -11174,8 +11174,7 @@ function showQuickConnectForm(email, inv){
   for(let y=2026;y>=1985;y--) yearOpts += '<option>'+y+'</option>';
 
   const ageRanges = [
-    ['','Select Age Range…'],['Under 18','Under 18'],
-    ...Array.from({length:10},(_,i)=>[String(18+i),String(18+i)]),
+    ['','Select Age Range…'],['Under 18','Under 18'],['18-25','18–25'],
     ['26-30','26–30'],['31-35','31–35'],['36-40','36–40'],['41-45','41–45'],
     ['46-50','46–50'],['51-55','51–55'],['56-60','56–60'],['61-65','61–65'],
     ['66-70','66–70'],['71-75','71–75'],['76-80','76–80'],['81+','81+']
