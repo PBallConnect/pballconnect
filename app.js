@@ -8528,7 +8528,6 @@ async function restoreSession(email, playerData){
     }catch(e){}
   }, 500);
 
-  loadIcPending();
   setTimeout(loadInnerCircle, 600);  // load IC members so badges show correctly
   setTimeout(loadMatchSquareCounts, 800);
   // Load court badges for nav
@@ -9173,9 +9172,12 @@ async function removeFromCircle(connId, btn){
   }catch(e){ btn.disabled=false; btn.textContent='Remove'; }
 }
 
+let _icPendingLoading = false;
 async function loadIcPending(){
   const myEmail = getMyEmail();
   if(!myEmail) return;
+  if(_icPendingLoading) return;
+  _icPendingLoading = true;
   const card = document.getElementById('icPendingCard');
   const list = document.getElementById('icPendingList');
   const badge = document.getElementById('icPendingBadge');
@@ -9236,6 +9238,7 @@ async function loadIcPending(){
       list.appendChild(row);
     });
   }catch(e){ console.warn('loadIcPending error:',e); }
+  finally{ _icPendingLoading = false; }
 }
 
 function buildPendingRequestRow(conn, player={}){
