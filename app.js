@@ -644,7 +644,10 @@ function toggleWaiver(){toggleConsent('risk');}
 function v(id){const el=document.getElementById(id);return el?el.value.trim():'';}
 function chk1(){
   const btn=document.getElementById('next1');if(!btn)return;
-  const ok=v('firstName')&&v('email')&&v('phone');
+  const genderOk=['Man','Woman','Prefer not to say'].includes(S.gender);
+  const hint=document.getElementById('genderHint');
+  if(hint) hint.style.display=(!genderOk&&(v('firstName')||v('email')||v('phone')))?'block':'none';
+  const ok=v('firstName')&&v('email')&&v('phone')&&genderOk;
   btn.disabled=!ok;
 }
 function chk2(){
@@ -8980,6 +8983,7 @@ function openEmojiPickerIfUnlocked(){
 }
 
 function lockProfileForm(){
+  document.getElementById('editModeBanner')?.remove();
   if(_editModeActive)return;
   ['step1','step2','step3'].forEach(id=>{
     const step=document.getElementById(id);if(!step)return;

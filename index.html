@@ -468,10 +468,11 @@
     <div class="field">
       <label>Gender</label>
       <div class="chips" id="genderChips">
-        <button class="chip" onclick="selChip('genderChips',this,'gender')">Male</button>
-        <button class="chip" onclick="selChip('genderChips',this,'gender')">Female</button>
-        <button class="chip" onclick="selChip('genderChips',this,'gender')">Prefer not to say</button>
+        <button class="chip" onclick="selChip('genderChips',this,'gender');chk1()">Man</button>
+        <button class="chip" onclick="selChip('genderChips',this,'gender');chk1()">Woman</button>
+        <button class="chip" onclick="selChip('genderChips',this,'gender');chk1()">Prefer not to say</button>
       </div>
+      <p id="genderHint" style="display:none;color:#c0392b;font-size:14px;margin-top:4px;">Please select your gender to continue.</p>
     </div>
     <div class="field">
       <label>Playing Hand</label>
