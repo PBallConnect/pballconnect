@@ -1271,7 +1271,7 @@ async function doSaveProfile(){
     // If arrived via invite link, show IC join prompt after a short delay
     const newEmail = v('email') || getMyEmail();
     const newName  = (v('firstName')+' '+v('lastName')).trim();
-    setTimeout(()=>handlePostRegistrationInvite(newEmail, newName), 1500);
+    setTimeout(()=>handlePostRegistrationInvite(newEmail, newName), 2500);
   }
 }
 
@@ -11366,6 +11366,7 @@ function showQuickConnectForm(email, inv){
           console.warn('Consent log failed (_qcSave):', e);
         }
       }
+      const _hadPendingInvite = !!PENDING_INVITE;
       _newUserRegistrationStarted = false;
       document.getElementById('quickConnectOverlay')?.remove();
       await restoreSession(email.toLowerCase());
@@ -11374,8 +11375,13 @@ function showQuickConnectForm(email, inv){
       updateOrganizerNav();
       updateNavForUserType();
       loadAllMatchBadges();
-      showPage('dashboard');
-      showToast('Welcome to PBallConnect! 🎾','#1a7a3a');
+      if(_hadPendingInvite){
+        showPage('innerCircle');
+        setTimeout(() => showIcSection('requests'), 400);
+      } else {
+        showPage('dashboard');
+        showToast('Welcome to PBallConnect! 🎾','#1a7a3a');
+      }
     }catch(e){
       if(btn){ btn.disabled=false; btn.textContent='Save & Join PBallConnect 🏓'; btn.style.background='#1a7a3a'; btn.style.cursor='pointer'; }
       if(errEl){ errEl.textContent='Save failed: '+(e.message||'Unknown error'); errEl.style.display='block'; }
@@ -11671,6 +11677,8 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
       }catch(e){}
     }
     // If declined, original row stays pending — new user can accept from IC → Requests later
+    showPage('innerCircle');
+    setTimeout(() => showIcSection('requests'), 400);
   };
 
   document.getElementById('icJoinYes').onclick = ()=>showStep2(true);
