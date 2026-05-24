@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Join PBallConnect</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0a120b; font-family: Arial, sans-serif; min-height: 100vh;
+           display: flex; align-items: flex-start; justify-content: center;
+           padding: 32px 20px 48px; }
+    .card { background: #fff; border-radius: 20px; padding: 32px 28px;
+            width: 100%; max-width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+    .logo { text-align: center; margin-bottom: 4px; }
+    .logo .pb { font-size: 26px; font-weight: 800; color: #1a7a3a; }
+    .logo .conn { font-size: 26px; font-weight: 800; color: #111; }
+    .logo .beta { display: inline-block; margin-left: 6px; padding: 2px 8px;
+                  border-radius: 999px; background: #f3f4f6; color: #9ca3af;
+                  font-size: 9px; font-weight: 700; letter-spacing: .08em; vertical-align: middle; }
+    .tagline { text-align: center; color: #9ca3af; font-style: italic;
+               font-size: 13px; margin: 0 0 22px; }
+    .heading { font-size: 21px; font-weight: 800; color: #111;
+               text-align: center; margin-bottom: 8px; }
+    .sub { font-size: 13px; color: #6b7280; text-align: center;
+           line-height: 1.6; margin-bottom: 24px; }
+    .field-label { display: block; font-size: 11px; font-weight: 700; color: #9ca3af;
+                   text-transform: uppercase; letter-spacing: .07em; margin-bottom: 7px; }
+    .field-label .req { color: #dc2626; }
+    input[type="email"], select {
+      width: 100%; padding: 12px 14px; border: 2px solid #d1d5db; border-radius: 10px;
+      font-size: 16px; color: #111; background: #fff; outline: none; margin-bottom: 18px;
+      font-family: Arial, sans-serif;
+    }
+    input[type="email"]:focus, select:focus { border-color: #1a7a3a; }
+    .slider-row { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+    .slider-row input[type="range"] {
+      flex: 1; height: 6px; cursor: pointer; padding: 0; margin: 0; border: none; border-radius: 0;
+      background: transparent;
+    }
+    .slider-val { font-size: 22px; font-weight: 800; color: #1a7a3a;
+                  min-width: 52px; text-align: right; }
+    .slider-hint { font-size: 11px; color: #9ca3af; text-align: center; margin-bottom: 4px; }
+    .skill-guide-link { display: block; text-align: center; font-size: 12px;
+                        color: #16a34a; text-decoration: underline; cursor: pointer;
+                        margin-bottom: 6px; }
+    .skill-guide { display: none; background: #f0fdf4; border: 1px solid #d1fae5;
+                   border-radius: 10px; padding: 14px; margin-bottom: 18px;
+                   font-size: 12px; color: #065f46; line-height: 1.7; }
+    .turnstile-wrap { display: flex; justify-content: center; margin: 4px 0 18px; }
+    .submit-btn { width: 100%; padding: 15px; background: #9ca3af; color: #fff;
+                  font-size: 16px; font-weight: 800; border: none; border-radius: 12px;
+                  cursor: not-allowed; transition: background .2s; margin-bottom: 14px; }
+    .submit-btn.ready { background: #1a7a3a; cursor: pointer; }
+    .small-print { color: #9ca3af; font-size: 12px; text-align: center; margin-bottom: 20px; }
+    .small-print a { color: #9ca3af; }
+    .error-msg { display: none; color: #dc2626; font-size: 12px; margin: -10px 0 14px;
+                 padding: 10px; background: #fef2f2; border-radius: 8px; }
+    .check-email { display: none; text-align: center; padding: 14px 0; }
+    .check-email .icon { font-size: 36px; margin-bottom: 12px; }
+    .check-email .title { font-size: 18px; font-weight: 700; color: #111; margin-bottom: 8px; }
+    .check-email .body { font-size: 14px; color: #6b7280; line-height: 1.6; }
+    hr { border: none; border-top: 1px solid #e5e7eb; margin: 0 0 16px; }
+    .back { text-align: center; margin: 0; }
+    .back a { color: #9ca3af; font-size: 13px; text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="logo">
+    <span class="pb">PBall</span><span class="conn">Connect</span>
+    <span class="beta">BETA</span>
+  </div>
+  <p class="tagline">For the Love of Pickleball</p>
+
+  <!-- Form state -->
+  <div id="formState">
+    <h1 class="heading">Join PBallConnect</h1>
+    <p class="sub">PBallConnect is a pickleball community built on trust. Players who join independently are encouraged to build their Inner Circle after registration.</p>
+
+    <!-- Email -->
+    <label class="field-label" for="jEmail">Email Address <span class="req">*</span></label>
+    <input type="email" id="jEmail" autocomplete="email" placeholder="you@example.com"
+      oninput="jCheck()"
+      onfocus="this.style.borderColor='#1a7a3a'"
+      onblur="this.style.borderColor='#d1d5db'"/>
+
+    <!-- Skill Level -->
+    <label class="field-label">Skill Level <span class="req">*</span></label>
+    <div class="slider-row">
+      <input type="range" id="jSkillSlider" min="0" max="21" value="0" oninput="jSkillUpdate(this.value);jCheck()"/>
+      <span class="slider-val" id="jSkillVal">—</span>
+    </div>
+    <div class="slider-hint">2.0 (beginner) → 7.0+ (pro)</div>
+    <a class="skill-guide-link" onclick="jToggleGuide();return false;">❓ What's my skill level?</a>
+    <div class="skill-guide" id="jSkillGuide">
+      <strong>2.0–2.5</strong> Beginner — just learning the game<br/>
+      <strong>3.0</strong> Can sustain rallies, working on placement<br/>
+      <strong>3.5</strong> Consistent ground strokes, learning strategy<br/>
+      <strong>4.0</strong> Solid fundamentals, competitive club play<br/>
+      <strong>4.5</strong> Tournament-level, strong all-around game<br/>
+      <strong>5.0+</strong> Advanced / Elite player
+    </div>
+
+    <!-- Playing Since -->
+    <label class="field-label" for="jSince">Playing Since <span class="req">*</span></label>
+    <select id="jSince" onchange="jCheck()">
+      <option value="">Select year…</option>
+      <option>2026</option><option>2025</option><option>2024</option><option>2023</option>
+      <option>2022</option><option>2021</option><option>2020</option><option>2019</option>
+      <option>2018</option><option>2017</option><option>2016</option><option>2015</option>
+      <option>2014</option><option>2013</option><option>2012</option><option>2011</option>
+      <option>2010</option><option>2009</option><option>2008</option><option>2007</option>
+      <option>2006</option><option>2005</option><option>2004</option><option>2003</option>
+      <option>2002</option><option>2001</option><option>2000</option><option>1999</option>
+      <option>1998</option><option>1997</option><option>1996</option><option>1995</option>
+      <option>1994</option><option>1993</option><option>1992</option><option>1991</option>
+      <option>1990</option><option>1989</option><option>1988</option><option>1987</option>
+      <option>1986</option><option>1985</option><option>1984</option><option>1983</option>
+      <option>1982</option><option>1981</option>
+    </select>
+
+    <!-- Age Range -->
+    <label class="field-label" for="jAge">Age Range <span class="req">*</span></label>
+    <select id="jAge" onchange="jCheck()">
+      <option value="">Select Age Range…</option>
+      <option value="Under 18">Under 18</option>
+      <option value="18-25">18–25</option>
+      <option value="26-30">26–30</option>
+      <option value="31-35">31–35</option>
+      <option value="36-40">36–40</option>
+      <option value="41-45">41–45</option>
+      <option value="46-50">46–50</option>
+      <option value="51-55">51–55</option>
+      <option value="56-60">56–60</option>
+      <option value="61-65">61–65</option>
+      <option value="66-70">66–70</option>
+      <option value="71-75">71–75</option>
+      <option value="76-80">76–80</option>
+      <option value="81+">81+</option>
+    </select>
+
+    <!-- Turnstile -->
+    <div class="turnstile-wrap">
+      <div class="cf-turnstile"
+           data-sitekey="0x4AAAAAADFDt6fSq_uOBj0O"
+           data-theme="light"
+           data-callback="jOnTurnstile"
+           id="jTurnstile"></div>
+    </div>
+
+    <p class="error-msg" id="jError"></p>
+
+    <button class="submit-btn" id="jSubmitBtn" onclick="jSubmit()" disabled>Send My Magic Link →</button>
+
+    <p class="small-print">Already have an account? <a href="https://pballconnect.com">Sign in at pballconnect.com</a></p>
+  </div>
+
+  <!-- Check email state -->
+  <div class="check-email" id="checkEmailState">
+    <div class="icon">✉️</div>
+    <div class="title">Check your email!</div>
+    <div class="body">We sent you a magic link. Click it to continue setting up your PBallConnect profile.</div>
+  </div>
+
+  <hr/>
+  <p class="back"><a href="https://pballconnect.com">← Back to PBallConnect</a></p>
+</div>
+
+<script>
+  var SUPABASE_URL     = 'https://dltiirdjfbjtydazrmvr.supabase.co';
+  var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsdGlpcmRqZmJqdHlkYXpybXZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MDQxNzgsImV4cCI6MjA4OTA4MDE3OH0.oBDtS3RZlGxMkqon-r1wdfYR6jPTSPGWIa8cZh7fLWA';
+
+  var _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  var DUPR_VALS = ['2.0','2.25','2.5','2.75','3.0','3.25','3.5','3.75','4.0','4.25','4.5','4.75',
+    '5.0','5.25','5.5','5.75','6.0','6.25','6.5','6.75','7.0','7.0+'];
+
+  var _skillSet      = false;  // true once slider has been moved off 0
+  var _turnstileDone = false;
+
+  function jSkillUpdate(idx){
+    _skillSet = parseInt(idx) > 0;
+    var val = _skillSet ? DUPR_VALS[parseInt(idx)] : '—';
+    document.getElementById('jSkillVal').textContent = val;
+  }
+
+  function jToggleGuide(){
+    var el = document.getElementById('jSkillGuide');
+    if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function jOnTurnstile(){
+    _turnstileDone = true;
+    jCheck();
+  }
+
+  function jGetTurnstileToken(){
+    var el = document.querySelector('[name="cf-turnstile-response"]');
+    return el ? el.value : '';
+  }
+
+  function jCheck(){
+    var email    = (document.getElementById('jEmail').value || '').trim();
+    var emailOk  = email.indexOf('@') > 0 && email.lastIndexOf('.') > email.indexOf('@');
+    var sinceOk  = !!document.getElementById('jSince').value;
+    var ageOk    = !!document.getElementById('jAge').value;
+    var ready    = emailOk && _skillSet && sinceOk && ageOk && _turnstileDone;
+    var btn      = document.getElementById('jSubmitBtn');
+    btn.disabled = !ready;
+    if(ready){ btn.classList.add('ready'); } else { btn.classList.remove('ready'); }
+  }
+
+  async function jSubmit(){
+    var email = (document.getElementById('jEmail').value || '').trim().toLowerCase();
+    var sliderIdx = parseInt(document.getElementById('jSkillSlider').value) || 0;
+    var skill = sliderIdx > 0 ? DUPR_VALS[sliderIdx] : '';
+    var since = document.getElementById('jSince').value;
+    var age   = document.getElementById('jAge').value;
+    var errEl = document.getElementById('jError');
+    errEl.style.display = 'none';
+
+    if(!email || !skill || !since || !age){
+      errEl.textContent = 'Please fill in all fields and move the skill slider.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    var turnstileToken = jGetTurnstileToken();
+    if(!turnstileToken){
+      errEl.textContent = 'Please complete the security check.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    var btn = document.getElementById('jSubmitBtn');
+    btn.disabled = true;
+    btn.classList.remove('ready');
+    btn.textContent = 'Sending…';
+
+    // Store form values in sessionStorage for pre-population after magic link click
+    sessionStorage.setItem('organic_email',         email);
+    sessionStorage.setItem('organic_skill',         skill);
+    sessionStorage.setItem('organic_playing_since', since);
+    sessionStorage.setItem('organic_age_range',     age);
+    sessionStorage.setItem('organic_source',        'organic');
+
+    var result = await _sb.auth.signInWithOtp({
+      email: email,
+      options: { emailRedirectTo: 'https://pballconnect.com/?organic=1' }
+    });
+
+    if(result.error){
+      // Clear sessionStorage on failure so stale values don't persist
+      ['organic_email','organic_skill','organic_playing_since','organic_age_range','organic_source']
+        .forEach(function(k){ sessionStorage.removeItem(k); });
+      errEl.textContent = 'Something went wrong. Please try again.';
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.classList.add('ready');
+      btn.textContent = 'Send My Magic Link →';
+      return;
+    }
+
+    document.getElementById('formState').style.display = 'none';
+    document.getElementById('checkEmailState').style.display = 'block';
+  }
+</script>
+
+</body>
+</html>

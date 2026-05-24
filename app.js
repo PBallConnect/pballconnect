@@ -1087,6 +1087,13 @@ async function doSaveProfile(){
     const _wasOptedIn    = !!(SESSION_PLAYER?.sms_opt_in);
     const _isOptingOut   = _wasOptedIn && !_smsOptIn;
     const _phoneRemoved  = _phoneDigits.length !== 10;
+    const _inviteSource  = (()=>{
+      const _org = sessionStorage.getItem('organic_source');
+      if(_org === 'organic'){ sessionStorage.removeItem('organic_source'); return 'organic'; }
+      if(PENDING_INVITE?.invite_type === 'qr') return 'qr';
+      if(PENDING_INVITE?.invite_token) return 'token';
+      return 'organic';
+    })();
     await saveRegistration({
       first_name:          v('firstName'),
       last_name:           v('lastName'),
@@ -1134,15 +1141,21 @@ async function doSaveProfile(){
       coach_rate_max:      (()=>{const el=document.getElementById('coachRateMax');return el?.value?parseInt(el.value)||null:null;})(),
       coach_bio:           document.getElementById('coachBio')?.value?.trim()||null,
       match_gender_pref:   S.matchGenderPref || 'Both',
+      invite_source:       _inviteSource,
     });
     console.log('✅ Registration saved');
     if (!SESSION_PLAYER) {
       try {
+        const _isOrganic  = _inviteSource === 'organic';
+        const _alertName  = `${(v('firstName')||'').trim()} ${(v('lastName')||'').trim()}`;
+        const _alertSubj  = _isOrganic
+          ? `🚨 Organic Signup — ${_alertName}`
+          : `🎾 New PBallConnect Registration — ${_alertName}`;
         await sendEmail({
           to_email: 'david@pballconnect.com',
           type:     'admin_registration_alert',
-          subject:  `🎾 New PBallConnect Registration — ${(v('firstName')||'').trim()} ${(v('lastName')||'').trim()}`,
-          personal_note: `Name: ${(v('firstName')||'').trim()} ${(v('lastName')||'').trim()}<br>Email: ${v('email')||''}<br>Path: Full Profile Registration<br>Skill Level: ${S.skill||'—'}<br>Zip: ${v('addrZip')||'—'}<br>Gender: ${S.gender||'—'}<br>SMS Opt-In: ${_smsOptIn ? 'Yes' : 'No'}<br>Registered At: ${new Date().toISOString()}`,
+          subject:  _alertSubj,
+          personal_note: `Name: ${_alertName}<br>Email: ${v('email')||''}<br>Path: Full Profile Registration<br>Invite Source: ${_inviteSource}<br>Skill Level: ${S.skill||'—'}<br>Age Range: ${document.getElementById('playerAge')?.value||'—'}<br>Zip: ${v('addrZip')||'—'}<br>Gender: ${S.gender||'—'}<br>SMS Opt-In: ${_smsOptIn ? 'Yes' : 'No'}<br>Registered At: ${new Date().toISOString()}`,
         });
       } catch (e) {
         console.warn('Admin alert failed:', e);
@@ -8306,6 +8319,17 @@ async function doLogin(){
     }
   }catch(e){ /* treat as unknown — proceed */ }
 
+  // Gate: new users with no invite must register through /join.html
+  if(isNewUser){
+    const _gateParams = new URLSearchParams(window.location.search);
+    const _hasInvite  = _gateParams.has('invite') || _gateParams.has('qr');
+    if(!_hasInvite && !PENDING_INVITE){
+      if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent='Send Magic Link →'; }
+      window.location.href = '/join.html';
+      return;
+    }
+  }
+
   // Update modal headline and button to reflect new vs. returning user
   if(isNewUser){
     if(titleEl) titleEl.textContent = 'Welcome to PBallConnect 🎾';
@@ -11587,6 +11611,35 @@ function startNewRegistration(email){
   showPage('playerProfile');
   unlockProfileForm();
   goTo(1);
+
+  // Pre-populate fields saved by join.html before the magic link was sent
+  (function(){
+    const orgEmail = sessionStorage.getItem('organic_email');
+    if(!orgEmail) return;
+    const orgSkill = sessionStorage.getItem('organic_skill');
+    const orgSince = sessionStorage.getItem('organic_playing_since');
+    const orgAge   = sessionStorage.getItem('organic_age_range');
+    if(emailEl) emailEl.value = orgEmail;
+    if(orgSkill){
+      const idx = DUPR_VALS.indexOf(orgSkill);
+      if(idx >= 0){
+        const slider = document.getElementById('personalRatingSlider');
+        if(slider){ slider.value = idx; updatePersonalRating(idx); }
+      }
+    }
+    if(orgSince){
+      const sinceEl = document.getElementById('playingSince');
+      if(sinceEl){ sinceEl.value = orgSince; S.playingSince = orgSince; }
+    }
+    if(orgAge){
+      const ageEl = document.getElementById('playerAge');
+      if(ageEl) ageEl.value = orgAge;
+    }
+    ['organic_email','organic_skill','organic_playing_since','organic_age_range']
+      .forEach(k => sessionStorage.removeItem(k));
+    // organic_source intentionally kept for doSaveProfile() to record invite_source
+  })();
+
   S._tosConsent = false; S._privacyConsent = false; S._riskConsent = false;
   document.getElementById('checkBoxTos')?.classList.remove('on');
   document.getElementById('checkBoxRisk')?.classList.remove('on');

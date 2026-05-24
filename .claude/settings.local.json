@@ -4,7 +4,12 @@
       "Bash(grep -n \"page-nav\\\\|nav-item\\\\|page-section\\\\|app-shell\\\\|sidebar\\\\|0a120b\\\\|1a2e1d\\\\|0f1710\\\\|background:#[0-9a-f]\\\\{5,6\\\\}\" \"C:/Users/DavidDiPerri/Documents/GitHub/pickleball-registry/styles.css\")",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "PowerShell(Get-Item *)",
+      "WebFetch(domain:pballconnect.com)",
+      "Bash(gh api *)",
+      "Bash(node --check app.js)",
+      "Bash(node *)"
     ]
   }
 }
