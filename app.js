@@ -1281,10 +1281,11 @@ async function doSaveProfile(){
     showToast('✅ Profile updated!','#4CAF7D');
   } else {
     document.getElementById('confirmOverlay').style.display='flex';
-    // If arrived via invite link, show IC join prompt after a short delay
     const newEmail = v('email') || getMyEmail();
     const newName  = (v('firstName')+' '+v('lastName')).trim();
-    setTimeout(()=>handlePostRegistrationInvite(newEmail, newName), 2500);
+    showFoundingMemberOverlay(()=>{
+      setTimeout(()=>handlePostRegistrationInvite(newEmail, newName), 2500);
+    });
   }
 }
 
@@ -11399,13 +11400,15 @@ function showQuickConnectForm(email, inv){
       updateOrganizerNav();
       updateNavForUserType();
       loadAllMatchBadges();
-      if(_hadPendingInvite){
-        showPage('innerCircle');
-        setTimeout(() => showIcSection('requests'), 400);
-      } else {
-        showPage('dashboard');
-        showToast('Welcome to PBallConnect! 🎾','#1a7a3a');
-      }
+      showFoundingMemberOverlay(()=>{
+        if(_hadPendingInvite){
+          showPage('innerCircle');
+          setTimeout(() => showIcSection('requests'), 400);
+        } else {
+          showPage('dashboard');
+          showToast('Welcome to PBallConnect! 🎾','#1a7a3a');
+        }
+      });
     }catch(e){
       if(btn){ btn.disabled=false; btn.textContent='Save & Join PBallConnect 🏓'; btn.style.background='#1a7a3a'; btn.style.cursor='pointer'; }
       if(errEl){ errEl.textContent='Save failed: '+(e.message||'Unknown error'); errEl.style.display='block'; }
@@ -11429,6 +11432,41 @@ function showQuickConnectForm(email, inv){
   };
 
   setTimeout(()=>document.getElementById('qcFirstName')?.focus(), 150);
+}
+
+async function showFoundingMemberOverlay(onDismiss){
+  if(localStorage.getItem('pb_founding_seen')){ onDismiss(); return; }
+  let playerCount = '';
+  try{
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/public_profiles?select=id&limit=1`,
+      { headers:{ 'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'count=exact' } }
+    );
+    const cr = r.headers.get('content-range');
+    if(cr){ const total=cr.split('/')[1]; if(total && total!=='*') playerCount=total; }
+  }catch(e){}
+  const countStr = playerCount ? playerCount+' players' : 'our founding players';
+  const overlay = document.createElement('div');
+  overlay.id = 'foundingMemberOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML =
+    '<div style="background:#0f1f12;border:1px solid rgba(245,158,11,0.4);border-radius:20px;'+
+    'padding:32px 28px;max-width:440px;width:92%;text-align:center;">'+
+      '<div style="font-size:48px;margin-bottom:12px;">🎾</div>'+
+      '<h2 style="color:#fff;font-size:20px;font-weight:800;margin:0 0 12px;">Welcome to the founding team! 🎾</h2>'+
+      '<p style="color:rgba(255,255,255,0.7);font-size:14px;line-height:1.7;margin:0 0 24px;">'+
+        'You\'re one of '+countStr+' helping shape PBallConnect. Your feedback matters — use the 💬 button anytime.'+
+      '</p>'+
+      '<button id="foundingMemberBtn" style="width:100%;padding:14px;border-radius:12px;border:none;'+
+        'background:var(--green);color:var(--dark);font-weight:800;font-size:14px;cursor:pointer;'+
+        'font-family:\'DM Sans\',sans-serif;">Let\'s Play! →</button>'+
+    '</div>';
+  document.body.appendChild(overlay);
+  document.getElementById('foundingMemberBtn').onclick = function(){
+    localStorage.setItem('pb_founding_seen','1');
+    overlay.remove();
+    onDismiss();
+  };
 }
 
 function showOrganizerQuestion(email, inv){
