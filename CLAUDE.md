@@ -1,6 +1,6 @@
 # CLAUDE.md — PBallConnect Reference
 
-_Last updated: May 20, 2026_
+_Last updated: May 24, 2026_
 
 ---
 
@@ -46,6 +46,7 @@ Deployed on **Cloudflare Pages** at `pballconnect.com`. No build step, no bundle
 | `styles.css` | — | All styles |
 | `landing.html` | — | Public marketing landing page — standalone, no app.js/styles.css dependency. Hero, features, skill level guide, waitlist form with Turnstile bot protection. |
 | `invite.html` | — | Standalone invite landing page — no app.js dependency |
+| `join.html` | — | Standalone organic signup gate — no app.js/styles.css dependency. Shown to uninvited first-time users redirected from `doLogin()`. Four pre-screen fields (email, skill, playing since, age range) stored in sessionStorage and pre-populated into the registration form after magic link auth. Cloudflare Turnstile bot protection. |
 | `functions/api/send-email.js` | — | Cloudflare Pages Function for transactional email via Resend. IP rate-limited (5/hr) via `RATE_LIMIT_KV`. |
 | `functions/api/send-sms.js` | — | Cloudflare Pages Function for SMS via Twilio. Consent-gated (`sms_opt_in` required), three-tier rate limited (player/match/global via KV), logs all attempts to `sms_log`. Always returns 200 — SMS errors never crash callers. No message length cap — Twilio handles multipart SMS automatically. |
 | `functions/api/twilio-webhook.js` | — | Receives Twilio STOP/HELP/START keyword callbacks. Validates X-Twilio-Signature (HMAC-SHA1), syncs `sms_opt_in` in Supabase, logs to `sms_log`. |
@@ -88,6 +89,8 @@ No tests, no linter, no build commands.
 3. **Non-member match invite flow not built.** Organizers can only invite IC members. Inviting players outside the IC (by email or name) is not yet implemented.
 
 4. **Create Group: Mixed gender count may not update correctly in all cases.** `buildGroupSummaryGrid()` uses a case-insensitive email Map for gender lookup — verify that IC_MEMBERS gender fields are consistent across all IC members after the fix.
+
+5. **Bug C — phone/link invite paths: IC connection never established.** `icPostPendingConnection()` stores `pending_TOKEN` as a placeholder `recipient_email` for phone and link invite paths (no recipient email known at invite time). `handlePostRegistrationInvite()` PATCHes `connections` where `recipient_email = newPlayerEmail` — this matches zero rows for the placeholder. The IC connection is never approved for these paths. Email invite path works correctly (recipient email is known at invite time). Fix required before phone/link invite paths are reliable.
 
 **Resolved (do not re-introduce):**
 - ~~`invites` table RLS INSERT policy missing~~ — policy added in Supabase; invites now write correctly
@@ -199,7 +202,7 @@ An alert email fires to `david@pballconnect.com` on every new player registratio
 | Quick Connect | `_qcSave()` | `app.js` |
 | SMS invite | `sms-register.js` | `functions/api/sms-register.js` |
 
-Email includes: player name, email, registration path, skill level, zip code, gender, `sms_opt_in` status, and UTC timestamp. Always `await sendEmail()` in `try/catch`. Never fire-and-forget. See Rule 50.
+Email includes: player name, email, registration path, invite source, skill level, age range, zip code, gender, `sms_opt_in` status, and UTC timestamp. Subject prefixed with 🚨 for organic signups. Always `await sendEmail()` in `try/catch`. Never fire-and-forget. See Rule 50.
 
 ---
 
@@ -327,3 +330,26 @@ Instruction format reminders:
 **UI simplification decisions:**
 - Availability toggles removed from profile registration form — too much friction for onboarding. DB columns preserved for future match scheduling logic. Do not re-add until match scheduling requires them.
 - `schedule` field fully removed — dead code, superseded by `avail_*` booleans (which are themselves hidden for now).
+
+### Session learnings — May 24, 2026
+
+**Organic signup gate:**
+- **`join.html` created** — standalone gate page (no app.js/styles.css dependency). Uninvited first-time users are redirected here from `doLogin()` when: `isNewUser === true` AND no `?invite=` or `?qr=` in URL AND `PENDING_INVITE === null`. Four pre-screen fields: email, skill slider, playing since, age range. Cloudflare Turnstile bot protection (same sitekey as `landing.html`).
+- **sessionStorage pre-population** — `join.html` stores `organic_email`, `organic_skill`, `organic_playing_since`, `organic_age_range`, `organic_source='organic'` before sending the magic link. `emailRedirectTo` points to `https://pballconnect.com/?organic=1`. After auth, `startNewRegistration()` reads these keys, pre-populates the registration form via DOM + `S.*` + `updatePersonalRating()`, then clears the four field keys. `organic_source` is intentionally kept until `doSaveProfile()` reads and clears it.
+- **`invite_source` column** — added to `registrations` table with CHECK constraint `('organic','qr','token','sms')`. Run in Supabase SQL Editor: `ALTER TABLE registrations ADD COLUMN invite_source text CHECK (invite_source IN ('organic','qr','token','sms'));`. `doSaveProfile()` derives the value at save time: checks `sessionStorage.organic_source` first (organic path), then `PENDING_INVITE.invite_type`/`invite_token` (invited paths), defaults to `'organic'`.
+
+**Admin alert enhanced:**
+- Organic signups get 🚨 subject prefix: `"🚨 Organic Signup — [Name]"`. Invited signups keep existing format.
+- `personal_note` now includes `Invite Source` and `Age Range` fields on all full-profile registrations.
+
+**IC invite section relabeled (May 24):**
+- `index.html` line 1256: `"Requests to Join Your Circle"` → `"Inner Circle Invites to Me"`.
+- Subtitle updated to `"These players have invited you to their Inner Circle."` — reflects that the section shows invites the current user received, not requests they sent.
+
+**Post-registration redirect to IC page:**
+- After accept/decline in `handlePostRegistrationInvite()` → `showStep2()`, app now navigates to `showPage('innerCircle')` then `setTimeout(() => showIcSection('requests'), 400)`. Fires for both Yes and No.
+- `doSaveProfile()` new-user path: `handlePostRegistrationInvite()` delay extended from 1500ms → 2500ms.
+- `_qcSave()`: captures `_hadPendingInvite = !!PENDING_INVITE` before calling `handlePostRegistrationInvite()`. If true, navigates to IC requests tab instead of dashboard (welcome toast skipped).
+
+**Known open bug logged (Bug C):**
+- Phone and link invite paths store `pending_TOKEN` as placeholder `recipient_email` in `connections`. `handlePostRegistrationInvite()` PATCH matches zero rows for these paths — IC connection is never established. Email invite path is unaffected. Do not attempt to fix by reusing `handlePostRegistrationInvite()` — requires a separate lookup strategy at registration time.
