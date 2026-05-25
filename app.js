@@ -8406,6 +8406,10 @@ async function initApp(){
   // No-session users: visibility is restored below before showPage('welcome').
   const welcomeInner = document.querySelector('#page-welcome > div');
   const _urlParams2 = new URLSearchParams(window.location.search);
+  // Organic magic link return — user came from join.html, suppress the banner
+  if(_urlParams2.get('organic') === '1'){
+    localStorage.setItem('pb_beta_banner_seen','1');
+  }
   const isNewUser = _urlParams2.get('newuser') === '1';
   // Also detect Supabase magic link tokens in the URL so we suppress the welcome
   // screen while auth resolves. iOS Safari opens magic links in a new tab —
@@ -12628,11 +12632,14 @@ function closeBetaBanner(){
   localStorage.setItem('pb_beta_banner_seen','1');
 }
 
-function maybeShowBetaBanner(){
-  if(!localStorage.getItem('pb_beta_banner_seen')){
-    const banner = document.getElementById('betaWelcomeBanner');
-    if(banner) banner.style.display='flex';
-  }
+async function maybeShowBetaBanner(){
+  if(localStorage.getItem('pb_beta_banner_seen')) return;
+  try{
+    const { data: { session } } = await _supabase.auth.getSession();
+    if(session) return;
+  }catch(e){}
+  const banner = document.getElementById('betaWelcomeBanner');
+  if(banner) banner.style.display='flex';
 }
 
 // Close feedback modal on backdrop click

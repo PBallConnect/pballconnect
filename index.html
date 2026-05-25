@@ -2370,30 +2370,43 @@
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:center;justify-content:center;">
   <div style="background:#0f1f12;border:1px solid rgba(245,158,11,0.4);border-radius:20px;
     padding:32px 28px;max-width:440px;width:92%;text-align:center;position:relative;">
-    <div style="font-size:48px;margin-bottom:12px;">🏓</div>
+    <img src="/icon-192.png" alt="PBallConnect" style="width:64px;height:64px;border-radius:16px;display:block;margin:0 auto 12px;">
     <div style="display:inline-flex;align-items:center;padding:3px 12px;border-radius:999px;
       background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);
       color:#fbbf24;font-size:11px;font-weight:800;letter-spacing:.1em;margin-bottom:16px;">
       PRIVATE BETA
     </div>
     <h2 style="color:#fff;font-size:20px;font-weight:800;margin:0 0 12px;">Welcome to PBallConnect</h2>
-    <p style="color:rgba(255,255,255,0.7);font-size:14px;line-height:1.7;margin:0 0 24px;">
-      We're building the best way to organize pickleball with people you trust. Our founding members are helping us get it right.
+    <p style="color:rgba(255,255,255,0.7);font-size:14px;line-height:1.7;margin:0 0 4px;">
+      A trusted pickleball community built on Inner Circles — the people you actually play with.
     </p>
-    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
-      <button onclick="closeBetaBanner(); openLoginModal();" style="width:100%;padding:14px;border-radius:12px;border:none;
+    <p style="color:rgba(255,255,255,0.7);font-size:14px;line-height:1.7;margin:0 0 24px;">
+      How would you like to get started?
+    </p>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
+      <button onclick="closeBetaBanner(); window.location.href='/join.html'" style="width:100%;padding:14px 16px;border-radius:12px;border:none;
         background:var(--green);color:var(--dark);font-weight:800;font-size:14px;cursor:pointer;
-        font-family:'DM Sans',sans-serif;">
-        I'm a founding member &rarr;
+        font-family:'DM Sans',sans-serif;text-align:left;">
+        🎾 Join PBallConnect &rarr;
       </button>
-      <button onclick="window.location.href='/join.html'" style="width:100%;padding:14px;border-radius:12px;
+      <button onclick="closeBetaBanner(); window.location.href='/join.html?path=quickinvite'" style="width:100%;padding:14px 16px;border-radius:12px;
         border:1.5px solid rgba(255,255,255,0.3);background:transparent;color:#fff;font-weight:800;
-        font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;">
-        I'm new to PBallConnect &rarr;
+        font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;text-align:left;">
+        🤝 Ask a member to invite me &rarr;
+      </button>
+      <button onclick="closeBetaBanner(); window.location.href='/join.html?path=waitlist'" style="width:100%;padding:14px 16px;border-radius:12px;
+        border:1.5px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.6);font-weight:400;
+        font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;text-align:left;">
+        🔔 Notify me at launch &rarr;
       </button>
     </div>
-    <div style="font-size:12px;color:var(--dim);">
-      Invited by a member? Use your invite link directly.
+    <div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:16px;">
+      <span style="font-size:13px;color:var(--dim);">Already a member or Charter Member?</span>
+      <button onclick="closeBetaBanner(); openLoginModal();" style="display:inline;background:none;border:none;padding:0 0 0 6px;
+        color:rgba(255,255,255,0.5);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;
+        text-decoration:underline;text-underline-offset:3px;">
+        Sign In &rarr;
+      </button>
     </div>
   </div>
 </div>
