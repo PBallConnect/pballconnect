@@ -1432,7 +1432,7 @@ function showPage(page){
   window.scrollTo(0,0); // always open pages at the top
   // Remove existing back button, show on all pages except dashboard and welcome
   document.getElementById('backToDashBtn')?.remove();
-  if(page !== 'dashboard' && page !== 'welcome') showBackToDashboard();
+  if(page !== 'dashboard' && page !== 'welcome' && !_newUserRegistrationStarted) showBackToDashboard();
   document.querySelectorAll('.page-section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
@@ -11654,14 +11654,15 @@ function startNewRegistration(email){
   unlockProfileForm();
   goTo(1);
 
-  // Pre-populate fields saved by join.html before the magic link was sent
+  // Pre-populate fields saved by join.html before the magic link was sent.
+  // Primary source: sessionStorage (same tab). Fallback: URL params (iOS new-tab).
   (function(){
     const orgEmail = sessionStorage.getItem('organic_email');
-    if(!orgEmail) return;
-    const orgSkill = sessionStorage.getItem('organic_skill');
-    const orgSince = sessionStorage.getItem('organic_playing_since');
-    const orgAge   = sessionStorage.getItem('organic_age_range');
-    if(emailEl) emailEl.value = orgEmail;
+    const orgSkill = sessionStorage.getItem('organic_skill') || _urlParams.get('organic_skill');
+    const orgSince = sessionStorage.getItem('organic_playing_since') || _urlParams.get('organic_since');
+    const orgAge   = sessionStorage.getItem('organic_age_range') || _urlParams.get('organic_age');
+    if(!orgEmail && !orgSkill && !orgSince && !orgAge) return;
+    if(orgEmail && emailEl) emailEl.value = orgEmail;
     if(orgSkill){
       const idx = DUPR_VALS.indexOf(orgSkill);
       if(idx >= 0){

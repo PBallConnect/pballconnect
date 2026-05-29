@@ -247,9 +247,13 @@
     sessionStorage.setItem('organic_age_range',     age);
     sessionStorage.setItem('organic_source',        'organic');
 
+    var redirectUrl = 'https://pballconnect.com/?organic=1' +
+      '&organic_skill=' + encodeURIComponent(skill) +
+      '&organic_since=' + encodeURIComponent(since) +
+      '&organic_age='   + encodeURIComponent(age);
     var result = await _sb.auth.signInWithOtp({
       email: email,
-      options: { emailRedirectTo: 'https://pballconnect.com/?organic=1' }
+      options: { emailRedirectTo: redirectUrl }
     });
 
     if(result.error){
