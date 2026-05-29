@@ -8406,6 +8406,7 @@ async function initApp(){
   // No-session users: visibility is restored below before showPage('welcome').
   const welcomeInner = document.querySelector('#page-welcome > div');
   const _urlParams2 = new URLSearchParams(window.location.search);
+  if(_urlParams2.get('reset_banner')==='dev') localStorage.removeItem('pb_beta_banner_seen');
   // Organic magic link return — user came from join.html, suppress the banner
   if(_urlParams2.get('organic') === '1'){
     localStorage.setItem('pb_beta_banner_seen','1');
@@ -8451,6 +8452,7 @@ async function initApp(){
   }
   if(!SESSION_PLAYER && !_newUserRegistrationStarted){
     showPage('welcome');
+    maybeShowBetaBanner();
   }
 }
 
@@ -12633,12 +12635,8 @@ function closeBetaBanner(){
   localStorage.setItem('pb_beta_banner_seen','1');
 }
 
-async function maybeShowBetaBanner(){
+function maybeShowBetaBanner(){
   if(localStorage.getItem('pb_beta_banner_seen')) return;
-  try{
-    const { data: { session } } = await _supabase.auth.getSession();
-    if(session) return;
-  }catch(e){}
   const banner = document.getElementById('betaWelcomeBanner');
   if(banner) banner.style.display='flex';
 }
@@ -12649,11 +12647,6 @@ document.addEventListener('click', function(e){
   if(modal && e.target===modal) closeFeedbackModal();
   const banner = document.getElementById('betaWelcomeBanner');
   if(banner && e.target===banner) closeBetaBanner();
-});
-
-// Show beta banner on load (after short delay so app loads first)
-document.addEventListener('DOMContentLoaded', ()=>{
-  setTimeout(maybeShowBetaBanner, 1500);
 });
 
 
