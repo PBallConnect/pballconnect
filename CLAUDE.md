@@ -89,13 +89,11 @@ No tests, no linter, no build commands.
 
 3. **Non-member match invite flow not built.** Organizers can only invite IC members. Inviting players outside the IC (by email or name) is not yet implemented.
 
-4. **Create Group: Mixed gender count may not update correctly in all cases.** `buildGroupSummaryGrid()` uses a case-insensitive email Map for gender lookup — verify that IC_MEMBERS gender fields are consistent across all IC members after the fix.
-
-6. ~~**Gender data cleanup needed**~~ — migration completed May 30: `'Male'` → `'Man'`, `'Female'` → `'Woman'` normalized. Users with `null` gender still need outreach or a login-time prompt.
-
-7. **Organic signup pre-population not fully verified.** Age range dropdown mismatch suspected between `join.html` option values and registration form option values. Console log added to diagnose. Needs live end-to-end test: go through join.html → magic link → registration form and confirm all four fields (email, skill, playing since, age range) pre-populate correctly.
+4. **Create Group: Mixed gender count may not update correctly in all cases.** `buildGroupSummaryGrid()` uses a case-insensitive email Map for gender lookup — verify gender fields are consistent across all IC members. Data is clean as of May 30 (`'Man'`/`'Woman'` normalized); this is a code-path verification gap only.
 
 5. **Bug C — phone/link invite paths: IC connection never established.** `icPostPendingConnection()` stores `pending_TOKEN` as a placeholder `recipient_email` for phone and link invite paths (no recipient email known at invite time). `handlePostRegistrationInvite()` PATCHes `connections` where `recipient_email = newPlayerEmail` — this matches zero rows for the placeholder. The IC connection is never approved for these paths. Email invite path works correctly (recipient email is known at invite time). Fix required before phone/link invite paths are reliable.
+
+6. **Organic signup pre-population not fully verified.** Age range dropdown mismatch suspected between `join.html` option values and registration form option values. Console log added to diagnose. Needs live end-to-end test: go through join.html → magic link → registration form and confirm all four fields (email, skill, playing since, age range) pre-populate correctly.
 
 **Resolved (do not re-introduce):**
 - ~~`invites` table RLS INSERT policy missing~~ — policy added in Supabase; invites now write correctly
@@ -112,6 +110,7 @@ No tests, no linter, no build commands.
 - ~~Duplicate courts in nearby list~~ — `normalizeCourtName()` fuzzy match + double-dedup applied
 - ~~Level grid column headers showing raw diff ranges (`< 3.88`, `3.88 – 4.13`) instead of IC Level Structure labels~~ — fixed in `buildGroupInviteGrid()` and `buildSmInviteGrid()`; now shows `.5+ Below My Level` / `.25 Below My Level` / `My Level` / `.25 Above My Level` / `.5+ Above My Level` with `≤/≥` reference values at 0.25 increments
 - ~~Emergency Fill overwrote `IC_MEMBERS` with flat objects when IC data was fetched on demand~~ — fixed by using local `_efMemberFlat` variable; `IC_MEMBERS` global is never written to by Emergency Fill. See Rule 47.
+- ~~Gender data in `registrations` used legacy values `'Male'`/`'Female'`~~ — one-time migration run May 30: `UPDATE registrations SET gender='Man' WHERE gender='Male'; UPDATE registrations SET gender='Woman' WHERE gender='Female';`. All rows now use `'Man'`/`'Woman'`. Users with `null` gender still need outreach or a login-time prompt.
 
 ---
 
