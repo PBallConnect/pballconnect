@@ -91,7 +91,7 @@ No tests, no linter, no build commands.
 
 4. **Create Group: Mixed gender count may not update correctly in all cases.** `buildGroupSummaryGrid()` uses a case-insensitive email Map for gender lookup — verify that IC_MEMBERS gender fields are consistent across all IC members after the fix.
 
-6. **Gender data cleanup needed (migration not yet run).** Existing users registered before gender was required have `null`, `'Male'`, or `'Female'` in the `gender` field. This breaks match gender balance calculation which expects `'Man'` / `'Woman'`. One-time migration needed in Supabase SQL Editor: `UPDATE registrations SET gender='Man' WHERE gender='Male'; UPDATE registrations SET gender='Woman' WHERE gender='Female';`. Users with `null` gender need outreach or a grace-period prompt on next login.
+6. ~~**Gender data cleanup needed**~~ — migration completed May 30: `'Male'` → `'Man'`, `'Female'` → `'Woman'` normalized. Users with `null` gender still need outreach or a login-time prompt.
 
 7. **Organic signup pre-population not fully verified.** Age range dropdown mismatch suspected between `join.html` option values and registration form option values. Console log added to diagnose. Needs live end-to-end test: go through join.html → magic link → registration form and confirm all four fields (email, skill, playing since, age range) pre-populate correctly.
 
@@ -391,3 +391,8 @@ Instruction format reminders:
 
 **Known issue — organic pre-population needs live test:**
 - Age range dropdown mismatch suspected between `join.html` option values and registration form option values. Console log added. Must be verified end-to-end: join.html → magic link → registration form, confirm all four fields pre-populate correctly before removing the console log.
+
+**Database cleanup completed (May 30):**
+- 16 test/incomplete accounts deleted from all related tables: `sms_consent_log`, `sms_log`, `match_responses`, `player_group_members`, `invites`, `connections`, `matches`, `organic_signups`, `registrations`. 6 clean accounts remain.
+- **Gender migration completed** — `'Female'` → `'Woman'`, `'Male'` → `'Man'` normalized across `registrations`. Known Bug #6 resolved.
+- **`invites` table schema correction** — the inviter column is `inviter_email`, not `organizer_email`. Update any query or code that references `organizer_email` on the `invites` table.
