@@ -11662,7 +11662,6 @@ function startNewRegistration(email){
     if(age){
       const ageEl = document.getElementById('playerAge');
       if(ageEl){
-        console.log('organic age:', age, 'playerAge options:', [...ageEl.options].map(o=>o.value));
         ageEl.value = age;
         ageEl.dispatchEvent(new Event('change'));
       }
