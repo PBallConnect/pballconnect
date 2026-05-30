@@ -8297,8 +8297,6 @@ async function doLogin(){
   const formEl     = document.getElementById('loginForm');
   const successEl  = document.getElementById('loginSuccess');
   const detailEl   = document.getElementById('loginSuccessDetail');
-  const titleEl    = document.getElementById('loginModalTitle');
-  const subEl      = document.getElementById('loginModalSub');
 
   const email = (emailInput?.value||'').trim().toLowerCase();
   if(!email || !email.includes('@')){
@@ -8307,43 +8305,9 @@ async function doLogin(){
   }
   if(errorEl) errorEl.style.display='none';
 
-  // Step 1: Check whether this email already has a registration
-  if(submitBtn){ submitBtn.disabled=true; submitBtn.textContent='Checking…'; }
-  let isNewUser = false;
-  try{
-    const checkRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/registrations?email=eq.${encodeURIComponent(email)}&select=id&limit=1`,
-      { headers:{ 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer '+SUPABASE_ACCESS_TOKEN } }
-    );
-    if(checkRes.ok){
-      const rows = await checkRes.json();
-      isNewUser = rows.length === 0;
-    }
-  }catch(e){ /* treat as unknown — proceed */ }
+  if(submitBtn){ submitBtn.disabled=true; }
 
-  // Gate: new users with no invite must register through /join.html
-  if(isNewUser){
-    const _gateParams = new URLSearchParams(window.location.search);
-    const _hasInvite  = _gateParams.has('invite') || _gateParams.has('qr');
-    if(!_hasInvite && !PENDING_INVITE){
-      if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent='Send Magic Link →'; }
-      window.location.href = '/join.html';
-      return;
-    }
-  }
-
-  // Update modal headline and button to reflect new vs. returning user
-  if(isNewUser){
-    if(titleEl) titleEl.textContent = 'Welcome to PBallConnect 🎾';
-    if(subEl)   subEl.textContent   = "Enter your email — we'll send you a link to sign in or create your account";
-    if(submitBtn) submitBtn.textContent = 'Send Magic Link →';
-  } else {
-    if(titleEl) titleEl.textContent = 'Welcome Back';
-    if(subEl)   subEl.textContent   = "We'll send a magic link to your inbox";
-    if(submitBtn) submitBtn.textContent = 'Send Magic Link →';
-  }
-
-  // Step 2: Send magic link
+  // Send magic link
   if(formEl) formEl.style.display='none';
   if(loadingEl) loadingEl.style.display='block';
 
@@ -8356,9 +8320,7 @@ async function doLogin(){
     if(loadingEl) loadingEl.style.display='none';
     if(successEl) successEl.style.display='block';
     if(detailEl){
-      detailEl.textContent = isNewUser
-        ? 'We sent a magic link to your email. Click it to sign in — if you\'re new, it\'ll get you set up in minutes.'
-        : 'We sent a magic link to '+email+'. Click it to sign in.';
+      detailEl.textContent = 'We sent a magic link to '+email+'. Click it to sign in.';
     }
   }catch(e){
     if(loadingEl) loadingEl.style.display='none';
