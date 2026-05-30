@@ -11628,6 +11628,7 @@ function startNewRegistration(email){
     let since = sessionStorage.getItem('organic_playing_since');
     let age   = sessionStorage.getItem('organic_age_range');
     const orgEmail = sessionStorage.getItem('organic_email');
+    let _needsServerDelete = false;
 
     if((!skill || !since || !age) && _urlParams.get('organic') === '1'){
       try{
@@ -11637,13 +11638,12 @@ function startNewRegistration(email){
           if(!skill) skill = d.skill_level || '';
           if(!since) since = d.playing_since || '';
           if(!age)   age   = d.age_range || '';
-          fetch('/api/organic-signup', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ email, delete: true })
-          }).catch(()=>{});
+          _needsServerDelete = true;
+        } else {
+          const text = await r.text().catch(()=>'');
+          console.error('[organic] server fetch failed:', r.status, text);
         }
-      }catch(_){}
+      }catch(e){ console.error('[organic] server fetch failed:', e); }
     }
 
     if(!orgEmail && !skill && !since && !age) return;
@@ -11665,6 +11665,13 @@ function startNewRegistration(email){
         ageEl.value = age;
         ageEl.dispatchEvent(new Event('change'));
       }
+    }
+    if(_needsServerDelete){
+      fetch('/api/organic-signup', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ email, delete: true })
+      }).catch(()=>{});
     }
     ['organic_email','organic_skill','organic_playing_since','organic_age_range']
       .forEach(k => sessionStorage.removeItem(k));
