@@ -1,6 +1,6 @@
 # CLAUDE.md — PBallConnect Reference
 
-_Last updated: May 24, 2026_
+_Last updated: May 30, 2026_
 
 ---
 
@@ -46,7 +46,7 @@ Deployed on **Cloudflare Pages** at `pballconnect.com`. No build step, no bundle
 | `styles.css` | — | All styles |
 | `landing.html` | — | Public marketing landing page — standalone, no app.js/styles.css dependency. Hero, features, skill level guide, waitlist form with Turnstile bot protection. |
 | `invite.html` | — | Standalone invite landing page — no app.js dependency |
-| `join.html` | — | Standalone organic signup gate — no app.js/styles.css dependency. Shown to uninvited first-time users redirected from `doLogin()`. Four pre-screen fields (email, skill, playing since, age range) stored in sessionStorage and pre-populated into the registration form after magic link auth. Cloudflare Turnstile bot protection. |
+| `join.html` | — | Standalone organic signup gate — no app.js/styles.css dependency. Reached via the "Join PBallConnect" button on the beta banner (not via `doLogin()` redirect — that gate was removed May 30). Four pre-screen fields (email, skill, playing since, age range) stored in sessionStorage and pre-populated into the registration form after magic link auth. Cloudflare Turnstile bot protection. |
 | `functions/api/send-email.js` | — | Cloudflare Pages Function for transactional email via Resend. IP rate-limited (5/hr) via `RATE_LIMIT_KV`. |
 | `functions/api/send-sms.js` | — | Cloudflare Pages Function for SMS via Twilio. Consent-gated (`sms_opt_in` required), three-tier rate limited (player/match/global via KV), logs all attempts to `sms_log`. Always returns 200 — SMS errors never crash callers. No message length cap — Twilio handles multipart SMS automatically. |
 | `functions/api/twilio-webhook.js` | — | Receives Twilio STOP/HELP/START keyword callbacks. Validates X-Twilio-Signature (HMAC-SHA1), syncs `sms_opt_in` in Supabase, logs to `sms_log`. |
@@ -57,6 +57,7 @@ Deployed on **Cloudflare Pages** at `pballconnect.com`. No build step, no bundle
 | `functions/api/match-invite-sms-data.js` | — | Server-side lookup of `phone` and `sms_opt_in` for a player by email using `SUPABASE_SERVICE_KEY`. Keeps sensitive fields off `public_profiles` and out of the client. |
 | `functions/api/log-sms-consent.js` | — | POST endpoint for TCPA consent audit logging. Validates body, inserts to `sms_consent_log` via `SUPABASE_SERVICE_KEY`. Returns 200 always — callers must not block on consent log failures. |
 | `match-invite.html` | — | Standalone mobile-first RSVP page for SMS match invites. Three states: (1) registered player — YES/NO buttons; (2) unregistered YES — mini registration form; (3) unregistered NO — warm decline + sign-up pitch. No app.js dependency. |
+| `functions/api/organic-signup.js` | — | Cloudflare Pages Function for organic signup pre-screen data. GET returns stored row by email; POST upserts `organic_signups` table (email, skill_level, playing_since, age_range); DELETE removes row. Used to persist join.html pre-screen data server-side so it survives the magic link redirect. |
 | `functions/api/waitlist.js` | — | Cloudflare Pages Function for waitlist form submissions. IP rate-limited (3/hr), Turnstile-verified, saves to `waitlist` table via service role key, sends confirmation email via Resend. |
 | `supabase_rls_policies.sql` | — | RLS policy definitions + waitlist table DDL — run in Supabase SQL editor after schema changes |
 | `manifest.json` | — | PWA manifest (also injected inline at runtime in app.js) |
@@ -89,6 +90,10 @@ No tests, no linter, no build commands.
 3. **Non-member match invite flow not built.** Organizers can only invite IC members. Inviting players outside the IC (by email or name) is not yet implemented.
 
 4. **Create Group: Mixed gender count may not update correctly in all cases.** `buildGroupSummaryGrid()` uses a case-insensitive email Map for gender lookup — verify that IC_MEMBERS gender fields are consistent across all IC members after the fix.
+
+6. **Gender data cleanup needed (migration not yet run).** Existing users registered before gender was required have `null`, `'Male'`, or `'Female'` in the `gender` field. This breaks match gender balance calculation which expects `'Man'` / `'Woman'`. One-time migration needed in Supabase SQL Editor: `UPDATE registrations SET gender='Man' WHERE gender='Male'; UPDATE registrations SET gender='Woman' WHERE gender='Female';`. Users with `null` gender need outreach or a grace-period prompt on next login.
+
+7. **Organic signup pre-population not fully verified.** Age range dropdown mismatch suspected between `join.html` option values and registration form option values. Console log added to diagnose. Needs live end-to-end test: go through join.html → magic link → registration form and confirm all four fields (email, skill, playing since, age range) pre-populate correctly.
 
 5. **Bug C — phone/link invite paths: IC connection never established.** `icPostPendingConnection()` stores `pending_TOKEN` as a placeholder `recipient_email` for phone and link invite paths (no recipient email known at invite time). `handlePostRegistrationInvite()` PATCHes `connections` where `recipient_email = newPlayerEmail` — this matches zero rows for the placeholder. The IC connection is never approved for these paths. Email invite path works correctly (recipient email is known at invite time). Fix required before phone/link invite paths are reliable.
 
@@ -353,3 +358,36 @@ Instruction format reminders:
 
 **Known open bug logged (Bug C):**
 - Phone and link invite paths store `pending_TOKEN` as placeholder `recipient_email` in `connections`. `handlePostRegistrationInvite()` PATCH matches zero rows for these paths — IC connection is never established. Email invite path is unaffected. Do not attempt to fix by reusing `handlePostRegistrationInvite()` — requires a separate lookup strategy at registration time.
+
+### Session learnings — May 30, 2026
+
+**doLogin() gate removed (critical bug fix):**
+- The pre-auth `registrations` check used `SUPABASE_ACCESS_TOKEN` which equals `SUPABASE_ANON_KEY` before login. RLS silently returns HTTP 200 with `[]` for anon queries — not a 403. This caused `isNewUser = true` for all existing users, redirecting them to `join.html`. The fix: `doLogin()` now sends the magic link unconditionally for any valid email. New vs. existing user routing happens in `onAuthStateChange` → `restoreSession()` where a real session token satisfies RLS. **Do not re-add any pre-auth DB check to `doLogin()`.**
+- The May 24 session note about `doLogin()` redirecting to `join.html` is superseded. `join.html` is now reached only via the "Join PBallConnect" banner button.
+
+**`organic_signups` table created in Supabase:**
+- Stores pre-screen data (email, skill_level, playing_since, age_range) keyed by email. `/api/organic-signup.js` Pages Function handles GET, POST, and DELETE. Used to persist join.html pre-screen data server-side so it survives the magic link redirect back to the app.
+
+**Beta banner rebuilt:**
+- Three-button layout: "Join PBallConnect" (→ `/join.html`), "Ask a member" (→ `/invite.html`), "Notify me at launch" (→ `/landing.html#waitlist`). Replaces old two-button layout.
+- `icon-192.png` logo replaces emoji in banner header.
+- Banner now fires synchronously with `showPage('welcome')` — no more 1500ms flash. `maybeShowBetaBanner()` converted from async (removed `getSession()` call) to synchronous, called directly after `showPage('welcome')` in `initApp()`.
+- `?reset_banner=dev` clears the `pb_beta_banner_seen` localStorage flag for testing.
+
+**Supabase redirect URLs updated to wildcards:**
+- `https://pballconnect.com/*` and `https://pickleball-registry.pages.dev/*` added to the Supabase Auth allow list to support all magic link return paths.
+
+**Dashboard button suppressed during new user registration:**
+- `_newUserRegistrationStarted` gate added to `showBackToDashboard()` — back-to-dashboard button does not appear while a new user is mid-registration.
+
+**Sign In button hidden during registration:**
+- `#navLoginBtn` hidden in `startNewRegistration()`, restored in `doSaveProfile()` and `_qcSave()`. Prevents a logged-in new user from opening the login modal mid-flow.
+
+**Mobile scroll fix:**
+- `#profileStickyHeader` set to `position:relative` on mobile to fix iOS touch-scroll dead zone caused by `position:sticky` interacting with the iOS scroll container.
+
+**Known issue — gender data migration pending:**
+- Run in Supabase SQL Editor before any gender-based matching logic is used: `UPDATE registrations SET gender='Man' WHERE gender='Male'; UPDATE registrations SET gender='Woman' WHERE gender='Female';`. Users with `null` gender need outreach or a login-time prompt.
+
+**Known issue — organic pre-population needs live test:**
+- Age range dropdown mismatch suspected between `join.html` option values and registration form option values. Console log added. Must be verified end-to-end: join.html → magic link → registration form, confirm all four fields pre-populate correctly before removing the console log.
