@@ -1177,6 +1177,7 @@ async function doSaveProfile(){
         console.warn('Consent log failed (doSaveProfile):', e);
       }
     }
+    document.getElementById('navLoginBtn')?.style.removeProperty('display');
     _newUserRegistrationStarted = false; // registration complete — allow normal profile restore
     showToast('✅ Profile saved!', '#4CAF7D');
     // Capture current values before any navigation
@@ -11398,6 +11399,7 @@ function showQuickConnectForm(email, inv){
         }
       }
       const _hadPendingInvite = !!PENDING_INVITE;
+      document.getElementById('navLoginBtn')?.style.removeProperty('display');
       _newUserRegistrationStarted = false;
       document.getElementById('quickConnectOverlay')?.remove();
       await restoreSession(email.toLowerCase());
@@ -11609,6 +11611,7 @@ async function sendMutualInvite(theirEmail, theirName){
 function startNewRegistration(email){
   if(_newUserRegistrationStarted) return; // prevent double-call from dual auth event sources
   _newUserRegistrationStarted = true;
+  document.getElementById('navLoginBtn')?.style.setProperty('display','none');
   closeLoginModal();
   S.email = (email||'').toLowerCase();
   localStorage.removeItem('pb_pending_email');
@@ -11696,7 +11699,11 @@ function startNewRegistration(email){
     }
     if(age){
       const ageEl = document.getElementById('playerAge');
-      if(ageEl) ageEl.value = age;
+      if(ageEl){
+        console.log('organic age:', age, 'playerAge options:', [...ageEl.options].map(o=>o.value));
+        ageEl.value = age;
+        ageEl.dispatchEvent(new Event('change'));
+      }
     }
     ['organic_email','organic_skill','organic_playing_since','organic_age_range']
       .forEach(k => sessionStorage.removeItem(k));
