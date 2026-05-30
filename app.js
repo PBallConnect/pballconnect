@@ -11657,28 +11657,46 @@ function startNewRegistration(email){
   goTo(1);
 
   // Pre-populate fields saved by join.html before the magic link was sent.
-  // Primary source: sessionStorage (same tab). Fallback: URL params (iOS new-tab).
-  (function(){
+  // Primary source: sessionStorage (same tab). Fallback: server fetch from organic_signups (iOS new-tab).
+  (async function(){
+    let skill = sessionStorage.getItem('organic_skill');
+    let since = sessionStorage.getItem('organic_playing_since');
+    let age   = sessionStorage.getItem('organic_age_range');
     const orgEmail = sessionStorage.getItem('organic_email');
-    const orgSkill = sessionStorage.getItem('organic_skill') || _urlParams.get('organic_skill');
-    const orgSince = sessionStorage.getItem('organic_playing_since') || _urlParams.get('organic_since');
-    const orgAge   = sessionStorage.getItem('organic_age_range') || _urlParams.get('organic_age');
-    if(!orgEmail && !orgSkill && !orgSince && !orgAge) return;
+
+    if((!skill || !since || !age) && _urlParams.get('organic') === '1'){
+      try{
+        const r = await fetch('/api/organic-signup?email=' + encodeURIComponent(email));
+        if(r.ok){
+          const d = await r.json();
+          if(!skill) skill = d.skill_level || '';
+          if(!since) since = d.playing_since || '';
+          if(!age)   age   = d.age_range || '';
+          fetch('/api/organic-signup', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ email, delete: true })
+          }).catch(()=>{});
+        }
+      }catch(_){}
+    }
+
+    if(!orgEmail && !skill && !since && !age) return;
     if(orgEmail && emailEl) emailEl.value = orgEmail;
-    if(orgSkill){
-      const idx = DUPR_VALS.indexOf(orgSkill);
+    if(skill){
+      const idx = DUPR_VALS.indexOf(skill);
       if(idx >= 0){
         const slider = document.getElementById('personalRatingSlider');
         if(slider){ slider.value = idx; updatePersonalRating(idx); }
       }
     }
-    if(orgSince){
+    if(since){
       const sinceEl = document.getElementById('playingSince');
-      if(sinceEl){ sinceEl.value = orgSince; S.playingSince = orgSince; }
+      if(sinceEl){ sinceEl.value = since; S.playingSince = since; }
     }
-    if(orgAge){
+    if(age){
       const ageEl = document.getElementById('playerAge');
-      if(ageEl) ageEl.value = orgAge;
+      if(ageEl) ageEl.value = age;
     }
     ['organic_email','organic_skill','organic_playing_since','organic_age_range']
       .forEach(k => sessionStorage.removeItem(k));

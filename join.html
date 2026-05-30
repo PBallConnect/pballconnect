@@ -247,13 +247,32 @@
     sessionStorage.setItem('organic_age_range',     age);
     sessionStorage.setItem('organic_source',        'organic');
 
-    var redirectUrl = 'https://pballconnect.com/?organic=1' +
-      '&organic_skill=' + encodeURIComponent(skill) +
-      '&organic_since=' + encodeURIComponent(since) +
-      '&organic_age='   + encodeURIComponent(age);
+    try {
+      var signupRes = await fetch('/api/organic-signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, skill_level: skill, playing_since: since, age_range: age })
+      });
+      if(!signupRes.ok){
+        var signupData = await signupRes.json().catch(function(){ return {}; });
+        errEl.textContent = signupData.error || 'Something went wrong. Please try again.';
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.classList.add('ready');
+        btn.textContent = 'Send My Magic Link →';
+        return;
+      }
+    } catch(_){
+      errEl.textContent = 'Network error. Please try again.';
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.classList.add('ready');
+      btn.textContent = 'Send My Magic Link →';
+      return;
+    }
     var result = await _sb.auth.signInWithOtp({
       email: email,
-      options: { emailRedirectTo: redirectUrl }
+      options: { emailRedirectTo: 'https://pballconnect.com/?organic=1' }
     });
 
     if(result.error){
