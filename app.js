@@ -304,10 +304,10 @@ function buildStaticSliderTicks(containerId){
   const tickColor='rgba(156,163,175,0.6)';
   const labelColor='var(--dim)';
   for(let i=0;i<=21;i++){
-    const pct=(i/21*100).toFixed(2);
+    const ratio=(i/21).toFixed(4);
     const isFull=fullNumIdxs.includes(i);
     const sp=document.createElement('span');
-    sp.style.cssText='position:absolute;left:'+pct+'%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;';
+    sp.style.cssText='position:absolute;left:calc(11px + '+ratio+' * (100% - 22px));transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;';
     if(isFull){
       sp.innerHTML=
         '<span style="display:block;width:2px;height:8px;background:'+tickColor+';"></span>'+
