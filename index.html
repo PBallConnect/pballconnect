@@ -373,11 +373,9 @@
 
           <!-- Step dots -->
           <div class="steps">
-            <div class="step-item"><div class="step-dot active" id="dot1">1</div><span class="step-label active" id="lbl1">Personal Info</span></div>
+            <div class="step-item"><div class="step-dot active" id="dot1">1</div><span class="step-label active" id="lbl1">Profile</span></div>
             <div class="step-line" id="line1"></div>
-            <div class="step-item"><div class="step-dot" id="dot2">2</div><span class="step-label" id="lbl2">Player Profile</span></div>
-            <div class="step-line" id="line2"></div>
-            <div class="step-item"><div class="step-dot" id="dot3">3</div><span class="step-label" id="lbl3">Waiver</span></div>
+            <div class="step-item"><div class="step-dot" id="dot2">2</div><span class="step-label" id="lbl2">Waiver</span></div>
           </div>
         </div>
   <!-- STEP 1 -->
@@ -537,14 +535,6 @@
       <div class="hint">Organizers unlock Named Groups and Recurring Match scheduling</div>
     </div>
 
-    <div class="btn-row">
-      <div></div>
-      <button class="btn-next" id="next1" disabled onclick="goTo(2)">Continue →</button>
-    </div>
-  </div>
-
-  <!-- STEP 2 -->
-  <div class="card" id="step2" style="display:none">
     <h2>Player Profile</h2>
     <div class="field">
       <label>Play Format</label>
@@ -721,13 +711,13 @@
     </div>
 
     <div class="btn-row">
-      <button class="btn-back" onclick="goTo(1)">← Back</button>
-      <button class="btn-next" id="next2" disabled onclick="goTo(3)">Continue →</button>
+      <div></div>
+      <button class="btn-next" id="next2" disabled onclick="goTo(2)">Continue →</button>
     </div>
   </div>
 
-  <!-- STEP 3 -->
-  <div class="card" id="step3" style="display:none">
+  <!-- STEP 2 — Waiver -->
+  <div class="card" id="step2" style="display:none">
     <h2>Waiver &amp; Agreement</h2>
     <!-- CONSENT CHECKBOXES -->
     <div class="check-row" onclick="toggleConsent('tos')" style="margin-bottom:14px;">
@@ -802,7 +792,7 @@
       </div>
     </div>
     <div class="btn-row">
-      <button class="btn-back" onclick="goTo(2)">← Back</button>
+      <button class="btn-back" onclick="goTo(1)">← Back</button>
       <button class="btn-submit" id="btnSubmit" disabled onclick="submitForm()">🎉 Complete Registration</button>
     </div>
   </div>

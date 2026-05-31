@@ -641,30 +641,28 @@ function toggleWaiver(){toggleConsent('risk');}
 
 function v(id){const el=document.getElementById(id);return el?el.value.trim():'';}
 function chk1(){
-  const btn=document.getElementById('next1');if(!btn)return;
+  const btn=document.getElementById('next2');if(!btn)return;
   const genderOk=['Man','Woman','Prefer not to say'].includes(S.gender);
   const hint=document.getElementById('genderHint');
   if(hint) hint.style.display=(!genderOk&&(v('firstName')||v('email')||v('phone')))?'block':'none';
-  const ok=v('firstName')&&v('email')&&v('phone')&&genderOk;
-  btn.disabled=!ok;
+  const personalInfoOk=v('firstName')&&v('email')&&v('phone')&&genderOk;
+  const ratingSlider=document.getElementById('personalRatingSlider');
+  const hasRating=ratingSlider&&parseInt(ratingSlider.value)>0;
+  const playerProfileOk=v('playingSince')&&hasRating;
+  btn.disabled=!(personalInfoOk&&playerProfileOk);
 }
-function chk2(){
-  const ratingSlider = document.getElementById('personalRatingSlider');
-  const hasRating = ratingSlider && parseInt(ratingSlider.value) > 0;
-  const ok = v('playingSince') && hasRating;
-  document.getElementById('next2').disabled = !ok;
-}
+function chk2(){ chk1(); }
 
 function goTo(n){
-  [1,2,3].forEach(i=>{
+  [1,2].forEach(i=>{
     document.getElementById('step'+i).style.display=i===n?'block':'none';
     const dot=document.getElementById('dot'+i),lbl=document.getElementById('lbl'+i);
     dot.className='step-dot'+(i<n?' done':i===n?' active':'');
     dot.textContent=i<n?'✓':i;
     lbl.className='step-label'+(i===n?' active':'');
-    if(i<3) document.getElementById('line'+i).className='step-line'+(i<n?' done':'');
+    if(i<2) document.getElementById('line'+i).className='step-line'+(i<n?' done':'');
   });
-  if(n===3){
+  if(n===2){
     populateSummary();
     const submitBtn=document.getElementById('btnSubmit');
     if(submitBtn) submitBtn.disabled=!(S._tosConsent&&S._riskConsent);
@@ -1310,7 +1308,6 @@ function resetForm(){
   document.getElementById('mapBadge').textContent='Click your state to select it';
     document.getElementById('checkBox').classList.remove('on');
   document.getElementById('btnSubmit').disabled=true;
-  document.getElementById('next1').disabled=true;
   document.getElementById('next2').disabled=true;
   document.getElementById('sumDuprRow').style.display='none';
   document.getElementById('sumCourtRow').style.display='none';
@@ -8972,7 +8969,7 @@ function openEmojiPickerIfUnlocked(){
 function lockProfileForm(){
   document.getElementById('editModeBanner')?.remove();
   if(_editModeActive)return;
-  ['step1','step2','step3'].forEach(id=>{
+  ['step1','step2'].forEach(id=>{
     const step=document.getElementById(id);if(!step)return;
     // Use readOnly+style instead of disabled — disabled can clear values in Chrome
     step.querySelectorAll('input:not([type="hidden"]),textarea').forEach(el=>{el.readOnly=true;el.style.opacity='0.6';el.style.cursor='not-allowed';el.style.pointerEvents='none';});
@@ -9005,7 +9002,7 @@ function lockProfileForm(){
   }
 }
 function unlockProfileForm(){
-  ['step1','step2','step3'].forEach(id=>{
+  ['step1','step2'].forEach(id=>{
     const step=document.getElementById(id);if(!step)return;
     step.querySelectorAll('input:not([type="hidden"]),textarea').forEach(el=>{el.readOnly=false;el.style.opacity='';el.style.cursor='';el.style.pointerEvents='';});
     step.querySelectorAll('select').forEach(el=>{el.disabled=false;el.style.opacity='';el.style.cursor='';});
