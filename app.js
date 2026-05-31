@@ -8117,10 +8117,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   setTimeout(checkMatchToken, 1000); // After session restore
 });
 
-document.addEventListener('DOMContentLoaded', ()=>{
-  buildStaticSliderTicks('duprTicks');
-  buildStaticSliderTicks('personalRatingTicks');
-});
+// Slider ticks are built in unlockProfileForm() after the form is visible and sliders have width.
 
 async function addMatchCourtToMyCourts(courtId, courtName, courtAddress, btn){
   const myEmail = getMyEmail();
@@ -9029,6 +9026,9 @@ function unlockProfileForm(){
     coachSec.querySelectorAll('input,select,textarea').forEach(el=>{el.disabled=false;el.style.opacity='';el.style.cursor='';});
   }
   document.getElementById('readOnlyBanner')?.remove();
+  buildStaticSliderTicks('duprTicks');
+  buildStaticSliderTicks('personalRatingTicks');
+  buildGoalTicks(0);
 }
 
 // ══════════════════════════════════════════════════════
