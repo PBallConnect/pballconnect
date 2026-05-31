@@ -35,9 +35,23 @@
     }
     input[type="email"]:focus, select:focus { border-color: #1a7a3a; }
     .slider-row { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+    .slider-wrap { flex: 1; }
     .slider-row input[type="range"] {
-      flex: 1; height: 6px; cursor: pointer; padding: 0; margin: 0; border: none; border-radius: 0;
-      background: transparent;
+      -webkit-appearance: none; appearance: none;
+      display: block; width: 100%; height: 6px;
+      border-radius: 3px; border: none; outline: none;
+      cursor: pointer; padding: 0; margin: 0;
+      background: linear-gradient(to right, #1a7a3a 0%, #1a7a3a var(--pct,0%), #d1d5db var(--pct,0%), #d1d5db 100%);
+    }
+    .slider-row input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px; height: 22px; border-radius: 50%;
+      background: #1a7a3a; border: 3px solid #fff;
+      box-shadow: 0 0 0 2px #1a7a3a; cursor: pointer;
+    }
+    .slider-row input[type="range"]::-moz-range-thumb {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: #1a7a3a; border: 3px solid #fff; cursor: pointer;
     }
     .slider-val { font-size: 22px; font-weight: 800; color: #1a7a3a;
                   min-width: 52px; text-align: right; }
@@ -90,7 +104,10 @@
     <!-- Skill Level -->
     <label class="field-label">Skill Level <span class="req">*</span></label>
     <div class="slider-row">
-      <input type="range" id="jSkillSlider" min="0" max="21" value="0" oninput="jSkillUpdate(this.value);jCheck()"/>
+      <div class="slider-wrap">
+        <input type="range" id="jSkillSlider" min="0" max="21" value="0" style="--pct:0%" oninput="jSkillUpdate(this.value);jCheck()"/>
+        <div id="jSkillTicks" style="position:relative;height:26px;margin-top:2px;"></div>
+      </div>
       <span class="slider-val" id="jSkillVal">—</span>
     </div>
     <div class="slider-hint">2.0 (beginner) → 7.0+ (pro)</div>
@@ -185,7 +202,36 @@
     _skillSet = parseInt(idx) > 0;
     var val = _skillSet ? DUPR_VALS[parseInt(idx)] : '—';
     document.getElementById('jSkillVal').textContent = val;
+    var pct = (parseInt(idx) / 21 * 100).toFixed(1) + '%';
+    document.getElementById('jSkillSlider').style.setProperty('--pct', pct);
   }
+
+  function jBuildSkillTicks(){
+    var container = document.getElementById('jSkillTicks');
+    if(!container) return;
+    container.innerHTML = '';
+    var FULL = [0,4,8,12,16,20];
+    var tickColor = 'rgba(156,163,175,0.6)';
+    var labelColor = '#9ca3af';
+    for(var i = 0; i <= 21; i++){
+      var ratio = (i / 21).toFixed(4);
+      var isFull = FULL.indexOf(i) >= 0;
+      var sp = document.createElement('span');
+      sp.style.cssText = 'position:absolute;left:calc(11px + ' + ratio + ' * (100% - 22px));transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;';
+      if(isFull){
+        sp.innerHTML =
+          '<span style="display:block;width:2px;height:8px;background:' + tickColor + ';"></span>' +
+          '<span style="font-size:9px;color:' + labelColor + ';margin-top:1px;white-space:nowrap;">' +
+            (DUPR_VALS[i] === '7.0+' ? '7.0' : DUPR_VALS[i]) +
+          '</span>';
+      } else {
+        sp.innerHTML = '<span style="display:block;width:1px;height:4px;background:' + tickColor + ';margin-top:2px;"></span>';
+      }
+      container.appendChild(sp);
+    }
+  }
+
+  jBuildSkillTicks();
 
   function jToggleGuide(){
     var el = document.getElementById('jSkillGuide');
