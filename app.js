@@ -268,7 +268,6 @@ function updateDupr(idx){
 }
 
 function buildGoalTicks(minIdx){
-  console.log('[ticks] buildGoalTicks called', minIdx);
   const ticks=document.getElementById('goalTicks');
   if(!ticks) return;
   ticks.innerHTML='';
@@ -297,7 +296,6 @@ function buildGoalTicks(minIdx){
 }
 
 function buildStaticSliderTicks(containerId){
-  console.log('[ticks] buildStaticSliderTicks called:', containerId);
   const ticks=document.getElementById(containerId);
   if(!ticks) return;
   ticks.innerHTML='';
