@@ -275,13 +275,13 @@ function buildGoalTicks(minIdx){
   // Full-number indices: 2.0=0, 3.0=4, 4.0=8, 5.0=12, 6.0=16, 7.0=20
   const fullNumIdxs=[0,4,8,12,16,20];
   for(let i=0;i<=21;i++){
-    const pct=(i/21*100).toFixed(2);
+    const ratio=(i/21).toFixed(4);
     const isFull=fullNumIdxs.includes(i);
     const isPast=i<minIdx;
     const tickColor=isPast?'rgba(239,68,68,0.4)':'rgba(156,163,175,0.6)';
     const labelColor=isPast?'rgba(239,68,68,0.6)':'var(--dim)';
     const sp=document.createElement('span');
-    sp.style.cssText='position:absolute;left:'+pct+'%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;';
+    sp.style.cssText='position:absolute;left:calc(11px + '+ratio+' * (100% - 22px));transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;';
     if(isFull){
       sp.innerHTML=
         '<span style="display:block;width:2px;height:8px;background:'+tickColor+';"></span>'+
@@ -339,7 +339,7 @@ function updateGoalRedBar(minIdx, goalIdx){
   if(xMarker){
     if(minIdx>0){
       xMarker.style.display    = 'block';
-      xMarker.style.left       = redPct+'%';
+      xMarker.style.left       = 'calc(11px + '+(minIdx/21).toFixed(4)+' * (100% - 22px))';
       xMarker.style.transform  = 'translateX(-50%)';
       xMarker.style.color      = '#991b1b';
       xMarker.style.fontWeight = '900';
@@ -391,10 +391,8 @@ function updateGoalRating(idx){
     if(!finalIdx){
       thumbLabel.style.display='none';
     } else {
-      const pctNum = finalIdx/21*100;
-      // Adjust for thumb width so label stays centered over thumb
-      const offset = pctNum < 10 ? 0 : pctNum > 90 ? -0 : 0;
-      thumbLabel.style.left = pctNum.toFixed(1)+'%';
+      const ratio=(finalIdx/21).toFixed(4);
+      thumbLabel.style.left='calc(11px + '+ratio+' * (100% - 22px))';
       thumbLabel.textContent = DUPR_VALS[finalIdx];
       thumbLabel.style.display='block';
     }
@@ -2506,17 +2504,15 @@ function afterRegistration(){
 document.addEventListener('DOMContentLoaded', ()=>{
   // Pre-select defaults for new users (no session yet)
   if(!SESSION_PLAYER){
-    document.querySelectorAll('#venuePrefChips .chip').forEach(c=>{
-      if(c.textContent.trim()==='Both'){ c.classList.add('on'); S.venuePref='Both'; }
-    });
-    document.querySelectorAll('#playFormatChips .chip').forEach(c=>{
-      if(c.textContent.trim()==='Both'){ c.classList.add('on'); S.playFormat='Both'; }
-    });
-    document.querySelectorAll('#matchGenderPrefChips .chip').forEach(c=>{
-      if(c.textContent.trim()==='Both'){ c.classList.add('on'); S.matchGenderPref='Both'; }
-    });
-    document.querySelectorAll('#playStyleChips .chip').forEach(c=>{
-      if(c.textContent.trim()==='Both'){ c.classList.add('on'); S.playStyle='Both'; }
+    [{id:'venuePrefChips',key:'venuePref'},{id:'playFormatChips',key:'playFormat'},
+     {id:'matchGenderPrefChips',key:'matchGenderPref'},{id:'playStyleChips',key:'playStyle'}]
+    .forEach(({id,key})=>{
+      const chips=document.querySelectorAll('#'+id+' .chip');
+      chips.forEach(c=>c.classList.add('on'));
+      chips.forEach(c=>{ if(c.textContent.trim()==='Both'){
+        c.style.background='#991b1b'; c.style.color='#fff'; c.style.borderColor='#7f1d1d';
+      }});
+      S[key]='Both';
     });
   }
 });
