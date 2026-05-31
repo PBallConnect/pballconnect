@@ -1,6 +1,6 @@
 # CLAUDE.md — PBallConnect Reference
 
-_Last updated: May 30, 2026_
+_Last updated: May 31, 2026_
 
 ---
 
@@ -93,7 +93,7 @@ No tests, no linter, no build commands.
 
 5. **Bug C — phone/link invite paths: IC connection never established.** `icPostPendingConnection()` stores `pending_TOKEN` as a placeholder `recipient_email` for phone and link invite paths (no recipient email known at invite time). `handlePostRegistrationInvite()` PATCHes `connections` where `recipient_email = newPlayerEmail` — this matches zero rows for the placeholder. The IC connection is never approved for these paths. Email invite path works correctly (recipient email is known at invite time). Fix required before phone/link invite paths are reliable.
 
-6. **Organic signup pre-population not fully verified.** Age range dropdown mismatch suspected between `join.html` option values and registration form option values. Console log added to diagnose. Needs live end-to-end test: go through join.html → magic link → registration form and confirm all four fields (email, skill, playing since, age range) pre-populate correctly.
+6. **Goal rating slider track fill not rendering.** Red section (start → personal rating) and green section (personal rating → target) do not appear. `updateGoalRedBar()` investigation pending — overlay bar elements (`goalSliderRedBar`, `goalSliderGreenBar`) may be missing from the DOM or the function may not be reaching them.
 
 **Resolved (do not re-introduce):**
 - ~~`invites` table RLS INSERT policy missing~~ — policy added in Supabase; invites now write correctly
@@ -111,6 +111,7 @@ No tests, no linter, no build commands.
 - ~~Level grid column headers showing raw diff ranges (`< 3.88`, `3.88 – 4.13`) instead of IC Level Structure labels~~ — fixed in `buildGroupInviteGrid()` and `buildSmInviteGrid()`; now shows `.5+ Below My Level` / `.25 Below My Level` / `My Level` / `.25 Above My Level` / `.5+ Above My Level` with `≤/≥` reference values at 0.25 increments
 - ~~Emergency Fill overwrote `IC_MEMBERS` with flat objects when IC data was fetched on demand~~ — fixed by using local `_efMemberFlat` variable; `IC_MEMBERS` global is never written to by Emergency Fill. See Rule 47.
 - ~~Gender data in `registrations` used legacy values `'Male'`/`'Female'`~~ — one-time migration run May 30: `UPDATE registrations SET gender='Man' WHERE gender='Male'; UPDATE registrations SET gender='Woman' WHERE gender='Female';`. All rows now use `'Man'`/`'Woman'`. Users with `null` gender still need outreach or a login-time prompt.
+- ~~Organic signup pre-population failing~~ — root cause: `id="lbl3\"` in `index.html` (backslash before closing quote) caused `goTo()` to crash before the pre-population IIFE ran. Fixed May 31. All 4 fields (email, skill, age range, playing since) confirmed pre-populating correctly end-to-end.
 
 ---
 
@@ -389,9 +390,27 @@ Instruction format reminders:
 - Run in Supabase SQL Editor before any gender-based matching logic is used: `UPDATE registrations SET gender='Man' WHERE gender='Male'; UPDATE registrations SET gender='Woman' WHERE gender='Female';`. Users with `null` gender need outreach or a login-time prompt.
 
 **Known issue — organic pre-population needs live test:**
-- Age range dropdown mismatch suspected between `join.html` option values and registration form option values. Console log added. Must be verified end-to-end: join.html → magic link → registration form, confirm all four fields pre-populate correctly before removing the console log.
+- ~~Age range dropdown mismatch suspected~~ — confirmed matching (May 31). Root cause was `id="lbl3\"` crashing `goTo()`. All 4 fields pre-populate correctly end-to-end. Debug console.log removed.
 
 **Database cleanup completed (May 30):**
 - 16 test/incomplete accounts deleted from all related tables: `sms_consent_log`, `sms_log`, `match_responses`, `player_group_members`, `invites`, `connections`, `matches`, `organic_signups`, `registrations`. 6 clean accounts remain.
 - **Gender migration completed** — `'Female'` → `'Woman'`, `'Male'` → `'Man'` normalized across `registrations`. Known Bug #6 resolved.
 - **`invites` table schema correction** — the inviter column is `inviter_email`, not `organizer_email`. Update any query or code that references `organizer_email` on the `invites` table.
+
+### Session learnings — May 31, 2026
+
+**Organic pre-population — verified working:**
+- Root cause of pre-population failure: `id="lbl3\"` in `index.html` (backslash before closing quote on `lbl3` span) caused `goTo()` to crash with a null dereference before the pre-population IIFE ever ran. Fixed to `id="lbl3"`.
+- DELETE ordering fixed in `startNewRegistration()` — server DELETE (`/api/organic-signup` POST with `{ delete: true }`) now fires after all 4 DOM writes via `_needsServerDelete` flag, not before.
+- Silent fetch failures now log `[organic] server fetch failed:` with status + body to the console. Network errors also logged.
+- All 4 fields (email, skill, age range, playing since) confirmed pre-populating correctly end-to-end.
+
+**Slider tick marks fixed:**
+- `buildGoalTicks()` updated to use `calc(11px + ratio * (100% - 22px))` — same formula as `buildStaticSliderTicks()`. Thumb radius is 11px (22px wide thumb per CSS).
+- Goal rating thumb label (`goalThumbLabel`) and ✕ marker (`goalRedLabel`) positions also corrected with the same formula — they were using raw `pct%` which misaligned by up to 11px at range extremes.
+
+**"Both" chip defaults fixed:**
+- Play Format, Match Type Preference, Venue Preference, Play Style all initialize with full "Both" active state on `DOMContentLoaded`: all siblings get `.on` class, the Both chip gets dark red styles (`background:#991b1b`), matching exactly what `selChip()` does when Both is tapped.
+
+**Known open issue — goal rating slider track fill (Bug #6):**
+- Red section (start → personal rating) and green section (personal rating → target) not rendering. `updateGoalRedBar()` reads `goalSliderRedBar` and `goalSliderGreenBar` — these overlay elements may be missing from the DOM or structurally wrong. Investigation pending.
