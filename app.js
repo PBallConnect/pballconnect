@@ -334,7 +334,7 @@ function updateGoalRedBar(minIdx, goalIdx){
 
   // Black bar: 0 → personal rating (represents the floor you can't go below)
   redBar.style.width        = redPct+'%';
-  redBar.style.background   = '#111';
+  redBar.style.background   = '#dc2626';
   redBar.style.borderRadius = '3px 0 0 3px';
 
   // ✕ marker at personal rating position
@@ -357,7 +357,7 @@ function updateGoalRedBar(minIdx, goalIdx){
     if(goalIdx>minIdx){
       greenBar.style.left        = redPct+'%';
       greenBar.style.width       = (goalPct-redPct)+'%';
-      greenBar.style.background  = '#1a7a3a';
+      greenBar.style.background  = '#2563eb';
       greenBar.style.borderRadius= '0 3px 3px 0';
     } else {
       greenBar.style.width = '0%';
