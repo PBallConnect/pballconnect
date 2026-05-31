@@ -1,6 +1,6 @@
 # CLAUDE.md — PBallConnect Reference
 
-_Last updated: May 31, 2026_
+_Last updated: May 31, 2026 (updated)_
 
 ---
 
@@ -93,7 +93,7 @@ No tests, no linter, no build commands.
 
 5. **Bug C — phone/link invite paths: IC connection never established.** `icPostPendingConnection()` stores `pending_TOKEN` as a placeholder `recipient_email` for phone and link invite paths (no recipient email known at invite time). `handlePostRegistrationInvite()` PATCHes `connections` where `recipient_email = newPlayerEmail` — this matches zero rows for the placeholder. The IC connection is never approved for these paths. Email invite path works correctly (recipient email is known at invite time). Fix required before phone/link invite paths are reliable.
 
-6. **Goal rating slider track fill not rendering.** Red section (start → personal rating) and green section (personal rating → target) do not appear. `updateGoalRedBar()` investigation pending — overlay bar elements (`goalSliderRedBar`, `goalSliderGreenBar`) may be missing from the DOM or the function may not be reaching them.
+6. ~~**Goal rating slider track fill not rendering**~~ — fixed May 31. See Resolved list.
 
 **Resolved (do not re-introduce):**
 - ~~`invites` table RLS INSERT policy missing~~ — policy added in Supabase; invites now write correctly
@@ -112,6 +112,7 @@ No tests, no linter, no build commands.
 - ~~Emergency Fill overwrote `IC_MEMBERS` with flat objects when IC data was fetched on demand~~ — fixed by using local `_efMemberFlat` variable; `IC_MEMBERS` global is never written to by Emergency Fill. See Rule 47.
 - ~~Gender data in `registrations` used legacy values `'Male'`/`'Female'`~~ — one-time migration run May 30: `UPDATE registrations SET gender='Man' WHERE gender='Male'; UPDATE registrations SET gender='Woman' WHERE gender='Female';`. All rows now use `'Man'`/`'Woman'`. Users with `null` gender still need outreach or a login-time prompt.
 - ~~Organic signup pre-population failing~~ — root cause: `id="lbl3\"` in `index.html` (backslash before closing quote) caused `goTo()` to crash before the pre-population IIFE ran. Fixed May 31. All 4 fields (email, skill, age range, playing since) confirmed pre-populating correctly end-to-end.
+- ~~Goal rating slider track fill not rendering~~ — `updateGoalRedBar()` bailed immediately because `goalSliderRedBar`, `goalSliderGreenBar`, `goalRedLabel` were never added to `index.html`. Added as `position:absolute` overlays inside the `position:relative` slider wrapper (May 31). Bars: `top:50%; transform:translateY(-50%); height:6px`. Red bar (#dc2626) = floor below personal rating; blue bar (#2563eb) = goal range above personal rating. Tick builds also moved from `DOMContentLoaded` to `unlockProfileForm()` to fix zero-width timing.
 
 ---
 
@@ -412,5 +413,11 @@ Instruction format reminders:
 **"Both" chip defaults fixed:**
 - Play Format, Match Type Preference, Venue Preference, Play Style all initialize with full "Both" active state on `DOMContentLoaded`: all siblings get `.on` class, the Both chip gets dark red styles (`background:#991b1b`), matching exactly what `selChip()` does when Both is tapped.
 
-**Known open issue — goal rating slider track fill (Bug #6):**
-- Red section (start → personal rating) and green section (personal rating → target) not rendering. `updateGoalRedBar()` reads `goalSliderRedBar` and `goalSliderGreenBar` — these overlay elements may be missing from the DOM or structurally wrong. Investigation pending.
+**Goal rating slider track fill — root cause found and fixed:**
+- `updateGoalRedBar()` bailed at `if(!redBar) return` because `goalSliderRedBar`, `goalSliderGreenBar`, and `goalRedLabel` were never in `index.html`. Added as empty `position:absolute` divs inside the `position:relative` slider wrapper before the `<input>` (so slider thumb stays on top in stacking order).
+- Bar styles: `top:50%; transform:translateY(-50%); height:6px` — vertically centered on the 6px track regardless of browser-rendered input height.
+- Colors: red bar `#dc2626` (floor below personal rating), blue bar `#2563eb` (goal range above personal rating). JS in `updateGoalRedBar()` drives `width`, `left`, `borderRadius` dynamically.
+
+**Slider tick timing fixed:**
+- `buildStaticSliderTicks` was called at `DOMContentLoaded` before the profile section was visible — sliders had zero layout width, so ticks rendered at position 0. Moved all three tick builds (`duprTicks`, `personalRatingTicks`, `buildGoalTicks(0)`) to the end of `unlockProfileForm()`, which fires after `showPage('playerProfile')`.
+- `buildGoalTicks(0)` now called at form unlock so goal ticks render immediately (all grey, no personal rating set yet) without requiring the user to touch the slider first.
