@@ -428,3 +428,14 @@ Instruction format reminders:
 - Phone storage description corrected: "encoded before storage" → "stored as plain text digits and used only for SMS notifications you have explicitly opted into."
 - Email vendor corrected: EmailJS → Resend.
 - Last updated changed to May 2026.
+
+**Registration form collapsed from 3 steps to 2 (May 31):**
+- Step 1 combines Personal Info + Player Profile as one scrolling form. Step 2 is Waiver only.
+- Progress indicator: 3 dots → 2 dots ("Profile" → "Waiver"). `dot3`, `lbl3`, `line2` removed from HTML.
+- `next1` button removed. `next2` is the single Continue → `goTo(2)`.
+- `chk1()` now validates all required fields in one pass: `firstName` + `email` + `phone` + `gender` + `playingSince` + `personalRating > 0`. Gates `next2`.
+- `chk2()` delegates to `chk1()` — all 8 existing call sites unchanged.
+- `goTo()` iterates `[1,2]` instead of `[1,2,3]`; `populateSummary` gates on `n===2`.
+- `lockProfileForm()` / `unlockProfileForm()` iterate `['step1','step2']`.
+- Waiver Back button updated: `goTo(2)` → `goTo(1)`.
+- `clearForm()`: stale `next1.disabled` reference removed.
