@@ -421,3 +421,10 @@ Instruction format reminders:
 **Slider tick timing fixed:**
 - `buildStaticSliderTicks` was called at `DOMContentLoaded` before the profile section was visible — sliders had zero layout width, so ticks rendered at position 0. Moved all three tick builds (`duprTicks`, `personalRatingTicks`, `buildGoalTicks(0)`) to the end of `unlockProfileForm()`, which fires after `showPage('playerProfile')`.
 - `buildGoalTicks(0)` now called at form unlock so goal ticks render immediately (all grey, no personal rating set yet) without requiring the user to touch the slider first.
+
+**Privacy policy updated (May 31):**
+- SMS Notifications section added with full TCPA-compliant language: STOP/HELP opt-out, message frequency disclosure, "message and data rates may apply."
+- Stale "Play schedule" row removed from What We Collect table — field was dropped from the DB in May 2026.
+- Phone storage description corrected: "encoded before storage" → "stored as plain text digits and used only for SMS notifications you have explicitly opted into."
+- Email vendor corrected: EmailJS → Resend.
+- Last updated changed to May 2026.
