@@ -439,3 +439,17 @@ Instruction format reminders:
 - `lockProfileForm()` / `unlockProfileForm()` iterate `['step1','step2']`.
 - Waiver Back button updated: `goTo(2)` → `goTo(1)`.
 - `clearForm()`: stale `next1.disabled` reference removed.
+
+**`join.html` skill slider styled (May 31):**
+- Added `-webkit-appearance:none`, green fill via `--pct` CSS variable, circular white/green thumb matching the app's slider style. `jBuildSkillTicks()` builds 22-stop tick marks using `calc(11px + ratio * (100% - 22px))`. All self-contained — no app.js or styles.css dependency.
+
+**Privacy policy link audit (May 31):**
+- `landing.html` line 624: `href="/index.html#page-privacy"` — links to a hash fragment that won't work (page-section is hidden until `showPage()` fires). **Needs to change to `href="/privacy.html"`.**
+- `join.html`: no privacy policy link anywhere. **Needs a footer link.**
+- Inline `#page-privacy` in `index.html` is out of sync with `privacy.html` — needs the same 5 updates applied to `privacy.html` (SMS section, "currently" qualifier on payment statement, play schedule row removed, phone encoding corrected, EmailJS → Resend).
+- Correct links confirmed: waiver consent in `index.html` (line 729) → `privacy.html` ✓; Quick Connect consent in `app.js` (line 11237) → `privacy.html` ✓.
+
+**Confirmed working (May 31):**
+- `join.html` skill slider — styled, ticks aligned, green fill ✓
+- 2-step registration collapse — complete and working ✓
+- Organic pre-population — verified end-to-end ✓
