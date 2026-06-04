@@ -4,7 +4,6 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Join PBallConnect</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -28,12 +27,14 @@
     .field-label { display: block; font-size: 11px; font-weight: 700; color: #9ca3af;
                    text-transform: uppercase; letter-spacing: .07em; margin-bottom: 7px; }
     .field-label .req { color: #dc2626; }
-    input[type="email"], select {
+    input[type="email"], input[type="text"], select {
       width: 100%; padding: 12px 14px; border: 2px solid #d1d5db; border-radius: 10px;
       font-size: 16px; color: #111; background: #fff; outline: none; margin-bottom: 18px;
       font-family: Arial, sans-serif;
     }
-    input[type="email"]:focus, select:focus { border-color: #1a7a3a; }
+    input[type="email"]:focus, input[type="text"]:focus, select:focus { border-color: #1a7a3a; }
+    .two-col { display: flex; gap: 12px; }
+    .two-col > div { flex: 1; min-width: 0; }
     .slider-row { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
     .slider-wrap { flex: 1; }
     .slider-row input[type="range"] {
@@ -62,6 +63,20 @@
     .skill-guide { display: none; background: #f0fdf4; border: 1px solid #d1fae5;
                    border-radius: 10px; padding: 14px; margin-bottom: 18px;
                    font-size: 12px; color: #065f46; line-height: 1.7; }
+    .toggle-section { margin-bottom: 18px; }
+    .toggle-question { font-size: 13px; font-weight: 700; color: #374151;
+                       margin-bottom: 10px; line-height: 1.5; }
+    .toggle-row { display: flex; gap: 8px; }
+    .toggle-btn { flex: 1; padding: 11px 0; border: 2px solid #d1d5db; border-radius: 10px;
+                  background: #fff; color: #6b7280; font-size: 15px; font-weight: 700;
+                  cursor: pointer; transition: all .15s; font-family: Arial, sans-serif; }
+    .toggle-btn.sel-yes { background: #1a7a3a; border-color: #1a7a3a; color: #fff; }
+    .toggle-btn.sel-no  { background: #374151; border-color: #374151; color: #fff; }
+    .calendly-wrap { margin-top: 12px; }
+    .calendly-btn { display: block; width: 100%; padding: 13px 0;
+                    background: #2563eb; color: #fff; font-size: 14px; font-weight: 700;
+                    text-align: center; text-decoration: none; border-radius: 10px;
+                    font-family: Arial, sans-serif; }
     .turnstile-wrap { display: flex; justify-content: center; margin: 4px 0 18px; }
     .submit-btn { width: 100%; padding: 15px; background: #9ca3af; color: #fff;
                   font-size: 16px; font-weight: 800; border: none; border-radius: 12px;
@@ -71,10 +86,10 @@
     .small-print a { color: #9ca3af; }
     .error-msg { display: none; color: #dc2626; font-size: 12px; margin: -10px 0 14px;
                  padding: 10px; background: #fef2f2; border-radius: 8px; }
-    .check-email { display: none; text-align: center; padding: 14px 0; }
-    .check-email .icon { font-size: 36px; margin-bottom: 12px; }
-    .check-email .title { font-size: 18px; font-weight: 700; color: #111; margin-bottom: 8px; }
-    .check-email .body { font-size: 14px; color: #6b7280; line-height: 1.6; }
+    .confirm-state { display: none; text-align: center; padding: 14px 0; }
+    .confirm-state .icon { font-size: 36px; margin-bottom: 12px; }
+    .confirm-state .title { font-size: 18px; font-weight: 700; color: #111; margin-bottom: 8px; }
+    .confirm-state .body { font-size: 14px; color: #6b7280; line-height: 1.6; }
     hr { border: none; border-top: 1px solid #e5e7eb; margin: 0 0 16px; }
     .back { text-align: center; margin: 0; }
     .back a { color: #9ca3af; font-size: 13px; text-decoration: none; }
@@ -92,7 +107,7 @@
   <!-- Form state -->
   <div id="formState">
     <h1 class="heading">Join PBallConnect</h1>
-    <p class="sub">PBallConnect is a pickleball community built on trust. Players who join independently are encouraged to build their Inner Circle after registration.</p>
+    <p class="sub">PBallConnect is in private beta. We connect pickleball players with the people they actually want to play with — and give organizers a better way to fill a court without the group text chaos. Join free, help shape the product, and be part of something new in the pickleball community.</p>
 
     <!-- Email -->
     <label class="field-label" for="jEmail">Email Address <span class="req">*</span></label>
@@ -100,6 +115,54 @@
       oninput="jCheck()"
       onfocus="this.style.borderColor='#1a7a3a'"
       onblur="this.style.borderColor='#d1d5db'"/>
+
+    <!-- First Name -->
+    <label class="field-label" for="jFirstName">First Name <span class="req">*</span></label>
+    <input type="text" id="jFirstName" autocomplete="given-name" placeholder="Your first name"
+      oninput="jCheck()"
+      onfocus="this.style.borderColor='#1a7a3a'"
+      onblur="this.style.borderColor='#d1d5db'"/>
+
+    <!-- City + State -->
+    <div class="two-col">
+      <div>
+        <label class="field-label" for="jCity">City <span class="req">*</span></label>
+        <input type="text" id="jCity" autocomplete="address-level2" placeholder="Your city"
+          oninput="jCheck()"
+          onfocus="this.style.borderColor='#1a7a3a'"
+          onblur="this.style.borderColor='#d1d5db'"/>
+      </div>
+      <div>
+        <label class="field-label" for="jState">State <span class="req">*</span></label>
+        <select id="jState" onchange="jCheck()">
+          <option value="">State…</option>
+          <option>AL</option><option>AK</option><option>AZ</option><option>AR</option>
+          <option>CA</option><option>CO</option><option>CT</option><option>DE</option>
+          <option>DC</option><option>FL</option><option>GA</option><option>HI</option>
+          <option>ID</option><option>IL</option><option>IN</option><option>IA</option>
+          <option>KS</option><option>KY</option><option>LA</option><option>ME</option>
+          <option>MD</option><option>MA</option><option>MI</option><option>MN</option>
+          <option>MS</option><option>MO</option><option>MT</option><option>NE</option>
+          <option>NV</option><option>NH</option><option>NJ</option><option>NM</option>
+          <option>NY</option><option>NC</option><option>ND</option><option>OH</option>
+          <option>OK</option><option>OR</option><option>PA</option><option>RI</option>
+          <option>SC</option><option>SD</option><option>TN</option><option>TX</option>
+          <option>UT</option><option>VT</option><option>VA</option><option>WA</option>
+          <option>WV</option><option>WI</option><option>WY</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- How did you hear -->
+    <label class="field-label" for="jHowHeard">How did you hear about PBallConnect? <span class="req">*</span></label>
+    <select id="jHowHeard" onchange="jCheck()">
+      <option value="">Select…</option>
+      <option>Friend or fellow player</option>
+      <option>Social media</option>
+      <option>Web search</option>
+      <option>Pickleball club or facility</option>
+      <option>Other</option>
+    </select>
 
     <!-- Skill Level -->
     <label class="field-label">Skill Level <span class="req">*</span></label>
@@ -159,6 +222,31 @@
       <option value="81+">81+</option>
     </select>
 
+    <!-- Beta Tester -->
+    <div class="toggle-section">
+      <div class="toggle-question">Are you interested in being a Beta Tester? <span style="color:#dc2626;">*</span></div>
+      <div class="toggle-row">
+        <button type="button" class="toggle-btn" id="jBetaYes" onclick="jSetBeta(true)">Yes</button>
+        <button type="button" class="toggle-btn" id="jBetaNo" onclick="jSetBeta(false)">No</button>
+      </div>
+    </div>
+
+    <!-- Video Call (revealed when beta=Yes) -->
+    <div id="jVideoCallSection" style="display:none;">
+      <div class="toggle-section">
+        <div class="toggle-question">Would you be willing to meet our founder for a quick 5-minute video call? <span style="color:#dc2626;">*</span></div>
+        <div class="toggle-row">
+          <button type="button" class="toggle-btn" id="jCallYes" onclick="jSetVideoCall(true)">Yes</button>
+          <button type="button" class="toggle-btn" id="jCallNo" onclick="jSetVideoCall(false)">No</button>
+        </div>
+        <div id="jCalendlyWrap" class="calendly-wrap" style="display:none;">
+          <a href="https://calendly.com/zorro-pballconnect" target="_blank" class="calendly-btn">
+            📅 Schedule Your 5-Minute Call
+          </a>
+        </div>
+      </div>
+    </div>
+
     <!-- Turnstile -->
     <div class="turnstile-wrap">
       <div class="cf-turnstile"
@@ -170,16 +258,16 @@
 
     <p class="error-msg" id="jError"></p>
 
-    <button class="submit-btn" id="jSubmitBtn" onclick="jSubmit()" disabled>Send My Magic Link →</button>
+    <button class="submit-btn" id="jSubmitBtn" onclick="jSubmit()" disabled>Submit Application →</button>
 
     <p class="small-print">Already have an account? <a href="https://pballconnect.com">Sign in at pballconnect.com</a></p>
   </div>
 
-  <!-- Check email state -->
-  <div class="check-email" id="checkEmailState">
-    <div class="icon">✉️</div>
-    <div class="title">Check your email!</div>
-    <div class="body">We sent you a magic link. Click it to continue setting up your PBallConnect profile.</div>
+  <!-- Confirmation state -->
+  <div class="confirm-state" id="confirmState">
+    <div class="icon" id="confirmIcon"></div>
+    <div class="title" id="confirmTitle"></div>
+    <div class="body" id="confirmBody"></div>
   </div>
 
   <hr/>
@@ -187,20 +275,17 @@
 </div>
 
 <script>
-  var SUPABASE_URL     = 'https://dltiirdjfbjtydazrmvr.supabase.co';
-  var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsdGlpcmRqZmJqdHlkYXpybXZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MDQxNzgsImV4cCI6MjA4OTA4MDE3OH0.oBDtS3RZlGxMkqon-r1wdfYR6jPTSPGWIa8cZh7fLWA';
-
-  var _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
   var DUPR_VALS = ['2.0','2.25','2.5','2.75','3.0','3.25','3.5','3.75','4.0','4.25','4.5','4.75',
     '5.0','5.25','5.5','5.75','6.0','6.25','6.5','6.75','7.0','7.0+'];
 
-  var _skillSet      = false;  // true once slider has been moved off 0
+  var _skillSet      = false;
   var _turnstileDone = false;
+  var _betaTester    = null;  // null=unselected, true=Yes, false=No
+  var _videoCall     = null;  // null=unselected, true=Yes, false=No
 
   function jSkillUpdate(idx){
     _skillSet = parseInt(idx) > 0;
-    var val = _skillSet ? DUPR_VALS[parseInt(idx)] : '—';
+    var val = _skillSet ? DUPR_VALS[parseInt(idx)] : '--';
     document.getElementById('jSkillVal').textContent = val;
     var pct = (parseInt(idx) / 21 * 100).toFixed(1) + '%';
     document.getElementById('jSkillSlider').style.setProperty('--pct', pct);
@@ -248,28 +333,70 @@
     return el ? el.value : '';
   }
 
+  function jSetBeta(val){
+    _betaTester = val;
+    document.getElementById('jBetaYes').className = 'toggle-btn' + (val === true  ? ' sel-yes' : '');
+    document.getElementById('jBetaNo').className  = 'toggle-btn' + (val === false ? ' sel-no'  : '');
+    if(val === true){
+      document.getElementById('jVideoCallSection').style.display = 'block';
+    } else {
+      document.getElementById('jVideoCallSection').style.display = 'none';
+      _videoCall = null;
+      document.getElementById('jCallYes').className = 'toggle-btn';
+      document.getElementById('jCallNo').className  = 'toggle-btn';
+      document.getElementById('jCalendlyWrap').style.display = 'none';
+    }
+    jCheck();
+  }
+
+  function jSetVideoCall(val){
+    _videoCall = val;
+    document.getElementById('jCallYes').className = 'toggle-btn' + (val === true  ? ' sel-yes' : '');
+    document.getElementById('jCallNo').className  = 'toggle-btn' + (val === false ? ' sel-no'  : '');
+    document.getElementById('jCalendlyWrap').style.display = (val === true) ? 'block' : 'none';
+    jCheck();
+  }
+
   function jCheck(){
-    var email    = (document.getElementById('jEmail').value || '').trim();
-    var emailOk  = email.indexOf('@') > 0 && email.lastIndexOf('.') > email.indexOf('@');
-    var sinceOk  = !!document.getElementById('jSince').value;
-    var ageOk    = !!document.getElementById('jAge').value;
-    var ready    = emailOk && _skillSet && sinceOk && ageOk && _turnstileDone;
-    var btn      = document.getElementById('jSubmitBtn');
+    var emailOk = (function(){
+      var v = (document.getElementById('jEmail').value || '').trim();
+      return v.indexOf('@') > 0 && v.lastIndexOf('.') > v.indexOf('@');
+    })();
+    var nameOk  = (document.getElementById('jFirstName').value || '').trim().length > 0;
+    var cityOk  = (document.getElementById('jCity').value || '').trim().length > 0;
+    var stateOk = !!document.getElementById('jState').value;
+    var howOk   = !!document.getElementById('jHowHeard').value;
+    var sinceOk = !!document.getElementById('jSince').value;
+    var ageOk   = !!document.getElementById('jAge').value;
+    var betaOk  = _betaTester !== null;
+    var videoOk = _betaTester !== true || _videoCall !== null;
+    var ready   = emailOk && nameOk && cityOk && stateOk && howOk && _skillSet &&
+                  sinceOk && ageOk && betaOk && videoOk && _turnstileDone;
+    var btn = document.getElementById('jSubmitBtn');
     btn.disabled = !ready;
     if(ready){ btn.classList.add('ready'); } else { btn.classList.remove('ready'); }
   }
 
   async function jSubmit(){
-    var email = (document.getElementById('jEmail').value || '').trim().toLowerCase();
+    var email    = (document.getElementById('jEmail').value || '').trim().toLowerCase();
+    var name     = (document.getElementById('jFirstName').value || '').trim();
+    var city     = (document.getElementById('jCity').value || '').trim();
+    var state    = document.getElementById('jState').value;
+    var howHeard = document.getElementById('jHowHeard').value;
     var sliderIdx = parseInt(document.getElementById('jSkillSlider').value) || 0;
-    var skill = sliderIdx > 0 ? DUPR_VALS[sliderIdx] : '';
-    var since = document.getElementById('jSince').value;
-    var age   = document.getElementById('jAge').value;
-    var errEl = document.getElementById('jError');
+    var skill    = sliderIdx > 0 ? DUPR_VALS[sliderIdx] : '';
+    var since    = document.getElementById('jSince').value;
+    var age      = document.getElementById('jAge').value;
+    var errEl    = document.getElementById('jError');
     errEl.style.display = 'none';
 
-    if(!email || !skill || !since || !age){
-      errEl.textContent = 'Please fill in all fields and move the skill slider.';
+    if(!email || !name || !city || !state || !howHeard || !skill || !since || !age || _betaTester === null){
+      errEl.textContent = 'Please fill in all required fields.';
+      errEl.style.display = 'block';
+      return;
+    }
+    if(_betaTester === true && _videoCall === null){
+      errEl.textContent = 'Please answer the video call question.';
       errEl.style.display = 'block';
       return;
     }
@@ -284,28 +411,34 @@
     var btn = document.getElementById('jSubmitBtn');
     btn.disabled = true;
     btn.classList.remove('ready');
-    btn.textContent = 'Sending…';
-
-    // Store form values in sessionStorage for pre-population after magic link click
-    sessionStorage.setItem('organic_email',         email);
-    sessionStorage.setItem('organic_skill',         skill);
-    sessionStorage.setItem('organic_playing_since', since);
-    sessionStorage.setItem('organic_age_range',     age);
-    sessionStorage.setItem('organic_source',        'organic');
+    btn.textContent = 'Submitting...';
 
     try {
-      var signupRes = await fetch('/api/organic-signup', {
+      var res = await fetch('/api/beta-apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email, skill_level: skill, playing_since: since, age_range: age })
+        body: JSON.stringify({
+          email:            email,
+          first_name:       name,
+          city:             city,
+          state:            state,
+          heard_from:       howHeard,
+          skill_level:      skill,
+          playing_since:    since,
+          age_range:        age,
+          wants_beta:       _betaTester,
+          wants_video_call: _betaTester ? _videoCall : null,
+          calendly_shown:   _betaTester === true && _videoCall === true,
+          turnstileToken:   turnstileToken
+        })
       });
-      if(!signupRes.ok){
-        var signupData = await signupRes.json().catch(function(){ return {}; });
-        errEl.textContent = signupData.error || 'Something went wrong. Please try again.';
+      var data = await res.json().catch(function(){ return {}; });
+      if(!res.ok){
+        errEl.textContent = data.error || 'Something went wrong. Please try again.';
         errEl.style.display = 'block';
         btn.disabled = false;
         btn.classList.add('ready');
-        btn.textContent = 'Send My Magic Link →';
+        btn.textContent = 'Submit Application →';
         return;
       }
     } catch(_){
@@ -313,28 +446,24 @@
       errEl.style.display = 'block';
       btn.disabled = false;
       btn.classList.add('ready');
-      btn.textContent = 'Send My Magic Link →';
-      return;
-    }
-    var result = await _sb.auth.signInWithOtp({
-      email: email,
-      options: { emailRedirectTo: 'https://pballconnect.com/?organic=1' }
-    });
-
-    if(result.error){
-      // Clear sessionStorage on failure so stale values don't persist
-      ['organic_email','organic_skill','organic_playing_since','organic_age_range','organic_source']
-        .forEach(function(k){ sessionStorage.removeItem(k); });
-      errEl.textContent = 'Something went wrong. Please try again.';
-      errEl.style.display = 'block';
-      btn.disabled = false;
-      btn.classList.add('ready');
-      btn.textContent = 'Send My Magic Link →';
+      btn.textContent = 'Submit Application →';
       return;
     }
 
     document.getElementById('formState').style.display = 'none';
-    document.getElementById('checkEmailState').style.display = 'block';
+    var confirmIcon  = document.getElementById('confirmIcon');
+    var confirmTitle = document.getElementById('confirmTitle');
+    var confirmBody  = document.getElementById('confirmBody');
+    if(_betaTester === false){
+      confirmIcon.textContent  = '✉️';
+      confirmTitle.textContent = "You're on the list!";
+      confirmBody.textContent  = "Thanks! We'll notify you when PBallConnect opens to everyone.";
+    } else {
+      confirmIcon.textContent  = '✅';
+      confirmTitle.textContent = 'Application Received!';
+      confirmBody.textContent  = "Thanks! We'll review your application and be in touch soon.";
+    }
+    document.getElementById('confirmState').style.display = 'block';
   }
 </script>
 

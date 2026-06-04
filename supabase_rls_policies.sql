@@ -625,3 +625,34 @@ alter table waitlist enable row level security;
 
 -- No public policies — service role key bypasses RLS for all writes.
 -- Authenticated admin reads (Supabase dashboard / service role) work without policies.
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- beta_applications — applications submitted via join.html gated beta flow.
+-- Written by /api/beta-application using SUPABASE_SERVICE_KEY.
+-- status: 'pending' = yes beta tester (awaiting review); 'waitlist' = no beta tester.
+-- Run this block in Supabase SQL Editor before deploying join.html.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+create table if not exists beta_applications (
+  id               uuid        primary key default gen_random_uuid(),
+  created_at       timestamptz not null default now(),
+  email            text        not null,
+  first_name       text        not null,
+  city             text        not null,
+  state            text        not null,
+  heard_from       text        not null,
+  skill_level      text,
+  playing_since    text,
+  age_range        text,
+  wants_beta       boolean     not null default false,
+  wants_video_call boolean,
+  calendly_shown   boolean     not null default false,
+  status           text        not null default 'pending'
+    check (status in ('pending','approved','rejected','waitlist')),
+  notes            text,
+  constraint beta_applications_email_unique unique (email)
+);
+
+alter table beta_applications enable row level security;
+
+-- No public policies — service role key bypasses RLS for all writes.
