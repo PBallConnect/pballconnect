@@ -423,6 +423,121 @@
     }
 
     footer a:hover { text-decoration: underline; }
+
+    /* ── Sign In Modal ── */
+    #signInModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .si-card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 2rem 1.75rem;
+      width: 100%;
+      max-width: 400px;
+      position: relative;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+    .si-close {
+      position: absolute;
+      top: 0.875rem;
+      right: 1rem;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      color: var(--muted);
+      cursor: pointer;
+      line-height: 1;
+      padding: 0.25rem 0.375rem;
+    }
+    .si-close:hover { color: var(--text); }
+    .si-logo {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      display: block;
+      margin: 0 auto 0.75rem;
+      box-shadow: 0 2px 12px rgba(22,163,74,0.15);
+    }
+    .si-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--text);
+      text-align: center;
+      margin-bottom: 0.25rem;
+    }
+    .si-sub {
+      font-size: 0.875rem;
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+    #siEmail {
+      display: block;
+      width: 100%;
+      padding: 0.75rem 0.9rem;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 1rem;
+      color: var(--text);
+      background: #fff;
+      outline: none;
+      -webkit-appearance: none;
+      margin-bottom: 0.75rem;
+      font-family: inherit;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    #siEmail:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(22,163,74,0.12);
+    }
+    #siSubmitBtn {
+      display: block;
+      width: 100%;
+      padding: 0.875rem 1.5rem;
+      background: var(--green);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.15s;
+      font-family: inherit;
+    }
+    #siSubmitBtn:hover:not(:disabled) { background: var(--green-dark); }
+    #siSubmitBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+    #siErrMsg {
+      display: none;
+      margin-top: 0.75rem;
+      padding: 0.75rem 1rem;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      color: #dc2626;
+      font-size: 0.875rem;
+    }
+    #siLoading {
+      display: none;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.95rem;
+      padding: 1rem 0;
+    }
+    #siSuccess {
+      display: none;
+      text-align: center;
+      padding: 0.5rem 0;
+    }
+    .si-success-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    #siSuccessDetail { font-size: 0.9rem; color: #4b5563; line-height: 1.6; }
   </style>
 </head>
 <body>
@@ -430,7 +545,7 @@
   <!-- ── Nav ── -->
   <nav class="nav" role="navigation" aria-label="Main navigation">
     <span class="nav-logo-text"><span>PBall</span>Connect</span>
-    <a href="/app.html" class="nav-signin">Sign In</a>
+    <a href="javascript:void(0)" onclick="openSignInModal()" class="nav-signin">Sign In</a>
   </nav>
 
   <!-- ── Hero ── -->
@@ -445,7 +560,7 @@
     </p>
     <div class="hero-actions">
       <a href="#waitlist" class="btn-primary">Request an Invite</a>
-      <p class="hero-signin-link">Already a member? <a href="/app.html">Sign In</a></p>
+      <p class="hero-signin-link">Already a member? <a href="javascript:void(0)" onclick="openSignInModal()">Sign In</a></p>
     </div>
   </section>
 
@@ -624,6 +739,98 @@
       <a href="/app.html#page-privacy">Privacy Policy</a>
     </p>
   </footer>
+
+  <!-- ── Sign In Modal ── -->
+  <div id="signInModal" role="dialog" aria-modal="true" aria-labelledby="siModalTitle">
+    <div class="si-card">
+      <button class="si-close" onclick="closeSignInModal()" aria-label="Close">&times;</button>
+      <img src="icon-192.png" alt="PBallConnect" class="si-logo"/>
+      <div class="si-title" id="siModalTitle">Sign In</div>
+      <div class="si-sub">Enter your email &mdash; we&rsquo;ll send you a magic link to sign in.</div>
+      <div id="siForm">
+        <input type="email" id="siEmail" placeholder="you@example.com" autocomplete="email"
+          onkeydown="if(event.key==='Enter')doSignIn()"/>
+        <button id="siSubmitBtn" onclick="doSignIn()">Send Magic Link &rarr;</button>
+        <div id="siErrMsg"></div>
+      </div>
+      <div id="siLoading">Sending&hellip;</div>
+      <div id="siSuccess">
+        <div class="si-success-icon">&#x2709;&#xFE0F;</div>
+        <p id="siSuccessDetail"></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var _siSupabaseUrl = 'https://dltiirdjfbjtydazrmvr.supabase.co';
+    var _siAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsdGlpcmRqZmJqdHlkYXpybXZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MDQxNzgsImV4cCI6MjA4OTA4MDE3OH0.oBDtS3RZlGxMkqon-r1wdfYR6jPTSPGWIa8cZh7fLWA';
+
+    function openSignInModal() {
+      document.getElementById('signInModal').style.display = 'flex';
+      setTimeout(function () { document.getElementById('siEmail').focus(); }, 100);
+    }
+
+    function closeSignInModal() {
+      document.getElementById('signInModal').style.display = 'none';
+      document.getElementById('siForm').style.display = 'block';
+      document.getElementById('siLoading').style.display = 'none';
+      document.getElementById('siSuccess').style.display = 'none';
+      document.getElementById('siErrMsg').style.display = 'none';
+      document.getElementById('siEmail').value = '';
+      var btn = document.getElementById('siSubmitBtn');
+      btn.disabled = false;
+      btn.textContent = 'Send Magic Link →';
+    }
+
+    async function doSignIn() {
+      var email = (document.getElementById('siEmail').value || '').trim().toLowerCase();
+      var errEl = document.getElementById('siErrMsg');
+      var btn = document.getElementById('siSubmitBtn');
+      var formEl = document.getElementById('siForm');
+      var loadingEl = document.getElementById('siLoading');
+      var successEl = document.getElementById('siSuccess');
+      var detailEl = document.getElementById('siSuccessDetail');
+
+      errEl.style.display = 'none';
+      if (!email || email.indexOf('@') < 1 || email.lastIndexOf('.') <= email.indexOf('@')) {
+        errEl.textContent = 'Please enter a valid email address.';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      btn.disabled = true;
+      formEl.style.display = 'none';
+      loadingEl.style.display = 'block';
+
+      try {
+        var res = await fetch(_siSupabaseUrl + '/auth/v1/otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': _siAnonKey },
+          body: JSON.stringify({
+            email: email,
+            options: { emailRedirectTo: window.location.origin + '/app.html' }
+          })
+        });
+        loadingEl.style.display = 'none';
+        if (res.ok) {
+          successEl.style.display = 'block';
+          detailEl.textContent = 'We sent a magic link to ' + email + '. Click it to sign in.';
+        } else {
+          throw new Error('Status ' + res.status);
+        }
+      } catch (e) {
+        loadingEl.style.display = 'none';
+        formEl.style.display = 'block';
+        btn.disabled = false;
+        errEl.textContent = 'Could not send link. Please try again.';
+        errEl.style.display = 'block';
+      }
+    }
+
+    document.getElementById('signInModal').addEventListener('click', function (e) {
+      if (e.target === this) closeSignInModal();
+    });
+  </script>
 
   <script>
     (function () {
