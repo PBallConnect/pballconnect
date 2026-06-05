@@ -1,0 +1,2457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="application-name" content="PBallConnect"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="PBallConnect"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="theme-color" content="#0a120b"/>
+<meta name="description" content="Connect with pickleball players near you. Find games, build your Inner Circle, track scores and stats."/>
+<meta property="og:title" content="PBallConnect — Find Pickleball Players Near You"/>
+<meta property="og:description" content="Connect with pickleball players, organize matches, track scores."/>
+<meta property="og:type" content="website"/>
+
+<!-- PWA Manifest -->
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230a120b'/><text y='.9em' font-size='80' x='10'>🏓</text></svg>"/>
+
+<!-- Styles -->
+<link rel="stylesheet" href="styles.css"/>
+
+<!-- External libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+<title>PBallConnect — Find Pickleball Players Near You</title>
+<style>
+  /* Top header — white */
+  .top-header { background:#ffffff !important; border-bottom:1px solid #e5e7eb !important; box-shadow:0 1px 4px rgba(0,0,0,0.06) !important; }
+  .top-logo-text { color:#111 !important; }
+  .top-logo-text span { color:#1a7a3a !important; }
+  .top-btn-label { color:#111 !important; }
+  .top-signin-btn { color:#111 !important; }
+
+  /* Nav separator lines */
+  .left-nav [style*="height:1px"] { background:#c9d0d8 !important; opacity:1 !important; }
+
+  /* Invited by Others badge — ensure text visible */
+  #invitedByOthersBadge { color:#fff !important; }
+
+  /* Match cards — white */
+  .match-card { background:#ffffff !important; border-color:#e5e7eb !important; }
+  .ic-member-card { background:#ffffff !important; border-color:#e5e7eb !important; }
+
+  /* Lessons dim */
+  .nav-lessons-dim { opacity:0.5 !important; }
+
+  /* Pickleball custom icon */
+  .pb-icon { width:1.2em; height:1.2em; object-fit:contain; vertical-align:middle; display:inline-block; }
+  .pb-icon-lg { width:1.8em; height:1.8em; object-fit:contain; vertical-align:middle; display:inline-block; }
+  .pb-icon-xl { width:2.5em; height:2.5em; object-fit:contain; vertical-align:middle; display:inline-block; }
+
+  /* SMS opt-in checkbox — custom appearance so checked state is visible on iOS */
+  #smsOptIn {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    border: 2px solid #9ca3af;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-top: 2px;
+    transition: background-color 0.15s, border-color 0.15s;
+  }
+  #smsOptIn:checked {
+    background-color: #2d6a4f;
+    border-color: #2d6a4f;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 8l3.5 3.5L13 5' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-size: 15px 15px;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+  #smsOptIn:focus-visible {
+    outline: 3px solid #2d6a4f;
+    outline-offset: 2px;
+  }
+</style>
+</head>
+<body>
+
+
+<div class="nav-overlay" id="navOverlay" onclick="closeNav()" style="display:none;opacity:0;pointer-events:none;"></div>
+
+<div class="right-column">
+<div class="top-header" style="background:#ffffff;border-bottom:1px solid #e5e7eb;">
+  <div class="top-header-left">
+    <!-- Hamburger INSIDE header so it's always visible and tappable -->
+    <button class="nav-toggle" onclick="toggleNav()" style="color:#111;">☰</button>
+    <div id="memberCountBadge" style="display:none;margin-left:8px;padding:3px 10px;border-radius:999px;background:rgba(76,175,125,0.12);border:1px solid rgba(76,175,125,0.25);font-size:11px;font-weight:700;color:#1a7a3a;letter-spacing:.03em;"></div>
+  </div>
+  <div class="top-header-right">
+    <!-- Refresh button - especially useful on mobile -->
+    <button id="refreshBtn" onclick="refreshCurrentPage()" title="Refresh"
+      style="background:none;border:none;color:#555;font-size:18px;cursor:pointer;padding:4px 8px;border-radius:6px;-webkit-tap-highlight-color:transparent;display:none;align-items:center;justify-content:center;">↻</button>
+    <div id="navLoginBtn" class="top-signin-btn" title="Your Profile — click to edit or sign out" onclick="S.email||getMyEmail()?openProfileMenu():openLoginModal()">
+      <span id="navLoginEmoji" style="font-size:16px;">👤</span>
+      <span id="navLoginLabel" class="top-btn-label">Sign In</span>
+    </div>
+  </div>
+</div>
+
+<div class="app-shell">
+  <!-- Left Navigation -->
+  <nav class="left-nav" id="leftNav" style="background:#f3f4f6;border-right:1px solid #e5e7eb;">
+    <div class="nav-logo">
+      <div style="padding:16px 16px 12px;border-bottom:1px solid #d1d5db;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <img src="/pickleball.jpg" style="width:36px;height:36px;object-fit:contain;" alt="pickleball"/>
+          <div>
+            <div style="font-size:16px;font-weight:900;color:#111;line-height:1.1;letter-spacing:-0.3px;"><span style="color:#1a7a3a;">PBall</span>Connect</div>
+            <div style="display:inline-block;margin-top:2px;padding:1px 6px;border-radius:3px;background:#1a1a1a;color:#f5f5f5;font-size:8px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;">BETA</div>
+          </div>
+        </div>
+        <div style="font-size:10px;font-weight:700;color:#1a7a3a;letter-spacing:.02em;font-style:italic;margin-top:4px;"><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> For the Love of Pickleball</div>
+      </div>
+    </div>
+    <div class="nav-items">
+
+      <!-- ── Dashboard ── -->
+      <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard" title="Dashboard" style="background:#d1fae5;border-left:3px solid #1a7a3a;">
+        <span class="nav-icon">🏠</span><span class="nav-label" style="font-weight:700;">Dashboard</span>
+      </div>
+
+      <div style="height:1px;background:var(--border);margin:6px 20px;opacity:0.5;"></div>
+
+      <!-- ── Matches ── -->
+      <div class="nav-section-label">Matches</div>
+      <button class="nav-item" onclick="showPage('confirmedMatches')" id="nav-confirmedMatches" title="Confirmed Matches — upcoming confirmed games">
+        <span class="nav-icon">✅</span><span class="nav-label">Confirmed Matches</span>
+        <span id="confirmedMatchesBadge" style="display:inline-flex;min-width:20px;height:20px;border-radius:50%;background:rgba(76,175,125,0.2);color:rgba(76,175,125,0.5);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;">0></span>
+      </button>
+      <button class="nav-item" onclick="showPage('findPlayers')" id="nav-findPlayers" title="Players Wanting to Play">
+        <span class="nav-icon">🔍</span><span class="nav-label">Players Wanting to Play</span>
+      </button>
+
+      <!-- Separator -->
+      <div style="height:1px;background:var(--border);margin:6px 20px;opacity:0.5;"></div>
+
+      <!-- ── Lessons ── -->
+      <div style="height:1px;background:var(--border);margin:6px 20px;opacity:0.5;"></div>
+
+      <!-- ── Player ── -->
+      <div class="nav-section-label">Player</div>
+      <button class="nav-item" onclick="showPage('playerProfile')" id="nav-playerProfile" title="Player Profile">
+        <span class="nav-icon">👤</span><span class="nav-label">Player Profile</span>
+      </button>
+      <button class="nav-item" onclick="showPage('innerCircle')" id="nav-innerCircle" title="Inner Circle">
+        <span class="nav-icon">👥</span><span class="nav-label">Inner Circle</span>
+      </button>
+      <button class="nav-item" onclick="showPage('myCourts')" id="nav-myCourts" title="My Courts" style="flex-wrap:wrap;align-items:flex-start;">
+        <span class="nav-icon">🏟️</span><span class="nav-label">My Courts</span>
+        <div style="width:100%;padding-left:32px;margin-top:4px;display:flex;gap:6px;" id="navCourtsBadges">
+          <span id="navCourtPrivate" title="Private Courts" style="display:none;flex-direction:column;align-items:center;gap:1px;">
+            <span style="min-width:20px;height:18px;border-radius:4px;background:rgba(140,100,255,0.2);border:1px solid rgba(140,100,255,0.4);color:#a78bfa;font-size:10px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;padding:0 5px;" id="navCourtPrivateNum"></span>
+            <span style="font-size:8px;font-weight:700;color:#a78bfa;letter-spacing:.03em;">Private</span>
+          </span>
+          <span id="navCourtPublic" title="Public Courts" style="display:none;flex-direction:column;align-items:center;gap:1px;">
+            <span style="min-width:20px;height:18px;border-radius:4px;background:rgba(76,175,125,0.2);border:1px solid rgba(76,175,125,0.4);color:var(--green);font-size:10px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;padding:0 5px;" id="navCourtPublicNum"></span>
+            <span style="font-size:8px;font-weight:700;color:var(--green);letter-spacing:.03em;">Public</span>
+          </span>
+        </div>
+      </button>
+
+      <!-- ── Organizer (shown only when is_organizer = true) ── -->
+      <div id="organizerNav" style="display:none;">
+        <div style="height:1px;background:var(--border);margin:6px 20px;opacity:0.5;"></div>
+        <div class="nav-section-label">Organizer</div>
+        <button class="nav-item" onclick="showPage('setupMatch')" id="nav-setupMatch" title="Set Up A Match">
+          <span class="nav-icon">🎯</span><span class="nav-label">Set Up A Match</span>
+        </button>
+        <button class="nav-item" onclick="showPage('myInvites')" id="nav-myInvites" title="My Match Invites — pending matches you organized">
+          <span class="nav-icon">📤</span><span class="nav-label">My Match Invites</span>
+          <span id="myInvitesBadge" style="display:inline-flex;min-width:18px;height:18px;border-radius:999px;background:rgba(239,68,68,0.3);color:rgba(255,255,255,0.5);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;">0></span>
+        </button>
+        <button class="nav-item" onclick="showPage('myGroups')" id="nav-myGroups" title="My Groups">
+          <span class="nav-icon">🗂️</span><span class="nav-label">My Groups</span>
+          <span id="navGroupsBadge" style="display:none;margin-left:auto;min-width:20px;height:20px;border-radius:4px;background:rgba(76,175,125,0.2);border:1px solid rgba(76,175,125,0.4);color:var(--green);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 5px;"></span>
+        </button>
+        <button class="nav-item" onclick="showPage('recurringMatches')" id="nav-recurringMatches" title="Recurring Matches">
+          <span class="nav-icon">🔄</span><span class="nav-label">Recurring Matches</span>
+        </button>
+      </div>
+
+      <div style="height:1px;background:var(--border);margin:6px 20px;opacity:0.5;"></div>
+
+      <!-- ── Stats ── -->
+      <div class="nav-section-label">Stats &amp; History</div>
+      <button class="nav-item" onclick="showPage('playerStats')" id="nav-playerStats-2" title="Player Statistics">
+        <span class="nav-icon">📊</span><span class="nav-label">Player Statistics</span>
+      </button>
+      <button class="nav-item" onclick="showPage('recordScores')" id="nav-recordScores-2" title="Record / View Scores">
+        <span class="nav-icon">🏆</span><span class="nav-label">Record / View Scores</span>
+      </button>
+
+      <div style="height:1px;background:var(--border);margin:6px 20px;opacity:0.5;"></div>
+
+      <div class="nav-section-label">Lessons</div>
+      <button class="nav-item nav-lessons-dim" onclick="showPage('myLessons')" id="nav-myLessons" title="My Lessons">
+        <span class="nav-icon">📚</span><span class="nav-label">My Lessons</span>
+      </button>
+      <button class="nav-item nav-lessons-dim" onclick="showPage('lessons')" id="nav-lessons" title="For Coaches">
+        <span class="nav-icon">🎓</span><span class="nav-label">For Coaches</span>
+        <span class="nav-lessons-badge" id="lessonsNavBadge" style="display:none;">New</span>
+      </button>
+      <button class="nav-item" onclick="showPage('privacy')" id="nav-privacy" title="Privacy Policy">
+        <span class="nav-icon">🔒</span><span class="nav-label">Privacy Policy</span>
+      </button>
+      <button class="nav-item" onclick="showPage('tos')" id="nav-tos" title="Terms of Service">
+        <span class="nav-icon">⚖️</span><span class="nav-label">Terms of Service</span>
+      </button>
+
+    </div>
+    <div class="nav-footer">
+      <div class="nav-footer-text">PBallConnect v1.0<br>Powered by Supabase</div>
+    </div>
+    <!-- Beta Feedback Button -->
+    <div style="padding:12px 16px;margin-top:auto;border-top:1px solid rgba(255,255,255,0.06);">
+      <button onclick="closeNav();openFeedbackModal()" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid #1a5c32;background:#d1fae5;color:#1a5c32;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;">
+        &#128172; Send Feedback
+      </button>
+      <div style="font-size:10px;color:#1a5c32;text-align:center;margin-top:6px;">Beta v0.1 — pballconnect.com</div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- ══ WELCOME / LANDING PAGE ════════════════════════════════ -->
+    <div class="page-section active" id="page-welcome" style="background:#ffffff;min-height:100vh;padding:0;margin:0;">
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;padding:2rem;text-align:center;">
+        <img src="icon-192.png" alt="PBallConnect" style="width:96px;height:96px;border-radius:20px;margin-bottom:1.5rem;">
+        <h1 style="font-size:2rem;font-weight:700;margin-bottom:0.5rem;">PBallConnect</h1>
+        <p style="color:#666;font-size:1.1rem;margin-bottom:2.5rem;">Pickleball. Your people. Your courts.</p>
+        <button onclick="openLoginModal()" style="width:100%;max-width:320px;padding:1rem;background:#1a7a3a;color:#fff;border:none;border-radius:12px;font-size:1.1rem;font-weight:600;cursor:pointer;margin-bottom:1rem;">Sign In</button>
+        <button onclick="showPage('tos')" style="width:100%;max-width:320px;padding:0.75rem;background:transparent;color:#1a7a3a;border:2px solid #1a7a3a;border-radius:12px;font-size:1rem;cursor:pointer;">Learn More</button>
+      </div>
+    </div>
+
+    <!-- PLAYER PROFILE PAGE -->
+    <!-- ══ DASHBOARD PAGE ══════════════════════════════════════ -->
+    <div class="page-section" id="page-dashboard" style="background:#ffffff;min-height:100vh;padding:0;margin:0;">
+      <div style="padding:16px 16px 40px;max-width:600px;margin:0 auto;">
+
+        <!-- Welcome header -->
+        <div style="margin-bottom:20px;padding-top:8px;">
+          <div style="font-size:24px;font-weight:800;color:#111;">Good to see you! <span id="dashEmoji">🎾</span></div>
+          <div id="dashName" style="font-size:14px;color:#666;margin-top:3px;"></div>
+        </div>
+
+        <!-- ── MATCHES container ── -->
+        <div style="background:#e2e8f0;border:3px solid #94a3b8;border-radius:16px;padding:14px 12px;margin-bottom:14px;">
+          <div style="font-size:15px;font-weight:800;color:#1e293b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;text-align:center;">Matches</div>
+          <div style="display:flex;gap:8px;">
+
+            <!-- Green: Confirmed -->
+            <button onclick="showPage('confirmedMatches')"
+              style="flex:1;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #16a34a;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;"
+              onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='#ffffff'">
+              <div id="dashSqConfirmed" style="font-size:26px;font-weight:800;color:#14532d;line-height:1;">0</div>
+              <div style="font-size:12px;font-weight:700;color:#14532d;margin-top:5px;line-height:1.4;">✅ Confirmed</div>
+              <div id="dashTileConfirmed" style="display:none;"></div>
+            </button>
+
+            <!-- Orange: Match Invites From Me → Others -->
+            <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+              <button id="dashMyInvitesTile" onclick="showPage('myInvites')"
+                style="width:100%;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #ea580c;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;"
+                onmouseover="this.style.background='#fff7ed'" onmouseout="this.style.background='#ffffff'">
+                <div id="dashSqMyInvites" style="font-size:26px;font-weight:800;color:#7c2d12;line-height:1;">0</div>
+                <div style="font-size:12px;font-weight:700;color:#7c2d12;margin-top:5px;line-height:1.4;">My Match Invites<br/>to Others</div>
+                <div id="dashTileMyInvites" style="display:none;"></div>
+              </button>
+            </div>
+
+            <!-- Blue: Match Invites to Me ← Others -->
+            <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+              <button onclick="showPage('invitedByOthers')"
+                style="width:100%;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #2563eb;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;"
+                onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='#ffffff'">
+                <div id="dashSqInvited" style="font-size:26px;font-weight:800;color:#1e3a8a;line-height:1;">0</div>
+                <div style="font-size:12px;font-weight:700;color:#1e3a8a;margin-top:5px;line-height:1.4;">Match Invites<br/>from Others</div>
+                <div id="dashTileInvited" style="display:none;"></div>
+              </button>
+              <div id="dashSubMyPending" onclick="showPage('invitedByOthers')"
+                style="display:none;padding:6px 10px;border-radius:10px;background:#FFF8E1;border:1.5px solid #F59E0B;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;"
+                onmouseover="this.style.background='#fef3c7'" onmouseout="this.style.background='#FFF8E1'">
+                <span id="dashSubMyPendingText" style="font-size:11px;font-weight:700;color:#92400E;"></span>
+              </div>
+            </div>
+
+          </div>
+
+
+
+          <!-- Set Up a Match button -->
+          <button onclick="showPage('setupMatch')"
+            style="width:100%;margin-top:10px;padding:13px 16px;border-radius:12px;background:#1a7a3a;border:none;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:8px;"
+            onmouseover="this.style.background='#15682f'" onmouseout="this.style.background='#1a7a3a'">
+            <span style="font-size:16px;">🎾</span>
+            <span style="font-size:14px;font-weight:800;color:#ffffff;">Set Up a Match</span>
+            <span style="font-size:14px;color:rgba(255,255,255,0.7);">→</span>
+          </button>
+
+        </div>
+
+        <!-- ── INNER CIRCLE container ── -->
+        <div style="background:#fef9c3;border:3px solid #eab308;border-radius:16px;padding:14px 12px;">
+          <div style="font-size:15px;font-weight:800;color:#713f12;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;text-align:center;">Inner Circle</div>
+          <div style="display:flex;gap:8px;">
+
+            <!-- Green: My Inner Circle -->
+            <button onclick="showPage('innerCircle');setTimeout(()=>showIcView('members'),450)"
+              style="flex:1;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #16a34a;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;"
+              onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='#ffffff'">
+              <div id="dashIcMemberCount" style="font-size:26px;font-weight:800;color:#14532d;line-height:1;">0</div>
+              <div style="font-size:12px;font-weight:700;color:#14532d;margin-top:5px;line-height:1.4;">👥 My IC</div>
+            </button>
+
+            <!-- Amber: My Invites to Others -->
+            <button onclick="showPage('innerCircle');setTimeout(()=>showIcView('invited'),450)"
+              style="flex:1;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #d97706;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;"
+              onmouseover="this.style.background='#fffbeb'" onmouseout="this.style.background='#ffffff'">
+              <div id="dashIcSentCount" style="font-size:26px;font-weight:800;color:#78350f;line-height:1;">0</div>
+              <div style="font-size:12px;font-weight:700;color:#78350f;margin-top:5px;line-height:1.4;">My Inner Circle<br/>Invites to Others</div>
+            </button>
+
+            <!-- Purple: Others Invites to Me -->
+            <button onclick="showPage('innerCircle');setTimeout(()=>showIcView('incoming'),450)"
+              style="flex:1;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #7c3aed;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;"
+              onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background='#ffffff'">
+              <div id="dashIcIncomingCount" style="font-size:26px;font-weight:800;color:#4c1d95;line-height:1;">0</div>
+              <div style="font-size:12px;font-weight:700;color:#4c1d95;margin-top:5px;line-height:1.4;">Others Inner Circle<br/>Invites to Me</div>
+            </button>
+
+          </div>
+        </div>
+
+        <!-- Hidden tiles kept for JS compat -->
+        <div id="dashTileIC" style="display:none;"></div>
+        <div id="dashNextMatch" style="display:none;"></div>
+        <div id="dashPendingInvites" style="display:none;"></div>
+        <div id="dashInvitedToPlay" style="display:none;"></div>
+
+      </div>
+    </div>
+
+    <div class="page-section" id="page-playerProfile">
+      <div class="reg-wrapper">
+
+        <!-- STICKY HEADER — Edit Profile + Share + Step dots -->
+        <div id="profileStickyHeader" style="position:sticky;top:0;z-index:50;background:#ffffff;margin:0 -4px;padding:10px 4px 8px;border-bottom:2px solid #e5e7eb;">
+
+          <!-- Edit + Share buttons (shown when signed in) -->
+          <div id="editProfileBtnInPage" style="display:none;margin-bottom:8px;">
+            <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
+              <button onclick="openQrModal()" title="Share your profile QR code"
+                style="padding:7px 14px;border-radius:20px;border:1px solid rgba(76,175,125,0.3);background:rgba(76,175,125,0.08);color:var(--green);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
+                📱 Share
+              </button>
+              <button id="editProfileBtnEl" class="edit-profile-btn" onclick="openEditProfile()">
+                ✏️ Edit Profile
+              </button>
+            </div>
+          </div>
+
+          <!-- Step dots -->
+          <div class="steps">
+            <div class="step-item"><div class="step-dot active" id="dot1">1</div><span class="step-label active" id="lbl1">Profile</span></div>
+            <div class="step-line" id="line1"></div>
+            <div class="step-item"><div class="step-dot" id="dot2">2</div><span class="step-label" id="lbl2">Waiver</span></div>
+          </div>
+        </div>
+  <!-- STEP 1 -->
+  <div class="card" id="step1" autocomplete="off">
+    <h2>Personal Information</h2>
+
+    <!-- Optional photo upload with consent -->
+    <div class="field">
+      <label>Profile Photo <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— optional</span></label>
+      <div id="photoUploadArea" style="margin-top:8px;">
+        <!-- Default state — emoji + optional photo button -->
+        <div style="display:flex;align-items:center;gap:16px;">
+          <div id="emojiPreview" style="width:64px;height:64px;border-radius:50%;background:rgba(76,175,125,0.15);border:2px solid rgba(76,175,125,0.3);display:flex;align-items:center;justify-content:center;font-size:30px;cursor:pointer;flex-shrink:0;position:relative;" onclick="openEmojiPickerIfUnlocked()">
+            🎾
+            <div id="photoPreviewOverlay" style="display:none;position:absolute;inset:0;border-radius:50%;overflow:hidden;"></div>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:12px;color:var(--dim);margin-bottom:8px;line-height:1.5;">
+              Pick an emoji avatar, or optionally add a real photo. Photos are only visible to your Inner Circle members.
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button type="button" onclick="document.getElementById('emojiPickerRow').style.display='flex'" 
+                style="padding:6px 14px;border-radius:8px;border:1px solid rgba(76,175,125,0.35);background:transparent;color:var(--green);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+                😀 Change Emoji
+              </button>
+              <button type="button" id="addPhotoBtn" onclick="openPhotoConsentModal()"
+                style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+                📷 Add Photo
+              </button>
+              <button type="button" id="removePhotoBtn" onclick="removeProfilePhoto()" style="display:none;padding:6px 14px;border-radius:8px;border:1px solid rgba(239,68,68,0.3);background:transparent;color:#f87171;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+                ✕ Remove Photo
+              </button>
+            </div>
+          </div>
+        </div>
+        <div id="emojiPickerRow" style="display:none;flex-wrap:wrap;gap:6px;max-width:340px;margin-top:12px;">
+          <div id="emojiPickerGrid" class="emoji-reg-grid"></div>
+        </div>
+        <input type="hidden" id="avatarEmoji" value=""/>
+        <input type="hidden" id="photoConsentGiven" value=""/>
+        <input type="file" id="photoFileInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handlePhotoSelected(this)"/>
+      </div>
+    </div>
+    <div class="field"><label>Email Address <span style="color:#dc2626;font-weight:700;">*</span></label><input type="email" id="email" placeholder="jane@example.com" autocomplete="off" oninput="chk1()"/></div>
+    <div class="grid2">
+      <div class="field"><label>First Name <span style="color:#dc2626;font-weight:700;">*</span></label><input type="text" id="firstName" placeholder="Jane" autocomplete="off" oninput="chk1()"/></div>
+      <div class="field">
+        <label>Last Name <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— optional · only initial stored</span></label>
+        <input type="text" id="lastName" placeholder="S." autocomplete="off"/>
+      </div>
+    </div>
+    <div class="field">
+      <label>Pickleball Nickname <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— optional</span></label>
+      <input type="text" id="nickname" placeholder="e.g. The Dink King, Smash Queen…"/>
+    </div>
+    <div class="field">
+      <label>📱 Mobile Number <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— optional</span></label>
+      <input type="tel" id="phone" placeholder="+1 (xxx) xxx-xxxx" autocomplete="tel" oninput="formatPhone(this);window.onPhoneChange()" maxlength="14" style="font-size:16px;"/>
+      <div id="smsOptInRow" style="display:none;margin-top:12px;">
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:16px;font-weight:400;text-transform:none;letter-spacing:0;">
+          <input type="checkbox" id="smsOptIn" onchange="window.onSmsOptInChange()"/>
+          <span id="smsOptInLabel" style="font-weight:400;color:#374151;line-height:1.5;">I agree to receive match invites, reminders, and updates from PBallConnect by text message. Message frequency varies. Message &amp; data rates may apply. Reply STOP to unsubscribe or HELP for help.</span>
+        </label>
+        <div style="font-size:13px;color:#9ca3af;margin-top:6px;margin-left:30px;line-height:1.5;">By checking this box you provide express written consent for PBallConnect to send automated text messages to the number provided. Consent is not a condition of registration or use of the service.</div>
+      </div>
+    </div>
+    <div class="field">
+      <label style="text-decoration:underline;">Age Range as of Jan 1 this Year</label>
+      <select id="playerAge" oninput="chk1()" onchange="chk1()" style="width:100%;padding:11px 14px;border-radius:10px;border:2px solid var(--border);background:#f9fafb;color:#111;font-size:14px;font-family:'DM Sans',sans-serif;">
+        <option value="">Select Age Range…</option>
+        <option value="Under 18">Under 18</option>
+        <option value="18-25">18–25</option>
+        <option value="26-30">26–30</option>
+        <option value="31-35">31–35</option>
+        <option value="36-40">36–40</option>
+        <option value="41-45">41–45</option>
+        <option value="46-50">46–50</option>
+        <option value="51-55">51–55</option>
+        <option value="56-60">56–60</option>
+        <option value="61-65">61–65</option>
+        <option value="66-70">66–70</option>
+        <option value="71-75">71–75</option>
+        <option value="76-80">76–80</option>
+        <option value="81+">81+</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Gender</label>
+      <div class="chips" id="genderChips">
+        <button class="chip" onclick="selChip('genderChips',this,'gender');chk1()">Man</button>
+        <button class="chip" onclick="selChip('genderChips',this,'gender');chk1()">Woman</button>
+        <button class="chip" onclick="selChip('genderChips',this,'gender');chk1()">Prefer not to say</button>
+      </div>
+      <p id="genderHint" style="display:none;color:#c0392b;font-size:14px;margin-top:4px;">Please select your gender to continue.</p>
+    </div>
+    <div class="field">
+      <label>Playing Hand</label>
+      <div class="chips" id="handednessChips">
+        <button class="chip" onclick="selChip('handednessChips',this,'handedness')">🤚 Right-Handed</button>
+        <button class="chip" onclick="selChip('handednessChips',this,'handedness')">🤚 Left-Handed</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- LOCATION — zip only; city/state derived automatically -->
+    <div class="field">
+      <label>Location</label>
+      <div style="font-size:11px;color:var(--dim);margin-bottom:10px;line-height:1.5;">
+        🔒 Enter your zip code — we'll look up your city and state automatically to find nearby players and courts.
+      </div>
+    </div>
+    <div class="field" style="max-width:160px;">
+      <label>Zip Code</label>
+      <input type="text" id="addrZip" oninput="onZipChange(this.value)" placeholder="03842" autocomplete="off" maxlength="10"/>
+      <div id="zipGeoStatus" style="font-size:11px;color:var(--dim);margin-top:6px;min-height:16px;"></div>
+    </div>
+    <!-- Hidden fields so downstream JS can read city/state without changes -->
+    <input type="hidden" id="addrCity" value=""/>
+    <input type="hidden" id="addrState" value=""/>
+
+    <div class="divider"></div>
+
+    <!-- DRIVE DISTANCE -->
+    <div class="field">
+      <label>Venue Preference</label>
+      <div class="chips" id="venuePrefChips">
+        <button class="chip" onclick="selChip('venuePrefChips',this,'venuePref')">🏢 Indoors</button>
+        <button class="chip" onclick="selChip('venuePrefChips',this,'venuePref')">🌳 Outdoors</button>
+        <button class="chip" onclick="selChip('venuePrefChips',this,'venuePref')">Both</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Willing to Drive</label>
+      <div style="padding:4px 0 8px">
+        <div class="drive-value" id="driveDisplay" style="font-size:22px;font-weight:700;color:var(--green);font-family:'Playfair Display',serif;text-align:center;margin-bottom:10px;">25 miles</div>
+        <input type="range" id="driveDistance" min="5" max="50" step="5" value="25" style="--pct:44.4%" oninput="onDriveChange(this.value)"/>
+        <div class="drive-ticks" style="display:flex;justify-content:space-between;margin-top:6px;">
+          <span style="font-size:10px;color:var(--dim);">5</span><span style="font-size:10px;color:var(--dim);">10</span>
+          <span style="font-size:10px;color:var(--dim);">15</span><span style="font-size:10px;color:var(--dim);">20</span>
+          <span style="font-size:10px;color:var(--dim);">25</span><span style="font-size:10px;color:var(--dim);">30</span>
+          <span style="font-size:10px;color:var(--dim);">35</span><span style="font-size:10px;color:var(--dim);">40</span>
+          <span style="font-size:10px;color:var(--dim);">45</span><span style="font-size:10px;color:var(--dim);">50+</span>
+        </div>
+      </div>
+      <div class="hint">Approximately how many miles are you willing to drive to play from your home address?</div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="field">
+      <label>Do you organize matches?</label>
+      <div class="chips" id="isOrganizerChips">
+        <button class="chip" onclick="selChip('isOrganizerChips',this,'isOrganizer')">Yes</button>
+        <button class="chip" onclick="selChip('isOrganizerChips',this,'isOrganizer')">Not yet</button>
+      </div>
+      <div class="hint">Organizers unlock Named Groups and Recurring Match scheduling</div>
+    </div>
+
+    <h2>Player Profile</h2>
+    <div class="field">
+      <label>Play Format</label>
+      <div class="chips" id="playFormatChips">
+        <button class="chip" onclick="selChip('playFormatChips',this,'playFormat')">Singles 🎾</button>
+        <button class="chip" onclick="selChip('playFormatChips',this,'playFormat')">Doubles 🎾🎾</button>
+        <button class="chip on" onclick="selChip('playFormatChips',this,'playFormat')">Both</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Match Type Preference <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— who do you like to play with?</span></label>
+      <div class="chips" id="matchGenderPrefChips">
+        <button class="chip" onclick="selChip('matchGenderPrefChips',this,'matchGenderPref');onMatchGenderPrefChange(this.textContent)">Mixed</button>
+        <button class="chip" onclick="selChip('matchGenderPrefChips',this,'matchGenderPref');onMatchGenderPrefChange(this.textContent)">Same Gender</button>
+        <button class="chip on" onclick="selChip('matchGenderPrefChips',this,'matchGenderPref');onMatchGenderPrefChange(this.textContent)">Both</button>
+      </div>
+      <div id="matchGenderPrefWarning" style="display:none;margin-top:8px;padding:10px 12px;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;font-size:12px;color:#92400e;line-height:1.5;">
+        ⚠️ Selecting only "<span id="matchGenderPrefWarnType"></span>" will restrict your playing opportunities. Consider selecting <strong>Both</strong> to maximize your matches.
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="field">
+      <label>DUPR Rating
+        <span style="font-size:11px;color:#1a7a3a;cursor:pointer;text-decoration:underline;margin-left:6px;font-weight:400;text-transform:none;letter-spacing:0;"
+          onclick="document.getElementById('duprTooltip').style.display=document.getElementById('duprTooltip').style.display==='none'?'block':'none'">
+          What's DUPR?
+        </span>
+      </label>
+      <div id="duprTooltip" style="display:none;margin-bottom:10px;padding:10px 14px;background:#f0fdf4;border:1px solid #6ee7b7;border-radius:10px;font-size:12px;color:#065f46;line-height:1.6;">
+        <strong>DUPR (Dynamic Universal Pickleball Rating)</strong> is the world's most accurate pickleball rating system used by 1M+ players globally.
+        It ranges from 2.0 (beginner) to 8.0 (pro). Don't have one yet?
+        <a href="https://mydupr.com" target="_blank" style="color:#1a7a3a;font-weight:700;">Get your free DUPR rating →</a>
+      </div>
+      <div style="padding:4px 0 8px">
+        <div class="dupr-display" id="duprDisplay">-- <span>not set — slide to choose</span></div>
+        <input type="range" id="duprSlider" min="0" max="21" step="1" value="0" oninput="updateDupr(this.value)" style="--pct:0%"/>
+        <div class="dupr-ticks" id="duprTicks"></div>
+      </div>
+      <div class="hint">Increments of 0.25 · Leave at start if unknown</div>
+    </div>
+    <div class="divider"></div>
+    <div class="field">
+      <label>Personal Skill Rating <span style="color:#dc2626;font-weight:700;">*</span></label>
+      <div style="padding:4px 0 8px">
+        <div class="dupr-display" id="personalRatingDisplay">-- <span>not set — slide to choose</span></div>
+        <input type="range" id="personalRatingSlider" min="0" max="21" step="1" value="0" oninput="updatePersonalRating(this.value)" style="--pct:0%"/>
+        <div class="dupr-ticks" id="personalRatingTicks"></div>
+      </div>
+      <div class="hint">Your self-assessed playing level · Increments of 0.25</div>
+      <div style="text-align:center;margin-top:4px;">
+        <a href="#" onclick="showSkillGuide();return false;" style="font-size:0.85rem;color:#16a34a;text-decoration:underline;">❓ What's my level?</a>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="field">
+      <label>Play Style</label>
+      <div class="chips" id="playStyleChips">
+        <span class="chip" onclick="selChip('playStyleChips',this,'playStyle')">Just for Fun</span>
+        <span class="chip" onclick="selChip('playStyleChips',this,'playStyle')">Competitive</span>
+        <span class="chip on" onclick="selChip('playStyleChips',this,'playStyle')">Both</span>
+      </div>
+    </div>
+    <div class="divider"></div>
+
+    <!-- Goal rating — shown only when Play Style = Competitive -->
+    <div class="field" id="goalRatingField" style="display:none;">
+      <label>Target Rating in the Next Year</label>
+      <div style="padding:4px 0 8px">
+        <div class="dupr-display" id="goalRatingDisplay">-- <span>slide right to set your goal</span></div>
+        <div style="position:relative;margin-top:4px;">
+          <div id="goalThumbLabel" style="display:none;position:absolute;top:-22px;transform:translateX(-50%);background:#1a7a3a;color:#fff;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;pointer-events:none;white-space:nowrap;"></div>
+          <div id="goalSliderRedBar" style="position:absolute;top:50%;transform:translateY(-50%);height:6px;left:0;width:0%;pointer-events:none;border-radius:3px 0 0 3px;"></div>
+          <div id="goalSliderGreenBar" style="position:absolute;top:50%;transform:translateY(-50%);height:6px;left:0;width:0%;pointer-events:none;border-radius:0 3px 3px 0;"></div>
+          <div id="goalRedLabel" style="display:none;position:absolute;top:-4px;pointer-events:none;"></div>
+          <input type="range" id="goalRatingSlider" min="0" max="21" step="1" value="0"
+            oninput="updateGoalRating(this.value)" style="width:100%;--pct:0%;"/>
+        </div>
+        <div class="dupr-ticks" id="goalTicks" style="margin-top:6px;"></div>
+      </div>
+      <!-- Two-bar gap visual -->
+      <div id="goalGapViz" style="margin:10px 0 4px;padding:12px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <span style="font-size:11px;color:#374151;font-weight:700;width:72px;flex-shrink:0;">Your level</span>
+          <div style="flex:1;height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;">
+            <div id="vizCurrentBar" style="height:100%;background:#ef4444;border-radius:4px;width:0%;transition:width .3s;"></div>
+          </div>
+          <span id="vizCurrentVal" style="font-size:12px;font-weight:800;color:#ef4444;width:30px;text-align:right;">—</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:11px;color:#374151;font-weight:700;width:72px;flex-shrink:0;">Target</span>
+          <div style="flex:1;height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;">
+            <div id="vizTargetBar" style="height:100%;background:#1a7a3a;border-radius:4px;width:0%;transition:width .3s;"></div>
+          </div>
+          <span id="vizTargetVal" style="font-size:12px;font-weight:800;color:#1a7a3a;width:30px;text-align:right;">—</span>
+        </div>
+        <div style="font-size:11px;color:#059669;font-weight:600;text-align:center;margin-top:10px;">We'll check in on your progress quarterly 🎯</div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="field">
+      <label>Playing Since <span style="color:#dc2626;font-weight:700;">*</span> <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— what year did you start playing?</span></label>
+      <select id="playingSince" onchange="S.playingSince=this.value;chk2()">
+        <option value="">Select year</option>
+        <option>2026</option>
+        <option>2025</option>
+        <option>2024</option>
+        <option>2023</option>
+        <option>2022</option>
+        <option>2021</option>
+        <option>2020</option>
+        <option>2019</option>
+        <option>2018</option>
+        <option>2017</option>
+        <option>2016</option>
+        <option>2015</option>
+        <option>2014</option>
+        <option>2013</option>
+        <option>2012</option>
+        <option>2011</option>
+        <option>2010</option>
+        <option>2009</option>
+        <option>2008</option>
+        <option>2007</option>
+        <option>2006</option>
+        <option>2005</option>
+        <option>2004</option>
+        <option>2003</option>
+        <option>2002</option>
+        <option>2001</option>
+        <option>2000</option>
+        <option>1999</option>
+        <option>1998</option>
+        <option>1997</option>
+        <option>1996</option>
+        <option>1995</option>
+        <option>1994</option>
+        <option>1993</option>
+        <option>1992</option>
+        <option>1991</option>
+        <option>1990</option>
+        <option>1989</option>
+        <option>1988</option>
+        <option>1987</option>
+        <option>1986</option>
+        <option>1985</option>
+        <option>1984</option>
+        <option>1983</option>
+        <option>1982</option>
+        <option>1981</option>
+        <option>1980</option>
+        <option>1979</option>
+        <option>1978</option>
+        <option>1977</option>
+        <option>1976</option>
+        <option>1975</option>
+        <option>1974</option>
+        <option>1973</option>
+        <option>1972</option>
+        <option>1971</option>
+        <option>1970</option>
+        <option>1969</option>
+        <option>1968</option>
+        <option>1967</option>
+        <option>1966</option>
+        <option>1965</option>
+        <option>1964</option>
+        <option>1963</option>
+        <option>1962</option>
+        <option>1961</option>
+        <option>1960</option>
+      </select>
+    </div>
+
+    <div class="btn-row">
+      <div></div>
+      <button class="btn-next" id="next2" disabled onclick="goTo(2)">Continue →</button>
+    </div>
+  </div>
+
+  <!-- STEP 2 — Waiver -->
+  <div class="card" id="step2" style="display:none">
+    <h2>Waiver &amp; Agreement</h2>
+    <!-- CONSENT CHECKBOXES -->
+    <div class="check-row" onclick="toggleConsent('tos')" style="margin-bottom:14px;">
+      <div class="check-box" id="checkBoxTos"></div>
+      <div class="check-text">
+        I have read and agree to the
+        <a href="terms.html" target="_blank" onclick="event.stopPropagation();" style="color:var(--green);font-weight:600;">Terms of Service</a>
+        and
+        <a href="privacy.html" target="_blank" onclick="event.stopPropagation();" style="color:var(--green);font-weight:600;">Privacy Policy</a>.
+        I am 18 years of age or older.
+      </div>
+    </div>
+    <div class="check-row" onclick="toggleConsent('risk')" style="margin-bottom:20px;">
+      <div class="check-box" id="checkBoxRisk"></div>
+      <div class="check-text">
+        I have read and agree to the
+        <span onclick="event.stopPropagation();document.getElementById('waiverModal').style.display='flex'" style="color:var(--green);cursor:pointer;font-weight:600;">Assumption of Risk &amp; Liability Waiver</span>.
+        I voluntarily assume all risks associated with playing pickleball.
+      </div>
+    </div>
+    <!-- REGISTRATION SUMMARY — 3 sections -->
+    <div style="margin-top:16px;">
+      <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:#ef4444;text-align:center;margin-bottom:16px;letter-spacing:.01em;">Registration Summary</div>
+
+      <!-- Section 1: Personal Info -->
+      <div id="sumSection1" style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;">
+        <div style="font-size:12px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">👤 Personal Info</div>
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.06);">
+          <div id="sumEmojiDisplay" style="width:52px;height:52px;border-radius:50%;background:rgba(76,175,125,0.12);border:2px solid rgba(76,175,125,0.25);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;">🎾</div>
+          <div>
+            <div id="sumNameBig" style="color:#fff;font-size:17px;font-weight:700;">—</div>
+            <div id="sumNicknameSub" style="color:var(--dim);font-size:13px;margin-top:2px;">—</div>
+          </div>
+        </div>
+        <div class="summary-row"><span>Email</span><span id="sumEmail">—</span></div>
+        <div class="summary-row" id="sumPhoneRow" style="display:none"><span>📱 Mobile</span><span id="sumPhone">—</span></div>
+        <div class="summary-row" id="sumSmsRow" style="display:none"><span>📲 SMS</span><span id="sumSms" style="color:#16a34a;font-weight:700;">Notifications: On</span></div>
+        <div class="summary-row"><span>Age Range</span><span id="sumDob">—</span></div>
+        <div class="summary-row"><span>Gender</span><span id="sumGender">—</span></div>
+        <div class="summary-row"><span>Zip</span><span id="sumZip">—</span></div>
+        <!-- Hidden compat spans for populateSummary -->
+        <span id="sumCity" style="display:none"></span>
+        <span id="sumState" style="display:none"></span>
+        <span id="sumShirt" style="display:none"></span>
+        <div class="summary-row" id="sumClubRow" style="display:none"><span>Club Member</span><span id="sumClub" style="color:#4CAF7D;">—</span></div>
+        <!-- Keep hidden fields for JS compatibility -->
+        <span id="sumName" style="display:none"></span>
+        <span id="sumNickname" style="display:none"></span>
+      </div>
+
+      <!-- Section 2: Player Info -->
+      <div id="sumSection2" style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;">
+        <div style="font-size:12px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">🏓 Player Info</div>
+        <div class="summary-row"><span>Playing Since</span><span id="sumSince">—</span></div>
+        <div class="summary-row"><span>Playing Hand</span><span id="sumHandedness">—</span></div>
+        <div class="summary-row"><span>Play Format</span><span id="sumFormat">—</span></div>
+        <div class="summary-row"><span>Play Style</span><span id="sumStyle">—</span></div>
+        <div class="summary-row"><span>Venue Preference</span><span id="sumVenuePref">—</span></div>
+        <div class="summary-row"><span>Drive Distance</span><span id="sumDrive">—</span></div>
+      </div>
+
+      <!-- Section 3: Playing Levels -->
+      <div id="sumSection3" style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:14px 16px;">
+        <div style="font-size:12px;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">⭐ Playing Levels</div>
+        <div class="summary-row"><span>Skill Level</span><span id="sumSkill">—</span></div>
+        <div class="summary-row" id="sumDuprRow" style="display:none"><span>DUPR Rating</span><span id="sumDupr">—</span></div>
+        <div class="summary-row" id="sumGoalRow" style="display:none"><span>Target Level</span><span id="sumGoal">—</span></div>
+        <!-- Hidden compat spans -->
+        <span id="sumImprove" style="display:none"></span>
+        <span id="sumLesson" style="display:none"></span>
+        <span id="sumWantsLesson" style="display:none"></span>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-back" onclick="goTo(1)">← Back</button>
+      <button class="btn-submit" id="btnSubmit" disabled onclick="submitForm()">🎉 Complete Registration</button>
+    </div>
+  </div>
+
+
+
+      </div><!-- end reg-wrapper -->
+    </div><!-- end page-playerProfile -->
+
+
+    <!-- MY COURTS PAGE -->
+    <div class="page-section" id="page-myCourts">
+      <div class="page-header">
+        <h1>My <span>Courts</span></h1>
+        <p>Adjust your search radius then browse courts near your home address</p>
+      </div>
+      <!-- Drive distance slider on My Courts page -->
+      <div class="card" style="margin-bottom:20px;max-width:960px;">
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:200px;">
+            <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--green);margin-bottom:8px;">Search Radius</div>
+            <input type="range" id="courtsPageDriveSlider" min="5" max="50" step="5" value="25" style="--pct:44.4%;width:100%;" oninput="updateCourtsRadius(this.value)"/>
+            <div style="display:flex;justify-content:space-between;margin-top:4px;">
+              <span style="font-size:10px;color:var(--dim);">5 mi</span>
+              <span style="font-size:10px;color:var(--dim);">25 mi</span>
+              <span style="font-size:10px;color:var(--dim);">50+ mi</span>
+            </div>
+          </div>
+          <div style="text-align:center;min-width:100px;">
+            <div id="courtsRadiusDisplay" style="font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:var(--green);">25 miles</div>
+            <div style="font-size:11px;color:var(--dim);margin-top:2px;" id="courtsPageSub">from your home</div>
+          </div>
+          <button onclick="loadMyCourts()" style="padding:11px 22px;border-radius:12px;border:none;background:var(--green);color:var(--dark);font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">🔍 Search Courts</button>
+        </div>
+      </div>
+      <div class="courts-page-grid">
+        <!-- Private Courts -->
+        <div class="courts-container private">
+          <div class="courts-container-header">
+            <span class="courts-container-icon">🏅</span>
+            <div>
+              <div class="courts-container-title">Private Courts</div>
+              <div class="courts-container-sub">Clubs & members-only facilities</div>
+            </div>
+          </div>
+          <div id="privateCourtsBody"><div class="courts-loading-msg">🔍 Select your profile location first</div></div>
+          <div class="courts-add-section">
+            <div class="courts-add-title">➕ Add a private court not listed</div>
+            <div class="courts-add-row">
+              <input type="text" id="addPrivateCourtInput" placeholder="Court or club name…" autocomplete="off"/>
+              <button class="courts-add-btn-purple" onclick="addCustomCourt('private')">Add</button>
+            </div>
+            <div class="courts-add-detail" id="addPrivateDetail" style="display:none;">
+              <input type="text" id="addPrivateAddr" placeholder="Address (optional)" autocomplete="off" style="margin-top:6px;"/>
+              <div style="display:flex;gap:8px;margin-top:6px;">
+                <label style="font-size:12px;color:var(--dim);display:flex;align-items:center;gap:6px;cursor:pointer;">
+                  <input type="checkbox" id="addPrivateIndoor" style="accent-color:var(--green);"/> Indoor
+                </label>
+                <input type="number" id="addPrivateNumCourts" placeholder="# courts" min="1" max="100"
+                  style="width:90px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:#fff;font-size:12px;"/>
+              </div>
+              <input type="text" id="addPrivateNotes" placeholder="Notes (hours, fees, contact…)" autocomplete="off" style="margin-top:6px;"/>
+              <button class="courts-add-btn-purple" onclick="addCustomCourt('private')" style="margin-top:8px;width:100%;padding:8px;">✅ Save This Court</button>
+            </div>
+          </div>
+        </div>
+        <!-- Public Courts -->
+        <div class="courts-container public">
+          <div class="courts-container-header">
+            <span class="courts-container-icon">🌳</span>
+            <div>
+              <div class="courts-container-title">Public Courts</div>
+              <div class="courts-container-sub">Parks, rec centers & open facilities</div>
+            </div>
+          </div>
+          <div id="publicCourtsBody"><div class="courts-loading-msg">🔍 Select your profile location first</div></div>
+          <div class="courts-add-section">
+            <div class="courts-add-title">➕ Add a public court not listed</div>
+            <div class="courts-add-row">
+              <input type="text" id="addPublicCourtInput" placeholder="Park or facility name…" autocomplete="off"/>
+              <button class="courts-add-btn-green" onclick="addCustomCourt('public')">Add</button>
+            </div>
+            <div class="courts-add-detail" id="addPublicDetail" style="display:none;">
+              <input type="text" id="addPublicAddr" placeholder="Address (optional)" autocomplete="off" style="margin-top:6px;"/>
+              <div style="display:flex;gap:8px;margin-top:6px;">
+                <label style="font-size:12px;color:var(--dim);display:flex;align-items:center;gap:6px;cursor:pointer;">
+                  <input type="checkbox" id="addPublicIndoor" style="accent-color:var(--green);"/> Indoor
+                </label>
+                <input type="number" id="addPublicNumCourts" placeholder="# courts" min="1" max="100"
+                  style="width:90px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:#fff;font-size:12px;"/>
+              </div>
+              <input type="text" id="addPublicNotes" placeholder="Notes (hours, fees, contact…)" autocomplete="off" style="margin-top:6px;"/>
+              <button class="courts-add-btn-green" onclick="addCustomCourt('public')" style="margin-top:8px;width:100%;padding:8px;">✅ Save This Court</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="courts-save-btn" onclick="saveMyCourts()">💾 Save My Courts</button>
+    </div>
+
+    <!-- PLAYER STATISTICS PAGE -->
+    <div class="page-section" id="page-playerStats">
+      <div class="page-header">
+        <h1>Player <span>Statistics</span></h1>
+        <p>Your performance and community insights</p>
+      </div>
+
+      <div class="ic-card" style="max-width:600px;margin-bottom:16px;">
+        <div class="ic-section-label">🏆 Match Record</div>
+        <div class="ic-empty">Win/loss record and match history coming soon.<br>
+          <span style="color:var(--green);font-size:11px;">Available once match results are recorded.</span>
+        </div>
+      </div>
+
+      <div class="ic-card" style="max-width:600px;margin-bottom:16px;">
+        <div class="ic-section-label">📈 Skill Progression</div>
+        <div class="ic-empty">Rating history and improvement tracking coming soon.</div>
+      </div>
+
+      <div class="ic-card" style="max-width:100%;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+          <div class="ic-section-label" style="margin-bottom:0;">🌐 Community Snapshot</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:11px;color:var(--dim);">Within</span>
+            <input type="range" id="communityRadiusSlider" min="5" max="50" step="5" value="25"
+              oninput="document.getElementById('communityRadiusLabel').textContent=this.value+' mi';loadCommunitySnapshot();"
+              style="width:120px;"/>
+            <span id="communityRadiusLabel" style="font-size:12px;font-weight:700;color:var(--green);min-width:40px;">25 mi</span>
+            <span id="communityLoading" style="font-size:11px;color:var(--dim);display:none;">Loading…</span>
+          </div>
+        </div>
+        <div id="icCommunitySnapshot">
+          <div class="ic-two-grids" title="Inner Circle Overview — click any number to see those players">
+            <div class="ic-grid-card" style="border:2px solid #d1d5db !important;">
+              <div class="ic-grid-title">Players near me by level</div>
+              <table class="ic-stat-table">
+                <thead><tr><th></th><th class="ic-th-below">🟡 Below</th><th class="ic-th-my">🟢 My level</th><th class="ic-th-above">🟣 Above</th><th class="ic-th-total">Total</th></tr></thead>
+                <tbody>
+                  <tr><td class="ic-row-label">Nearby</td><td class="ic-th-below" id="cmBelowTotal">—</td><td class="ic-th-my" id="cmMyTotal">—</td><td class="ic-th-above" id="cmAboveTotal">—</td><td class="ic-th-total" id="cmLevelTotal">—</td></tr>
+                  <tr><td class="ic-row-label">My circle</td><td class="ic-th-below" id="cmBelowCircle">0</td><td class="ic-th-my" id="cmMyCircle">0</td><td class="ic-th-above" id="cmAboveCircle">0</td><td class="ic-th-total" id="cmLevelCircle">0</td></tr>
+                  <tr><td class="ic-row-label" style="color:var(--green);">Connected</td><td class="ic-th-below" id="cmBelowPct">—</td><td class="ic-th-my" id="cmMyPct">—</td><td class="ic-th-above" id="cmAbovePct">—</td><td class="ic-th-total" id="cmLevelPct">—</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="ic-grid-card" style="border:2px solid #d1d5db !important;">
+              <div class="ic-grid-title">Players near me by gender</div>
+              <table class="ic-stat-table">
+                <thead><tr><th></th><th class="ic-th-male">♂ Male</th><th class="ic-th-female">♀ Female</th><th class="ic-th-other">⚪ Other</th><th class="ic-th-total">Total</th></tr></thead>
+                <tbody>
+                  <tr><td class="ic-row-label">Nearby</td><td class="ic-th-male" id="cmMaleTotal">—</td><td class="ic-th-female" id="cmFemaleTotal">—</td><td class="ic-th-other" id="cmOtherTotal">—</td><td class="ic-th-total" id="cmGenderTotal">—</td></tr>
+                  <tr><td class="ic-row-label">My circle</td><td class="ic-th-male" id="cmMaleCircle">0</td><td class="ic-th-female" id="cmFemaleCircle">0</td><td class="ic-th-other" id="cmOtherCircle">0</td><td class="ic-th-total" id="cmGenderCircle">0</td></tr>
+                  <tr><td class="ic-row-label" style="color:var(--green);">Connected</td><td class="ic-th-male" id="cmMalePct">—</td><td class="ic-th-female" id="cmFemalePct">—</td><td class="ic-th-other" id="cmOtherPct">—</td><td class="ic-th-total" id="cmGenderPct">—</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div id="communitySnapshotEmpty" class="ic-empty" style="display:none;">
+          Sign in and complete your profile to see your community snapshot.
+        </div>
+      </div>
+    </div>
+
+    <!-- PLAYERS WANTING TO PLAY PAGE -->
+    <div class="page-section" id="page-findPlayers">
+      <div class="page-header">
+        <h1 style="color:#111;">Players Wanting to Play</h1>
+        <p id="findPlayersSubtitle">Find players near you looking for a game</p>
+      </div>
+
+      <!-- My availability toggle -->
+      <div class="pwp-availability-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+          <div>
+            <div style="color:#111;font-size:14px;font-weight:600;">Are you looking to play?</div>
+            <div style="color:var(--dim);font-size:12px;margin-top:3px;">Toggle on so other players can find you</div>
+          </div>
+          <label class="pwp-toggle-wrap">
+            <input type="checkbox" id="pwpAvailableToggle" onchange="toggleMyAvailability(this.checked)"/>
+            <span class="pwp-toggle-track"><span class="pwp-toggle-thumb"></span></span>
+            <span id="pwpToggleLabel" style="color:var(--dim);font-size:13px;margin-left:8px;">Off</span>
+          </label>
+        </div>
+        <div id="pwpMyStatusRow" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+          <div style="font-size:12px;color:var(--dim);margin-bottom:8px;">When are you available?</div>
+          <div class="chips" id="pwpAvailChips" style="flex-wrap:wrap;gap:6px;">
+            <button class="chip" onclick="selChip('pwpAvailChips',this,'pwpAvail')">Today</button>
+            <button class="chip" onclick="selChip('pwpAvailChips',this,'pwpAvail')">This week</button>
+            <button class="chip" onclick="selChip('pwpAvailChips',this,'pwpAvail')">Weekends</button>
+            <button class="chip" onclick="selChip('pwpAvailChips',this,'pwpAvail')">Flexible</button>
+          </div>
+          <div style="font-size:12px;color:var(--dim);margin-top:12px;margin-bottom:8px;">Format?</div>
+          <div class="chips" id="pwpFormatChips" style="flex-wrap:wrap;gap:6px;">
+            <button class="chip" onclick="selChip('pwpFormatChips',this,'pwpFormat')">Singles</button>
+            <button class="chip" onclick="selChip('pwpFormatChips',this,'pwpFormat')">Doubles</button>
+            <button class="chip" onclick="selChip('pwpFormatChips',this,'pwpFormat')">Either</button>
+          </div>
+          <button class="btn-next" onclick="saveMyAvailability()"
+            style="margin-top:14px;width:auto;padding:10px 24px;">Save my availability</button>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="pwp-filters-card">
+        <div class="pwp-filter-row">
+          <div class="pwp-filter-group">
+            <label class="pwp-filter-label">Skill level</label>
+            <select id="pwpSkillFilter" onchange="loadFindPlayers()"
+              style="padding:8px 12px;border-radius:8px;border:2px solid #6b7280;background:#ffffff;color:#111;font-size:12px;font-family:'DM Sans',sans-serif;">
+              <option value="">Any level</option>
+              <option>2.0</option><option>2.25</option><option>2.5</option><option>2.75</option>
+              <option>3.0</option><option>3.25</option><option>3.5</option><option>3.75</option>
+              <option>4.0</option><option>4.25</option><option>4.5</option><option>4.75</option>
+              <option>5.0</option><option>5.5</option><option>6.0</option><option>6.5</option>
+              <option>7.0+</option>
+            </select>
+          </div>
+          <div class="pwp-filter-group">
+            <label class="pwp-filter-label">Format</label>
+            <select id="pwpFormatFilter" onchange="loadFindPlayers()"
+              style="padding:8px 12px;border-radius:8px;border:2px solid #6b7280;background:#ffffff;color:#111;font-size:12px;font-family:'DM Sans',sans-serif;">
+              <option value="">Any format</option>
+              <option>Singles</option>
+              <option>Doubles</option>
+            </select>
+          </div>
+          <div class="pwp-filter-group">
+            <label class="pwp-filter-label">Miles from me</label>
+            <select id="pwpRadiusFilter" onchange="loadFindPlayers()"
+              style="padding:8px 12px;border-radius:8px;border:2px solid #6b7280;background:#ffffff;color:#111;font-size:12px;font-family:'DM Sans',sans-serif;">
+              <option value="25">25 miles</option>
+              <option value="50">50 miles</option>
+              <option value="100">100 miles</option>
+              <option value="">Anywhere</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Player results -->
+      <div id="pwpResults">
+        <div class="ic-empty" style="padding:20px 0;">Click a filter above or wait a moment to load players near you.</div>
+      </div>
+    </div>
+
+    <!-- INNER CIRCLE PAGE -->
+    <div class="page-section" id="page-innerCircle" style="background:#ffffff;min-height:100vh;padding:0;margin:0;">
+      <div style="padding:16px 16px 40px;max-width:600px;margin:0 auto;">
+
+        <!-- Page header — matches dashboard style -->
+        <div style="margin-bottom:20px;padding-top:8px;">
+          <div style="font-size:24px;font-weight:800;color:#111;">Inner <span style="color:#1a7a3a;">Circle</span> 🎾</div>
+          <div style="font-size:14px;color:#666;margin-top:3px;" id="icPageSubtitle">Your trusted player network</div>
+        </div>
+
+        <!-- ── INNER CIRCLE 3-button container ── -->
+        <div id="icStickyHeader" style="position:sticky;top:52px;z-index:100;background:#ffffff;padding:8px 0 10px;border-bottom:2px solid #e5e7eb;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+        <div style="background:#fef9c3;border:3px solid #eab308;border-radius:16px;padding:14px 12px;">
+          <div style="font-size:15px;font-weight:800;color:#713f12;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;text-align:center;">Inner Circle</div>
+          <div style="display:flex;gap:8px;">
+
+            <!-- Green: My Inner Circle -->
+            <button id="icTabMembers" onclick="showIcSection('members')"
+              style="flex:1;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #16a34a;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;">
+              <div id="icTabMemberCount" style="font-size:26px;font-weight:800;color:#14532d;line-height:1;">0</div>
+              <div style="font-size:12px;font-weight:700;color:#14532d;margin-top:5px;line-height:1.4;">👥 My IC</div>
+            </button>
+
+            <!-- Amber: My Invites to Others -->
+            <button id="icTabInvite" onclick="showIcSection('invite')"
+              style="flex:1;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #d97706;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;">
+              <div id="icTabSentCount" style="font-size:26px;font-weight:800;color:#78350f;line-height:1;">0</div>
+              <div style="font-size:12px;font-weight:700;color:#78350f;margin-top:5px;line-height:1.4;">My Inner Circle<br/>Invites to Others</div>
+            </button>
+
+            <!-- Purple: Others Invites to Me -->
+            <button id="icTabRequests" onclick="showIcSection('requests')"
+              style="flex:1;padding:12px 6px;border-radius:12px;background:#ffffff;border:2.5px solid #7c3aed;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;">
+              <div id="icTabRequestCount" style="font-size:26px;font-weight:800;color:#4c1d95;line-height:1;">0</div>
+              <div style="font-size:12px;font-weight:700;color:#4c1d95;margin-top:5px;line-height:1.4;">Others Inner Circle<br/>Invites to Me</div>
+            </button>
+
+          </div>
+        </div>
+        </div><!-- end ic container -->
+
+        <!-- ── SECTION: My Circle (Members) — default visible ── -->
+        <div id="icSectionMembers">
+
+          <!-- Send an Invite button -->
+          <button onclick="toggleIcInvitePanel()"
+            style="width:100%;padding:16px;background:#1a7a3a;color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:14px;transition:background .15s;"
+            onmouseover="this.style.background='#15652f'" onmouseout="this.style.background='#1a7a3a'">
+            ✉️ Send an Invite
+          </button>
+
+          <!-- Expandable invite panel -->
+          <div id="icInvitePanel" style="display:none;background:#f0fdf4;border:2px solid #d1fae5;border-radius:14px;padding:16px;margin-bottom:14px;">
+            <div style="font-size:14px;font-weight:800;color:#1a7a3a;margin-bottom:12px;">How do you want to invite?</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+
+              <!-- Email -->
+              <button id="icChannelEmail" onclick="selectIcChannel('email')"
+                style="width:100%;padding:14px 16px;background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:12px;font-family:inherit;text-align:left;transition:background .15s;"
+                onmouseover="this.style.background='#dcfce7'" onmouseout="this.style.background='#f0fdf4'">
+                <span style="font-size:24px;flex-shrink:0;">✉️</span>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:14px;font-weight:800;color:#14532d;">Email via PBallConnect</div>
+                  <div style="font-size:11px;color:#16a34a;">Sends a branded invite directly — no email app needed</div>
+                </div>
+                <span style="color:#16a34a;flex-shrink:0;">→</span>
+              </button>
+
+              <!-- Text (mobile only — shown by JS on open) -->
+              <button id="icChannelText" onclick="selectIcChannel('text')"
+                style="display:none;width:100%;padding:14px 16px;background:#eff6ff;border:2px solid #2563eb;border-radius:12px;cursor:pointer;align-items:center;gap:12px;font-family:inherit;text-align:left;transition:background .15s;"
+                onmouseover="this.style.background='#dbeafe'" onmouseout="this.style.background='#eff6ff'">
+                <span style="font-size:24px;flex-shrink:0;">💬</span>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:14px;font-weight:800;color:#1e3a8a;">Send a Text</div>
+                  <div style="font-size:11px;color:#3b82f6;">Opens your Messages app</div>
+                </div>
+                <span style="color:#2563eb;flex-shrink:0;">→</span>
+              </button>
+
+              <!-- Copy Link -->
+              <button id="icChannelLink" onclick="selectIcChannel('link')"
+                style="width:100%;padding:14px 16px;background:#fefce8;border:2px solid #ca8a04;border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:12px;font-family:inherit;text-align:left;transition:background .15s;"
+                onmouseover="this.style.background='#fef9c3'" onmouseout="this.style.background='#fefce8'">
+                <span style="font-size:24px;flex-shrink:0;">🔗</span>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:14px;font-weight:800;color:#713f12;">Copy Invite Link</div>
+                  <div style="font-size:11px;color:#ca8a04;">Paste anywhere — WhatsApp, Slack, LinkedIn, wherever</div>
+                </div>
+                <span style="color:#ca8a04;flex-shrink:0;">→</span>
+              </button>
+
+            </div>
+
+            <!-- QR option -->
+            <div id="icQrLine" onclick="openQrModal()" style="font-size:11px;color:#6b7280;text-align:center;margin-top:12px;cursor:pointer;">
+              At the court? Show your QR code instead →
+            </div>
+
+            <!-- Per-channel form (shown when a channel is selected) -->
+            <div id="icChannelForm" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid #d1fae5;">
+
+              <!-- Back link — always shown when a channel form is active -->
+              <div style="margin-bottom:10px;">
+                <span onclick="resetIcChannelForm()" style="font-size:12px;color:#6b7280;cursor:pointer;text-decoration:underline;">← Change method</span>
+              </div>
+
+              <!-- Email fields -->
+              <div id="icEmailFields" style="display:none;">
+                <input id="icFormName" type="text" placeholder="Their name"
+                  style="width:100%;padding:10px 12px;border:2px solid #9ca3af;border-radius:10px;font-size:16px;color:#111;background:#fff;box-sizing:border-box;outline:none;margin-bottom:8px;font-family:inherit;"
+                  oninput="this.style.borderColor=this.value.trim()?'#16a34a':'#9ca3af'"/>
+                <input id="icFormEmail" type="email" placeholder="Their email"
+                  style="width:100%;padding:10px 12px;border:2px solid #9ca3af;border-radius:10px;font-size:16px;color:#111;background:#fff;box-sizing:border-box;outline:none;margin-bottom:10px;font-family:inherit;"
+                  oninput="this.style.borderColor=this.value.trim()?'#16a34a':'#9ca3af'"/>
+                <button onclick="sendIcEmailInvite()"
+                  style="width:100%;padding:13px;background:#1a7a3a;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:background .15s;"
+                  onmouseover="this.style.background='#15652f'" onmouseout="this.style.background='#1a7a3a'">
+                  Send Invite ✉️
+                </button>
+                <div id="icEmailConfirm" style="display:none;"></div>
+              </div>
+
+              <!-- Text fields -->
+              <div id="icTextFields" style="display:none;">
+                <input id="icFormNameText" type="text" placeholder="Their first name"
+                  style="width:100%;padding:10px 12px;border:2px solid #9ca3af;border-radius:10px;font-size:16px;color:#111;background:#fff;box-sizing:border-box;outline:none;margin-bottom:10px;font-family:inherit;"
+                  oninput="this.style.borderColor=this.value.trim()?'#2563eb':'#9ca3af'"/>
+                <button onclick="sendIcTextInvite()"
+                  style="width:100%;padding:13px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:background .15s;">
+                  Open Messages 💬
+                </button>
+              </div>
+
+              <!-- Link fields -->
+              <div id="icLinkFields" style="display:none;">
+                <input id="icFormNameLink" type="text" placeholder="Their name"
+                  style="width:100%;padding:10px 12px;border:2px solid #9ca3af;border-radius:10px;font-size:16px;color:#111;background:#fff;box-sizing:border-box;outline:none;margin-bottom:10px;font-family:inherit;"
+                  oninput="this.style.borderColor=this.value.trim()?'#ca8a04':'#9ca3af'"/>
+                <button onclick="sendIcLinkInvite()"
+                  style="width:100%;padding:13px;background:#ca8a04;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:background .15s;">
+                  Copy Link 🔗
+                </button>
+                <div id="icLinkConfirm" style="display:none;"></div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Sent invites history — shown above grid when there are awaiting invites -->
+          <div class="ic-card ic-pending-invites-card" id="icInvitesCard" style="display:none;max-width:100%;margin-top:0;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+              <div class="ic-section-label" style="margin-bottom:0;">⏳ Invites Sent <span id="icInvitesBadge" class="ic-badge"></span></div>
+              <div style="font-size:11px;color:var(--dim);">Awaiting acceptance</div>
+            </div>
+            <div id="icInvitesList"></div>
+          </div>
+
+          <!-- View toggle row -->
+          <div style="display:flex;gap:6px;margin-bottom:8px;padding:0 2px;">
+            <button id="icViewGrid" onclick="switchIcMemberView('grid')"
+              style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;background:#1a7a3a;border:1.5px solid #1a7a3a;color:#fff;font-family:inherit;">📊 Level Grid</button>
+            <button id="icViewFavorites" onclick="switchIcMemberView('favorites')"
+              style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;background:#f1f5f9;border:1.5px solid #d1d5db;color:#374151;font-family:inherit;">⭐ Favorites</button>
+            <button id="icViewAlpha" onclick="switchIcMemberView('alpha')"
+              style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;background:#f1f5f9;border:1.5px solid #d1d5db;color:#374151;font-family:inherit;">A–Z</button>
+          </div>
+
+          <!-- MY INNER CIRCLE label row -->
+          <div style="font-size:12px;font-weight:800;color:#1a7a3a;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;padding:0 2px;">
+            ✅ My Inner Circle <span id="icMemberCountLabel" style="font-weight:600;color:#6b7280;text-transform:none;letter-spacing:0;"></span>
+          </div>
+
+          <!-- Level grid — shown in grid view, hidden otherwise -->
+          <div id="icLevelGrid" style="display:none;overflow-x:auto;margin-bottom:8px;"></div>
+
+          <!-- Column headers — shown in list views, hidden in grid view -->
+          <div id="icColHeaders" style="display:flex;align-items:center;gap:10px;padding:6px 12px;background:#f1f5f9;border-radius:8px;margin-bottom:4px;">
+            <div style="width:32px;flex-shrink:0;"></div>
+            <div style="flex:1.8;font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">Name</div>
+            <div style="flex:1.2;font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">Nickname</div>
+            <div style="flex-shrink:0;width:72px;font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">Level</div>
+            <div style="flex-shrink:0;width:24px;"></div>
+          </div>
+
+          <!-- Member list — populated by renderInnerCircleList() -->
+          <div id="icApprovedList" style="border:1.5px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#ffffff;">
+            <div style="padding:32px;text-align:center;color:#9ca3af;font-size:14px;">
+              Your Inner Circle is empty.<br>
+              <span style="font-size:13px;color:#1a7a3a;cursor:pointer;font-weight:700;" onclick="toggleIcInvitePanel()">Invite someone to get started →</span>
+            </div>
+          </div>
+
+
+        </div>
+
+        <!-- ── SECTION: Invite New Members (legacy nav target) ── -->
+        <div id="icSectionInvite" style="display:none;">
+          <!-- Hidden legacy stubs referenced by JS -->
+          <div id="inviteStatus" style="display:none;"></div>
+          <div id="inviteSentList" style="display:none;"></div>
+        </div>
+
+        <!-- ── SECTION: Member Requests ── -->
+        <div id="icSectionRequests" style="display:none;">
+          <div class="ic-card" id="icPendingCard" style="max-width:100%;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+              <div class="ic-section-label" style="margin-bottom:0;color:#7c3aed;">
+                🟣 Inner Circle Invites to Me <span id="icPendingBadge" class="ic-badge" style="background:rgba(124,58,237,0.2);color:#a78bfa;"></span>
+              </div>
+            </div>
+            <div style="font-size:13px;color:var(--dim);margin-bottom:12px;">These players have invited you to their Inner Circle.</div>
+            <div id="icPendingList"></div>
+          </div>
+        </div>
+
+
+        <!-- Legacy stubs for JS compat -->
+        <div id="icStatsDashboard" style="display:none;"></div>
+        <div id="icApprovedCard" style="display:none;"></div>
+        <div id="icSentCard" style="display:none;"><div id="icSentList"></div></div>
+        <div id="icPlayHistoryCard" style="display:none;"><div id="icPlayHistoryList"></div></div>
+        <div id="icInlineList" style="display:none;"></div>
+        <div id="icOutboundCount" style="display:none;">0</div>
+        <div id="icInboundCount" style="display:none;">0</div>
+        <div id="icApprovedBadge" style="display:none;"></div>
+
+      </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="loginModal" style="display:none;position:fixed;top:0;left:0;right:0;
+      min-height:100%;background:rgba(0,0,0,0.8);z-index:400;
+      align-items:flex-start;justify-content:center;padding:60px 16px;">
+      <div class="login-modal-card">
+        <button onclick="closeLoginModal()" style="position:absolute;top:12px;right:12px;
+          background:rgba(255,255,255,0.1);border:none;color:#fff;width:28px;height:28px;
+          border-radius:50%;cursor:pointer;font-size:14px;">✕</button>
+
+        <div style="text-align:center;margin-bottom:24px;">
+          <div style="font-size:32px;margin-bottom:8px;">🏓</div>
+          <div id="loginModalTitle" style="color:#fff;font-size:20px;font-weight:700;">Sign In</div>
+          <div id="loginModalSub" style="color:var(--dim);font-size:13px;margin-top:4px;">Enter your email — we'll send you a magic link to sign in</div>
+        </div>
+
+        <!-- Login form -->
+        <div id="loginForm">
+          <div class="login-field">
+            <label class="login-label">Email address</label>
+            <input type="email" id="loginEmail" placeholder="your@email.com"
+              autocomplete="email"
+              style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);
+              background:rgba(255,255,255,0.07);color:#fff;font-size:14px;
+              font-family:'DM Sans',sans-serif;box-sizing:border-box;"
+              onkeydown="if(event.key==='Enter')doLogin()"/>
+          </div>
+          <div id="loginError" style="color:#f87171;font-size:12px;margin-top:8px;display:none;"></div>
+          <button onclick="doLogin()" id="loginSubmitBtn"
+            style="width:100%;margin-top:16px;padding:13px;border-radius:12px;
+            border:none;background:var(--green);color:#fff;font-size:15px;font-weight:700;
+            cursor:pointer;font-family:'DM Sans',sans-serif;">
+            Send Magic Link →
+          </button>
+          <div style="text-align:center;margin-top:16px;color:var(--dim);font-size:11px;line-height:1.6;">
+            We'll email you a secure magic link — no password needed.<br/>
+            New here? Click the link and we'll get you set up in 2 minutes.
+          </div>
+        </div>
+
+        <!-- Loading state -->
+        <div id="loginLoading" style="display:none;text-align:center;padding:20px;">
+          <div style="color:var(--green);font-size:14px;">Sending magic link…</div>
+        </div>
+
+        <!-- Success state -->
+        <div id="loginSuccess" style="display:none;text-align:center;padding:12px 0;">
+          <div style="font-size:40px;margin-bottom:8px;">📬</div>
+          <div id="loginSuccessMsg" style="color:#fff;font-size:16px;font-weight:700;">Check your inbox!</div>
+          <div id="loginSuccessDetail" style="color:var(--dim);font-size:13px;margin-top:8px;line-height:1.5;">We sent a magic link to your email. Click it to sign in — if you're new, it'll get you set up in minutes.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Player Card Modal -->
+    <div id="playerCardModal" style="display:none;position:fixed;top:0;left:0;right:0;
+      min-height:100%;background:rgba(0,0,0,0.75);z-index:300;
+      align-items:flex-start;justify-content:center;padding:40px 16px;">
+      <div class="pc-card-modal">
+        <button onclick="closePlayerCard()" style="position:absolute;top:12px;right:12px;
+          background:rgba(255,255,255,0.1);border:none;color:#fff;width:28px;height:28px;
+          border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;
+          justify-content:center;">✕</button>
+        <div id="playerCardContent"></div>
+      </div>
+    </div>
+
+    <!-- Player Confirmation Modal -->
+    <div id="icConfirmModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;
+      background:rgba(0,0,0,0.7);z-index:500;align-items:flex-start;
+      justify-content:center;padding-top:60px;">
+      <div class="ic-modal-card">
+        <div class="ic-modal-title">Is this the right player?</div>
+        <div class="ic-modal-subtitle">Confirm before sending your Inner Circle request</div>
+        <div id="icModalContent"></div>
+        <div class="ic-modal-actions">
+          <button class="ic-action-btn ic-btn-decline" onclick="closeIcModal()">Cancel</button>
+          <button class="ic-action-btn ic-btn-approve" id="icModalConfirmBtn" style="margin-left:8px;">
+            📨 Send invite
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SET UP A MATCH PAGE -->
+    <div class="page-section" id="page-setupMatch">
+      <div class="page-header">
+        <h1 style="color:#111;">Set Up A <span style="color:#1a7a3a;">Match</span></h1>
+        <p id="matchPageSub">Fill in the details and send your invite</p>
+      </div>
+
+      <!-- STEP INDICATOR (hidden — kept for JS compat) -->
+      <div id="matchSteps" style="display:none;">
+      </div>
+
+      <!-- Sticky Progress Bar -->
+      <div id="smProgressBar" style="position:sticky;top:52px;z-index:100;background:#fef9c3;border-bottom:2px solid #eab308;padding:10px 16px 6px;">
+        <div style="display:flex;align-items:center;justify-content:center;">
+          <div id="smStep1" style="width:32px;height:32px;border-radius:50%;border:2px solid #eab308;background:#fef9c3;color:#713f12;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">1</div>
+          <div style="flex:1;height:1px;background:#d97706;max-width:20px;"></div>
+          <div id="smStep2" style="width:28px;height:28px;border-radius:50%;border:2px solid #d97706;background:#fff;color:#78350f;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">2</div>
+          <div style="flex:1;height:1px;background:#d97706;max-width:20px;"></div>
+          <div id="smStep3" style="width:28px;height:28px;border-radius:50%;border:2px solid #d97706;background:#fff;color:#78350f;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">3</div>
+          <div style="flex:1;height:1px;background:#d97706;max-width:20px;"></div>
+          <div id="smStep4" style="width:28px;height:28px;border-radius:50%;border:2px solid #d97706;background:#fff;color:#78350f;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">4</div>
+          <div style="flex:1;height:1px;background:#d97706;max-width:20px;"></div>
+          <div id="smStep5" style="width:28px;height:28px;border-radius:50%;border:2px solid #d97706;background:#fff;color:#78350f;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">5</div>
+          <div style="flex:1;height:1px;background:#d97706;max-width:20px;"></div>
+          <div id="smStep6" style="width:28px;height:28px;border-radius:50%;border:2px solid #d97706;background:#fff;color:#78350f;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">6</div>
+          <div style="flex:1;height:1px;background:#d97706;max-width:20px;"></div>
+          <div id="smStep7" style="width:28px;height:28px;border-radius:50%;border:2px solid #d97706;background:#fff;color:#78350f;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">7</div>
+        </div>
+        <div id="smProgressLabel" style="text-align:center;font-size:11px;font-weight:700;color:#713f12;margin-top:5px;">Step 1 · Play Structure</div>
+      </div>
+
+      <!-- Container 1: Play Structure -->
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 1</span> · Play Structure</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div id="smGenderEither" onclick="selectMatchGender('either',this)"
+            style="padding:12px 16px;border:2px solid #1a7a3a;border-radius:12px;background:#f0fdf4;cursor:pointer;display:flex;align-items:center;gap:12px;">
+            <span style="font-size:20px;">👥</span>
+            <div><div style="font-size:13px;font-weight:700;color:#111;">Open</div><div style="font-size:11px;color:#6b7280;">Any gender welcome</div></div>
+          </div>
+          <div id="smGenderMixed" onclick="selectMatchGender('mixed',this)"
+            style="padding:12px 16px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;display:flex;align-items:center;gap:12px;">
+            <span style="font-size:20px;">🤝</span>
+            <div><div style="font-size:13px;font-weight:700;color:#111;">Mixed</div><div style="font-size:11px;color:#6b7280;">Even number of men and women</div></div>
+          </div>
+          <div id="smGenderSame" onclick="selectMatchGender('same',this)"
+            style="padding:12px 16px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;display:flex;align-items:center;gap:12px;">
+            <span style="font-size:20px;">👤</span>
+            <div><div style="font-size:13px;font-weight:700;color:#111;">Same Gender</div><div style="font-size:11px;color:#6b7280;">Men only or women only</div></div>
+          </div>
+          <!-- Divider between open/mixed/same and Set Group -->
+          <div style="display:flex;align-items:center;gap:8px;margin:2px 0;">
+            <hr style="flex:1;border:none;border-top:2px solid #374151;margin:0;">
+            <span style="font-size:10px;font-weight:700;color:#6b7280;white-space:nowrap;letter-spacing:.05em;">— or use a saved group —</span>
+            <hr style="flex:1;border:none;border-top:2px solid #374151;margin:0;">
+          </div>
+          <div id="smGenderGroup" onclick="selectMatchGender('group',this)"
+            style="padding:12px 16px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;display:flex;align-items:center;gap:12px;">
+            <span style="font-size:20px;">📋</span>
+            <div><div style="font-size:13px;font-weight:700;color:#111;">One of my Set Groups</div><div style="font-size:11px;color:#6b7280;">Use a saved group as your invite list</div></div>
+          </div>
+        </div>
+        <!-- Group picker -->
+        <div id="smGenderGroupWrap" style="display:none;margin-top:10px;"></div>
+      </div>
+
+      <!-- Container 2: Match Type -->
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 2</span> · Match Type</span>
+        </div>
+        <div id="smStep2LockedLabel" style="display:none;font-size:12px;font-weight:700;color:#1a7a3a;background:#f0fdf4;border:1px solid #a7f3d0;border-radius:8px;padding:6px 12px;margin-bottom:10px;"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div id="smFmtDoubles" onclick="selectMatchFormat('doubles',this)"
+            style="padding:16px 12px;border:2px solid #1a7a3a;border-radius:12px;background:#f0fdf4;cursor:pointer;text-align:center;">
+            <div style="font-size:22px;margin-bottom:6px;">🏓🏓</div>
+            <div style="font-size:13px;font-weight:800;color:#111;">Doubles</div>
+            <div style="font-size:11px;color:#6b7280;margin-top:2px;">4 players / court</div>
+          </div>
+          <div id="smFmtSingles" onclick="selectMatchFormat('singles',this)"
+            style="padding:16px 12px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;text-align:center;">
+            <div style="font-size:22px;margin-bottom:6px;">🏓</div>
+            <div style="font-size:13px;font-weight:800;color:#111;">Singles</div>
+            <div style="font-size:11px;color:#6b7280;margin-top:2px;">2 players / court</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Container 3: Number of Courts -->
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 3</span> · Number of Courts</span>
+        </div>
+        <div id="smStep3LockedLabel" style="display:none;font-size:12px;font-weight:700;color:#1a7a3a;background:#f0fdf4;border:1px solid #a7f3d0;border-radius:8px;padding:6px 12px;margin-bottom:10px;"></div>
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <button id="smCourtsBtn1" onclick="selectNumCourts(1)"
+            style="padding:8px 20px;border-radius:999px;border:1.5px solid #1a7a3a;background:#1a7a3a;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">1</button>
+          <button id="smCourtsBtn2" onclick="selectNumCourts(2)"
+            style="padding:8px 20px;border-radius:999px;border:1.5px solid #d1d5db;background:#f3f4f6;color:#374151;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">2</button>
+          <button id="smCourtsBtn3" onclick="selectNumCourts(3)"
+            style="padding:8px 20px;border-radius:999px;border:1.5px solid #d1d5db;background:#f3f4f6;color:#374151;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">3</button>
+          <button id="smCourtsBtn4" onclick="selectNumCourts(4)"
+            style="padding:8px 20px;border-radius:999px;border:1.5px solid #d1d5db;background:#f3f4f6;color:#374151;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">4</button>
+        </div>
+        <div id="smCourtHelperLine" style="font-size:13px;color:#1a7a3a;font-weight:600;text-align:center;margin-bottom:12px;">1 court · 4 players total · 3 spots open</div>
+        <div style="background:#fee2e2;border:1px solid #f87171;border-radius:10px;padding:8px 14px;display:inline-flex;align-items:center;gap:6px;">
+          <span style="font-size:13px;color:#991b1b;font-weight:600;">Players needed (you're in):</span>
+          <span id="smNeededNum" style="font-size:20px;font-weight:800;color:#991b1b;">3</span>
+        </div>
+      </div>
+
+      <!-- Container 4: Invites -->
+      <div id="smInviteContainer" style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">4</div>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 4</span> · Invites</span>
+        </div>
+        <!-- Set Group path: collapsed read-only banner (shown instead of grid) -->
+        <div id="smStep4LockedLabel" style="display:none;font-size:12px;font-weight:700;color:#1a7a3a;background:#f0fdf4;border:1px solid #a7f3d0;border-radius:8px;padding:6px 12px;margin-bottom:10px;"></div>
+        <!-- Level grid (non-Set-Group path) — built by buildSmInviteGrid() -->
+        <div id="smInviteGridSection"></div>
+        <!-- Hidden elements preserved for JS compatibility -->
+        <div id="smNeededGrid" style="display:none;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+          <div style="display:grid;grid-template-columns:1fr 72px 72px;background:#f9fafb;padding:8px 12px;border-bottom:1px solid #e5e7eb;">
+            <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;"></div>
+            <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;text-align:center;">Needed</div>
+            <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;text-align:center;">Invited</div>
+          </div>
+          <div id="smNeededGridRows"></div>
+        </div>
+        <div id="smInviteAll" style="display:none;"><span id="smInviteAllCount"></span></div>
+        <div id="smInviteSpecific" style="display:none;"></div>
+        <div id="smInviteGroup" style="display:none;"></div>
+        <!-- Set Group path: read-only roster -->
+        <div id="smGroupRosterDisplay" style="display:none;margin-bottom:14px;"></div>
+        <!-- Specific player picker -->
+        <div id="smSpecificPickerWrap" style="display:none;margin-bottom:14px;border:1px solid #e5e7eb;border-radius:12px;padding:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <div style="font-size:12px;font-weight:700;color:#1a7a3a;">Select players</div>
+            <div id="matchSpecificCount" style="font-size:12px;color:#6b7280;font-weight:600;"></div>
+          </div>
+          <div id="matchSpecificWarning" style="display:none;"></div>
+          <div id="matchSpecificList" style="max-height:300px;overflow-y:auto;"></div>
+        </div>
+        <!-- Named group picker -->
+        <div id="smGroupPickerWrap" style="display:none;margin-bottom:14px;">
+          <select id="smGroupSelect" onchange="smOnGroupSelect(this.value)"
+            style="width:100%;padding:10px 14px;border-radius:10px;border:2px solid #d1d5db;background:#fff;color:#111;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;">
+            <option value="">Select a group…</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Container 5: Date & Time -->
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">5</div>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 5</span> · Date &amp; Time</span>
+        </div>
+        <div style="margin-bottom:12px;">
+          <input type="date" id="matchDate"
+            style="width:100%;padding:10px 14px;border-radius:10px;border:2px solid #d1d5db;background:#f9fafb;color:#111;font-size:14px;box-sizing:border-box;font-family:'DM Sans',sans-serif;"
+            oninput="MS.date=this.value;smCheckConflict();smUpdateSendBtn();smUpdateSummary()"/>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:end;margin-bottom:12px;">
+          <div>
+            <label style="font-size:10px;font-weight:700;color:#1a5c32;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:6px;">Start Time</label>
+            <select id="matchTimeStart" onchange="onMatchStartTimeChange(this.value);smCheckConflict();smUpdateSendBtn();smUpdateSummary()"
+              style="width:100%;padding:10px 14px;border-radius:10px;border:2px solid #d1d5db;background:#fff;color:#111;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;outline:none;appearance:none;cursor:pointer;">
+              <option value="">Select time…</option>
+            </select>
+          </div>
+          <div style="text-align:center;padding-bottom:2px;">
+            <div style="font-size:9px;font-weight:700;color:#1a5c32;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Duration</div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <button onclick="adjustDuration(-0.25)"
+                style="width:28px;height:28px;border-radius:7px;border:2px solid #1a7a3a;background:#d1fae5;color:#1a7a3a;font-size:16px;cursor:pointer;font-family:'DM Sans',sans-serif;line-height:1;flex-shrink:0;font-weight:800;">−</button>
+              <span id="matchDurationDisplay" style="min-width:44px;text-align:center;font-size:13px;font-weight:700;color:#1a7a3a;white-space:nowrap;">2 hrs</span>
+              <button onclick="adjustDuration(0.25)"
+                style="width:28px;height:28px;border-radius:7px;border:2px solid #1a7a3a;background:#d1fae5;color:#1a7a3a;font-size:16px;cursor:pointer;font-family:'DM Sans',sans-serif;line-height:1;flex-shrink:0;font-weight:800;">+</button>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:#1a5c32;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:6px;">End Time</label>
+            <div id="smEndTimeDisplay" style="padding:10px 14px;border-radius:10px;border:2px solid #d1d5db;background:#f3f4f6;color:#6b7280;font-size:14px;font-weight:600;">—</div>
+          </div>
+        </div>
+        <!-- Hidden end-time select for JS compat -->
+        <select id="matchTimeEnd" style="display:none;"><option value=""></option></select>
+        <!-- Conflict detection -->
+        <div id="smConflictBox" style="display:none;"></div>
+      </div>
+
+      <!-- Container 6: Court -->
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">6</div>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 6</span> · Court</span>
+        </div>
+        <!-- Selected court chip (shown after selection, hides list) -->
+        <div id="smSelectedCourtChip" style="display:none;margin-bottom:14px;"></div>
+        <!-- Priority courts list: recent history + saved, compact single-line rows -->
+        <div id="smPriorityCourtsList" style="margin-bottom:8px;"></div>
+        <!-- Show all courts toggle -->
+        <div id="smShowAllCourtsWrap" style="margin-bottom:10px;">
+          <button id="smShowAllCourtsBtn" onclick="smToggleAllCourts()"
+            style="width:100%;padding:8px 14px;border-radius:8px;border:1px solid #d1d5db;background:#f9fafb;color:#6b7280;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;text-align:left;">Show all courts ▼</button>
+        </div>
+        <!-- Expanded section: Public/Private tabs + full saved + nearby lists -->
+        <div id="smAllCourtsSection" style="display:none;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+            <button id="smCourtTypePublic" onclick="smSetCourtType('public')"
+              style="padding:9px 16px;border-radius:999px;border:1.5px solid #1a7a3a;background:#1a7a3a;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🌳 Public</button>
+            <button id="smCourtTypePrivate" onclick="smSetCourtType('private')"
+              style="padding:9px 16px;border-radius:999px;border:1.5px solid #d1d5db;background:#f3f4f6;color:#374151;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🏢 Private</button>
+          </div>
+          <div id="smSavedCourtsLabel" style="font-size:11px;font-weight:700;color:#1a7a3a;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;">My saved public courts</div>
+          <div id="smSavedCourts" style="margin-bottom:14px;"></div>
+          <div id="smOtherCourtsLabel" style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;">Other public courts nearby</div>
+          <div id="smOtherCourts" style="margin-bottom:10px;"></div>
+        </div>
+        <div id="matchCourtCapacityWarn" style="display:none;margin-bottom:10px;padding:10px 12px;border-radius:10px;border:1.5px solid;font-size:12px;font-weight:600;line-height:1.5;"></div>
+        <button id="smAddCourtBtn" onclick="showPage('myCourts')"
+          style="width:100%;padding:10px;border-radius:10px;border:1.5px dashed #d1d5db;background:#f9fafb;color:#6b7280;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">+ Add a new court</button>
+      </div>
+
+      <!-- Container 7: Review & Send -->
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 20px;margin-bottom:24px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:#1a7a3a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">7</div>
+          <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;"><span style="color:#d97706;font-weight:800;">Step 7</span> · Review &amp; Send</span>
+        </div>
+        <div id="smReviewRosterWrap" style="display:none;margin-bottom:16px;"></div>
+        <div id="smSummaryRows" style="margin-bottom:16px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;"></div>
+        <div style="margin-bottom:16px;">
+          <textarea id="matchNote" placeholder="Add a note for your players…"
+            style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid #d1d5db;background:#f9fafb;color:#111;font-size:13px;resize:vertical;min-height:60px;box-sizing:border-box;font-family:'DM Sans',sans-serif;outline:none;"
+            oninput="smUpdateSummary()"></textarea>
+        </div>
+        <button id="matchSendBtn" onclick="submitMatch()"
+          style="width:100%;padding:15px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-size:15px;font-weight:800;font-family:inherit;opacity:0.4;cursor:not-allowed;transition:opacity .15s;"
+          disabled>🎾 Send Invites</button>
+        <div id="matchSendStatus" style="font-size:12px;color:#6b7280;margin-top:8px;text-align:center;"></div>
+      </div>
+
+    </div>
+    <!-- MY INVITES PAGE -->
+    <!-- OUTER CIRCLE PAGE -->
+
+    <!-- CONFIRMED MATCHES PAGE -->
+    <div class="page-section" id="page-confirmedMatches">
+      <div class="page-header">
+        <h1 style="color:#111;">✅ Confirmed <span style="color:#1a7a3a;">Matches</span></h1>
+        <p>Upcoming matches you're confirmed to play</p>
+      </div>
+      <div id="confirmedMatchesList"></div>
+    </div>
+
+    <!-- RECORD / VIEW SCORES PAGE -->
+    <div class="page-section" id="page-recordScores">
+      <div class="page-header">
+        <h1>🏆 Record / <span>View Scores</span></h1>
+        <p>Record scores and view your match history</p>
+      </div>
+      <!-- Walk-on match button -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+        <div style="font-size:13px;color:var(--dim);">Past matches you were part of</div>
+        <button onclick="openWalkOnMatchModal()"
+          style="padding:9px 16px;border-radius:10px;border:1px solid rgba(76,175,125,0.4);background:rgba(76,175,125,0.1);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;">
+          + Record Walk-On Match
+        </button>
+      </div>
+      <div id="recordScoresList"></div>
+    </div>
+
+    <!-- MY GROUPS PAGE -->
+    <div class="page-section" id="page-myGroups">
+      <div class="page-header">
+        <h1 style="color:#111;">🗂️ My <span style="color:#1a7a3a;">Groups</span></h1>
+        <p>Named player groups for quick match inviting</p>
+      </div>
+      <div style="margin-bottom:16px;">
+        <button onclick="showCreateGroupModal()"
+          style="padding:10px 20px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+          + Create Group
+        </button>
+      </div>
+      <div id="myGroupsList"></div>
+    </div>
+
+    <!-- RECURRING MATCHES PAGE -->
+    <div class="page-section" id="page-recurringMatches">
+      <div class="page-header">
+        <h1 style="color:#111;">🔄 Recurring <span style="color:#1a7a3a;">Matches</span></h1>
+        <p>Schedule repeating matches linked to your groups</p>
+      </div>
+      <div style="margin-bottom:16px;">
+        <button onclick="showCreateRecurringModal()"
+          style="padding:10px 20px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+          + New Recurring Match
+        </button>
+      </div>
+      <div id="recurringMatchesList"></div>
+    </div>
+
+    <div class="page-section" id="page-myInvites" style="background:#ffffff;">
+      <div class="page-header">
+        <h1>My Match <span>Invites</span></h1>
+        <p>Matches you've organized and their response status</p>
+      </div>
+      <div id="myInvitesList" style="max-width:700px;"></div>
+    </div>
+
+    <!-- INVITED BY OTHERS PAGE -->
+    <div class="page-section" id="page-invitedByOthers">
+      <div class="page-header">
+        <h1>Pending <span>Matches</span></h1>
+        <p>Invites to respond to, and matches awaiting a full roster</p>
+      </div>
+      <div id="invitedByOthersList" style="max-width:700px;"></div>
+    </div>
+
+    <!-- MY LESSONS PAGE -->
+    <div class="page-section" id="page-myLessons">
+      <div class="page-header">
+        <h1>My <span>Lessons</span></h1>
+        <p>Find a coach and track your lesson history</p>
+      </div>
+
+      <!-- Find a Coach section -->
+      <div style="margin-bottom:28px;">
+        <div style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">🔍 Find a Coach</div>
+        <div id="lessonsLockedMsg" class="lessons-locked" style="display:none;">
+          <div class="lessons-locked-icon">🔒</div>
+          <div class="lessons-locked-text">Sign in and complete your Player Profile to see coaches near you!</div>
+          <button class="lessons-go-profile-btn" onclick="showPage('playerProfile')">Go to Player Profile →</button>
+        </div>
+        <div id="coachDirectory" style="display:none;">
+          <div style="font-size:12px;color:var(--dim);margin-bottom:16px;" id="coachDirectoryMeta"></div>
+          <div id="coachList"></div>
+        </div>
+      </div>
+
+      <!-- Lesson Tracker -->
+      <div style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">📚 Lesson Tracker</div>
+      <div class="coming-soon" style="min-height:30vh;">
+        <div class="coming-soon-icon">📚</div>
+        <h2>Lesson Tracker</h2>
+        <p>Once you book a lesson with a coach, your sessions will appear here — dates, coach, notes, and progress tracking.</p>
+        <div class="coming-soon-badge">Coming Soon</div>
+      </div>
+    </div>
+
+    <!-- PRIVACY POLICY PAGE -->
+    <div class="page-section" id="page-privacy">
+      <div class="page-header">
+        <h1>Privacy <span>Policy</span></h1>
+        <p>Last updated: May 2026</p>
+      </div>
+      <div style="max-width:680px;line-height:1.8;color:#374151;font-size:14px;">
+
+        <div style="background:#f0fdf4;border:1px solid rgba(76,175,125,0.35);border-radius:14px;padding:20px;margin-bottom:24px;">
+          <div style="font-size:18px;font-weight:800;color:#1a7a3a;margin-bottom:8px;">Our Commitment to You</div>
+          <div style="color:#374151;">PBallConnect was built by pickleball players, for pickleball players. We collect only what we need to connect you with others who want to play. We will never sell your data, never use it for advertising, and you can delete your account at any time.</div>
+        </div>
+
+        <div style="font-size:16px;font-weight:700;color:#111;margin:20px 0 8px;">What We Collect</div>
+        <div style="color:#6b7280;font-size:13px;margin-bottom:16px;">And why we need it:</div>
+        <div style="display:grid;gap:10px;margin-bottom:24px;">
+          <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 12px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">
+            <div style="color:#111;font-weight:600;font-size:13px;">First Name + Nickname</div>
+            <div style="color:#6b7280;font-size:13px;">So other players can identify you in the app</div>
+          </div>
+          <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 12px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">
+            <div style="color:#111;font-weight:600;font-size:13px;">Last Name initial (optional)</div>
+            <div style="color:#6b7280;font-size:13px;">For your player card display only</div>
+          </div>
+          <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 12px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">
+            <div style="color:#111;font-weight:600;font-size:13px;">Email address</div>
+            <div style="color:#6b7280;font-size:13px;">Required to sign in and receive match invites</div>
+          </div>
+          <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 12px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">
+            <div style="color:#111;font-weight:600;font-size:13px;">Phone number (optional)</div>
+            <div style="color:#6b7280;font-size:13px;">For future match notifications and score recording</div>
+          </div>
+          <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 12px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">
+            <div style="color:#111;font-weight:600;font-size:13px;">Age range (e.g. 41–45)</div>
+            <div style="color:#6b7280;font-size:13px;">For community statistics — no exact birthdate stored</div>
+          </div>
+          <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 12px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">
+            <div style="color:#111;font-weight:600;font-size:13px;">City, State, Zip</div>
+            <div style="color:#6b7280;font-size:13px;">To find nearby players and courts — no street address stored</div>
+          </div>
+          <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 12px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">
+            <div style="color:#111;font-weight:600;font-size:13px;">Skill level &amp; play preferences</div>
+            <div style="color:#6b7280;font-size:13px;">To match you with compatible players</div>
+          </div>
+        </div>
+
+        <div style="font-size:16px;font-weight:700;color:#111;margin:20px 0 10px;">What We Never Collect</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;">
+          <span style="padding:6px 12px;border-radius:999px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#f87171;font-size:12px;font-weight:600;">✕ Street address</span>
+          <span style="padding:6px 12px;border-radius:999px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#f87171;font-size:12px;font-weight:600;">✕ Full date of birth</span>
+          <span style="padding:6px 12px;border-radius:999px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#f87171;font-size:12px;font-weight:600;">✕ Financial information</span>
+          <span style="padding:6px 12px;border-radius:999px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#f87171;font-size:12px;font-weight:600;">✕ Social Security number</span>
+          <span style="padding:6px 12px;border-radius:999px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#f87171;font-size:12px;font-weight:600;">✕ Facial images or biometrics <span style="color:#9ca3af;font-weight:400;">(unless you voluntarily upload a profile photo with consent)</span></span>
+          <span style="padding:6px 12px;border-radius:999px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#f87171;font-size:12px;font-weight:600;">✕ Health records</span>
+        </div>
+
+        <div style="font-size:16px;font-weight:700;color:#111;margin:20px 0 10px;">How We Protect Your Data</div>
+        <div style="margin-bottom:24px;">
+          Your data is stored on Supabase, which is SOC 2 Type 2 certified and built on AWS infrastructure with encryption at rest and in transit. Phone numbers are stored as plain text digits and used only for SMS notifications you have explicitly opted into. We use row-level security to restrict database access. We never share your data with third parties except as required to operate the app (e.g. sending emails via Resend).
+        </div>
+
+        <div style="font-size:16px;font-weight:700;color:#111;margin:20px 0 10px;">SMS Notifications</div>
+        <div style="margin-bottom:24px;">
+          If you provide a mobile phone number and opt in to SMS notifications, PBallConnect may send you transactional text messages such as match invitations and match updates. Message and data rates may apply. Message frequency varies. You can opt out at any time by replying STOP to any message. For help, reply HELP. Opting out of SMS does not affect your account or any other notifications.
+        </div>
+
+        <div style="font-size:16px;font-weight:700;color:#111;margin:20px 0 10px;">Your Rights</div>
+        <div style="margin-bottom:24px;">
+          You can request deletion of your account and all associated data at any time by emailing <span style="color:var(--green);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="1f7b766f6f7e2828285f78727e7673317c7072">[email&#160;protected]</a></span>. We will process deletion requests within 30 days.
+        </div>
+
+        <div style="font-size:16px;font-weight:700;color:#111;margin:20px 0 10px;">Contact</div>
+        <div style="margin-bottom:32px;">
+          Questions about this policy? Email us at <span style="color:var(--green);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="aecac7dedecf999999eec9c3cfc7c280cdc1c3">[email&#160;protected]</a></span>. We're real people — you'll get a real response.
+        </div>
+
+        <div style="text-align:center;padding:20px;border-top:1px solid var(--border);color:var(--dim);font-size:12px;">
+          PBallConnect · Built with ❤️ for the pickleball community<br>
+          A portion of future proceeds supports <strong style="color:var(--green);">A Tiny Ripple of Hope</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- TERMS OF SERVICE PAGE -->
+    <div class="page-section" id="page-tos">
+      <div class="page-header">
+        <h1>Terms of <span>Service</span></h1>
+        <p>Last updated: April 2026 &nbsp;·&nbsp; Effective date: April 22, 2026</p>
+      </div>
+      <div style="max-width:680px;line-height:1.8;color:#374151;font-size:14px;">
+
+        <div style="background:#f0fdf4;border:1px solid rgba(76,175,125,0.35);border-radius:14px;padding:20px;margin-bottom:24px;">
+          <div style="font-size:18px;font-weight:800;color:#1a7a3a;margin-bottom:8px;">Plain English First</div>
+          <div style="color:#374151;">These Terms govern your use of PBallConnect. We've written them to be readable. If something is unclear, email us — we're real people and we'll explain it.</div>
+        </div>
+
+        <!-- Section 1 -->
+        <div style="font-size:16px;font-weight:700;color:#111;margin:20px 0 8px;">1. Acceptance of Terms</div>
+        <div style="margin-bottom:16px;">By creating an account or using PBallConnect, you agree to these Terms. If you do not agree, do not use the app. PBallConnect is operated by <strong>[OWNER NAME / LLC NAME]</strong>, a New Hampshire business.</div>
+
+        <!-- Section 2 -->
+        <div style="font-size:16px;font-weight:700;color:#111;margin:20px 0 8px;">2. Description of Service</div>
+        <div style="margin-bottom:16px;">PBallConnect is a platform that helps pickleball players find each other, organize matches, and manage their player networks. We do not organize, supervise, or manage any matches, courts, or physical activities arranged through the platform. <strong>We are a technology intermediary only.</strong></div>
+
+        <!-- Section 3 -->
+        <div style="font-size:16px;font-weight:700;color:#111;margin:20px 0 8px;">3. Eligibility</div>
+        <div style="margin-bottom:16px;">You must be <strong>18 years or older</strong> to use PBallConnect. By registering, you confirm you meet this requirement.</div>
+
+        <!-- Section 4 -->
+        <div style="font-size:16px;font-weight:700;color:#111;margin:20px 0 8px;">4. User Accounts</div>
+        <div style="margin-bottom:16px;">You are responsible for maintaining the security of your account. You agree to provide accurate information. We use magic link authentication — you are responsible for the security of your email account.</div>
+
+        <!-- Section 5 -->
+        <div style="font-size:16px;font-weight:700;color:#111;margin:20px 0 8px;">5. Acceptable Use</div>
+        <div style="margin-bottom:8px;">You agree <strong>not</strong> to:</div>
+        <div style="display:grid;gap:6px;margin-bottom:16px;">
+          <div style="display:flex;gap:10px;padding:8px 12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;"><span style="color:#c2410c;font-weight:700;">✕</span><span>Impersonate another person</span></div>
+          <div style="display:flex;gap:10px;padding:8px 12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;"><span style="color:#c2410c;font-weight:700;">✕</span><span>Use the platform to harass, threaten, or harm others</span></div>
+          <div style="display:flex;gap:10px;padding:8px 12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;"><span style="color:#c2410c;font-weight:700;">✕</span><span>Attempt to access other users' accounts or data</span></div>
+          <div style="display:flex;gap:10px;padding:8px 12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;"><span style="color:#c2410c;font-weight:700;">✕</span><span>Use automated tools to scrape or abuse the platform</span></div>
+          <div style="display:flex;gap:10px;padding:8px 12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;"><span style="color:#c2410c;font-weight:700;">✕</span><span>Use PBallConnect for any commercial purpose without written permission</span></div>
+        </div>
+
+        <!-- Section 6 -->
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:18px;margin:20px 0;">
+          <div style="font-size:15px;font-weight:800;color:#991b1b;margin-bottom:8px;">6. Physical Activity Disclaimer</div>
+          <div style="color:#374151;margin-bottom:10px;"><strong>IMPORTANT:</strong> Pickleball is a physical activity with inherent risks of injury. PBallConnect facilitates connections between players but does not supervise, manage, or control any physical activity. By using PBallConnect to arrange matches, you acknowledge and accept all risks associated with participating in pickleball and physical activity generally.</div>
+          <div style="color:#374151;">PBallConnect, its owners, officers, and employees are not liable for any injury, illness, death, property damage, or other harm arising from participation in any match, activity, or event arranged through this platform.</div>
+        </div>
+
+        <!-- Section 7 -->
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:18px;margin:20px 0;">
+          <div style="font-size:15px;font-weight:800;color:#991b1b;margin-bottom:8px;">7. Limitation of Liability</div>
+          <div style="color:#374151;margin-bottom:10px;font-weight:600;">TO THE MAXIMUM EXTENT PERMITTED BY LAW, PBALLCONNECT SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING LOSS OF DATA, PERSONAL INJURY, OR PROPERTY DAMAGE, ARISING OUT OF OR RELATED TO YOUR USE OF THE PLATFORM.</div>
+          <div style="color:#374151;">Our total liability to you for any claims arising under these Terms shall not exceed <strong>$100</strong>.</div>
+        </div>
+
+        <!-- Section 8 -->
+        <div style="font-size:16px;font-weight:700;color:#111;margin:20px 0 8px;">8. Indemnification</div>
+        <div style="margin-bottom:16px;">You agree to indemnify and hold harmless PBallConnect and its owners from any claims, damages, or expenses (including attorney fees) arising from your use of the platform or violation of these Terms.</div>
+
+        <!-- Section 9 -->
+        <div style="font-size:16px;font-weight:700;color:#111;margin:20px 0 8px;">9. Privacy</div>
+        <div style="margin-bottom:16px;">Your use of PBallConnect is also governed by our <span onclick="showPage('privacy')" style="color:#1a7a3a;cursor:pointer;font-weight:600;">Privacy Policy</span>, which is incorporated into these Terms.</div>
+
+        <!-- Section 10 -->
+        <div style="font-size:16px;font-weight:700;color:#111;margin:20px 0 8px;">10. Changes to Terms</div>
+        <div style="margin-bottom:16px;">We may update these Terms at any time. We will notify registered users by email. Continued use after changes constitutes acceptance of the new Terms.</div>
+
+        <!-- Section 11 -->
+        <div style="font-size:16px;font-weight:700;color:#111;margin:20px 0 8px;">11. Governing Law</div>
+        <div style="margin-bottom:16px;">These Terms are governed by the laws of the <strong>State of New Hampshire</strong>, without regard to conflict of law principles.</div>
+
+        <!-- Section 12 -->
+        <div style="font-size:16px;font-weight:700;color:#111;margin:20px 0 8px;">12. Contact</div>
+        <div style="margin-bottom:32px;">For questions about these Terms, contact us at: <strong>[YOUR EMAIL ADDRESS]</strong></div>
+
+        <div style="text-align:center;padding:20px;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:12px;">
+          PBallConnect · Built with ❤️ for the pickleball community<br>
+          A portion of future proceeds supports <strong style="color:#1a7a3a;">A Tiny Ripple of Hope</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- COACHING PAGE -->
+    <div class="page-section" id="page-lessons">
+      <div class="page-header">
+        <h1>🎓 <span>Coaching</span></h1>
+        <p>Register as a coach and grow your student base</p>
+      </div>
+
+      <!-- Coach status -->
+      <div id="coachStatusMsg" style="margin-bottom:16px;"></div>
+
+      <!-- Are you a coach? -->
+      <div class="field" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:14px;padding:16px;margin-bottom:16px;">
+        <label style="color:#111;">Are you a coach or instructor?</label>
+        <div style="font-size:12px;color:#6b7280;margin-bottom:10px;line-height:1.5;">Coaches get a 🎓 badge on their player card and appear in the Find a Coach directory on the My Lessons page.</div>
+        <div class="chips" id="isCoachChips">
+          <button class="chip" onclick="selChip('isCoachChips',this,'isCoach');toggleCoachSection('Yes')">Yes — I coach!</button>
+          <button class="chip" onclick="selChip('isCoachChips',this,'isCoach');toggleCoachSection('No')">Not currently</button>
+        </div>
+      </div>
+
+      <!-- Coach profile details (shown when Yes) -->
+      <div id="coachSection" style="display:none;">
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:14px;padding:16px;margin-bottom:16px;">
+          <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:14px;">🎓 Coach Profile</div>
+
+          <div class="field">
+            <label style="color:#111;">Certifications</label>
+            <div class="chips" id="coachCertChips" style="flex-wrap:wrap;">
+              <button class="chip" onclick="toggleCoachChip('coachCertChips',this,'coachCerts','PPR')">PPR Certified</button>
+              <button class="chip" onclick="toggleCoachChip('coachCertChips',this,'coachCerts','IPTPA')">IPTPA Certified</button>
+              <button class="chip" onclick="toggleCoachChip('coachCertChips',this,'coachCerts','USAPA')">USAPA Ambassador</button>
+              <button class="chip" onclick="toggleCoachChip('coachCertChips',this,'coachCerts','Self-taught')">Self-taught pro</button>
+              <button class="chip" onclick="toggleCoachChip('coachCertChips',this,'coachCerts','Tennis pro')">Tennis pro background</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label style="color:#111;">Lesson types offered</label>
+            <div class="chips" id="coachLessonChips" style="flex-wrap:wrap;">
+              <button class="chip" onclick="toggleCoachChip('coachLessonChips',this,'coachLessonTypes','Beginner')">Beginner</button>
+              <button class="chip" onclick="toggleCoachChip('coachLessonChips',this,'coachLessonTypes','Intermediate')">Intermediate</button>
+              <button class="chip" onclick="toggleCoachChip('coachLessonChips',this,'coachLessonTypes','Advanced')">Advanced</button>
+              <button class="chip" onclick="toggleCoachChip('coachLessonChips',this,'coachLessonTypes','All levels')">All levels</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label style="color:#111;">Lesson format</label>
+            <div class="chips" id="coachFormatChips" style="flex-wrap:wrap;">
+              <button class="chip" onclick="toggleCoachChip('coachFormatChips',this,'coachFormats','Private')">Private (1-on-1)</button>
+              <button class="chip" onclick="toggleCoachChip('coachFormatChips',this,'coachFormats','Semi-private')">Semi-private</button>
+              <button class="chip" onclick="toggleCoachChip('coachFormatChips',this,'coachFormats','Group clinic')">Group clinic</button>
+              <button class="chip" onclick="toggleCoachChip('coachFormatChips',this,'coachFormats','Drills')">Drills session</button>
+            </div>
+          </div>
+
+          <div class="grid2">
+            <div class="field">
+              <label style="color:#111;">Rate from ($/hr)</label>
+              <input type="number" id="coachRateMin" placeholder="e.g. 50" min="0" max="500" style="background:#fff;color:#111;border:2px solid #d1d5db;"/>
+            </div>
+            <div class="field">
+              <label style="color:#111;">Rate to ($/hr)</label>
+              <input type="number" id="coachRateMax" placeholder="e.g. 80" min="0" max="500" style="background:#fff;color:#111;border:2px solid #d1d5db;"/>
+            </div>
+          </div>
+
+          <div class="field">
+            <label style="color:#111;">Coach bio <span style="color:#9ca3af;font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;">— optional</span></label>
+            <textarea id="coachBio" rows="3" maxlength="500" placeholder="e.g. Former tennis pro with 5 years teaching pickleball. Focus on technique, footwork and the third-shot drop…"
+              style="width:100%;padding:12px 14px;border-radius:10px;border:2px solid #d1d5db;background:#fff;color:#111;font-size:13px;font-family:'DM Sans',sans-serif;resize:vertical;line-height:1.5;outline:none;"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Save button -->
+      <button onclick="saveCoachProfile()"
+        style="width:100%;padding:14px;border-radius:12px;border:none;background:var(--green);color:#fff;font-weight:800;font-size:15px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:24px;">
+        💾 Save Coach Profile
+      </button>
+
+      <!-- Feature tiles -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;text-align:center;">
+          <div style="font-size:28px;margin-bottom:8px;">🗺️</div>
+          <div style="font-size:12px;font-weight:600;color:#111;margin-bottom:4px;">Local discovery</div>
+          <div style="font-size:11px;color:#6b7280;">Players near you find your profile</div>
+        </div>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;text-align:center;">
+          <div style="font-size:28px;margin-bottom:8px;">🎓</div>
+          <div style="font-size:12px;font-weight:600;color:#111;margin-bottom:4px;">Cert badge</div>
+          <div style="font-size:11px;color:#6b7280;">PPR, IPTPA credentials displayed</div>
+        </div>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:16px;text-align:center;">
+          <div style="font-size:28px;margin-bottom:8px;">💰</div>
+          <div style="font-size:12px;font-weight:600;color:#111;margin-bottom:4px;">Set your rate</div>
+          <div style="font-size:11px;color:#6b7280;">Show your hourly range</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+</div>
+
+
+<!-- QR Code Share Modal -->
+<div id="qrModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.96);z-index:700;flex-direction:column;align-items:center;justify-content:center;padding:24px;">
+  <div style="width:100%;max-width:360px;text-align:center;">
+
+    <!-- Header -->
+    <div style="margin-bottom:20px;">
+      <div style="font-size:28px;margin-bottom:8px;">📱</div>
+      <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:4px;">Share My Profile</div>
+      <div style="font-size:13px;color:var(--dim);line-height:1.5;">Point a phone camera at this code to join PBallConnect and connect with you instantly</div>
+    </div>
+
+    <!-- QR Code canvas -->
+    <div style="background:#fff;border-radius:20px;padding:20px;display:inline-block;margin-bottom:16px;">
+      <canvas id="qrCanvas"></canvas>
+    </div>
+
+    <!-- Player info strip -->
+    <div id="qrPlayerInfo" style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:20px;padding:12px 16px;background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.25);border-radius:12px;">
+      <span id="qrEmoji" style="font-size:28px;">🎾</span>
+      <div style="text-align:left;">
+        <div id="qrName" style="font-size:15px;font-weight:700;color:#fff;"></div>
+        <div id="qrSkill" style="font-size:12px;color:var(--green);"></div>
+      </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+      <button onclick="shareInviteLink()" style="padding:12px;border-radius:10px;border:1px solid rgba(76,175,125,0.4);background:rgba(76,175,125,0.1);color:var(--green);font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+        🔗 Share Link
+      </button>
+      <button onclick="copyInviteLink()" style="padding:12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;" id="qrCopyBtn">
+        📋 Copy Link
+      </button>
+    </div>
+
+    <div id="qrInviteUrl" style="font-size:10px;color:var(--dim);margin-bottom:14px;word-break:break-all;padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:8px;"></div>
+
+    <!-- Reset QR code -->
+    <div style="text-align:center;margin-bottom:14px;">
+      <button onclick="resetQrCode()" style="background:none;border:none;color:#6b7280;font-size:11px;cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif;">🔄 Reset my QR code</button>
+    </div>
+
+    <button onclick="closeQrModal()" style="width:100%;padding:13px;border-radius:12px;border:none;background:rgba(255,255,255,0.08);color:var(--dim);font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
+      Close
+    </button>
+  </div>
+</div>
+
+<!-- Walk-On Match Modal -->
+<div id="walkOnModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;align-items:flex-end;justify-content:center;">
+  <div style="background:#0a1a0d;border:1px solid rgba(76,175,125,0.3);border-radius:24px 24px 0 0;padding:24px 20px 40px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div style="font-size:17px;font-weight:800;color:#fff;">+ Record Walk-On Match</div>
+      <button onclick="document.getElementById('walkOnModal').style.display='none'" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:22px;">✕</button>
+    </div>
+    <div style="font-size:13px;color:var(--dim);margin-bottom:20px;line-height:1.5;">
+      Played a match that wasn't set up in the app? Record it here and it'll count toward your stats.
+    </div>
+    <div class="field" style="margin-bottom:14px;">
+      <label>Date Played</label>
+      <input type="date" id="walkOnDate" style="width:100%;padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:#fff;font-size:14px;font-family:'DM Sans',sans-serif;box-sizing:border-box;"/>
+    </div>
+    <div class="field" style="margin-bottom:14px;">
+      <label>Match Type</label>
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <button id="walkOnDoubles" onclick="walkOnSetType('doubles')" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(76,175,125,0.4);background:rgba(76,175,125,0.15);color:var(--green);font-weight:700;font-size:13px;cursor:pointer;"><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Doubles</button>
+        <button id="walkOnSingles" onclick="walkOnSetType('singles')" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;"><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Singles</button>
+      </div>
+    </div>
+    <div id="walkOnTeamsSection">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#4CAF7D;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Team A</div>
+          <input type="text" id="walkOnA1" placeholder="Player 1 name" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;box-sizing:border-box;margin-bottom:6px;"/>
+          <input type="text" id="walkOnA2" placeholder="Player 2 name (doubles)" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;box-sizing:border-box;"/>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Team B</div>
+          <input type="text" id="walkOnB1" placeholder="Player 1 name" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;box-sizing:border-box;margin-bottom:6px;"/>
+          <input type="text" id="walkOnB2" placeholder="Player 2 name (doubles)" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;box-sizing:border-box;"/>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#4CAF7D;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Team A Score</div>
+          <input type="number" id="walkOnScoreA" placeholder="11" min="0" max="30" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:#fff;font-size:20px;font-weight:700;font-family:'DM Sans',sans-serif;box-sizing:border-box;"/>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Team B Score</div>
+          <input type="number" id="walkOnScoreB" placeholder="8" min="0" max="30" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.07);color:#fff;font-size:20px;font-weight:700;font-family:'DM Sans',sans-serif;box-sizing:border-box;"/>
+        </div>
+      </div>
+    </div>
+    <button onclick="saveWalkOnMatch()" style="width:100%;padding:14px;border-radius:12px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:15px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+      ✓ Save Match Result
+    </button>
+  </div>
+</div>
+
+<!-- Score Recorder Modal -->
+<div id="scoreRecorderModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;align-items:flex-end;justify-content:center;padding:0;">
+  <div style="background:#0a1a0d;border:1px solid rgba(76,175,125,0.3);border-radius:24px 24px 0 0;padding:24px 20px 40px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div style="font-size:18px;font-weight:800;color:#fff;"><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Record Score</div>
+      <button onclick="closeScoreRecorder()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:22px;padding:0;">✕</button>
+    </div>
+
+    <!-- Match info -->
+    <div id="srMatchInfo" style="font-size:13px;color:var(--dim);margin-bottom:20px;padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:10px;"></div>
+
+    <!-- Step 1: Team assignment -->
+    <div id="srStep1">
+      <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:12px;">Who played together?</div>
+      <div style="font-size:12px;color:var(--dim);margin-bottom:14px;">Tap a player to move them between teams. Tap ⇄ to swap teams.</div>
+
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:start;margin-bottom:20px;">
+        <!-- Team A -->
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#4CAF7D;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;text-align:center;">Team A</div>
+          <div id="srTeamA" style="min-height:80px;background:rgba(76,175,125,0.08);border:1px solid rgba(76,175,125,0.25);border-radius:12px;padding:8px;"></div>
+        </div>
+        <!-- Swap button -->
+        <div style="display:flex;align-items:center;padding-top:28px;">
+          <button onclick="swapTeams()" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:8px;color:var(--dim);font-size:18px;cursor:pointer;padding:8px 10px;">⇄</button>
+        </div>
+        <!-- Team B -->
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;text-align:center;">Team B</div>
+          <div id="srTeamB" style="min-height:80px;background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.25);border-radius:12px;padding:8px;"></div>
+        </div>
+      </div>
+
+      <button onclick="srGoToScore()" id="srNextBtn"
+        style="width:100%;padding:14px;border-radius:12px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:15px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+        Enter Score →
+      </button>
+    </div>
+
+    <!-- Step 2: Score entry -->
+    <div id="srStep2" style="display:none;">
+      <div id="srGameLabel" style="font-size:14px;font-weight:700;color:#fff;margin-bottom:16px;text-align:center;">Game 1</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+        <!-- Team A score -->
+        <div style="text-align:center;">
+          <div id="srTeamALabel" style="font-size:12px;font-weight:700;color:#4CAF7D;margin-bottom:10px;">Team A</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
+            <button onclick="adjustScore('A',-1)" style="width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">−</button>
+            <div id="srScoreA" style="font-size:52px;font-weight:900;color:#fff;min-width:64px;text-align:center;line-height:1;">0</div>
+            <button onclick="adjustScore('A',1)" style="width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
+          </div>
+        </div>
+        <!-- Team B score -->
+        <div style="text-align:center;">
+          <div id="srTeamBLabel" style="font-size:12px;font-weight:700;color:#60a5fa;margin-bottom:10px;">Team B</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
+            <button onclick="adjustScore('B',-1)" style="width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">−</button>
+            <div id="srScoreB" style="font-size:52px;font-weight:900;color:#fff;min-width:64px;text-align:center;line-height:1;">0</div>
+            <button onclick="adjustScore('B',1)" style="width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Score validation message -->
+      <div id="srScoreMsg" style="text-align:center;font-size:12px;min-height:20px;margin-bottom:12px;"></div>
+
+      <!-- Confirm button -->
+      <button onclick="srConfirmGame()" id="srConfirmBtn"
+        style="width:100%;padding:14px;border-radius:12px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:15px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:10px;">
+        ✓ Confirm Score
+      </button>
+      <button onclick="srBackToTeams()"
+        style="width:100%;padding:10px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+        ← Back to Teams
+      </button>
+    </div>
+
+    <!-- Step 3: Confirmation -->
+    <div id="srStep3" style="display:none;text-align:center;">
+      <div style="font-size:40px;margin-bottom:12px;">🏆</div>
+      <div id="srResultSummary" style="font-size:15px;color:#fff;font-weight:600;line-height:1.6;margin-bottom:20px;"></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+        <button onclick="srAddGame()"
+          style="padding:12px;border-radius:12px;border:1px solid rgba(76,175,125,0.4);background:rgba(76,175,125,0.08);color:var(--green);font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+          + Record Game 2
+        </button>
+        <button onclick="srFinish()"
+          style="padding:12px;border-radius:12px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+          Done ✓
+        </button>
+      </div>
+      <div id="srGamesSaved" style="font-size:12px;color:var(--dim);"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Photo Consent Modal -->
+<div id="photoConsentModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:700;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#0f1f12;border:1px solid rgba(76,175,125,0.3);border-radius:20px;padding:28px 24px;max-width:440px;width:100%;">
+    <div style="font-size:32px;text-align:center;margin-bottom:12px;">📷</div>
+    <div style="font-size:18px;font-weight:800;color:#fff;text-align:center;margin-bottom:16px;">Add a Profile Photo</div>
+
+    <div style="background:rgba(255,193,7,0.08);border:1px solid rgba(255,193,7,0.25);border-radius:12px;padding:14px 16px;margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:700;color:#fbbf24;margin-bottom:8px;">⚠️ Privacy Notice — Please Read</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.75);line-height:1.6;">
+        Profile photos are <strong style="color:#fff;">optional</strong> and visible only to your Inner Circle members — not the general public.<br><br>
+        By uploading a photo you confirm:
+      </div>
+      <ul style="font-size:12px;color:rgba(255,255,255,0.75);line-height:1.8;margin:8px 0 0 16px;padding:0;">
+        <li>This is a photo of yourself</li>
+        <li>You are 18 years or older</li>
+        <li>You consent to PBallConnect storing this photo</li>
+        <li>Your consent and timestamp will be logged for our records</li>
+        <li>You can remove your photo at any time</li>
+      </ul>
+    </div>
+
+    <div style="font-size:12px;color:var(--dim);margin-bottom:20px;line-height:1.5;">
+      Facial images can be used for identification purposes. We recommend using an emoji avatar if you prefer full privacy.
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <button onclick="closePhotoConsentModal()" 
+        style="padding:12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+        Use Emoji Instead
+      </button>
+      <button onclick="acceptPhotoConsent()"
+        style="padding:12px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+        ✓ I Understand — Choose Photo
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Skill Level Guide Modal -->
+<div class="modal-overlay" id="skillGuideModal" style="display:none" onclick="hideSkillGuide()">
+  <div class="modal" onclick="event.stopPropagation()" style="max-height:85vh;overflow-y:auto;">
+    <h3 style="margin-bottom:4px;color:#111;">🏓 Find Your Level</h3>
+    <p style="color:#6b7280;font-size:13px;margin-bottom:20px;">Based on USA Pickleball ratings</p>
+
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
+
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;">
+        <div style="font-size:14px;font-weight:800;color:#111;">1.0–2.5 &nbsp;<span style="font-weight:500;color:#6b7280;">·</span>&nbsp; <span style="color:#6b7280;font-weight:600;">Beginner</span></div>
+        <div style="font-size:12px;color:#4b5563;margin-top:5px;line-height:1.6;">Learning the rules, keeping score, and sustaining short rallies.</div>
+      </div>
+
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;">
+        <div style="font-size:14px;font-weight:800;color:#111;">3.0 &nbsp;<span style="font-weight:500;color:#6b7280;">·</span>&nbsp; <span style="color:#6b7280;font-weight:600;">Intermediate</span></div>
+        <div style="font-size:12px;color:#4b5563;margin-top:5px;line-height:1.6;">Consistent serves and returns, understanding court positioning, and learning to dink.</div>
+      </div>
+
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;">
+        <div style="font-size:14px;font-weight:800;color:#111;">3.5 &nbsp;<span style="font-weight:500;color:#6b7280;">·</span>&nbsp; <span style="color:#6b7280;font-weight:600;">Lower Intermediate</span></div>
+        <div style="font-size:12px;color:#4b5563;margin-top:5px;line-height:1.6;">Sustaining dink rallies, developing drop shots, and moving to the kitchen line reliably.</div>
+      </div>
+
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px 16px;">
+        <div style="font-size:14px;font-weight:800;color:#111;">4.0 &nbsp;<span style="font-weight:500;color:#1a7a3a;">·</span>&nbsp; <span style="color:#1a7a3a;font-weight:600;">Upper Intermediate</span></div>
+        <div style="font-size:12px;color:#4b5563;margin-top:5px;line-height:1.6;">Consistency, controlling pace, playing with strategy, and working well with a partner.</div>
+      </div>
+
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px 16px;">
+        <div style="font-size:14px;font-weight:800;color:#111;">4.5+ &nbsp;<span style="font-weight:500;color:#1a7a3a;">·</span>&nbsp; <span style="color:#1a7a3a;font-weight:600;">Advanced / Elite</span></div>
+        <div style="font-size:12px;color:#4b5563;margin-top:5px;line-height:1.6;">Mastered most shots, high consistency, minimal errors, and strong strategic play.</div>
+      </div>
+
+    </div>
+
+    <p style="font-size:11px;color:#9ca3af;text-align:center;border-top:1px solid #e5e7eb;padding-top:12px;margin-bottom:16px;">Source: USA Pickleball</p>
+
+    <button class="btn-close" onclick="hideSkillGuide()">Got it!</button>
+  </div>
+</div>
+
+<!-- Waiver Modal -->
+<div class="modal-overlay" id="waiverModal" style="display:none" onclick="document.getElementById('waiverModal').style.display='none'">
+  <div class="modal" onclick="event.stopPropagation()" style="max-height:85vh;overflow-y:auto;">
+    <h3 style="margin-bottom:4px;">Assumption of Risk &amp; Liability Waiver</h3>
+    <p style="color:#6b7280;font-size:13px;margin-bottom:20px;">Please read carefully before participating</p>
+
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px 16px;margin-bottom:18px;">
+      <p style="font-size:13px;font-weight:700;color:#991b1b;margin:0 0 6px;">ASSUMPTION OF RISK, RELEASE, AND WAIVER OF LIABILITY</p>
+      <p style="font-size:12px;color:#374151;margin:0;">I, the undersigned participant, in consideration of being permitted to participate in pickleball activities arranged through PBallConnect, hereby agree as follows:</p>
+    </div>
+
+    <p style="font-size:13px;line-height:1.7;margin-bottom:14px;"><strong>1. ACKNOWLEDGMENT OF RISK</strong><br>
+    I understand that pickleball is a physical sport that involves inherent risks, including but not limited to: sprains, strains, fractures, eye injuries, heat illness, cardiac events, and other injuries that may result in disability or death. I voluntarily assume all such risks, both known and unknown.</p>
+
+    <p style="font-size:13px;line-height:1.7;margin-bottom:14px;"><strong>2. RELEASE OF LIABILITY</strong><br>
+    I hereby release, waive, discharge, and covenant not to sue PBallConnect, its owners, officers, employees, agents, and volunteers (collectively "Released Parties") from any and all claims, demands, actions, or causes of action arising from my participation in any activity arranged through PBallConnect, including claims arising from the negligence of the Released Parties. This release is intended to be as broad and inclusive as permitted by the laws of the State of New Hampshire, including RSA 508:13, which permits release of liability for negligence in recreational activities.</p>
+
+    <p style="font-size:13px;line-height:1.7;margin-bottom:14px;"><strong>3. MEDICAL REPRESENTATION</strong><br>
+    I represent that I am in adequate physical condition to participate in pickleball. I have no medical condition that would make participation unsafe. I agree to consult a physician before participating if I have any health concerns.</p>
+
+    <p style="font-size:13px;line-height:1.7;margin-bottom:14px;"><strong>4. EMERGENCY MEDICAL AUTHORIZATION</strong><br>
+    In the event of an emergency, I authorize Released Parties to seek medical treatment on my behalf. I agree to be responsible for all costs of such treatment.</p>
+
+    <p style="font-size:13px;line-height:1.7;margin-bottom:14px;"><strong>5. INDEMNIFICATION</strong><br>
+    I agree to indemnify and hold harmless the Released Parties from any claims brought by third parties arising from my conduct during activities arranged through PBallConnect.</p>
+
+    <p style="font-size:13px;line-height:1.7;margin-bottom:14px;"><strong>6. SEVERABILITY</strong><br>
+    If any provision of this waiver is found to be unenforceable, the remaining provisions shall remain in full force and effect.</p>
+
+    <p style="font-size:13px;line-height:1.7;margin-bottom:18px;"><strong>7. ACKNOWLEDGMENT</strong><br>
+    I have read this waiver, understand its terms, and sign it voluntarily. I am 18 years of age or older.</p>
+
+    <p style="font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb;padding-top:14px;margin-bottom:16px;">By clicking "I Agree &amp; Create My Account" during registration, you agree to this waiver.</p>
+
+    <div style="display:flex;gap:10px;">
+      <button class="btn-close" onclick="document.getElementById('waiverModal').style.display='none'" style="flex:1;">Close</button>
+      <button onclick="window.print()" style="flex:1;padding:10px 16px;border-radius:10px;border:1px solid #d1d5db;background:#f9fafb;color:#374151;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">🖨️ Print / Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation -->
+
+<!-- Confirmation -->
+<!-- Profile Changes Diff Modal -->
+<div id="profileDiffOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);
+  display:none;align-items:center;justify-content:center;padding:16px;z-index:500;">
+  <div style="background:#0f1f12;border:1px solid var(--border);border-radius:20px;
+    padding:24px;max-width:480px;width:100%;max-height:85vh;overflow-y:auto;">
+    <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:4px;">Review Your Changes</div>
+    <div style="font-size:12px;color:var(--dim);margin-bottom:16px;">Confirm these updates before saving</div>
+    <div id="profileDiffList" style="margin-bottom:20px;"></div>
+    <div style="display:flex;gap:10px;">
+      <button id="profileDiffConfirm"
+        style="flex:1;padding:12px;border-radius:10px;border:none;background:var(--green);
+          color:var(--dark);font-weight:700;font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+        ✅ Looks Correct — Save
+      </button>
+      <button onclick="document.getElementById('profileDiffOverlay').style.display='none'"
+        style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--border);
+          background:transparent;color:var(--dim);font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+        ✏️ Keep Editing
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="confirm-overlay" id="confirmOverlay" style="display:none">
+  <div class="confirm-card">
+    <div class="confirm-icon"><img src="/pickleball.jpg" class="pb-icon-xl" alt="pickleball"/></div>
+    <h2>You're In!</h2>
+    <div class="sub">Welcome to the directory</div>
+    <div class="confirm-profile">
+      <div id="confirmAvatar"></div>
+      <div class="confirm-name" id="confirmName"></div>
+      <div class="confirm-email" id="confirmEmailDisp"></div>
+      <div class="confirm-grid">
+        <div class="confirm-stat"><div class="cs-l">Skill</div><div class="cs-v" id="cSkill"></div></div>
+        <div class="confirm-stat"><div class="cs-l">State</div><div class="cs-v" id="cState"></div></div>
+        <div class="confirm-stat"><div class="cs-l">City</div><div class="cs-v" id="cCity"></div></div>
+        <div class="confirm-stat"><div class="cs-l">DUPR</div><div class="cs-v" id="cDupr"></div></div>
+        <div class="confirm-stat" id="cCourtStat" style="display:none;"><div class="cs-l">Home Court</div><div class="cs-v" id="cCourt"></div></div>
+      </div>
+    </div>
+    <div class="confirm-note">You can now explore <span>My Courts</span> in the left menu!</div>
+    <button class="btn-again" onclick="afterRegistration()">Go to My Courts →</button>
+  </div>
+</div>
+</body>
+
+<!-- App JavaScript -->
+<script src="app.js"></script>
+<!-- Floating Beta Feedback Button -->
+<button id="floatingFeedbackBtn" onclick="openFeedbackModal()" title="Send Beta Feedback"
+  style="position:fixed;bottom:24px;right:20px;z-index:500;width:52px;height:52px;border-radius:50%;
+    border:none;background:rgba(245,158,11,0.9);color:#000;font-size:22px;cursor:pointer;
+    box-shadow:0 4px 20px rgba(245,158,11,0.4);display:flex;align-items:center;justify-content:center;
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:transform .15s;">
+  &#128172;
+</button>
+
+<!-- Beta Welcome Banner -->
+<div id="betaWelcomeBanner" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.8);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:center;justify-content:center;">
+  <div style="background:#0f1f12;border:1px solid rgba(245,158,11,0.4);border-radius:20px;
+    padding:32px 28px;max-width:440px;width:92%;text-align:center;position:relative;">
+    <img src="/icon-192.png" alt="PBallConnect" style="width:64px;height:64px;border-radius:16px;display:block;margin:0 auto 12px;">
+    <div style="display:inline-flex;align-items:center;padding:3px 12px;border-radius:999px;
+      background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);
+      color:#fbbf24;font-size:11px;font-weight:800;letter-spacing:.1em;margin-bottom:16px;">
+      PRIVATE BETA
+    </div>
+    <h2 style="color:#fff;font-size:20px;font-weight:800;margin:0 0 12px;">Welcome to PBallConnect</h2>
+    <p style="color:rgba(255,255,255,0.7);font-size:14px;line-height:1.7;margin:0 0 4px;">
+      A trusted pickleball community built on Inner Circles — the people you actually play with.
+    </p>
+    <p style="color:rgba(255,255,255,0.7);font-size:14px;line-height:1.7;margin:0 0 24px;">
+      How would you like to get started?
+    </p>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
+      <button onclick="closeBetaBanner(); window.location.href='/join.html'" style="width:100%;padding:14px 16px;border-radius:12px;border:none;
+        background:var(--green);color:var(--dark);font-weight:800;font-size:14px;cursor:pointer;
+        font-family:'DM Sans',sans-serif;text-align:left;">
+        🎾 Join PBallConnect &rarr;
+      </button>
+      <button onclick="closeBetaBanner(); window.location.href='/join.html?path=quickinvite'" style="width:100%;padding:14px 16px;border-radius:12px;
+        border:1.5px solid rgba(255,255,255,0.3);background:transparent;color:#fff;font-weight:800;
+        font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;text-align:left;">
+        🤝 Ask a member to invite me &rarr;
+      </button>
+      <button onclick="closeBetaBanner(); window.location.href='/join.html?path=waitlist'" style="width:100%;padding:14px 16px;border-radius:12px;
+        border:1.5px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.6);font-weight:400;
+        font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;text-align:left;">
+        🔔 Notify me at launch &rarr;
+      </button>
+    </div>
+    <div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:16px;">
+      <span style="font-size:13px;color:var(--dim);">Already a member or Charter Member?</span>
+      <button onclick="closeBetaBanner(); openLoginModal();" style="display:inline;background:none;border:none;padding:0 0 0 6px;
+        color:rgba(255,255,255,0.5);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;
+        text-decoration:underline;text-underline-offset:3px;">
+        Sign In &rarr;
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Build Badge — hash populated at runtime from /cdn-cgi/appinfo -->
+<div id="buildBadge" style="position:fixed;bottom:8px;right:10px;font-size:10px;color:#999;z-index:90;pointer-events:auto;">
+  β build <a id="buildBadgeLink" href="https://github.com/Thrive8/pickleball-registry/commit/......." target="_blank" style="color:#999;text-decoration:none;">.......</a>
+</div>
+
+<!-- Feedback Modal -->
+<div id="feedbackModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.7);
+  align-items:flex-end;justify-content:center;">
+  <div style="background:#0f1f12;border:1px solid rgba(245,158,11,0.3);border-radius:20px 20px 0 0;
+    padding:24px 20px 40px;width:100%;max-width:520px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div style="font-size:16px;font-weight:800;color:#fff;">&#128172; Beta Feedback</div>
+      <button onclick="closeFeedbackModal()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer;">&#10005;</button>
+    </div>
+    <div style="font-size:12px;color:var(--dim);margin-bottom:16px;">Your feedback shapes PBallConnect. Thank you!</div>
+
+    <!-- Star Rating -->
+    <div style="margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Overall Experience</div>
+      <div id="starRating" style="display:flex;gap:8px;">
+        <span class="fb-star" data-val="1" onclick="setFeedbackStar(1)" style="font-size:28px;cursor:pointer;opacity:0.3;transition:opacity .15s;">&#11088;</span>
+        <span class="fb-star" data-val="2" onclick="setFeedbackStar(2)" style="font-size:28px;cursor:pointer;opacity:0.3;transition:opacity .15s;">&#11088;</span>
+        <span class="fb-star" data-val="3" onclick="setFeedbackStar(3)" style="font-size:28px;cursor:pointer;opacity:0.3;transition:opacity .15s;">&#11088;</span>
+        <span class="fb-star" data-val="4" onclick="setFeedbackStar(4)" style="font-size:28px;cursor:pointer;opacity:0.3;transition:opacity .15s;">&#11088;</span>
+        <span class="fb-star" data-val="5" onclick="setFeedbackStar(5)" style="font-size:28px;cursor:pointer;opacity:0.3;transition:opacity .15s;">&#11088;</span>
+      </div>
+    </div>
+
+    <!-- Text Feedback -->
+    <div style="margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Your Feedback</div>
+      <textarea id="feedbackText" rows="4" placeholder="What's working well? What could be better? Any bugs to report?"
+        style="width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);
+          border-radius:10px;padding:12px;color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;
+          outline:none;resize:vertical;box-sizing:border-box;line-height:1.5;"></textarea>
+    </div>
+
+    <button onclick="submitFeedback()" style="width:100%;padding:14px;border-radius:12px;border:none;
+      background:#fbbf24;color:#000;font-weight:800;font-size:14px;cursor:pointer;
+      font-family:'DM Sans',sans-serif;">
+      Submit Feedback
+    </button>
+  </div>
+</div>
+
+<!-- Emergency Fill Overlay — organizer tool triggered when a player drops and waitlist is empty -->
+<div id="emergencyFillOverlay" style="display:none;position:fixed;inset:0;z-index:9500;background:#fff;overflow-y:auto;-webkit-overflow-scrolling:touch;"></div>
+
+</body>
+</html>
