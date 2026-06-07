@@ -289,7 +289,7 @@
     btn.style.opacity = '.5';
     btn.textContent = 'Sending…';
 
-    var redirectTo = 'https://pballconnect.com/?newuser=1&' + _redirectParam;
+    var redirectTo = 'https://pballconnect.com/app.html?newuser=1&' + _redirectParam;
 
     var result = await _sb.auth.signInWithOtp({
       email: emailVal,

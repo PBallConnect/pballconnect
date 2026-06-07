@@ -85,7 +85,7 @@ export async function onRequestPost(context) {
       body: JSON.stringify({
         type: 'magiclink',
         email: emailLower,
-        options: { redirect_to: 'https://pballconnect.com/?sms_welcome=1' },
+        options: { redirect_to: 'https://pballconnect.com/app.html?sms_welcome=1' },
       }),
     });
     const linkData = await linkRes.json();
