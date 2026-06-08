@@ -26,6 +26,9 @@ _Cross-reference: CLAUDE.md (overview), CLAUDE-RULES.md (rules), CLAUDE-SMS.md (
 | `player_groups` | Named groups | `id`, `organizer_email`, `name`, `max_players`, `group_type` ('set'/'random'), `match_type` ('singles'/'doubles') |
 | `player_group_members` | Group members | `group_id`, `player_email`, `role` ('primary'/'sub') |
 | `recurring_matches` | Recurring schedules | `id`, `organizer_email`, `group_id`, `court_id`, `days_of_week`, `time_start`, `duration`, `auto_invite_hours`, `gap_alert_hours` |
+| `beta_applications` | Beta applicant queue — gated intake form submissions pending founder review | `id`, `first_name`, `email`, `city`, `state`, `skill_level`, `playing_since`, `age_range`, `heard_from`, `wants_beta` (boolean), `wants_video_call` (boolean), `calendly_shown` (boolean, default false), `status` (default 'pending'), `created_at` |
+
+> **RLS:** No public read or write. Service role only for INSERT via /api/beta-apply. Never expose to client. Status values: 'pending' (awaiting review), 'approved' (invite sent), 'rejected' (declined).
 
 ### Views
 

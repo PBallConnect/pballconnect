@@ -46,7 +46,7 @@ Deployed on **Cloudflare Pages** at `pballconnect.com`. No build step, no bundle
 | `styles.css` | — | All styles |
 | `landing.html` | — | Public marketing landing page — standalone, no app.js/styles.css dependency. Hero, features, skill level guide, waitlist form with Turnstile bot protection. |
 | `invite.html` | — | Standalone invite landing page — no app.js dependency |
-| `join.html` | — | Standalone organic signup gate — no app.js/styles.css dependency. Reached via the "Join PBallConnect" button on the beta banner (not via `doLogin()` redirect — that gate was removed May 30). Four pre-screen fields (email, skill, playing since, age range) stored in sessionStorage and pre-populated into the registration form after magic link auth. Cloudflare Turnstile bot protection. |
+| `join.html` | — | Gated beta application form — standalone, no app.js/styles.css dependency. Collects first name, email, city, state, skill level, playing since, age range, heard from, beta tester interest, video call interest. Submits to /api/beta-apply. Does NOT send magic link — applicant waits for founder approval. Waitlist path (wants_beta=false) uses existing waitlist flow. |
 | `functions/api/send-email.js` | — | Cloudflare Pages Function for transactional email via Resend. IP rate-limited (5/hr) via `RATE_LIMIT_KV`. |
 | `functions/api/send-sms.js` | — | Cloudflare Pages Function for SMS via Twilio. Consent-gated (`sms_opt_in` required), three-tier rate limited (player/match/global via KV), logs all attempts to `sms_log`. Always returns 200 — SMS errors never crash callers. No message length cap — Twilio handles multipart SMS automatically. |
 | `functions/api/twilio-webhook.js` | — | Receives Twilio STOP/HELP/START keyword callbacks. Validates X-Twilio-Signature (HMAC-SHA1), syncs `sms_opt_in` in Supabase, logs to `sms_log`. |
@@ -59,13 +59,16 @@ Deployed on **Cloudflare Pages** at `pballconnect.com`. No build step, no bundle
 | `match-invite.html` | — | Standalone mobile-first RSVP page for SMS match invites. Three states: (1) registered player — YES/NO buttons; (2) unregistered YES — mini registration form; (3) unregistered NO — warm decline + sign-up pitch. No app.js dependency. |
 | `functions/api/organic-signup.js` | — | Cloudflare Pages Function for organic signup pre-screen data. GET returns stored row by email; POST upserts `organic_signups` table (email, skill_level, playing_since, age_range); DELETE removes row. Used to persist join.html pre-screen data server-side so it survives the magic link redirect. |
 | `functions/api/waitlist.js` | — | Cloudflare Pages Function for waitlist form submissions. IP rate-limited (3/hr), Turnstile-verified, saves to `waitlist` table via service role key, sends confirmation email via Resend. |
+| `functions/api/beta-apply.js` | — | Cloudflare Pages Function for beta applications. Validates fields, Turnstile-verified, IP rate-limited (3/hr), inserts to beta_applications via SUPABASE_SERVICE_KEY, sends admin notification emails to zorro@pballconnect.com and dippa777@gmail.com, attempts SMS to FOUNDER_PHONE. Always returns { ok: true } after validation. |
 | `supabase_rls_policies.sql` | — | RLS policy definitions + waitlist table DDL — run in Supabase SQL editor after schema changes |
 | `manifest.json` | — | PWA manifest (also injected inline at runtime in app.js) |
 | `icon-512.png`, `icon-192.png` | — | PWA home screen icons |
 | `apple-touch-icon.png` | — | iOS home screen icon |
 | `favicon-32.png` | — | Browser tab favicon |
 
-> **FUTURE:** When ready to make `landing.html` the root page: rename `index.html` → `app.html`, rename `landing.html` → `index.html`, update `_redirects` accordingly.
+> **NOTE on file naming:** index.html is the public marketing/landing page (formerly landing.html). app.html is the app shell (formerly index.html). This rename was made to ensure pballconnect.com/ serves the public marketing page and the app lives at pballconnect.com/app.html. All magic link redirects, invite URLs, and auth redirects point to app.html.
+
+> **FUTURE:** Supabase Site URL is set to https://pballconnect.com/app.html. All redirectTo and emailRedirectTo values in invite flows point to app.html. Never revert these to / or index.html.
 
 ---
 

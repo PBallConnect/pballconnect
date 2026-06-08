@@ -103,3 +103,9 @@ _All 50 rules. No trimming. Cross-reference with CLAUDE.md, CLAUDE-SCHEMA.md, CL
 49. **`sms_consent_log` is append-only.** Never UPDATE or DELETE rows. Every opt-in and opt-out event anywhere in the system — registration, Quick Connect, SMS invite flow, STOP/START webhook — writes a new INSERT row. Use `SUPABASE_SERVICE_KEY` for all inserts. Use `Prefer: return=minimal`.
 
 50. **Admin registration alert emails fire to `david@pballconnect.com` on every new registration across all three paths** — `doSaveProfile` (full profile), `_qcSave` (Quick Connect), and `sms-register.js` (SMS invite). Always `await sendEmail()` in `try/catch`. Never fire-and-forget.
+
+51. **app.html is the app root — never index.html.** Since the index.html/landing.html rename (June 2026), index.html serves the public marketing page at pballconnect.com/. The app lives at pballconnect.com/app.html. All magic links, invite redirects, emailRedirectTo, redirectTo, and post-auth navigations must point to app.html. Never hardcode /, /?, or /index.html as a redirect target in any auth or invite flow.
+
+52. **beta_applications is append-only for new applicants.** Never DELETE rows. Status transitions (pending → approved or rejected) are the only permitted UPDATEs, and only via founder action. Use SUPABASE_SERVICE_KEY for all writes. Never expose beta_applications data through public_profiles or any client-readable endpoint.
+
+53. **join.html does not send magic links.** The beta application flow on join.html submits to /api/beta-apply and shows a confirmation message. It never calls signInWithOtp or sends any auth email. Magic links are only sent after the founder manually approves an applicant and sends a personal invite link via the existing invite token system.
