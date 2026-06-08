@@ -1076,6 +1076,8 @@ async function doSaveProfile(){
     }catch(e){ console.warn('Zip geocode failed:',e); }
   }
 
+  // Capture whether this is a new registration before any async ops can set SESSION_PLAYER
+  const _isNewRegistration = !SESSION_PLAYER;
   // Save to Supabase via direct REST call
   try{
     const _phoneDigits   = (v('phone')||'').replace(/\D/g,'');
@@ -1210,8 +1212,6 @@ async function doSaveProfile(){
       if(S.addrLat) SESSION_PLAYER.lat = S.addrLat;
       if(S.addrLon) SESSION_PLAYER.lon = S.addrLon;
     }
-    // Capture whether this was a new registration before re-fetch overwrites SESSION_PLAYER
-    const _isNewRegistration = !SESSION_PLAYER;
     // Re-fetch the saved record and restore to ensure top bar is accurate
     const savedEmail = v('email') || getMyEmail();
     if(savedEmail){
@@ -1283,7 +1283,14 @@ async function doSaveProfile(){
     const newEmail = v('email') || getMyEmail();
     const newName  = (v('firstName')+' '+v('lastName')).trim();
     showFoundingMemberOverlay(()=>{
-      setTimeout(()=>handlePostRegistrationInvite(newEmail, newName), 2500);
+      setTimeout(()=>{
+        document.getElementById('confirmOverlay').style.display='none';
+        if(PENDING_INVITE){
+          handlePostRegistrationInvite(newEmail, newName);
+        } else {
+          showPage('dashboard');
+        }
+      }, 2500);
     });
   }
 }
@@ -11763,8 +11770,8 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
       }catch(e){}
     }
     // If declined, original row stays pending — new user can accept from IC → Requests later
-    showPage('innerCircle');
-    setTimeout(() => showIcSection('requests'), 400);
+    document.getElementById('confirmOverlay').style.display='none';
+    showPage('dashboard');
   };
 
   document.getElementById('icJoinYes').onclick = ()=>showStep2(true);
