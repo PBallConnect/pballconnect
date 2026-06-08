@@ -1210,6 +1210,8 @@ async function doSaveProfile(){
       if(S.addrLat) SESSION_PLAYER.lat = S.addrLat;
       if(S.addrLon) SESSION_PLAYER.lon = S.addrLon;
     }
+    // Capture whether this was a new registration before re-fetch overwrites SESSION_PLAYER
+    const _isNewRegistration = !SESSION_PLAYER;
     // Re-fetch the saved record and restore to ensure top bar is accurate
     const savedEmail = v('email') || getMyEmail();
     if(savedEmail){
@@ -1249,7 +1251,7 @@ async function doSaveProfile(){
   const av=document.getElementById('confirmAvatar');
   if(av) av.innerHTML=S.photoSrc?`<img class="confirm-avatar" src="${S.photoSrc}"/>`:`<div class="confirm-avatar-ph">👤</div>`;
   // If editing existing profile, skip overlay — go straight to summary
-  if(SESSION_PLAYER){
+  if(!_isNewRegistration){
     // Clean up edit mode fully
     stopChangeDetection();
     _editModeActive = false;
@@ -11075,7 +11077,7 @@ function showInviteEmailStep(inv){
     if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
     localStorage.setItem('pb_pending_email', emailVal);
     const token = inv?.invite_token || localStorage.getItem('pb_pending_invite_token') || '';
-    const redirectTo = window.location.origin + window.location.pathname + (token ? '?invite='+token : '');
+    const redirectTo = window.location.origin + window.location.pathname + (token ? '?newuser=1&invite='+token : '?newuser=1');
     try{
       const { error } = await _supabase.auth.signInWithOtp({ email: emailVal, options:{ emailRedirectTo: redirectTo } });
       if(error) throw error;
@@ -11576,7 +11578,7 @@ function startNewRegistration(email){
   const _returnToken = _urlParams.get('invite');
   const _returnQrId  = _urlParams.get('qr');
 
-  if(_isNewUserReturn && _returnQrId && !PENDING_INVITE){
+  if(_returnQrId && !PENDING_INVITE){
     // Coming back from magic link via QR invite — look up owner by qr_invite_id
     fetch(`${SUPABASE_URL}/rest/v1/public_profiles?qr_invite_id=eq.${encodeURIComponent(_returnQrId)}&select=email,first_name,last_name`,
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
@@ -11592,7 +11594,7 @@ function startNewRegistration(email){
     }).catch(()=>{ showInviteLandingChoice(email, null); });
     return;
   }
-  if(_isNewUserReturn && _returnToken && !PENDING_INVITE){
+  if(_returnToken && !PENDING_INVITE){
     // Coming back from magic link via invite.html — fetch invite data then show choice
     fetch(`https://dltiirdjfbjtydazrmvr.supabase.co/rest/v1/invite_tokens?invite_token=eq.${_returnToken}`,
       {headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsdGlpcmRqZmJqdHlkYXpybXZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MDQxNzgsImV4cCI6MjA4OTA4MDE3OH0.oBDtS3RZlGxMkqon-r1wdfYR6jPTSPGWIa8cZh7fLWA','Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
