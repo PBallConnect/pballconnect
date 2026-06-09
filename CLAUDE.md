@@ -1,6 +1,6 @@
 # CLAUDE.md — PBallConnect Reference
 
-_Last updated: May 31, 2026 (updated)_
+_Last updated: June 8, 2026_
 
 ---
 
@@ -8,6 +8,7 @@ _Last updated: May 31, 2026 (updated)_
 - [CLAUDE-RULES.md](CLAUDE-RULES.md) — all 50 numbered coding rules
 - [CLAUDE-SCHEMA.md](CLAUDE-SCHEMA.md) — full database schema, architecture patterns, feature behavior specs, UI patterns
 - [CLAUDE-SMS.md](CLAUDE-SMS.md) — SMS infrastructure and match invite SMS system architecture
+- [CLAUDE-FLOWS.md](CLAUDE-FLOWS.md) — all user flow definitions, regression checklist
 
 ---
 
@@ -99,6 +100,7 @@ No tests, no linter, no build commands.
 6. ~~**Goal rating slider track fill not rendering**~~ — fixed May 31. See Resolved list.
 
 **Resolved (do not re-introduce):**
+- ~~**Registration flow regression (June 2026)**~~ — `const _isNewRegistration` declared inside `try{}` caused silent `ReferenceError` after save; new users saw "You're All Set" then were dumped to `page-welcome`. Fixed by moving the declaration before `try{}`.
 - ~~`invites` table RLS INSERT policy missing~~ — policy added in Supabase; invites now write correctly
 - ~~`invite_token` missing from INSERT payload~~ — client-side token generated via `crypto.getRandomValues` and included in payload
 - ~~`+` addressed Gmail accounts blocked by silent filter in `sendEmail()`~~ — filter removed; only `@example.com` and `@test.com` are blocked

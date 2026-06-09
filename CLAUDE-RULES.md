@@ -68,7 +68,7 @@ _All 50 rules. No trimming. Cross-reference with CLAUDE.md, CLAUDE-SCHEMA.md, CL
 
 32. **Always `git push --force origin main`.** The pre-push hook amends HEAD to write `version.json` — this rewrites the commit, requiring `--force`. Never use `--force-with-lease`. Never place a `git push` inside the pre-push hook.
 
-33. **SMS invite flow uses `invite_method: 'sms'`.** The `invites_invite_method_check` DB constraint defines the allowed set. Passing `'text'` causes a 400 error. Allowed values: `'email'`, `'link'`, `'qr'`, `'ic'`, `'sms'`, `'text'`.
+33. **SMS invite flow uses `invite_method: 'sms'`.** The `invites_invite_method_check` DB constraint defines the allowed set. Allowed values: `'email'`, `'link'`, `'qr'`, `'ic'`, `'sms'` — never `'text'`. Passing `'text'` causes a 400 error from the `invites_invite_method_check` DB constraint.
 
 34. **All inputs must be `font-size: 16px` minimum.** iOS Safari auto-zooms any input below 16px. Never set input font-size to 13px or 14px.
 
@@ -109,3 +109,5 @@ _All 50 rules. No trimming. Cross-reference with CLAUDE.md, CLAUDE-SCHEMA.md, CL
 52. **beta_applications is append-only for new applicants.** Never DELETE rows. Status transitions (pending → approved or rejected) are the only permitted UPDATEs, and only via founder action. Use SUPABASE_SERVICE_KEY for all writes. Never expose beta_applications data through public_profiles or any client-readable endpoint.
 
 53. **join.html does not send magic links.** The beta application flow on join.html submits to /api/beta-apply and shows a confirmation message. It never calls signInWithOtp or sends any auth email. Magic links are only sent after the founder manually approves an applicant and sends a personal invite link via the existing invite token system.
+
+54. **In `doSaveProfile()`, always declare `const _isNewRegistration = !SESSION_PLAYER` BEFORE the `try{}` block.** Never declare it inside `try{}` and reference it outside — JavaScript block-scoping causes a silent `ReferenceError` that crashes the function after save with no error shown to the user. New users will see "You're All Set" and then be dumped to `page-welcome` instead of the dashboard.
