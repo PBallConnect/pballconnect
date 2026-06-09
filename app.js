@@ -8255,7 +8255,10 @@ function openLoginModal(){
       if(subEl)   subEl.textContent   = 'Enter your email to get started';
       if(btnEl)   btnEl.textContent   = 'Send Magic Link →';
     }
-    setTimeout(()=>document.getElementById('loginEmail')?.focus(), 100);
+    const savedEmail = localStorage.getItem('pb_email');
+    const emailInput = document.getElementById('loginEmail');
+    if(savedEmail && emailInput && !emailInput.value) emailInput.value = savedEmail;
+    setTimeout(()=>emailInput?.focus(), 100);
   }
 }
 
