@@ -1,6 +1,6 @@
 # CLAUDE-RULES.md — Important Rules for Claude Code
 
-_All 54 rules. No trimming. Cross-reference with CLAUDE.md, CLAUDE-SCHEMA.md, CLAUDE-SMS.md._
+_All 55 rules. No trimming. Cross-reference with CLAUDE.md, CLAUDE-SCHEMA.md, CLAUDE-SMS.md._
 
 ---
 
@@ -111,3 +111,5 @@ _All 54 rules. No trimming. Cross-reference with CLAUDE.md, CLAUDE-SCHEMA.md, CL
 53. **join.html does not send magic links.** The beta application flow on join.html submits to /api/beta-apply and shows a confirmation message. It never calls signInWithOtp or sends any auth email. Magic links are only sent after the founder manually approves an applicant and sends a personal invite link via the existing invite token system.
 
 54. **In `doSaveProfile()`, always declare `const _isNewRegistration = !SESSION_PLAYER` BEFORE the `try{}` block.** Never declare it inside `try{}` and reference it outside — JavaScript block-scoping causes a silent `ReferenceError` that crashes the function after save with no error shown to the user. New users will see "You're All Set" and then be dumped to `page-welcome` instead of the dashboard.
+
+55. **`is_organizer` is a DB-only reporting column as of June 2026.** Every registered member has full organizer access. Never re-add UI gating, nav hiding, or feature locks based on `is_organizer` in `app.js` or `app.html`. To check if a user owns a match, use `organizer_email` — that is unrelated to this column.
