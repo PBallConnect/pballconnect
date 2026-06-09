@@ -986,7 +986,6 @@ function showProfileDiff(){
     {label:'DUPR Rating',   old:String(player.dupr_rating||''),       nw:String(S.duprVal||'')},
     {label:'Target Level',  old:String(player.goal_rating||''),       nw:String(S.goalRating||'')},
 
-    {label:'Is Organizer',  old:String(player.is_organizer||false),    nw:String(S.isOrganizer==='Yes')},
     {label:'Is Coach',      old:String(player.is_coach||false),       nw:String(S.isCoach==='Yes')},
     {label:'Coach Certs',   old:player.coach_certifications||'',      nw:S.coachCerts&&S.coachCerts.size>0?[...S.coachCerts].join(', '):''},
     {label:'Lesson Types',  old:player.coach_lesson_types||'',        nw:S.coachLessonTypes&&S.coachLessonTypes.size>0?[...S.coachLessonTypes].join(', '):''},
@@ -1131,7 +1130,7 @@ async function doSaveProfile(){
       lat:                 S.addrLat || SESSION_PLAYER?.lat || null,
       lon:                 S.addrLon || SESSION_PLAYER?.lon || null,
       is_coach:            S.isCoach==='Yes',
-      is_organizer:        S.isOrganizer==='Yes',
+      is_organizer:        false,
       coach_certifications: S.coachCerts&&S.coachCerts.size>0 ? [...S.coachCerts].join(', ') : null,
       coach_lesson_types:  S.coachLessonTypes&&S.coachLessonTypes.size>0 ? [...S.coachLessonTypes].join(', ') : null,
       coach_formats:       S.coachFormats&&S.coachFormats.size>0 ? [...S.coachFormats].join(', ') : null,
@@ -8943,8 +8942,6 @@ function startChangeDetection(){
       S.playStyle!==(p.play_style||'')||
       S.venuePref!==(p.play_venues||'')||
 
-      // Organizer flag
-      (S.isOrganizer==='Yes')!==(p.is_organizer||false)||
       // Coach fields
       (S.isCoach==='Yes')!==(p.is_coach||false)||
       [...(S.coachCerts||[])].sort().join(',')!==(p.coach_certifications||'').split(',').map(s=>s.trim()).filter(Boolean).sort().join(',')||
