@@ -29,7 +29,7 @@
 const S={gender:'',skill:'',anytime:false,partner:false,
   waiver:false,photoSrc:null,state:'',stateFips:'',county:'',city:'',email:'',
   court:'',courtName:'',duprVal:null,venues:new Set(),driveDistance:'25 miles',
-  playStyle:'',playFormat:'Both',matchGenderPref:'Both',handedness:'',avatarEmoji:'🎾',venuePref:'',playingSince:'',nickname:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null,_tosConsent:false,_privacyConsent:false,_riskConsent:false,isCoach:'',coachCerts:new Set(),coachLessonTypes:new Set(),coachFormats:new Set(),isOrganizer:'',
+  playStyle:'',playFormat:'Both',matchGenderPref:'Both',handedness:'',avatarEmoji:'🎾',venuePref:'',playingSince:'',nickname:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null,_tosConsent:false,_privacyConsent:false,_riskConsent:false,isCoach:'',coachCerts:new Set(),coachLessonTypes:new Set(),coachFormats:new Set(),
   availWeekdayMorning:false,availWeekdayAfternoon:false,availWeekdayEvening:false,availWeekends:false};
 
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -1130,7 +1130,6 @@ async function doSaveProfile(){
       lat:                 S.addrLat || SESSION_PLAYER?.lat || null,
       lon:                 S.addrLon || SESSION_PLAYER?.lon || null,
       is_coach:            S.isCoach==='Yes',
-      is_organizer:        false,
       coach_certifications: S.coachCerts&&S.coachCerts.size>0 ? [...S.coachCerts].join(', ') : null,
       coach_lesson_types:  S.coachLessonTypes&&S.coachLessonTypes.size>0 ? [...S.coachLessonTypes].join(', ') : null,
       coach_formats:       S.coachFormats&&S.coachFormats.size>0 ? [...S.coachFormats].join(', ') : null,
@@ -7050,7 +7049,7 @@ function smSelectInvite(mode, skipProgress){
 
 async function smLoadGroupSelect(){
   const sel=document.getElementById('smGroupSelect');
-  if(!sel||!SESSION_PLAYER?.is_organizer) return;
+  if(!sel) return;
   const myEmail=getMyEmail();
   try{
     const res=await fetch(
@@ -8476,7 +8475,6 @@ async function restoreSession(email, playerData){
   S.wantsToImprove = player.wants_to_improve || '';
   S.goalRating   = player.goal_rating || null;
   S.matchGenderPref = player.match_gender_pref || 'Both';
-  S.isOrganizer     = player.is_organizer ? 'Yes' : 'Not yet';
   SESSION_PLAYER = player;
   updateOrganizerNav();
   updateNavForUserType();
@@ -8892,17 +8890,6 @@ function restoreProfileForm(player){
         if(ch.textContent.trim()==='Not currently') ch.classList.add('on');
       });
     }
-  }
-
-  // Restore organizer flag
-  {
-    const isOrg = !!player.is_organizer;
-    S.isOrganizer = isOrg ? 'Yes' : 'Not yet';
-    const chips = document.getElementById('isOrganizerChips');
-    if(chips) chips.querySelectorAll('.chip').forEach(ch=>{
-      const t = ch.textContent.trim();
-      ch.classList.toggle('on', isOrg ? t==='Yes' : t==='Not yet');
-    });
   }
 
   [1,2,3].forEach(i=>{const step=document.getElementById('step'+i);if(step)step.style.display='block';});
@@ -12646,59 +12633,24 @@ document.addEventListener('click', function(e){
 
 
 // ══════════════════════════════════════════════════════════════
-// PART 1 — Organizer flag helpers
+// PART 1 — Organizer nav helpers
 // ══════════════════════════════════════════════════════════════
 
 function updateOrganizerNav(){
-  const isOrg = !!(SESSION_PLAYER?.is_organizer);
   const navDiv = document.getElementById('organizerNav');
-  if(navDiv) navDiv.style.display = isOrg ? 'block' : 'none';
+  if(navDiv) navDiv.style.display = SESSION_PLAYER ? 'block' : 'none';
 }
 
 function updateNavForUserType(){
-  const isOrganizer   = !!(SESSION_PLAYER?.is_organizer);
-  const wantsOrganizer = !!(SESSION_PLAYER?.wants_organizer);
-
-  // Nav items that require organizer status
-  const organizerOnlyItems = ['setupMatch','myInvites','myGroups','recurringMatches'];
-
-  organizerOnlyItems.forEach(pageId => {
+  const organizerItems = ['setupMatch','myInvites','myGroups','recurringMatches'];
+  organizerItems.forEach(pageId => {
     const el = document.getElementById('nav-' + pageId);
     if(!el) return;
-    if(isOrganizer){
-      el.style.opacity = '1';
-      el.style.pointerEvents = 'auto';
-      el.style.cursor = '';
-      el.title = el.getAttribute('title') || '';
-      el.onclick = function(){ showPage(pageId); };
-    } else if(wantsOrganizer){
-      el.style.opacity = '0.4';
-      el.style.pointerEvents = 'auto';
-      el.style.cursor = 'pointer';
-      el.title = 'Complete your profile to unlock Court Captain tools';
-      el.onclick = function(e){
-        e.stopPropagation();
-        showToast('Complete your full profile to unlock Court Captain tools 🏓','#1a7a3a');
-        showCourtCaptainNudge(SESSION_PLAYER?.email || getMyEmail());
-      };
-    } else {
-      el.style.opacity = '0.4';
-      el.style.pointerEvents = 'auto';
-      el.style.cursor = 'default';
-      el.title = 'Organizer feature — become a Court Captain to unlock';
-      el.onclick = function(e){
-        e.stopPropagation();
-        showToast('These tools are for Court Captains. Ask your organizer about setting up matches! 🎾','#6b7280');
-      };
-    }
+    el.style.opacity = '1';
+    el.style.pointerEvents = 'auto';
+    el.style.cursor = '';
+    el.onclick = function(){ showPage(pageId); };
   });
-
-  // Gray the Organizer section label for non-organizers
-  const orgSection = document.getElementById('organizerNav');
-  if(orgSection){
-    const label = orgSection.querySelector('.nav-section-label');
-    if(label) label.style.opacity = isOrganizer ? '1' : '0.5';
-  }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -13634,7 +13586,6 @@ async function deleteGroup(groupId){
 async function injectNamedGroupOptions(){
   const container = document.getElementById('namedGroupOptions');
   if(!container) return;
-  if(!SESSION_PLAYER?.is_organizer){ container.style.display='none'; return; }
   const myEmail = getMyEmail();
   try{
     const res = await fetch(
