@@ -5,7 +5,7 @@ _Last updated: June 8, 2026_
 ---
 
 ## Related Documentation
-- [CLAUDE-RULES.md](CLAUDE-RULES.md) — all 50 numbered coding rules
+- [CLAUDE-RULES.md](CLAUDE-RULES.md) — all 54 numbered coding rules
 - [CLAUDE-SCHEMA.md](CLAUDE-SCHEMA.md) — full database schema, architecture patterns, feature behavior specs, UI patterns
 - [CLAUDE-SMS.md](CLAUDE-SMS.md) — SMS infrastructure and match invite SMS system architecture
 - [CLAUDE-FLOWS.md](CLAUDE-FLOWS.md) — all user flow definitions, regression checklist

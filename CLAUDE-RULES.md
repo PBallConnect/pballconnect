@@ -1,6 +1,6 @@
 # CLAUDE-RULES.md — Important Rules for Claude Code
 
-_All 50 rules. No trimming. Cross-reference with CLAUDE.md, CLAUDE-SCHEMA.md, CLAUDE-SMS.md._
+_All 54 rules. No trimming. Cross-reference with CLAUDE.md, CLAUDE-SCHEMA.md, CLAUDE-SMS.md._
 
 ---
 
