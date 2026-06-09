@@ -458,3 +458,25 @@ Instruction format reminders:
 - `join.html` skill slider — styled, ticks aligned, green fill ✓
 - 2-step registration collapse — complete and working ✓
 - Organic pre-population — verified end-to-end ✓
+
+### Session learnings — June 8, 2026
+
+**`is_organizer` gating removed — all members are organizers:**
+- Decision: every registered member gets full organizer access. No self-selection, no founder promotion flow.
+- Removed from app.js: `S.isOrganizer` state var, `restoreSession()` assignment, chip restore, `doSaveProfile()` payload, `smLoadGroupSelect()` early return, `injectNamedGroupOptions()` hide check, all opacity/pointer-events gating in `updateNavForUserType()`, `isOrg` condition in `updateOrganizerNav()`.
+- Removed from app.html: `isOrganizerChips` chip group and hint text from Step 1 of registration form.
+- DB column retained for back-office reporting. SQL run: `UPDATE registrations SET is_organizer = true WHERE is_organizer = false`.
+- `organizer_email` on matches table is unrelated — do not confuse with `is_organizer` flag.
+- See Rule 55.
+
+**Registration flow regressions fixed (June 8, 2026):**
+- Root cause: `const _isNewRegistration = !SESSION_PLAYER` declared inside `try{}` — silent ReferenceError after save. Fixed: declared before `try{}`. See Rule 54.
+- No-invite path: `showFoundingMemberOverlay` callback now hides `confirmOverlay` and calls `showPage('dashboard')` directly when `!PENDING_INVITE`.
+- `handlePostRegistrationInvite()` → changed `showPage('innerCircle')` to `showPage('dashboard')`.
+- `confirmOverlay` button copy updated to "Taking you to your dashboard..."
+- Beta banner: "Sign In" moved to full-width green button at TOP of stack above join CTAs. Email pre-fill added to login modal from `localStorage.pb_email`.
+
+**CLAUDE-FLOWS.md created:**
+- 11 flows documented: email IC invite, QR invite, link/text invite, existing user, returning member new device, post-registration success, SMS match invite, Can't Make It drop flow.
+- Includes global state variable reference table and regression prevention checklist.
+- Must be updated any time a flow chain function is modified.
