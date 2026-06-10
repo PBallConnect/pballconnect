@@ -202,7 +202,7 @@ Steps 1–5 same as Flow 9. Then:
 |---|---|---|
 | 6 | Player is NOT registered → compact match summary shown | Match summary card |
 | 7a | Player taps YES → 4-field mini form | Gender chips, skill slider, zip, email |
-| 7b | Submits → POST `/api/sms-register` creates auth user, saves registration, auto-approves IC connection | "You're registered!" |
+| 7b | Submits → POST `/api/sms-register` creates auth user, saves registration. Original connections row (organizer → new user) patched to `approved`. Reciprocal row created as `status='pending'` — organizer must explicitly accept before it counts in their My IC. Matches email path behavior (see Flow 1 step 18). | "You're registered!" |
 | 8a | Player taps NO → warm decline + soft pitch | "Sign Me Up!" (→ `invite.html`) + "Maybe Later" |
 
 ---

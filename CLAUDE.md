@@ -487,3 +487,9 @@ Instruction format reminders:
 - Flow: inviter sends → pending. Invitee accepts → original row approved, reciprocal row pending. Inviter accepts reciprocal → both sides approved. True mutual consent on both sides.
 - Tile counts were already correct — `loadInnerCircle()` filters approved only, `loadIcPending()` filters pending inbound only. No tile count changes needed.
 - See CLAUDE-FLOWS.md Flow 1 step 18.
+
+**SMS registration reciprocal connection fixed (June 10, 2026):**
+- Bug: `sms-register.js` was creating the reciprocal connection row as `status='approved'` — bypassing organizer consent entirely. Both sides showed My IC = 1 with no invite flow.
+- Fix: `sms-register.js` line 205 — `status:'approved'` → `status:'pending'`. SMS path now matches email path exactly.
+- `_syncIcSentCount()` reads sent count from `connections` table directly — no `invites` row insert needed for My IC Invites to Others to show correctly.
+- See CLAUDE-FLOWS.md Flow 10.
