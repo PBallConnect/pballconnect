@@ -1,6 +1,6 @@
 # CLAUDE-RULES.md — Important Rules for Claude Code
 
-_All 55 rules. No trimming. Cross-reference with CLAUDE.md, CLAUDE-SCHEMA.md, CLAUDE-SMS.md._
+_All 56 rules. No trimming. Cross-reference with CLAUDE.md, CLAUDE-SCHEMA.md, CLAUDE-SMS.md._
 
 ---
 
@@ -113,3 +113,5 @@ _All 55 rules. No trimming. Cross-reference with CLAUDE.md, CLAUDE-SCHEMA.md, CL
 54. **In `doSaveProfile()`, always declare `const _isNewRegistration = !SESSION_PLAYER` BEFORE the `try{}` block.** Never declare it inside `try{}` and reference it outside — JavaScript block-scoping causes a silent `ReferenceError` that crashes the function after save with no error shown to the user. New users will see "You're All Set" and then be dumped to `page-welcome` instead of the dashboard.
 
 55. **`is_organizer` is a DB-only reporting column as of June 2026.** Every registered member has full organizer access. Never re-add UI gating, nav hiding, or feature locks based on `is_organizer` in `app.js` or `app.html`. To check if a user owns a match, use `organizer_email` — that is unrelated to this column.
+
+56. **`sendIcEmailInvite()` must run the re-invite pre-check before sending.** Before calling `icCreateSingleUseInvite()` or `sendEmail()`, query `connections` for an existing row where `requester_email = SESSION_PLAYER.email` AND `recipient_email = entered email`. If an `approved` row exists → toast "They're already in your Inner Circle." and abort. If a `pending` row exists → toast "You already have a pending invite to this person." and abort. Only proceed if no row exists. This prevents duplicate invite emails and duplicate `invites` rows.

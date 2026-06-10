@@ -65,7 +65,7 @@ Steps 1–10 identical to Flow 1. Then:
 | 12 | Invitee completes form, taps Save | — |
 | 13 | `_qcSave()` saves row, checks `PENDING_INVITE` → calls `handlePostRegistrationInvite()` | "You're All Set" screen |
 | 14 | `handlePostRegistrationInvite()` shows "Join [inviter]'s IC?" prompt | IC join prompt |
-| 15 | Invitee taps Yes → connection approved, reciprocal row created | — |
+| 15 | Invitee taps Yes → original connection row patched to `approved`. Reciprocal row created as `status='pending'` — inviter must explicitly accept before it counts in their My IC | — |
 | 16 | `confirmOverlay` hidden → `showPage('dashboard')` | Dashboard — green IC tile = 1 |
 
 **Note:** `_qcSave()` must also call `handlePostRegistrationInvite()` when `PENDING_INVITE` is set — same as `doSaveProfile()`.
@@ -238,3 +238,5 @@ Run this before pushing ANY change to auth, registration, or invite flows:
 - [ ] `_isNewRegistration` is declared BEFORE `try{}` in `doSaveProfile()`
 - [ ] All `emailRedirectTo` values point to `app.html` — never `/` or `index.html` (Rule 51)
 - [ ] `startNewRegistration()` does NOT fire when `SESSION_PLAYER` exists after re-fetch
+- [ ] Reciprocal connection rows created as `pending` — never `approved` at creation (Flows 1, 2, 10)
+- [ ] Re-invite pre-check fires before `sendIcEmailInvite()` sends — existing approved or pending connection aborts with toast (Rule 56)

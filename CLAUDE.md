@@ -5,7 +5,7 @@ _Last updated: June 10, 2026_
 ---
 
 ## Related Documentation
-- [CLAUDE-RULES.md](CLAUDE-RULES.md) — all 55 numbered coding rules
+- [CLAUDE-RULES.md](CLAUDE-RULES.md) — all 56 numbered coding rules
 - [CLAUDE-SCHEMA.md](CLAUDE-SCHEMA.md) — full database schema, architecture patterns, feature behavior specs, UI patterns
 - [CLAUDE-SMS.md](CLAUDE-SMS.md) — SMS infrastructure and match invite SMS system architecture
 - [CLAUDE-FLOWS.md](CLAUDE-FLOWS.md) — all user flow definitions, regression checklist
@@ -493,3 +493,10 @@ Instruction format reminders:
 - Fix: `sms-register.js` line 205 — `status:'approved'` → `status:'pending'`. SMS path now matches email path exactly.
 - `_syncIcSentCount()` reads sent count from `connections` table directly — no `invites` row insert needed for My IC Invites to Others to show correctly.
 - See CLAUDE-FLOWS.md Flow 10.
+
+**Re-invite pre-check added to `sendIcEmailInvite()` (June 10, 2026):**
+- Before sending an IC email invite, `sendIcEmailInvite()` now queries `connections` for any existing row where `requester_email = SESSION_PLAYER.email` AND `recipient_email = entered email`.
+- If an `approved` row exists → toast "They're already in your Inner Circle." and abort.
+- If a `pending` row exists → toast "You already have a pending invite to this person." and abort.
+- Only if no row exists → proceed with `icCreateSingleUseInvite()` + `sendEmail()`.
+- Prevents duplicate invite emails and duplicate `invites` rows. See Rule 56.
