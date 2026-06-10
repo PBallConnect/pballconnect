@@ -10561,6 +10561,26 @@ async function sendIcEmailInvite(){
   const btn = document.querySelector('#icEmailFields button');
   if(btn){ btn.disabled = true; btn.textContent = 'Sending…'; }
 
+  // Pre-check: block if a connection already exists in either direction (pending or approved)
+  try{
+    const existingCheck = await fetch(
+      `${SUPABASE_URL}/rest/v1/connections?or=(and(requester_email.eq.${encodeURIComponent(myEmail)},recipient_email.eq.${encodeURIComponent(email)}),and(requester_email.eq.${encodeURIComponent(email)},recipient_email.eq.${encodeURIComponent(myEmail)}))&status=in.(pending,approved)&select=id,status`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+    );
+    if(existingCheck.ok){
+      const existing = await existingCheck.json();
+      if(existing.length > 0){
+        const st = existing[0].status;
+        const msg = st === 'approved'
+          ? `${name || email} is already in your Inner Circle.`
+          : `You already have a pending invite to ${name || email}.`;
+        showToast(msg, '#f59e0b');
+        if(btn){ btn.disabled = false; btn.textContent = 'Send Invite ✉️'; }
+        return;
+      }
+    }
+  }catch(_){}
+
   try{
     // Check if invitee already has a profile — use ic_invite_existing for members, ic_invite for new users
     let inviteeIsExisting = false;
