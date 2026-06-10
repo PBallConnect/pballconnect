@@ -480,3 +480,10 @@ Instruction format reminders:
 - 11 flows documented: email IC invite, QR invite, link/text invite, existing user, returning member new device, post-registration success, SMS match invite, Can't Make It drop flow.
 - Includes global state variable reference table and regression prevention checklist.
 - Must be updated any time a flow chain function is modified.
+
+**Reciprocal IC connection bug fixed (June 10, 2026):**
+- Bug: when a new user accepted an IC invite during registration, the reciprocal connection row was created as `status='approved'` — counting in the inviter's "My IC" without their consent.
+- Fix: app.js line 11754 — reciprocal row now created as `status='pending'`.
+- Flow: inviter sends → pending. Invitee accepts → original row approved, reciprocal row pending. Inviter accepts reciprocal → both sides approved. True mutual consent on both sides.
+- Tile counts were already correct — `loadInnerCircle()` filters approved only, `loadIcPending()` filters pending inbound only. No tile count changes needed.
+- See CLAUDE-FLOWS.md Flow 1 step 18.

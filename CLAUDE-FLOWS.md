@@ -46,7 +46,7 @@ Each flow defines the exact sequence of steps a user experiences, the URL params
 | 15 | Re-fetch populates `SESSION_PLAYER` | — | `SESSION_PLAYER` now set | — |
 | 16 | `_isNewRegistration` is true → `showFoundingMemberOverlay()` → calls `handlePostRegistrationInvite()` | — | — | "You're All Set" screen |
 | 17 | `handlePostRegistrationInvite()` finds `PENDING_INVITE` → shows "Join [inviter]'s IC?" prompt | — | — | IC join prompt overlay |
-| 18 | Invitee taps Yes → `connections` row patched to `approved`, reciprocal row created | — | — | — |
+| 18 | Invitee taps Yes → original `connections` row patched to `approved`. Reciprocal row created as `pending` — inviter must explicitly accept before it counts in their My IC | — | — | — |
 | 19 | `confirmOverlay` hidden → `showPage('dashboard')` | — | — | Dashboard — green IC tile = 1 |
 
 **Critical rules:** Rule 51 (redirects → `app.html`), Rule 16 (check `is_used`), Rule 36 (`Prefer: return=minimal`).
