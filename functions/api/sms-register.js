@@ -192,7 +192,7 @@ export async function onRequestPost(context) {
     );
   } catch (_) {}
 
-  // Create reciprocal connection (new user → organizer) as approved
+  // Create reciprocal connection (new user → organizer) as pending — organizer must accept before it counts in their My IC
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/connections`, {
       method: 'POST',
@@ -202,7 +202,7 @@ export async function onRequestPost(context) {
         requester_name:  fullName,
         recipient_email: inv.inviter_email,
         recipient_name:  inv.inviter_name || '',
-        status:          'approved',
+        status:          'pending',
       }),
     });
   } catch (_) {}
