@@ -12637,6 +12637,151 @@ function closeBetaBanner(){
   localStorage.setItem('pb_beta_banner_seen','1');
 }
 
+// ── Beta Tester Feedback System ───────────────────────
+let _bfScreenshotFile = null;
+
+window.openBetaFeedback = function openBetaFeedback(){
+  const overlay = document.getElementById('betaFeedbackOverlay');
+  if(!overlay) return;
+  document.getElementById('bfPageUrl').value = window.location.href;
+  document.getElementById('bfUserAgent').value = navigator.userAgent;
+  overlay.style.display = 'block';
+};
+
+window.closeBetaFeedback = function closeBetaFeedback(){
+  const overlay = document.getElementById('betaFeedbackOverlay');
+  if(overlay) overlay.style.display = 'none';
+  const feat = document.getElementById('bfFeature');
+  if(feat) feat.value = '';
+  const wh = document.getElementById('bfWhatHappened');
+  if(wh) wh.value = '';
+  const we = document.getElementById('bfWhatExpected');
+  if(we) we.value = '';
+  document.querySelectorAll('input[name="bfSeverity"]').forEach(r => r.checked = false);
+  const inp = document.getElementById('bfScreenshotInput');
+  if(inp) inp.value = '';
+  const preview = document.getElementById('bfScreenshotPreview');
+  if(preview) preview.style.display = 'none';
+  const img = document.getElementById('bfScreenshotImg');
+  if(img) img.src = '';
+  _bfScreenshotFile = null;
+};
+
+window.bfHandleScreenshot = function bfHandleScreenshot(input){
+  const file = input.files && input.files[0];
+  if(!file) return;
+  if(file.size > 10 * 1024 * 1024){
+    showToast('Screenshot must be under 10MB','#ef4444');
+    input.value = '';
+    return;
+  }
+  _bfScreenshotFile = file;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    const img = document.getElementById('bfScreenshotImg');
+    const preview = document.getElementById('bfScreenshotPreview');
+    if(img) img.src = ev.target.result;
+    if(preview) preview.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+};
+
+window.submitBetaFeedback = async function submitBetaFeedback(){
+  const feature = (document.getElementById('bfFeature')?.value || '').trim();
+  const whatHappened = (document.getElementById('bfWhatHappened')?.value || '').trim();
+  const severity = document.querySelector('input[name="bfSeverity"]:checked')?.value || '';
+  const whatExpected = (document.getElementById('bfWhatExpected')?.value || '').trim();
+  const pageUrl = document.getElementById('bfPageUrl')?.value || '';
+  const userAgent = document.getElementById('bfUserAgent')?.value || '';
+
+  if(!feature){ showToast('Please select a feature','#ef4444'); return; }
+  if(!whatHappened){ showToast('Please describe what happened','#ef4444'); return; }
+  if(!severity){ showToast('Please select a severity','#ef4444'); return; }
+
+  const btn = document.getElementById('bfSubmitBtn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Submitting…'; }
+
+  const playerEmail = getMyEmail() || 'anonymous';
+  const playerName = getMyName() || 'Anonymous';
+  let screenshotUrl = null;
+
+  try{
+    if(_bfScreenshotFile){
+      const ts = Date.now();
+      const ext = (_bfScreenshotFile.name.split('.').pop() || 'jpg').toLowerCase();
+      const safeName = playerEmail.replace(/[^a-z0-9]/gi,'_');
+      const path = safeName + '/' + ts + '.' + ext;
+      const uploadRes = await fetch(
+        SUPABASE_URL + '/storage/v1/object/beta-feedback-screenshots/' + path,
+        {
+          method: 'POST',
+          headers:{
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + SUPABASE_ACCESS_TOKEN,
+            'Content-Type': _bfScreenshotFile.type,
+            'x-upsert': 'true'
+          },
+          body: _bfScreenshotFile
+        }
+      );
+      if(uploadRes.ok){
+        screenshotUrl = SUPABASE_URL + '/storage/v1/object/public/beta-feedback-screenshots/' + path;
+      }else{
+        console.warn('Screenshot upload failed:', await uploadRes.text());
+      }
+    }
+
+    await fetch(SUPABASE_URL + '/rest/v1/beta_feedback', {
+      method: 'POST',
+      headers:{
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_ACCESS_TOKEN,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        player_email: playerEmail,
+        player_name: playerName,
+        feature: feature,
+        what_happened: whatHappened,
+        what_expected: whatExpected || null,
+        severity: severity,
+        screenshot_url: screenshotUrl,
+        page_url: pageUrl,
+        user_agent: userAgent,
+        created_at: new Date().toISOString()
+      })
+    });
+
+    try{
+      const severityLabel = { idea:'💡 Feature Idea', minor:'🟡 Minor', annoying:'🟠 Annoying', broken:'🔴 Broken' }[severity] || severity;
+      const note = 'Feature: ' + feature + '\nSeverity: ' + severityLabel +
+        '\n\nWhat happened:\n' + whatHappened +
+        (whatExpected ? '\n\nExpected:\n' + whatExpected : '') +
+        (screenshotUrl ? '\n\nScreenshot: ' + screenshotUrl : '') +
+        '\n\nPlayer: ' + playerName + ' (' + playerEmail + ')' +
+        '\nPage: ' + pageUrl +
+        '\nUser Agent: ' + userAgent;
+      await sendEmail({
+        to_email: 'david@pballconnect.com',
+        type: 'notification',
+        subject: '🧪 Beta Feedback — ' + feature + ' — ' + severityLabel,
+        personal_note: note
+      });
+    }catch(e){
+      console.warn('Beta feedback admin email error:', e.message);
+    }
+
+    showToast('Feedback submitted — thank you! 🙏','#4CAF7D');
+    window.closeBetaFeedback();
+  }catch(e){
+    console.warn('submitBetaFeedback error:', e.message);
+    showToast('Error submitting feedback — please try again','#ef4444');
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = 'Submit Feedback'; }
+  }
+};
+
 function maybeShowBetaBanner(){
   if(localStorage.getItem('pb_beta_banner_seen')) return;
   const banner = document.getElementById('betaWelcomeBanner');
@@ -12671,6 +12816,8 @@ function updateNavForUserType(){
     el.style.cursor = '';
     el.onclick = function(){ showPage(pageId); };
   });
+  const bfBtn = document.getElementById('nav-betaFeedback');
+  if(bfBtn) bfBtn.style.display = (SESSION_PLAYER && SESSION_PLAYER.is_beta_tester === true) ? 'flex' : 'none';
 }
 
 // ══════════════════════════════════════════════════════════════

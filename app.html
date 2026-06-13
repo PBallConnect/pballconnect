@@ -216,6 +216,9 @@
       <button class="nav-item" onclick="showPage('tos')" id="nav-tos" title="Terms of Service">
         <span class="nav-icon">⚖️</span><span class="nav-label">Terms of Service</span>
       </button>
+      <button class="nav-item" id="nav-betaFeedback" onclick="openBetaFeedback()" title="Beta Feedback" style="display:none;">
+        <span class="nav-icon">🧪</span><span class="nav-label">Beta Feedback</span>
+      </button>
 
     </div>
     <div class="nav-footer">
@@ -2444,6 +2447,69 @@
 
 <!-- Emergency Fill Overlay — organizer tool triggered when a player drops and waitlist is empty -->
 <div id="emergencyFillOverlay" style="display:none;position:fixed;inset:0;z-index:9500;background:#fff;overflow-y:auto;-webkit-overflow-scrolling:touch;"></div>
+
+<!-- Beta Tester Feedback Overlay -->
+<div id="betaFeedbackOverlay" style="display:none;position:fixed;inset:0;z-index:9600;background:#fff;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+  <div style="max-width:600px;margin:0 auto;padding:20px 16px 60px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-top:8px;">
+      <div style="font-size:20px;font-weight:800;color:#111;">🧪 Beta Feedback</div>
+      <button onclick="closeBetaFeedback()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;padding:4px 8px;border-radius:6px;" title="Close">✕</button>
+    </div>
+    <input type="hidden" id="bfPageUrl"/>
+    <input type="hidden" id="bfUserAgent"/>
+    <div style="margin-bottom:16px;">
+      <label style="font-size:14px;font-weight:700;color:#111;display:block;margin-bottom:6px;">Feature <span style="color:#dc2626;">*</span></label>
+      <select id="bfFeature" style="width:100%;padding:12px;border:1.5px solid #d1d5db;border-radius:10px;font-size:16px;font-family:inherit;background:#fff;color:#111;-webkit-appearance:none;appearance:none;box-sizing:border-box;">
+        <option value="">Select a feature…</option>
+        <option value="Registration">Registration</option>
+        <option value="Dashboard">Dashboard</option>
+        <option value="Inner Circle">Inner Circle</option>
+        <option value="Set Up a Match">Set Up a Match</option>
+        <option value="Match Invites">Match Invites</option>
+        <option value="SMS">SMS</option>
+        <option value="Player Profile">Player Profile</option>
+        <option value="My Courts">My Courts</option>
+        <option value="Navigation">Navigation</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div style="margin-bottom:16px;">
+      <label style="font-size:14px;font-weight:700;color:#111;display:block;margin-bottom:6px;">What happened? <span style="color:#dc2626;">*</span></label>
+      <textarea id="bfWhatHappened" rows="4" placeholder="Describe what happened…" style="width:100%;padding:12px;border:1.5px solid #d1d5db;border-radius:10px;font-size:16px;font-family:inherit;resize:vertical;box-sizing:border-box;outline:none;line-height:1.5;"></textarea>
+    </div>
+    <div style="margin-bottom:16px;">
+      <label style="font-size:14px;font-weight:700;color:#111;display:block;margin-bottom:6px;">What did you expect to happen? <span style="color:#9ca3af;font-weight:400;">(optional)</span></label>
+      <textarea id="bfWhatExpected" rows="3" placeholder="Describe the expected behavior…" style="width:100%;padding:12px;border:1.5px solid #d1d5db;border-radius:10px;font-size:16px;font-family:inherit;resize:vertical;box-sizing:border-box;outline:none;line-height:1.5;"></textarea>
+    </div>
+    <div style="margin-bottom:16px;">
+      <label style="font-size:14px;font-weight:700;color:#111;display:block;margin-bottom:10px;">Severity <span style="color:#dc2626;">*</span></label>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:16px;color:#111;">
+          <input type="radio" name="bfSeverity" value="idea" style="width:20px;height:20px;accent-color:#1a7a3a;flex-shrink:0;cursor:pointer;"> 💡 Feature Idea
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:16px;color:#111;">
+          <input type="radio" name="bfSeverity" value="minor" style="width:20px;height:20px;accent-color:#1a7a3a;flex-shrink:0;cursor:pointer;"> 🟡 Minor
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:16px;color:#111;">
+          <input type="radio" name="bfSeverity" value="annoying" style="width:20px;height:20px;accent-color:#1a7a3a;flex-shrink:0;cursor:pointer;"> 🟠 Annoying
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:16px;color:#111;">
+          <input type="radio" name="bfSeverity" value="broken" style="width:20px;height:20px;accent-color:#1a7a3a;flex-shrink:0;cursor:pointer;"> 🔴 Broken
+        </label>
+      </div>
+    </div>
+    <div style="margin-bottom:24px;">
+      <label style="font-size:14px;font-weight:700;color:#111;display:block;margin-bottom:6px;">Screenshot <span style="color:#9ca3af;font-weight:400;">(optional, images only)</span></label>
+      <input type="file" id="bfScreenshotInput" accept="image/*" onchange="bfHandleScreenshot(this)" style="font-size:16px;width:100%;box-sizing:border-box;">
+      <div id="bfScreenshotPreview" style="display:none;margin-top:10px;">
+        <img id="bfScreenshotImg" src="" alt="Screenshot preview" style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid #e5e7eb;display:block;">
+      </div>
+    </div>
+    <button id="bfSubmitBtn" onclick="submitBetaFeedback()" style="width:100%;padding:14px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-weight:800;font-size:16px;cursor:pointer;font-family:inherit;">
+      Submit Feedback
+    </button>
+  </div>
+</div>
 
 </body>
 </html>
