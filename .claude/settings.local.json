@@ -9,7 +9,12 @@
       "WebFetch(domain:pballconnect.com)",
       "Bash(gh api *)",
       "Bash(node --check app.js)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(git *)",
+      "Bash(curl -sI \"https://pballconnect.com/app.html\")",
+      "Bash(curl -s \"https://pballconnect.com/app.html\" -A \"Mozilla/5.0\")",
+      "Bash(npx playwright *)",
+      "Bash(grep -v \"//\\\\|organizer_email\\\\|isOrganizer[^C]\\\\|organizerName\\\\|organizerPlaying\\\\|organizerNav\\\\|organizerOnly\\\\|organizerQuest\")"
     ]
   }
 }

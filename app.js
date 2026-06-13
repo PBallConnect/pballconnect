@@ -8601,6 +8601,8 @@ function updateTopBar(player){
   const sinceTxt = since    ? ' · Since '+since : '';
   if(navEmoji) navEmoji.textContent=emoji;
   navLabel.textContent = fname+nick+skillTxt+sinceTxt+' ▾';
+  const betaBadge = document.getElementById('betaTesterBadge');
+  if(betaBadge) betaBadge.style.display = player.is_beta_tester === true ? 'inline-flex' : 'none';
 }
 
 function openProfileMenu(){

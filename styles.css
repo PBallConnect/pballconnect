@@ -264,7 +264,7 @@
   .app-shell{display:flex;min-height:100vh;flex-direction:row;}
 
   /* ── Left Nav ─────────────────────────────────────── */
-  .left-nav{width:240px;min-height:100vh;background:#f3f4f6;border-right:1px solid #d1d5db;
+  .left-nav{width:240px;height:100vh;background:#f3f4f6;border-right:1px solid #d1d5db;
     display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:50;}
   /* .left-nav.collapsed removed — JS uses .open class, not .collapsed */
   .nav-logo{padding:0;border-bottom:1px solid #d1d5db;}
@@ -272,7 +272,7 @@
   .nav-logo-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:900;color:#1a5c32;line-height:1.1;margin-top:4px;}
   .nav-logo-title span{color:var(--yellow);}
   .nav-logo-sub{color:var(--dim);font-size:10px;letter-spacing:.1em;margin-top:3px;}
-  .nav-items{padding:16px 0;flex:1;}
+  .nav-items{padding:16px 0;flex:1;min-height:0;overflow-y:auto;}
   .nav-item{display:flex;align-items:center;gap:12px;padding:12px 20px;cursor:pointer;
     transition:all .2s;border-left:3px solid transparent;color:#1a5c32;font-size:13px;font-weight:500;
     background:none;border-top:none;border-right:none;border-bottom:none;
