@@ -2678,7 +2678,10 @@ function selectMatchFormat(fmt, el){
   smUpdateProgress(2);
   // Rebuild invite grid so minimum-needed counter stays in sync
   const _igs = document.getElementById('smInviteGridSection');
-  if(_igs && _igs.innerHTML && MS.genderPref !== 'group') buildSmInviteGrid();
+  if(_igs && _igs.innerHTML && MS.genderPref !== 'group'){
+    _smPurgeMixedWrongGender();
+    buildSmInviteGrid();
+  }
 }
 
 // ── Match type preference (Profile) ───────────────────
@@ -6209,12 +6212,78 @@ function smUpdateSendBtn(){
 }
 
 // ── Step 4 Invite Grid helpers ────────────────────────
+
+// Returns which gender(s) should appear in the mixed invite pool.
+// 'woman' — only women needed (e.g. man organizer Singles Mixed)
+// 'man'   — only men needed (e.g. woman organizer Singles Mixed)
+// 'both'  — both genders still have unfilled quota (Doubles Mixed, early selection)
+function _smMixedNeededGenders(){
+  const myGender = (SESSION_PLAYER?.gender || '').toLowerCase();
+  const n = MS.numCourts;
+  const playersPerSide = MS.format === 'singles' ? 1 : 2;
+  const minNeeded = (n * (MS.format === 'singles' ? 2 : 4)) - 1;
+  let menNeeded = 0, womenNeeded = 0;
+  if(myGender === 'man')        { menNeeded = (n * playersPerSide) - 1; womenNeeded = n * playersPerSide; }
+  else if(myGender === 'woman') { womenNeeded = (n * playersPerSide) - 1; menNeeded = n * playersPerSide; }
+  else { menNeeded = Math.floor(minNeeded / 2); womenNeeded = Math.ceil(minNeeded / 2); }
+  // Static zero-quota: gender never needed for this format/org combination
+  if(menNeeded === 0) return 'woman';
+  if(womenNeeded === 0) return 'man';
+  // Dynamic: count already-invited from specificPlayers
+  let invMen = 0, invWomen = 0;
+  IC_MEMBERS.forEach(({player}) => {
+    const e = (player.email||'').toLowerCase();
+    if(!MS.specificPlayers || !MS.specificPlayers.has(e)) return;
+    const g = (player.gender||'').toLowerCase();
+    if(g === 'man') invMen++; else if(g === 'woman') invWomen++;
+  });
+  if(invMen >= menNeeded && invWomen < womenNeeded) return 'woman';
+  if(invWomen >= womenNeeded && invMen < menNeeded) return 'man';
+  return 'both';
+}
+
+// Removes any selected players whose gender is not needed for the current mixed
+// format, then shows a toast if any were removed. Only fires for singles (where
+// one gender has a quota of zero); doubles mixed always needs both genders.
+function _smPurgeMixedWrongGender(){
+  if(MS.genderPref !== 'mixed') return;
+  if(!MS.specificPlayers || !MS.specificPlayers.size) return;
+  const myGender = (SESSION_PLAYER?.gender || '').toLowerCase();
+  const n = MS.numCourts;
+  const playersPerSide = MS.format === 'singles' ? 1 : 2;
+  const minNeeded = (n * (MS.format === 'singles' ? 2 : 4)) - 1;
+  let menNeeded = 0, womenNeeded = 0;
+  if(myGender === 'man')        { menNeeded = (n * playersPerSide) - 1; womenNeeded = n * playersPerSide; }
+  else if(myGender === 'woman') { womenNeeded = (n * playersPerSide) - 1; menNeeded = n * playersPerSide; }
+  else { menNeeded = Math.floor(minNeeded / 2); womenNeeded = Math.ceil(minNeeded / 2); }
+  // Only purge when one gender has zero quota (singles case)
+  let wrongGender = null;
+  if(menNeeded === 0) wrongGender = 'man';
+  else if(womenNeeded === 0) wrongGender = 'woman';
+  if(!wrongGender) return;
+  let removed = 0;
+  IC_MEMBERS.forEach(({player}) => {
+    const e = (player.email||'').toLowerCase();
+    if(!MS.specificPlayers.has(e)) return;
+    const g = (player.gender||'').toLowerCase();
+    if(g === wrongGender){ MS.specificPlayers.delete(e); removed++; }
+  });
+  if(removed > 0){
+    const fmtLabel = MS.format === 'singles' ? 'Singles' : 'Doubles';
+    const neededLabel = wrongGender === 'man' ? 'Women' : 'Men';
+    showToast(`Invite pool updated for Mixed ${fmtLabel} — only ${neededLabel} shown.`, '#f59e0b');
+  }
+}
+
 function _smGetInviteBuckets(){
   const mySkill  = parseFloat(S.skill || SESSION_PLAYER?.skill_level || 0);
   const myGender = (SESSION_PLAYER?.gender || '').toLowerCase();
-  const filtered = IC_MEMBERS.filter(m =>
-    MS.genderPref === 'same' ? (m.player.gender||'').toLowerCase() === myGender : true
-  );
+  const mixedNeeded = MS.genderPref === 'mixed' ? _smMixedNeededGenders() : null;
+  const filtered = IC_MEMBERS.filter(m => {
+    if(MS.genderPref === 'same') return (m.player.gender||'').toLowerCase() === myGender;
+    if(mixedNeeded && mixedNeeded !== 'both') return (m.player.gender||'').toLowerCase() === mixedNeeded;
+    return true;
+  });
   const buckets = [
     { key:'far_below', label:'.5+ Below My Level', members:[] },
     { key:'below',     label:'.25 Below My Level', members:[] },
