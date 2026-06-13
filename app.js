@@ -4816,7 +4816,9 @@ async function loadConfirmedMatches(){
         organizerName: m.organizer_name || 'Unknown',
         organizerEmail: m.organizer_email || '',
         maxPlayers: maxNeeded,
-        matchDateTime: _mStart ? _mStart.getTime() : null
+        matchDateTime: _mStart ? _mStart.getTime() : null,
+        genderPref: m.gender_pref || 'either',
+        format: m.match_type || 'singles'
       };
       // Organizer-only actions
       if(isOrganizer){
@@ -5991,7 +5993,9 @@ async function loadInvitedByOthersPage(){
           organizerName: m.organizer_name || 'Unknown',
           organizerEmail: m.organizer_email || '',
           maxPlayers: maxNeeded,
-          matchDateTime: m.match_date&&m.time_start ? new Date(m.match_date+'T'+m.time_start).getTime() : null
+          matchDateTime: m.match_date&&m.time_start ? new Date(m.match_date+'T'+m.time_start).getTime() : null,
+          genderPref: m.gender_pref || 'either',
+          format: m.match_type || 'singles'
         };
         const card=document.createElement('div');
         card.style.cssText='background:#ffffff;border:3px solid #dc2626;border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);';
@@ -6064,7 +6068,9 @@ async function loadInvitedByOthersPage(){
           organizerName: ((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim() || '',
           organizerEmail: m.organizer_email || '',
           maxPlayers: maxNeeded,
-          matchDateTime: m.match_date && m.time_start ? new Date(m.match_date+'T'+m.time_start).getTime() : null
+          matchDateTime: m.match_date && m.time_start ? new Date(m.match_date+'T'+m.time_start).getTime() : null,
+          genderPref: m.gender_pref || 'either',
+          format: m.match_type || 'singles'
         };
         const card=document.createElement('div');
         card.style.cssText='background:#ffffff;border:3px solid #f59e0b;border-radius:16px;padding:0;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);';
@@ -7898,7 +7904,8 @@ window.confirmCantMakeIt = async function(matchId){
   const _myEmailFinal = (getMyEmail()||'').toLowerCase();
   const _orgEmailFinal = (d?.organizerEmail||'').toLowerCase();
   if(!waitlisted.length && _orgEmailFinal && _myEmailFinal === _orgEmailFinal){
-    setTimeout(()=>window.showEmergencyFill(matchId, null), 800);
+    const _droppedInfo = { email: _myEmailFinal, name: getMyName() || _myEmailFinal.split('@')[0], gender: (SESSION_PLAYER?.gender||'').toLowerCase() };
+    setTimeout(()=>window.showEmergencyFill(matchId, _droppedInfo), 800);
   }
 
   if(waitlisted.length){
@@ -7965,13 +7972,18 @@ window.confirmCantMakeIt = async function(matchId){
 let _efMatchId = null;
 let _efCandidates = [];
 let _efSelected = new Set();
-let _efGenderNeeded = null;
-let _efCurrentMode = null;
+let _efGenderFilter = null;
+let _efDroppedEmail = null;
+let _efDroppedName = null;
+let _efDroppedGender = null;
 
-window.showEmergencyFill = async function(matchId, droppedGender){
+window.showEmergencyFill = async function(matchId, droppedInfo){
   _efMatchId = matchId;
-  _efGenderNeeded = droppedGender || null;
   _efSelected = new Set();
+  _efGenderFilter = null;
+  _efDroppedEmail = (droppedInfo?.email || '').toLowerCase() || null;
+  _efDroppedName  = droppedInfo?.name  || null;
+  _efDroppedGender = (droppedInfo?.gender || '').toLowerCase() || null;
 
   const d = window._cmCache[matchId] || {};
   const matchInfo = [d.dateStr, d.timeStr, d.courtName && d.courtName !== 'Court TBD' ? d.courtName : null]
@@ -7987,9 +7999,10 @@ window.showEmergencyFill = async function(matchId, droppedGender){
     const rows = inRes.ok ? await inRes.json() : [];
     rows.forEach(r => alreadyIn.add((r.player_email||'').toLowerCase()));
   }catch(_){}
+  // Fix 1: Exclude the dropped player so they don't appear in the fill pool
+  if(_efDroppedEmail) alreadyIn.add(_efDroppedEmail);
 
-  // Build flat player list for Emergency Fill — never overwrite IC_MEMBERS (it uses
-  // {player, conn, lastPlayed} wrappers; corrupting it would break the invite grid).
+  // Build flat player list — never overwrite IC_MEMBERS (Rule 47)
   let _efMemberFlat = [];
   if(IC_MEMBERS && IC_MEMBERS.length){
     _efMemberFlat = IC_MEMBERS.map(m => m.player).filter(Boolean);
@@ -8017,6 +8030,15 @@ window.showEmergencyFill = async function(matchId, droppedGender){
   const overlay = document.getElementById('emergencyFillOverlay');
   if(!overlay) return;
 
+  // Fix 2: Smart gender prompt when match has gender preference and a player dropped
+  const matchGenderPref = d.genderPref || 'either';
+  const showGenderPrompt = (matchGenderPref === 'mixed' || matchGenderPref === 'same') && !!_efDroppedGender;
+
+  // Fix 4: Send a Text link — mobile only
+  const textLinkHtml = _icIsMobile
+    ? '<div id="efTextLink" style="text-align:center;margin-top:14px;"><span onclick="window.efSendText()" style="font-size:13px;color:#6b7280;cursor:pointer;text-decoration:underline;">Can\'t find anyone? Send a text instead &#8594;</span></div>'
+    : '';
+
   overlay.innerHTML =
     '<div style="max-width:520px;margin:0 auto;padding:20px 16px 80px;">'+
       '<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">'+
@@ -8028,17 +8050,10 @@ window.showEmergencyFill = async function(matchId, droppedGender){
         '<button onclick="document.getElementById(\'emergencyFillOverlay\').style.display=\'none\'" '+
           'style="margin-left:auto;background:none;border:none;font-size:22px;color:#9ca3af;cursor:pointer;padding:4px 8px;">&#10005;</button>'+
       '</div>'+
-      '<div style="font-size:13px;color:#dc2626;font-weight:600;margin-bottom:8px;">Waitlist is empty — reach out to fill this spot fast.</div>'+
-      (_efGenderNeeded?
-        '<div id="efGenderToggle" style="font-size:13px;color:#6b7280;margin-bottom:14px;">Showing <strong>'+_efGenderNeeded+'s</strong> only &middot; <span onclick="window.efOverrideGender()" style="color:#1a7a3a;cursor:pointer;text-decoration:underline;">Show all IC instead &#8594;</span></div>'
-        :'<div style="margin-bottom:14px;"></div>')+
-      '<div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:18px;" id="efModeTiles">'+
-        _buildEfModeTile('gender','&#128107;',droppedGender?'Same Gender':'Any Gender',droppedGender?'Match dropped player':'All IC members')+
-        _buildEfModeTile('level','&#127919;','My Level','IC members at your skill')+
-        _buildEfModeTile('all','&#128101;','All IC Members','Anyone not already invited')+
-        _buildEfModeTile('text','&#128172;','Send a Text','Open your messages app')+
-      '</div>'+
-      '<div id="efList" style="display:none;"></div>'+
+      '<div style="font-size:13px;color:#dc2626;font-weight:600;margin-bottom:14px;">Waitlist is empty — reach out to fill this spot fast.</div>'+
+      (showGenderPrompt ? _efBuildGenderPromptHTML(matchGenderPref) : '')+
+      '<div id="efList" style="'+(showGenderPrompt ? 'display:none;' : '')+'"></div>'+
+      textLinkHtml+
       '<div id="efSendBar" style="display:none;position:fixed;bottom:0;left:0;right:0;padding:16px;background:#fff;border-top:2px solid #e5e7eb;box-shadow:0 -2px 8px rgba(0,0,0,0.12);z-index:10001;">'+
         '<button onclick="window.efSendInvites()" id="efSendBtn" '+
           'style="width:100%;max-width:520px;display:block;margin:0 auto;padding:0;min-height:64px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;">'+
@@ -8047,109 +8062,148 @@ window.showEmergencyFill = async function(matchId, droppedGender){
       '</div>'+
     '</div>';
 
+  if(!showGenderPrompt) _efRenderCandidateList();
+
   overlay.style.display = 'block';
 };
 
-function _buildEfModeTile(mode, icon, title, sub){
-  return '<div onclick="window.efSelectMode(\''+mode+'\')" id="efTile_'+mode+'" '+
-    'style="cursor:pointer;border:2px solid #e5e7eb;border-radius:14px;padding:16px 12px;min-height:56px;display:flex;align-items:center;gap:14px;background:#fff;transition:all .15s;">'+
-    '<div style="font-size:26px;flex-shrink:0;">'+icon+'</div>'+
-    '<div style="text-align:left;">'+
-      '<div style="font-size:15px;font-weight:800;color:#111;margin-bottom:2px;">'+title+'</div>'+
-      '<div style="font-size:13px;color:#6b7280;line-height:1.4;">'+sub+'</div>'+
+function _efBuildGenderPromptHTML(matchGenderPref){
+  const g = _efDroppedGender || '';
+  const gLabel  = g === 'man' ? 'Man' : g === 'woman' ? 'Woman' : g;
+  const gPlural = g === 'man' ? 'Men' : g === 'woman' ? 'Women' : gLabel+'s';
+  const safeName = (_efDroppedName || 'A player').replace(/'/g,'&#39;');
+  const promptText = matchGenderPref === 'mixed'
+    ? safeName+' ('+gLabel+') just dropped. Do you want to invite '+gPlural+' only to keep the match balanced, or open it to all IC members?'
+    : safeName+' just dropped. Do you want to invite '+gPlural+' only or open to all IC members?';
+  const safeG = g.replace(/'/g,"\\'");
+  return '<div id="efGenderPrompt" style="background:#fffbeb;border:2px solid #fbbf24;border-radius:12px;padding:16px;margin-bottom:14px;">'+
+    '<div style="font-size:14px;color:#111;font-weight:600;margin-bottom:12px;">'+promptText+'</div>'+
+    '<div style="display:flex;gap:10px;">'+
+      '<button onclick="window.efChooseGender(\''+safeG+'\')" '+
+        'style="flex:1;padding:10px 12px;border-radius:8px;border:2px solid #1a7a3a;background:#1a7a3a;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">'+
+        gPlural+' Only</button>'+
+      '<button onclick="window.efChooseGender(null)" '+
+        'style="flex:1;padding:10px 12px;border-radius:8px;border:2px solid #e5e7eb;background:#fff;color:#374151;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">'+
+        'Open to All</button>'+
     '</div>'+
   '</div>';
 }
 
-window.efSelectMode = function(mode){
-  _efCurrentMode = mode;
-  _efSelected = new Set();
+window.efChooseGender = function(genderFilter){
+  _efGenderFilter = genderFilter;
+  const prompt = document.getElementById('efGenderPrompt');
+  if(prompt) prompt.style.display = 'none';
+  const listEl = document.getElementById('efList');
+  if(listEl) listEl.style.display = 'block';
+  _efRenderCandidateList();
+};
 
-  ['gender','level','all','text'].forEach(m=>{
-    const tile = document.getElementById('efTile_'+m);
-    if(!tile) return;
-    tile.style.borderColor = m===mode ? '#1a7a3a' : '#e5e7eb';
-    tile.style.background  = m===mode ? '#f0fdf4' : '#fff';
-  });
-
-  const listEl  = document.getElementById('efList');
-  const sendBar = document.getElementById('efSendBar');
+function _efRenderCandidateList(){
+  const listEl = document.getElementById('efList');
   if(!listEl) return;
-
-  if(mode === 'text'){
-    listEl.style.display = 'none';
-    if(sendBar) sendBar.style.display = 'none';
-    const d = window._cmCache[_efMatchId] || {};
-    const matchInfo2 = [d.dateStr, d.timeStr, d.courtName && d.courtName !== 'Court TBD' ? d.courtName : null]
-      .filter(Boolean).join(' ');
-    const orgFirst = ((d.organizerName||'').split(' ')[0]) || 'a friend';
-    const msg = 'Hey! We need one more player for pickleball on '+matchInfo2+'. Interested? Join PBallConnect: '+window.location.origin+'/';
-    window.open('sms:?body='+encodeURIComponent(msg.substring(0,160)), '_self');
-    return;
-  }
 
   const mySkill = parseFloat(SESSION_PLAYER?.skill_self || SESSION_PLAYER?.skill_level || '0') || 0;
   let pool = _efCandidates.slice();
-
-  if(mode === 'gender' && _efGenderNeeded){
-    const gLower = _efGenderNeeded.toLowerCase();
-    const genderedPool = pool.filter(p => (p.gender||'').toLowerCase() === gLower);
-    if(genderedPool.length) pool = genderedPool;
-  } else if(mode === 'level' && mySkill > 0){
-    const levelPool = pool.filter(p => {
-      const ps = parseFloat(p.skill_self || p.skill_level || '0') || 0;
-      return ps > 0 && Math.abs(ps - mySkill) <= 0.5;
-    });
-    if(levelPool.length) pool = levelPool;
-  }
+  if(_efGenderFilter) pool = pool.filter(p => (p.gender||'').toLowerCase() === _efGenderFilter);
 
   if(!pool.length){
-    listEl.innerHTML = '<div style="text-align:center;padding:24px;color:#9ca3af;font-size:13px;">No available IC members — try another mode or send a text.</div>';
+    listEl.innerHTML = '<div style="text-align:center;padding:24px;color:#9ca3af;font-size:13px;">No available IC members — try sending a text.</div>';
     listEl.style.display = 'block';
-    if(sendBar) sendBar.style.display = 'none';
     return;
   }
 
-  let html = '<div style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Select players to invite</div>';
+  const bucketDefs = [
+    { label:'.5+ Below My Level', players:[] },
+    { label:'.25 Below My Level', players:[] },
+    { label:'My Level',           players:[], center:true },
+    { label:'.25 Above My Level', players:[] },
+    { label:'.5+ Above My Level', players:[] },
+  ];
+  const noRating = [];
+
   pool.forEach(p => {
-    const keyId = (p.email||'').replace(/[@.]/g,'_');
-    const name = ((p.first_name||'')+' '+(p.last_name||'')).trim() || p.email;
-    const skill = p.skill_self || p.skill_level || '—';
-    html +=
-      '<div id="efPlayer_'+keyId+'" onclick="window.efTogglePlayer(\''+p.email+'\')" '+
-        'style="display:flex;align-items:center;gap:10px;padding:11px 12px;margin-bottom:6px;border-radius:10px;border:2px solid #e5e7eb;background:#fff;cursor:pointer;transition:all .12s;">'+
-        '<div id="efChk_'+keyId+'" style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:2px solid #d1d5db;background:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;transition:all .12s;"></div>'+
-        '<div style="flex:1;">'+
-          '<div style="font-size:14px;font-weight:700;color:#111;">'+name+'</div>'+
-          '<div style="font-size:11px;color:#9ca3af;">'+skill+'</div>'+
-        '</div>'+
-      '</div>';
+    const ps = parseFloat(p.skill_self || p.skill_level || '0') || 0;
+    if(!ps || !mySkill){ noRating.push(p); return; }
+    const diff = ps - mySkill;
+    if(diff <= -0.375)      bucketDefs[0].players.push(p);
+    else if(diff <= -0.125) bucketDefs[1].players.push(p);
+    else if(diff <=  0.125) bucketDefs[2].players.push(p);
+    else if(diff <=  0.375) bucketDefs[3].players.push(p);
+    else                    bucketDefs[4].players.push(p);
   });
+
+  const _fmtSk = v => { const r = Math.round(v * 4) / 4; return r % 1 === 0 ? r.toFixed(1) : String(r); };
+  const ranges = mySkill ? [
+    '≤ '+_fmtSk(mySkill - 0.50),
+    _fmtSk(mySkill - 0.25),
+    _fmtSk(mySkill),
+    _fmtSk(mySkill + 0.25),
+    '≥ '+_fmtSk(mySkill + 0.50),
+  ] : ['','','','',''];
+
+  const _pill = (email, name) => {
+    const sel = _efSelected.has(email);
+    const ps  = sel
+      ? 'background:#1a7a3a;color:#fff;border:1px solid #1a7a3a;'
+      : 'background:#fff;color:#374151;border:1px solid #d1d5db;';
+    const se = email.replace(/'/g,"\\'");
+    return '<div onclick="window.efTogglePlayer(\''+se+'\')" style="'+ps+'border-radius:999px;padding:3px 7px;font-size:11px;font-weight:600;margin-bottom:3px;cursor:pointer;text-align:center;user-select:none;">'+name+'</div>';
+  };
+
+  let html = '<div style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Select players to invite</div>';
+  html += '<div style="overflow-x:auto;margin-bottom:10px;">';
+  html += '<table style="width:100%;border-collapse:separate;border-spacing:3px 0;table-layout:fixed;">';
+  html += '<thead><tr>';
+  bucketDefs.forEach((bkt, i) => {
+    const hasP = bkt.players.length > 0;
+    const hBg  = bkt.center
+      ? 'background:#d1fae5;color:#1a7a3a;'
+      : hasP ? 'background:#f1f5f9;color:#374151;' : 'background:#f1f5f9;color:#d1d5db;';
+    html += '<th style="'+hBg+'border-radius:8px 8px 0 0;padding:5px 3px;text-align:center;font-weight:800;">';
+    html += '<div style="font-size:10px;">'+bkt.label+'</div>';
+    if(ranges[i]) html += '<div style="font-size:9px;opacity:.65;margin-top:1px;">'+ranges[i]+'</div>';
+    html += '</th>';
+  });
+  html += '</tr></thead><tbody><tr>';
+  bucketDefs.forEach(bkt => {
+    html += '<td style="vertical-align:top;padding:4px 1px;">';
+    if(bkt.players.length){
+      bkt.players.forEach(p => {
+        const email = (p.email||'').toLowerCase();
+        const name  = ((p.first_name||'')+' '+(p.last_name||'')).trim() || p.email;
+        html += _pill(email, name);
+      });
+    } else {
+      html += '<div style="font-size:10px;color:#9ca3af;text-align:center;padding-top:4px;">—</div>';
+    }
+    html += '</td>';
+  });
+  html += '</tr></tbody></table></div>';
+
+  if(noRating.length){
+    html += '<div style="font-size:11px;font-weight:700;color:#9ca3af;margin:10px 0 6px;">No rating on file</div>';
+    noRating.forEach(p => {
+      const email = (p.email||'').toLowerCase();
+      const name  = ((p.first_name||'')+' '+(p.last_name||'')).trim() || p.email;
+      html += _pill(email, name);
+    });
+  }
 
   listEl.innerHTML = html;
   listEl.style.display = 'block';
-  if(sendBar) sendBar.style.display = 'none';
-};
+}
 
 window.efTogglePlayer = function(email){
-  const keyId = (email||'').replace(/[@.]/g,'_');
-  const chk = document.getElementById('efChk_'+keyId);
-  const row = document.getElementById('efPlayer_'+keyId);
-
   if(_efSelected.has(email)){
     _efSelected.delete(email);
-    if(chk){ chk.style.background='#fff'; chk.style.borderColor='#d1d5db'; chk.textContent=''; }
-    if(row){ row.style.borderColor='#e5e7eb'; row.style.background='#fff'; }
   } else {
     _efSelected.add(email);
-    if(chk){ chk.style.background='#1a7a3a'; chk.style.borderColor='#1a7a3a'; chk.textContent='✓'; }
-    if(row){ row.style.borderColor='#1a7a3a'; row.style.background='#f0fdf4'; }
   }
-
+  _efRenderCandidateList();
   const sendBar = document.getElementById('efSendBar');
   const btn = document.getElementById('efSendBtn');
   if(sendBar) sendBar.style.display = _efSelected.size > 0 ? 'block' : 'none';
-  if(btn) btn.textContent = 'Send Invites ('+_efSelected.size+')';
+  if(btn) btn.textContent = 'Send Invites'+(_efSelected.size > 0 ? ' ('+_efSelected.size+')' : '');
 };
 
 window.efSendInvites = async function(){
@@ -8198,11 +8252,12 @@ window.efSendInvites = async function(){
   showToast('Invites sent to '+sent+' player'+(sent!==1?'s':'')+' 🎾','#1a7a3a');
 };
 
-window.efOverrideGender = function(){
-  _efGenderNeeded = null;
-  const toggle = document.getElementById('efGenderToggle');
-  if(toggle) toggle.style.display = 'none';
-  if(_efCurrentMode) window.efSelectMode(_efCurrentMode);
+window.efSendText = function(){
+  const d = window._cmCache[_efMatchId] || {};
+  const matchInfo2 = [d.dateStr, d.timeStr, d.courtName && d.courtName !== 'Court TBD' ? d.courtName : null]
+    .filter(Boolean).join(' ');
+  const msg = 'Hey! We need one more player for pickleball on '+matchInfo2+'. Interested? Join PBallConnect: '+window.location.origin+'/';
+  window.open('sms:?body='+encodeURIComponent(msg.substring(0,160)), '_self');
 };
 
 function addHours(timeStr, hrs){
