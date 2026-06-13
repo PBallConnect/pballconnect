@@ -2670,6 +2670,24 @@ function selectMatchFormat(fmt, el){
   if(dbl){ dbl.style.border='1px solid #e5e7eb'; dbl.style.background='#fff'; }
   if(sgl){ sgl.style.border='1px solid #e5e7eb'; sgl.style.background='#fff'; }
   if(el){ el.style.border='2px solid #1a7a3a'; el.style.background='#f0fdf4'; }
+  // Mixed is only valid for Doubles — hide it for Singles; restore for Doubles
+  const _mixedTile = document.getElementById('smGenderMixed');
+  if(fmt === 'singles'){
+    if(_mixedTile) _mixedTile.style.display = 'none';
+    if(MS.genderPref === 'mixed'){
+      MS.genderPref = 'either';
+      MS.specificPlayers = new Set();
+      ['smGenderEither','smGenderMixed','smGenderSame','smGenderGroup'].forEach(id=>{
+        const d=document.getElementById(id); if(!d) return;
+        d.style.border='1px solid #e5e7eb'; d.style.background='#fff';
+      });
+      const _openEl = document.getElementById('smGenderEither');
+      if(_openEl){ _openEl.style.border='2px solid #1a7a3a'; _openEl.style.background='#f0fdf4'; }
+      showToast('Mixed format is only available for Doubles — switched to Open', '#f59e0b');
+    }
+  } else {
+    if(_mixedTile) _mixedTile.style.display = 'flex';
+  }
   if(MS.inviteMode==='specific') buildSpecificPicker();
   smUpdateNeededBox();
   renderCourtCapacityWarning();
@@ -7367,7 +7385,7 @@ function initSetupMatch(){
   // Gender buttons — reset borders, backgrounds, and any dimming from a previous Set Group selection
   const ge=document.getElementById('smGenderEither'), gm=document.getElementById('smGenderMixed'), gs=document.getElementById('smGenderSame'), gg=document.getElementById('smGenderGroup');
   if(ge){ ge.style.border='2px solid #1a7a3a'; ge.style.background='#f0fdf4'; ge.classList.remove('sm-option-dimmed'); }
-  if(gm){ gm.style.border='1px solid #e5e7eb'; gm.style.background='#fff'; gm.classList.remove('sm-option-dimmed'); }
+  if(gm){ gm.style.border='1px solid #e5e7eb'; gm.style.background='#fff'; gm.style.display=''; gm.classList.remove('sm-option-dimmed'); }
   if(gs){ gs.style.border='1px solid #e5e7eb'; gs.style.background='#fff'; gs.classList.remove('sm-option-dimmed'); }
   if(gg){ gg.style.border='1px solid #e5e7eb'; gg.style.background='#fff'; }
   const gw=document.getElementById('smGenderGroupWrap'); if(gw){ gw.style.display='none'; gw.innerHTML=''; }
