@@ -1256,6 +1256,11 @@ async function doSaveProfile(){
     document.getElementById('editProfileBtnEl')?.classList.remove('active');
     document.getElementById('editModeBanner')?.remove();
     document.getElementById('readOnlyBanner')?.remove();
+    document.getElementById('editModeStickyBanner').style.display='none';
+    const _pshSave=document.getElementById('profileStickyHeader');
+    if(_pshSave) _pshSave.style.top='';
+    const _ppSave=document.getElementById('page-playerProfile');
+    if(_ppSave) _ppSave.style.paddingTop='';
     // Ensure consent stays checked — once agreed, always agreed
     S._tosConsent = true;
     S._privacyConsent = true;
@@ -1429,7 +1434,12 @@ function showPage(page){
     if(page === 'playerProfile' && _newUserRegistrationStarted){ /* allowed */ }
     else { showPage('welcome'); return; }
   }
-  if(page!=='playerProfile'){stopChangeDetection();_editModeActive=false;}
+  if(page!=='playerProfile'){
+    stopChangeDetection();_editModeActive=false;
+    document.getElementById('editModeStickyBanner').style.display='none';
+    const _pshNav=document.getElementById('profileStickyHeader');if(_pshNav)_pshNav.style.top='';
+    const _ppNav=document.getElementById('page-playerProfile');if(_ppNav)_ppNav.style.paddingTop='';
+  }
   closeNav();
   setTimeout(closeNav, 50); // catch any async re-opens
   window.scrollTo(0,0); // always open pages at the top
@@ -6260,9 +6270,10 @@ function buildSmInviteSummaryGrid(){
 
   if(pref === 'mixed'){
     const n = MS.numCourts;
+    const playersPerSide = MS.format === 'singles' ? 1 : 2;
     let menNeeded = 0, womenNeeded = 0;
-    if(myGender === 'man')        { menNeeded = (n * 2) - 1; womenNeeded = n * 2; }
-    else if(myGender === 'woman') { womenNeeded = (n * 2) - 1; menNeeded = n * 2; }
+    if(myGender === 'man')        { menNeeded = (n * playersPerSide) - 1; womenNeeded = n * playersPerSide; }
+    else if(myGender === 'woman') { womenNeeded = (n * playersPerSide) - 1; menNeeded = n * playersPerSide; }
     else                           { menNeeded = Math.floor(minNeeded / 2); womenNeeded = Math.ceil(minNeeded / 2); }
     let invMen = 0, invWomen = 0;
     IC_MEMBERS.forEach(({player}) => {
@@ -8643,6 +8654,11 @@ async function openEditProfile(){
   // Give restoreProfileForm time to populate fields before unlocking
   setTimeout(()=>{
     unlockProfileForm();
+    document.getElementById('editModeStickyBanner').style.display='block';
+    const _psh=document.getElementById('profileStickyHeader');
+    if(_psh) _psh.style.top='96px';
+    const _pp=document.getElementById('page-playerProfile');
+    if(_pp) _pp.style.paddingTop='44px';
     document.getElementById('editProfileBtnEl')?.classList.add('active');
     const card=document.getElementById('step1');
     const h2=card?.querySelector('h2');
@@ -12757,13 +12773,16 @@ window.submitBetaFeedback = async function submitBetaFeedback(){
 
     try{
       const severityLabel = { idea:'💡 Feature Idea', minor:'🟡 Minor', annoying:'🟠 Annoying', broken:'🔴 Broken' }[severity] || severity;
-      const note = 'Feature: ' + feature + '\nSeverity: ' + severityLabel +
-        '\n\nWhat happened:\n' + whatHappened +
-        (whatExpected ? '\n\nExpected:\n' + whatExpected : '') +
-        (screenshotUrl ? '\n\nScreenshot: ' + screenshotUrl : '') +
-        '\n\nPlayer: ' + playerName + ' (' + playerEmail + ')' +
-        '\nPage: ' + pageUrl +
-        '\nUser Agent: ' + userAgent;
+      const row = (label, val) => `<p style="margin:0 0 12px;"><strong style="color:#fff;">${label}:</strong><br>${val}</p>`;
+      const note = [
+        row('Feature', feature),
+        row('Severity', severityLabel),
+        row('What Happened', whatHappened.replace(/\n/g,'<br>')),
+        row('What Expected', whatExpected ? whatExpected.replace(/\n/g,'<br>') : '<em style="opacity:.6;">Not provided</em>'),
+        row('Player', playerName + ' (' + playerEmail + ')'),
+        row('Page', pageUrl),
+        screenshotUrl ? row('Screenshot', '<a href="' + screenshotUrl + '" style="color:#4CAF7D;">View screenshot</a>') : ''
+      ].join('');
       await sendEmail({
         to_email: 'david@pballconnect.com',
         type: 'notification',

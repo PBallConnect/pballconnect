@@ -855,6 +855,12 @@
   .login-field{margin-bottom:12px;}
   .login-label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;
     letter-spacing:.07em;color:var(--dim);margin-bottom:6px;}
+  /* ── Edit Mode Sticky Banner ─────────────────────── */
+  #editModeStickyBanner{position:fixed;top:52px;left:240px;right:0;z-index:390;
+    background:#fef3c7;border-bottom:2px solid #fcd34d;color:#b45309;
+    font-size:16px;font-weight:600;text-align:center;padding:10px 16px;
+    box-sizing:border-box;}
+  @media(max-width:768px){#editModeStickyBanner{left:0;}}
   /* ── Top Header Bar ───────────────────────────────── */
   .top-header{display:flex;align-items:center;justify-content:space-between;
     padding:0 20px;padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right));
