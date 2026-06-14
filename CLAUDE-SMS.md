@@ -3,6 +3,8 @@
 _General SMS infrastructure + Match Invite SMS system (added May 16, 2026)._
 _Cross-reference: CLAUDE.md (overview), CLAUDE-SCHEMA.md (schema), CLAUDE-RULES.md (Rules 33, 37–43, 48)._
 
+_Last updated: June 13, 2026_
+
 ---
 
 ## SMS Notification System

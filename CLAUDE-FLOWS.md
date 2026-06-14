@@ -3,6 +3,8 @@
 _Created June 2026. Cross-reference: CLAUDE.md, CLAUDE-SCHEMA.md, CLAUDE-RULES.md, CLAUDE-SMS.md._
 _Update this file whenever any function in a flow chain is modified. Never change a flow without updating here first._
 
+_Last updated: June 13, 2026_
+
 ---
 
 ## How To Use This File

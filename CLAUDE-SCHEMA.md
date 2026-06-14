@@ -3,6 +3,8 @@
 _Full database schema, architecture patterns, feature behavior specs, and UI patterns._
 _Cross-reference: CLAUDE.md (overview), CLAUDE-RULES.md (rules), CLAUDE-SMS.md (SMS system)._
 
+_Last updated: June 13, 2026_
+
 ---
 
 ## Database Schema
