@@ -1,6 +1,6 @@
 # CLAUDE.md — PBallConnect Reference
 
-_Last updated: June 13, 2026_
+_Last updated: June 14, 2026_
 
 ---
 
@@ -96,11 +96,12 @@ No tests, no linter, no build commands.
 
 4. **Create Group: Mixed gender count may not update correctly in all cases.** `buildGroupSummaryGrid()` uses a case-insensitive email Map for gender lookup — verify gender fields are consistent across all IC members. Data is clean as of May 30 (`'Man'`/`'Woman'` normalized); this is a code-path verification gap only.
 
-5. **Bug C — phone/link invite paths: IC connection never established.** `icPostPendingConnection()` stores `pending_TOKEN` as a placeholder `recipient_email` for phone and link invite paths (no recipient email known at invite time). `handlePostRegistrationInvite()` PATCHes `connections` where `recipient_email = newPlayerEmail` — this matches zero rows for the placeholder. The IC connection is never approved for these paths. Email invite path works correctly (recipient email is known at invite time). Fix required before phone/link invite paths are reliable.
+5. ~~**Goal rating slider track fill not rendering**~~ — fixed May 31. See Resolved list.
 
-6. ~~**Goal rating slider track fill not rendering**~~ — fixed May 31. See Resolved list.
+6. **IC member count includes pending connections.** New user's "My IC" tile shows 1 immediately after joining via invite, before the organizer accepts the reciprocal connection. Count should only include `status = 'approved'` rows where the current user is requester or recipient. Affects all paths.
 
 **Resolved (do not re-introduce):**
+- ~~**Bug C — link/text invite paths: IC connection never established**~~ — Fixed June 2026. `handlePostRegistrationInvite()` now includes a fallback that queries `connections` by `recipient_email = 'pending_' + inv.invite_token`. Two RLS policies added to `connections` table: SELECT and UPDATE for `recipient_email ILIKE 'pending_%'`. Reciprocal POST fixed by resolving `inv._resolvedInviterEmail` from the fallback row, used as fallback when `inv.inviter_email` is undefined (token paths only). QR path unaffected.
 - ~~**Registration flow regression (June 2026)**~~ — `const _isNewRegistration` declared inside `try{}` caused silent `ReferenceError` after save; new users saw "You're All Set" then were dumped to `page-welcome`. Fixed by moving the declaration before `try{}`.
 - ~~`invites` table RLS INSERT policy missing~~ — policy added in Supabase; invites now write correctly
 - ~~`invite_token` missing from INSERT payload~~ — client-side token generated via `crypto.getRandomValues` and included in payload
