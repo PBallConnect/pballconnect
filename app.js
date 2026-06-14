@@ -11963,7 +11963,6 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
               {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
             );
             const fbRows = fbRes.ok ? await fbRes.json() : [];
-            console.log('BugC fallback: looking for', pendingKey, 'fbRes status:', fbRes.status, 'fbRows:', JSON.stringify(fbRows));
             if(fbRows.length){
               inv._resolvedInviterEmail = fbRows[0].requester_email;
               await fetch(`${SUPABASE_URL}/rest/v1/connections?id=eq.${fbRows[0].id}`,{
@@ -11984,7 +11983,6 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
           headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal,resolution=ignore-duplicates'},
           body:JSON.stringify({requester_email:newPlayerEmail,requester_name:newPlayerName,recipient_email:inv.inviter_email||inv._resolvedInviterEmail,recipient_name:inv.inviter_name||'',status:'pending'})
         });
-        console.log('BugC reciprocal POST status:', recipRes.status, await recipRes.text());
         showToast('🎾 You joined '+shortName+'\'s IC! They\'ll be notified to connect back.','#4CAF7D');
       }catch(e){}
     }
