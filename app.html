@@ -2514,5 +2514,14 @@
   </div>
 </div>
 
+<div id="debugPanel" style="position:fixed;bottom:0;left:0;right:0;max-height:200px;overflow-y:auto;background:#000;color:#0f0;font-size:11px;font-family:monospace;padding:8px;z-index:99999;"></div>
+<script>
+const _dbg = document.getElementById('debugPanel');
+const _origWarn = console.warn.bind(console);
+const _origLog = console.log.bind(console);
+console.warn = (...a) => { _origWarn(...a); if(_dbg) _dbg.innerHTML += '<div style="color:#f87171">WARN: '+a.join(' ')+'</div>'; _dbg.scrollTop=_dbg.scrollHeight; };
+console.log = (...a) => { _origLog(...a); if(_dbg) _dbg.innerHTML += '<div>LOG: '+a.join(' ')+'</div>'; _dbg.scrollTop=_dbg.scrollHeight; };
+</script>
+
 </body>
 </html>
