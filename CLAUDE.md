@@ -1,6 +1,6 @@
 # CLAUDE.md — PBallConnect Reference
 
-_Last updated: June 10, 2026_
+_Last updated: June 13, 2026_
 
 ---
 
