@@ -2,6 +2,8 @@
 
 _All 56 rules. No trimming. Cross-reference with CLAUDE.md, CLAUDE-SCHEMA.md, CLAUDE-SMS.md._
 
+_Last updated: June 13, 2026_
+
 ---
 
 1. **Read before writing.** Always read a file with the Read tool before editing or overwriting it.
