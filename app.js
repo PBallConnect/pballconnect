@@ -11978,11 +11978,12 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
           }
         }
         // Create reciprocal connection (new user → inviter) as pending — inviter must accept before it counts in their IC
-        await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
+        const recipRes = await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
           method:'POST',
           headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal,resolution=ignore-duplicates'},
           body:JSON.stringify({requester_email:newPlayerEmail,requester_name:newPlayerName,recipient_email:inv.inviter_email,recipient_name:inv.inviter_name||'',status:'pending'})
         });
+        console.log('BugC reciprocal POST status:', recipRes.status, await recipRes.text());
         showToast('🎾 You joined '+shortName+'\'s IC! They\'ll be notified to connect back.','#4CAF7D');
       }catch(e){}
     }
