@@ -2688,6 +2688,23 @@ function selectMatchFormat(fmt, el){
   } else {
     if(_mixedTile) _mixedTile.style.display = 'flex';
   }
+  // Set Group is only available for Doubles — hide it for Singles; restore for Doubles
+  const _groupTile = document.getElementById('smGenderGroup');
+  const _groupDivider = document.getElementById('smGenderGroupDivider');
+  if(fmt === 'singles'){
+    if(_groupTile) _groupTile.style.display = 'none';
+    if(_groupDivider) _groupDivider.style.display = 'none';
+    const _groupWrap = document.getElementById('smGenderGroupWrap');
+    if(MS.selectedGroupId || (_groupWrap && _groupWrap.style.display !== 'none')){
+      _smExitGroupMode();
+      const _openElG = document.getElementById('smGenderEither');
+      if(_openElG){ _openElG.style.border='2px solid #1a7a3a'; _openElG.style.background='#f0fdf4'; }
+      showToast('Set Groups are only available for Doubles — selection cleared', '#f59e0b');
+    }
+  } else {
+    if(_groupTile) _groupTile.style.display = 'flex';
+    if(_groupDivider) _groupDivider.style.display = 'flex';
+  }
   if(MS.inviteMode==='specific') buildSpecificPicker();
   smUpdateNeededBox();
   renderCourtCapacityWarning();
@@ -7393,7 +7410,8 @@ function initSetupMatch(){
   if(ge){ ge.style.border='2px solid #1a7a3a'; ge.style.background='#f0fdf4'; ge.classList.remove('sm-option-dimmed'); }
   if(gm){ gm.style.border='1px solid #e5e7eb'; gm.style.background='#fff'; gm.style.display=''; gm.classList.remove('sm-option-dimmed'); }
   if(gs){ gs.style.border='1px solid #e5e7eb'; gs.style.background='#fff'; gs.classList.remove('sm-option-dimmed'); }
-  if(gg){ gg.style.border='1px solid #e5e7eb'; gg.style.background='#fff'; }
+  if(gg){ gg.style.border='1px solid #e5e7eb'; gg.style.background='#fff'; gg.style.display='flex'; }
+  const ggd=document.getElementById('smGenderGroupDivider'); if(ggd) ggd.style.display='flex';
   const gw=document.getElementById('smGenderGroupWrap'); if(gw){ gw.style.display='none'; gw.innerHTML=''; }
   smUnlockStep4();
   const igs=document.getElementById('smInviteGridSection'); if(igs) igs.innerHTML='';
