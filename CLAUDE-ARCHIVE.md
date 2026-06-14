@@ -2,6 +2,8 @@
 
 _Archived from CLAUDE.md. These are resolved work logs from past sessions — kept for historical reference but removed from the main reference doc to reduce noise._
 
+_Last updated: June 13, 2026_
+
 ---
 
 ## Session learnings — May 16, 2026
