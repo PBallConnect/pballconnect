@@ -81,9 +81,9 @@ Steps 1–10 identical to Flow 1. Then:
 | 1 | Organizer copies IC invite link or sends text | — |
 | 2 | Invitee taps link | `invite.html?token=TOKEN` |
 | 3–10 | Same as Flow 1 steps 3–10 | Same |
-| 11+ | Registration completes — but IC connection fails to approve | Dashboard, IC tile = 0 |
+| 11+ | Registration completes — IC connection approved via fallback | Dashboard, IC tile = 1 |
 
-> ⚠️ **Known Bug C (unresolved as of June 2026):** For link and text invite paths, `icPostPendingConnection()` stores `pending_TOKEN` as a placeholder `recipient_email` in `connections`. When `handlePostRegistrationInvite()` tries to PATCH `connections` to `approved`, it finds zero matching rows (the real email doesn't match the placeholder). The IC connection is never established. Do not attempt to fix this without reading CLAUDE-SCHEMA.md § Inner Circle first and updating this flow.
+> ✅ **Fixed June 2026 —** `handlePostRegistrationInvite()` now includes a fallback lookup for `pending_TOKEN` placeholder rows created by link/text invite paths. On registration, if the primary email-based PATCH finds zero rows, the fallback queries `connections` by `recipient_email = 'pending_' + inv.invite_token` and patches the row with the real email and `status='approved'`. Email invite path unchanged.
 
 ---
 

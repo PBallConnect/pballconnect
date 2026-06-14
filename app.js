@@ -11954,6 +11954,28 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
           headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
           body:JSON.stringify({status:'approved'})
         });
+        // Fallback for link/text invite paths — connection row stored as pending_TOKEN when no email was known at invite time
+        if(inv.invite_token){
+          try{
+            const pendingKey = 'pending_'+inv.invite_token;
+            const fbRes = await fetch(
+              `${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(inv.inviter_email)}&recipient_email=eq.${encodeURIComponent(pendingKey)}&select=id`,
+              {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+            );
+            const fbRows = fbRes.ok ? await fbRes.json() : [];
+            if(fbRows.length){
+              await fetch(`${SUPABASE_URL}/rest/v1/connections?id=eq.${fbRows[0].id}`,{
+                method:'PATCH',
+                headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+                body:JSON.stringify({recipient_email:newPlayerEmail, status:'approved'})
+              });
+            } else {
+              console.warn('handlePostRegistrationInvite: no pending_TOKEN connection found for', inv.invite_token);
+            }
+          }catch(e){
+            console.warn('handlePostRegistrationInvite: fallback patch failed', e.message);
+          }
+        }
         // Create reciprocal connection (new user → inviter) as pending — inviter must accept before it counts in their IC
         await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
           method:'POST',
