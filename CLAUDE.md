@@ -9,6 +9,7 @@ _Last updated: June 10, 2026_
 - [CLAUDE-SCHEMA.md](CLAUDE-SCHEMA.md) — full database schema, architecture patterns, feature behavior specs, UI patterns
 - [CLAUDE-SMS.md](CLAUDE-SMS.md) — SMS infrastructure and match invite SMS system architecture
 - [CLAUDE-FLOWS.md](CLAUDE-FLOWS.md) — all user flow definitions, regression checklist
+- [CLAUDE-ARCHIVE.md](CLAUDE-ARCHIVE.md) — resolved session learnings from May–June 2026, archived for historical reference
 
 ---
 
