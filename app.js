@@ -11963,6 +11963,7 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
               {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
             );
             const fbRows = fbRes.ok ? await fbRes.json() : [];
+            console.log('BugC fallback: looking for', pendingKey, 'fbRes status:', fbRes.status, 'fbRows:', JSON.stringify(fbRows));
             if(fbRows.length){
               await fetch(`${SUPABASE_URL}/rest/v1/connections?id=eq.${fbRows[0].id}`,{
                 method:'PATCH',
@@ -11973,7 +11974,7 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
               console.warn('handlePostRegistrationInvite: no pending_TOKEN connection found for', inv.invite_token);
             }
           }catch(e){
-            console.warn('handlePostRegistrationInvite: fallback patch failed', e.message);
+            console.warn('handlePostRegistrationInvite: fallback patch failed', e.message, e);
           }
         }
         // Create reciprocal connection (new user → inviter) as pending — inviter must accept before it counts in their IC
