@@ -11959,7 +11959,7 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
           try{
             const pendingKey = 'pending_'+inv.invite_token;
             const fbRes = await fetch(
-              `${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(inv.inviter_email)}&recipient_email=eq.${encodeURIComponent(pendingKey)}&select=id`,
+              `${SUPABASE_URL}/rest/v1/connections?recipient_email=eq.${encodeURIComponent(pendingKey)}&select=id`,
               {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
             );
             const fbRows = fbRes.ok ? await fbRes.json() : [];
