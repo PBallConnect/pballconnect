@@ -462,8 +462,8 @@
   .courts-add-title{color:var(--dim);font-size:11px;font-weight:600;letter-spacing:.08em;
     text-transform:uppercase;margin-bottom:10px;}
   .courts-add-row{display:flex;gap:8px;}
-  .courts-add-row input{flex:1;background:rgba(255,255,255,0.06);border:1px solid var(--border);
-    border-radius:10px;padding:10px 14px;color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;}
+  .courts-add-row input{flex:1;background:#f9fafb;border:1px solid var(--border);
+    border-radius:10px;padding:10px 14px;color:#1a1a1a;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;}
   .courts-add-row input:focus{border-color:var(--green);}
   .courts-add-row input::placeholder{color:var(--dim);}
   .courts-add-btn-green{padding:10px 16px;border-radius:10px;border:none;background:var(--green);

@@ -9985,8 +9985,17 @@ async function loadIcInvites(){
       });
     };
 
+    // Deduplicate pending by recipient_email — keep the most recent row (array is ordered desc)
+    const seenRecip = new Set();
+    const pendingDeduped = pending.filter(c => {
+      const key = (c.recipient_email||'').toLowerCase();
+      if(seenRecip.has(key)) return false;
+      seenRecip.add(key);
+      return true;
+    });
+
     // Only show AWAITING — accepted invites are already in the IC member count
-    renderGroup(pending, '⏳ Awaiting', '#fbbf24', true);
+    renderGroup(pendingDeduped, '⏳ Awaiting', '#fbbf24', true);
 
   }catch(e){ console.warn('loadIcInvites error:',e); }
 }
