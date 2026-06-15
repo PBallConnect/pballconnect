@@ -29,7 +29,7 @@
 const S={gender:'',skill:'',anytime:false,partner:false,
   waiver:false,photoSrc:null,state:'',stateFips:'',county:'',city:'',email:'',
   court:'',courtName:'',duprVal:null,venues:new Set(),driveDistance:'25 miles',
-  playStyle:'',playFormat:'Both',matchGenderPref:'Both',handedness:'',avatarEmoji:'🎾',venuePref:'',playingSince:'',nickname:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null,_tosConsent:false,_privacyConsent:false,_riskConsent:false,isCoach:'',coachCerts:new Set(),coachLessonTypes:new Set(),coachFormats:new Set(),
+  playStyle:'',playFormat:'Both',matchGenderPref:'Both',handedness:'',avatarEmoji:'',venuePref:'',playingSince:'',nickname:'',wantsToImprove:'',goalRating:null,hasHadLesson:'',wantsLesson:'',addrLat:null,addrLon:null,_tosConsent:false,_privacyConsent:false,_riskConsent:false,isCoach:'',coachCerts:new Set(),coachLessonTypes:new Set(),coachFormats:new Set(),
   availWeekdayMorning:false,availWeekdayAfternoon:false,availWeekdayEvening:false,availWeekends:false};
 
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -694,7 +694,7 @@ function populateSummary(){
   const goal      = S.goalRating || '';
   const improve   = S.wantsToImprove || '';
   const nick      = document.getElementById('nickname')?.value?.trim() || S.nickname || '';
-  const emoji     = document.getElementById('avatarEmoji')?.value || S.avatarEmoji || '🎾';
+  const emoji     = document.getElementById('avatarEmoji')?.value || S.avatarEmoji || '';
 
   // — Name header —
   const lastInitial = lastName ? lastName.charAt(0).toUpperCase()+'.' : '';
@@ -968,9 +968,9 @@ function showProfileDiff(){
     return found?found[0]:st;
   };
 
-  const currentEmoji = document.getElementById('avatarEmoji')?.value || S.avatarEmoji || '🎾';
+  const currentEmoji = document.getElementById('avatarEmoji')?.value || S.avatarEmoji || '';
   const fields=[
-    {label:'Emoji',         old:player.avatar_emoji||'🎾',           nw:currentEmoji},
+    {label:'Emoji',         old:player.avatar_emoji||'',           nw:currentEmoji},
     {label:'First Name',    old:player.first_name||'',               nw:v('firstName')},
     {label:'Nickname',      old:player.nickname||'',                  nw:v('nickname')},
     {label:'Age Range',     old:player.age_range||'',                       nw:document.getElementById('playerAge')?.value||''},
@@ -1119,7 +1119,7 @@ async function doSaveProfile(){
       play_style:          S.playStyle || null,
       play_format:         S.playFormat || 'Both',
       handedness:          S.handedness || null,
-      avatar_emoji:        S.avatarEmoji || '🎾',
+      avatar_emoji:        S.avatarEmoji || '',
       play_venues:         S.venuePref   || null,
       playing_since:       S.playingSince || null,
       goal_rating:         S.goalRating || null,
@@ -1146,7 +1146,7 @@ async function doSaveProfile(){
         const _alertName  = `${(v('firstName')||'').trim()} ${(v('lastName')||'').trim()}`;
         const _alertSubj  = _isOrganic
           ? `🚨 Organic Signup — ${_alertName}`
-          : `🎾 New PBallConnect Registration — ${_alertName}`;
+          : `New PBallConnect Registration — ${_alertName}`;
         await sendEmail({
           to_email: 'david@pballconnect.com',
           type:     'admin_registration_alert',
@@ -1178,7 +1178,7 @@ async function doSaveProfile(){
     showToast('✅ Profile saved!', '#4CAF7D');
     // Capture current values before any navigation
     const _savedNickname  = v('nickname') || S.nickname || '';
-    const _savedEmoji     = document.getElementById('avatarEmoji')?.value || S.avatarEmoji || '🎾';
+    const _savedEmoji     = document.getElementById('avatarEmoji')?.value || S.avatarEmoji || '';
     const _savedFirstName = v('firstName') || '';
     // Read skill from slider display (most accurate source)
     const _sliderDisplay = document.getElementById('personalRatingDisplay')?.textContent?.match(/[\d\.]+/)?.[0];
@@ -1582,7 +1582,7 @@ async function loadCoachDirectory(){
       card.style.cssText='background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px;';
       card.innerHTML=
         '<div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:12px;">'+
-        (coach.photo_url ? '<div style="width:52px;height:52px;border-radius:50%;overflow:hidden;flex-shrink:0;"><img src="'+coach.photo_url+'" style="width:100%;height:100%;object-fit:cover;"/></div>' : '<div style="width:52px;height:52px;border-radius:50%;background:rgba(76,175,125,0.12);border:2px solid rgba(76,175,125,0.25);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">'+(coach.avatar_emoji||'🎾')+'</div>')+
+        (coach.photo_url ? '<div style="width:52px;height:52px;border-radius:50%;overflow:hidden;flex-shrink:0;"><img src="'+coach.photo_url+'" style="width:100%;height:100%;object-fit:cover;"/></div>' : '<div style="width:52px;height:52px;border-radius:50%;background:rgba(76,175,125,0.12);border:2px solid rgba(76,175,125,0.25);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">'+(coach.avatar_emoji||'')+'</div>')+
         '<div style="flex:1;">'+
           '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'+
             '<span style="color:#fff;font-size:15px;font-weight:700;">'+name+'</span>'+
@@ -1663,7 +1663,7 @@ async function openRecordResults(matchId, matchType){
       SR.players.push({
         email: r.player_email,
         name: r.player_name || (prof ? (prof.first_name||'')+(prof.last_name?' '+prof.last_name:'') : r.player_email),
-        emoji: prof?.avatar_emoji || '🎾'
+        emoji: prof?.avatar_emoji || ''
       });
     });
 
@@ -2601,7 +2601,7 @@ function onLessonOfferAnswer(answer){
     msgDiv.style.display='block';
     msgDiv.innerHTML=`
       <div style="background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.3);border-radius:14px;padding:16px;margin-top:8px;">
-        <div style="color:var(--green);font-size:13px;font-weight:700;margin-bottom:6px;">🎾 Great — we'll set that up!</div>
+        <div style="color:var(--green);font-size:13px;font-weight:700;margin-bottom:6px;">Great — we'll set that up!</div>
         <div style="color:#111;font-size:12px;line-height:1.7;">
           After completing registration, click <strong style="color:#111;">Get Lessons</strong> in the left menu
           to browse certified instructors near you and book within 30 days.
@@ -4015,7 +4015,7 @@ async function checkMatchOverlap(){
       const list = conflicts.map(m=>{
         const s=fmt12(m.time_start);
         const e=m.time_end?fmt12(m.time_end):'';
-        return (m.match_type==='doubles'?'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Doubles':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Singles')+' at '+s+(e?' – '+e:'')+(m.court_name?' @ '+m.court_name:'');
+        return (m.match_type==='doubles'?'<img src="/icon-192.png" class="pb-icon" alt="pickleball"/><img src="/icon-192.png" class="pb-icon" alt="pickleball"/> Doubles':'<img src="/icon-192.png" class="pb-icon" alt="pickleball"/> Singles')+' at '+s+(e?' – '+e:'')+(m.court_name?' @ '+m.court_name:'');
       }).join('<br>');
       warnText.innerHTML='You already have a match at this time:<br><span style="color:#fff;font-weight:600;">'+list+'</span><br><span style="color:var(--dim);">Back-to-back is fine — only true overlaps are flagged.</span>';
     }
@@ -4087,7 +4087,7 @@ function buildMatchSummary(){
   const genderPrefLabel = MS.genderPref==='mixed'?'Mixed':MS.genderPref==='same'?'Same Gender':'Either';
 
   sum.innerHTML =
-    '<div class="match-summary-row" style="color:#111;"><span>Match Type</span><span>'+(MS.format==='doubles'?'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Doubles':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Singles')+(MS.numCourts>1?' &times;'+MS.numCourts+' courts':'')+'</span></div>'+
+    '<div class="match-summary-row" style="color:#111;"><span>Match Type</span><span>'+(MS.format==='doubles'?'<img src="/icon-192.png" class="pb-icon" alt="pickleball"/><img src="/icon-192.png" class="pb-icon" alt="pickleball"/> Doubles':'<img src="/icon-192.png" class="pb-icon" alt="pickleball"/> Singles')+(MS.numCourts>1?' &times;'+MS.numCourts+' courts':'')+'</span></div>'+
     '<div class="match-summary-row"><span>Play Structure</span><span>'+genderPrefLabel+'</span></div>'+
     '<div class="match-summary-row"><span>Duration</span><span>'+durStr+'</span></div>'+
     '<div class="match-summary-row"><span>Invited</span><span>'+invitedLabel+' ('+invitees.length+')</span></div>'+
@@ -4150,7 +4150,7 @@ function getMatchStatusDisplay(match){
     const mStart = new Date(match.match_date+'T'+match.time_start);
     const mEnd   = new Date(match.match_date+'T'+match.time_end);
     if(now >= mStart && now <= mEnd)
-      return {label:'🎾 In Progress', color:'#16a34a', bg:'#f0fdf4', border:'#16a34a', inProgress:true};
+      return {label:'In Progress', color:'#16a34a', bg:'#f0fdf4', border:'#16a34a', inProgress:true};
   }
   // FIX 2: "Open" should never show after match end time has passed (within grace window)
   if(match.status==='open' && match.match_date){
@@ -4371,7 +4371,7 @@ async function submitMatch(){
       }catch(playerErr){ console.warn('SMS invite error for', player.email, playerErr); }
     }
     // Success: toast first, then navigate to dashboard
-    showToast('🎾 Invites sent! Your match is set.','#4CAF7D');
+    showToast('Invites sent! Your match is set.','#4CAF7D');
     status.textContent='';
     btn.textContent='✅ Sent!';
     // Navigate immediately so toast overlays the dashboard.
@@ -4391,7 +4391,7 @@ async function submitMatch(){
         setTimeout(()=>tile.classList.remove('tile-pulse'), 2400);
       }
     }, 300);
-  }catch(e){ status.textContent='⚠️ Error: '+e.message; btn.disabled=false; btn.textContent='🎾 Send Match Invite'; }
+  }catch(e){ status.textContent='⚠️ Error: '+e.message; btn.disabled=false; btn.textContent='Send Match Invite'; }
 }
 
 async function loadSentMatches(){
@@ -4433,7 +4433,7 @@ async function loadSentMatches(){
       const hdr=document.createElement('div');
       hdr.style.cssText='display:flex;align-items:center;gap:12px;margin-bottom:6px;cursor:pointer;';
       hdr.innerHTML=
-        '<span style="font-size:20px;">'+(m.match_type==='doubles'?'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/>':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/>')+'</span>'+
+        '<span style="font-size:20px;">'+(m.match_type==='doubles'?'<img src="/icon-192.png" class="pb-icon" alt="pickleball"/><img src="/icon-192.png" class="pb-icon" alt="pickleball"/>':'<img src="/icon-192.png" class="pb-icon" alt="pickleball"/>')+'</span>'+
         '<div style="flex:1;">'+
           '<div style="color:'+(isPast?'#94a3b8':'#fff')+';font-size:13px;font-weight:600;">'+(isPast?'<s>':'')+dateStr+' · '+timeStr+(isPast?'</s>':'')+'</div>'+
           '<div style="color:var(--dim);font-size:11px;">'+(m.court_name||'TBD')+(m.is_feeler?' · Feeler':'')+'</div>'+
@@ -5055,7 +5055,7 @@ async function cancelMatch(matchId){
       sendEmail({
         to_email: p.player_email,
         type: 'match_update',
-        personal_note: myName+' has cancelled the '+( m?.match_type==='doubles'?'Doubles':'Singles')+' match scheduled for '+dateStr+(timeStr?' at '+timeStr:'')+(m?.court_name&&m.court_name!=='TBD'?' @ '+m.court_name:'')+'. We hope to see you on the courts soon! 🏓',
+        personal_note: myName+' has cancelled the '+( m?.match_type==='doubles'?'Doubles':'Singles')+' match scheduled for '+dateStr+(timeStr?' at '+timeStr:'')+(m?.court_name&&m.court_name!=='TBD'?' @ '+m.court_name:'')+'. We hope to see you on the courts soon!',
         invite_url: window.location.origin,
       });
     }
@@ -5225,7 +5225,7 @@ async function loadRecordScores(){
 
       card.innerHTML=
         '<div style="display:flex;align-items:flex-start;gap:10px;">'+
-          '<span style="font-size:22px;">'+(m.match_type==='doubles'?'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/>':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/>')+'</span>'+
+          '<span style="font-size:22px;">'+(m.match_type==='doubles'?'<img src="/icon-192.png" class="pb-icon" alt="pickleball"/><img src="/icon-192.png" class="pb-icon" alt="pickleball"/>':'<img src="/icon-192.png" class="pb-icon" alt="pickleball"/>')+'</span>'+
           '<div style="flex:1;">'+
             '<div style="color:'+(hasScores?'var(--green)':'#fff')+';font-size:14px;font-weight:700;">'+dateStr+(timeStr?' · '+timeStr:'')+'</div>'+
             '<div style="color:var(--dim);font-size:12px;">'+(m.court_name&&m.court_name!=='TBD'?m.court_name:(m.court_address||'Location TBD'))+'</div>'+
@@ -5233,7 +5233,7 @@ async function loadRecordScores(){
           '<button onclick="openRecordResults(\''+m.id+'\',\''+m.match_type+'\')" '+
             'style="padding:7px 14px;border-radius:8px;border:none;background:var(--green);color:var(--dark);'+
             'font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0;">'+
-            (hasScores?'✏️ Edit Score':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Record Score')+
+            (hasScores?'✏️ Edit Score':'<img src="/icon-192.png" class="pb-icon" alt="pickleball"/> Record Score')+
           '</button>'+
         '</div>'+scoresHtml;
       container.appendChild(card);
@@ -5400,7 +5400,7 @@ async function loadMyInvitesPage(){
       if(isPast){
         bottom='<div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:rgba(76,175,125,0.08);border:1px solid rgba(76,175,125,0.2);border-radius:10px;">'+
           '<span style="font-size:12px;color:var(--green);font-weight:600;">Record the scores from this match</span>'+
-          '<button onclick="openRecordResults(\''+m.id+'\',\''+m.match_type+'\')" style="padding:8px 16px;border-radius:8px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;flex-shrink:0;">🏓 Record Score</button>'+
+          '<button onclick="openRecordResults(\''+m.id+'\',\''+m.match_type+'\')" style="padding:8px 16px;border-radius:8px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;flex-shrink:0;">Record Score</button>'+
           '</div>';
       } else {
         const remaining = Math.max(0, maxNeeded - inP.length);
@@ -5448,7 +5448,7 @@ async function loadMyInvitesPage(){
       const weatherId = 'mi-weather-'+m.id;
       card.innerHTML=
         '<div style="display:flex;align-items:flex-start;gap:10px;">'+
-        '<span style="font-size:22px;">'+(m.match_type==='doubles'?'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/>':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/>')+'</span>'+
+        '<span style="font-size:22px;">'+(m.match_type==='doubles'?'<img src="/icon-192.png" class="pb-icon" alt="pickleball"/><img src="/icon-192.png" class="pb-icon" alt="pickleball"/>':'<img src="/icon-192.png" class="pb-icon" alt="pickleball"/>')+'</span>'+
         '<div style="flex:1;">'+
           '<div style="color:'+(isPast?'#6b7280':'#111')+';font-size:14px;font-weight:700;">'+(isPast?'<s>':'')+dateStr+(isPast?'</s>':'')+'</div>'+
           '<div style="color:#374151;font-size:12px;margin-top:1px;font-weight:600;">'+timeStr+'</div>'+
@@ -8267,7 +8267,7 @@ window.efSendInvites = async function(){
 
   const overlay = document.getElementById('emergencyFillOverlay');
   if(overlay) overlay.style.display = 'none';
-  showToast('Invites sent to '+sent+' player'+(sent!==1?'s':'')+' 🎾','#1a7a3a');
+  showToast('Invites sent to '+sent+' player'+(sent!==1?'s':''),'#1a7a3a');
 };
 
 window.efSendText = function(){
@@ -8420,7 +8420,7 @@ function openLoginModal(){
       const titleEl = modal.querySelector('[style*="Welcome back"]');
       const subEl   = modal.querySelector('[style*="Sign in to access"]');
       const btnEl   = document.getElementById('loginSubmitBtn');
-      if(titleEl) titleEl.textContent = 'Welcome! 🎾';
+      if(titleEl) titleEl.textContent = 'Welcome!';
       if(subEl)   subEl.textContent   = 'Enter your email to get started';
       if(btnEl)   btnEl.textContent   = 'Send Magic Link →';
     }
@@ -8507,7 +8507,7 @@ async function signOut(){
   localStorage.removeItem('pb_nickname');
   localStorage.removeItem('pb_emoji');
   SUPABASE_ACCESS_TOKEN = SUPABASE_ANON_KEY;
-  S.email=''; S.nickname=''; S.avatarEmoji='🎾'; S.skill='';
+  S.email=''; S.nickname=''; S.avatarEmoji=''; S.skill='';
   SESSION_PLAYER=null;
   location.reload();
 }
@@ -8555,7 +8555,7 @@ async function initApp(){
     if(isNewUser){
       welcomeInner.innerHTML =
         '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;padding:2rem;text-align:center;">'+
-          '<div style="font-size:48px;margin-bottom:16px;">🎾</div>'+
+          '<div style="margin-bottom:16px;"><img src="/icon-192.png" style="width:48px;height:48px;object-fit:contain;"/></div>'+
           '<div style="font-size:18px;font-weight:700;color:#111;margin-bottom:8px;">Setting up your account…</div>'+
           '<div style="font-size:14px;color:#6b7280;">Just a moment — your invite is loading.</div>'+
         '</div>';
@@ -8637,7 +8637,7 @@ async function restoreSession(email, playerData){
   S.driveDistance= player.drive_distance_miles ? player.drive_distance_miles+' miles' : '25 miles';
   S.venuePref    = player.play_venues || '';
   S.nickname     = player.nickname    || '';
-  S.avatarEmoji  = player.avatar_emoji || '🎾';
+  S.avatarEmoji  = player.avatar_emoji || '';
   S.skill        = player.skill_level || '';
   S.playingSince = player.playing_since || '';
   S.addrLat      = player.lat  || null;
@@ -8663,7 +8663,7 @@ async function restoreSession(email, playerData){
   showToast(
     _smswelcome
       ? 'Welcome to PBallConnect, '+(player.first_name||'Player')+'! 🔥 You\'re all set.'
-      : (_isReturning ? 'Welcome back, ' : 'Welcome, ')+(player.first_name||'Player')+'! 🎾',
+      : (_isReturning ? 'Welcome back, ' : 'Welcome, ')+(player.first_name||'Player')+'!',
     '#4CAF7D'
   );
 
@@ -8980,7 +8980,7 @@ function restoreProfileForm(player){
     if(dd){dd.value=parseInt(player.drive_distance_miles)||25;onDriveChange(parseInt(player.drive_distance_miles)||25);}
   }
 
-  const emojiToShow=S.avatarEmoji||player.avatar_emoji||'🎾';
+  const emojiToShow=S.avatarEmoji||player.avatar_emoji||'';
   const preview=document.getElementById('emojiPreview');
   if(preview) preview.textContent=emojiToShow;
   const emojiInput=document.getElementById('avatarEmoji');
@@ -9094,7 +9094,7 @@ function startChangeDetection(){
   _changeTimer=setInterval(()=>{
     const btn=document.getElementById('btnSubmit');
     if(!btn){clearInterval(_changeTimer);return;}
-    const currentEmoji=document.getElementById('avatarEmoji')?.value||S.avatarEmoji||'🎾';
+    const currentEmoji=document.getElementById('avatarEmoji')?.value||S.avatarEmoji||'';
     const changed=
       v('firstName')!==(p.first_name||'')||
       v('nickname')!==(p.nickname||'')||
@@ -9115,7 +9115,7 @@ function startChangeDetection(){
       String(document.getElementById('coachRateMin')?.value||'')!==String(p.coach_rate_min||'')||
       String(document.getElementById('coachRateMax')?.value||'')!==String(p.coach_rate_max||'')||
       (document.getElementById('coachBio')?.value||'').trim()!==(p.coach_bio||'').trim()||
-      currentEmoji!==(p.avatar_emoji||'🎾')||
+      currentEmoji!==(p.avatar_emoji||'')||
       String(S.skill||'')!==String(p.skill_level||'')||
       String(S.goalRating||'')!==String(p.goal_rating||'')||
       String(S.duprVal||'')!==String(p.dupr_rating||'')||
@@ -9827,7 +9827,7 @@ function openPlayerCard(player,connection,myEmail){
   const content=document.getElementById('playerCardContent');
   if(!modal||!content) return;
   const name=((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim()||'Player';
-  const emoji=player.avatar_emoji||'🎾';
+  const emoji=player.avatar_emoji||'';
   const tags=[];
   if(player.skill_level) tags.push({cls:'pc-tag-green',label:'⭐ '+player.skill_level+' Rating'});
   if(player.dupr_rating) tags.push({cls:'pc-tag-green',label:'DUPR '+player.dupr_rating});
@@ -9851,7 +9851,7 @@ function openPlayerCard(player,connection,myEmail){
     addBtn.textContent='+ Add to Inner Circle'; addBtn.onclick=()=>{ closePlayerCard(); openIcConfirmModal(player); };
   }
   const playBtn=document.createElement('button');
-  playBtn.className='pc-btn-play'; playBtn.textContent='🎾 Play';
+  playBtn.className='pc-btn-play'; playBtn.textContent='Play';
   playBtn.onclick=()=>{ closePlayerCard(); showPage('setupMatch'); };
   actionDiv.appendChild(addBtn); actionDiv.appendChild(playBtn);
   content.innerHTML=
@@ -10549,7 +10549,7 @@ async function smIcInviteText(){
     if(!url) throw new Error('Invite creation failed');
     const myName = (getMyName()||'Someone').split(' ')[0];
     const message = myName+' invited you to their Inner Circle on PBallConnect! '+
-      'Set up your free player profile: '+url+' (takes 2 min) 🎾';
+      'Set up your free player profile: '+url+' (takes 2 min)';
     const encodedMsg = encodeURIComponent(message);
 
     if(isMobile){
@@ -10841,7 +10841,7 @@ function icDoneInviting(){
   loadIcInvites();
   renderInnerCircleList();
   window.scrollTo(0,0);
-  showToast('🎾 Invites sent! Check back to see who joins.','#4CAF7D');
+  showToast('Invites sent! Check back to see who joins.','#4CAF7D');
 }
 window.icDoneInviting = icDoneInviting;
 
@@ -10859,7 +10859,7 @@ async function sendIcTextInvite(){
     const smsUrl = url + '&channel=sms';
     await icPostPendingConnection(null, name, token);
     const myFirst = (getMyName()||'Someone').split(' ')[0];
-    const msg = encodeURIComponent('Hey '+name+'! '+myFirst+' invited you to play pickleball on PBallConnect 🎾\n\nSet up your free player profile here:\n\n'+smsUrl);
+    const msg = encodeURIComponent('Hey '+name+'! '+myFirst+' invited you to play pickleball on PBallConnect\n\nSet up your free player profile here:\n\n'+smsUrl);
     window.open('sms:?body='+msg, '_self');
     showToast('💬 Messages opened for '+name,'#60a5fa');
     if(nameEl){ nameEl.value=''; nameEl.style.borderColor='#9ca3af'; }
@@ -11008,7 +11008,7 @@ async function openQrModal(){
   _qrInviteUrl = inviteUrl;
 
   // Fill player info
-  const emoji = SESSION_PLAYER?.avatar_emoji || '🎾';
+  const emoji = SESSION_PLAYER?.avatar_emoji || '';
   const name  = ((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.nickname?' "'+SESSION_PLAYER.nickname+'"':'')).trim() || myEmail;
   const skill = SESSION_PLAYER?.skill_level ? 'Skill ' + SESSION_PLAYER.skill_level : '';
   document.getElementById('qrEmoji').textContent = emoji;
@@ -11063,7 +11063,7 @@ async function shareInviteLink(){
   const myName = ((SESSION_PLAYER?.first_name||'')).trim() || 'Someone';
   const shareData = {
     title: 'Join me on PBallConnect!',
-    text: myName + ' invited you to join PBallConnect — the best way to find pickleball players near you. 🎾',
+    text: myName + ' invited you to join PBallConnect — the best way to find pickleball players near you.',
     url: _qrInviteUrl
   };
   try{
@@ -11133,7 +11133,7 @@ async function openQuickInvite(method){
     }catch(e){if(statusEl) statusEl.textContent='⚠️ Email error: '+(e.text||e.message||'Unknown error');}
   }
   if(method==='sms'){
-    const smsBody=encodeURIComponent(myName+' invited you to join PBallConnect! 🎾 '+(note?'"'+note+'" ':'')+inviteUrl);
+    const smsBody=encodeURIComponent(myName+' invited you to join PBallConnect! '+(note?'"'+note+'" ':'')+inviteUrl);
     window.open('sms:'+(inviteePhone?'+1'+inviteePhone:'')+'?body='+smsBody);
     if(statusEl) statusEl.textContent='';
     showToast('✅ SMS app opened!','#4CAF7D');
@@ -11178,7 +11178,7 @@ function checkInviteToken(){
       if(!rows.length) return;
       const owner=rows[0];
       const ownerName=((owner.first_name||'')+(owner.last_name?' '+owner.last_name:'')).trim()||'A fellow player';
-      const inv={invite_type:'qr',qr_id:qrId,inviter_email:owner.email,inviter_name:ownerName,avatar_emoji:owner.avatar_emoji||'🎾'};
+      const inv={invite_type:'qr',qr_id:qrId,inviter_email:owner.email,inviter_name:ownerName,avatar_emoji:owner.avatar_emoji||''};
       PENDING_INVITE=inv;
       window._pendingInviteRef=inv;
       if(!isNewUserReturn){
@@ -11226,13 +11226,13 @@ function showInviteBanner(invite){
   banner.innerHTML=
     '<div id="inviteBannerCard" style="background:#ffffff;border-radius:20px;padding:28px 24px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'+
       '<div style="text-align:center;margin-bottom:16px;">'+
-        '<div style="font-size:48px;margin-bottom:10px;">🎾</div>'+
+        '<div style="margin-bottom:10px;"><img src="/icon-192.png" style="width:48px;height:48px;object-fit:contain;"/></div>'+
         '<h2 style="font-family:\'Playfair Display\',serif;font-size:19px;font-weight:800;color:#111;margin-bottom:0;line-height:1.3;">'+inviterName+' has invited you to join PBallConnect!</h2>'+
       '</div>'+
       noteHtml+
       '<div style="font-size:12px;color:#9ca3af;text-align:center;margin-bottom:18px;font-style:italic;">"If you want to play ball, click a link."</div>'+
       '<button onclick="document.getElementById(\'inviteBanner\').remove();showInviteEmailStep(window._pendingInviteRef);" style="width:100%;padding:14px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-weight:800;font-size:15px;cursor:pointer;margin-bottom:12px;font-family:\'DM Sans\',sans-serif;">'+
-        'Yes, I want to join! 🏓'+
+        'Yes, I want to join!'+
       '</button>'+
       '<div style="text-align:center;">'+
         '<span onclick="document.getElementById(\'inviteBanner\').remove()" style="font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline;">Maybe Later</span>'+
@@ -11301,7 +11301,7 @@ function showInviteLandingChoice(email, inv){
   overlay.innerHTML =
     '<div style="background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'+
       '<div style="text-align:center;margin-bottom:20px;">'+
-        '<div style="font-size:40px;margin-bottom:8px;">🎾</div>'+
+        '<div style="margin-bottom:8px;"><img src="/icon-192.png" style="width:40px;height:40px;object-fit:contain;"/></div>'+
         '<div style="font-size:18px;font-weight:800;color:#111;margin-bottom:4px;">Welcome to PBallConnect!</div>'+
         '<div style="font-size:13px;color:#1a7a3a;font-weight:600;margin-bottom:4px;">'+inviterName+' invited you to join.</div>'+
         '<div style="font-size:12px;color:#6b7280;">How would you like to get started?</div>'+
@@ -11333,7 +11333,7 @@ function showInviteLandingChoice(email, inv){
     document.getElementById('checkBoxRisk')?.classList.remove('on');
     const sb=document.getElementById('btnSubmit'); if(sb) sb.disabled=true;
     document.getElementById('lessonSection') && (document.getElementById('lessonSection').style.display='none');
-    showToast('🎾 Great! Let\'s build your full profile — it\'s quick and fun!','#4CAF7D');
+    showToast('Great! Let\'s build your full profile — it\'s quick and fun!','#4CAF7D');
     setTimeout(()=>{ const fn=document.getElementById('firstName'); if(fn) fn.focus(); chk1(); }, 350);
   };
   window._inviteChoiceQuick = function(){
@@ -11447,7 +11447,7 @@ function showQuickConnectForm(email, inv){
       '<div id="qcError" style="display:none;margin-bottom:12px;padding:10px 14px;background:#fef2f2;border-radius:8px;font-size:12px;color:#dc2626;"></div>'+
       '<button id="qcSaveBtn" onclick="window._qcSave()" disabled '+
         'style="width:100%;padding:15px;border-radius:12px;border:none;background:#9ca3af;color:#fff;font-weight:800;font-size:15px;cursor:not-allowed;font-family:\'DM Sans\',sans-serif;margin-bottom:14px;transition:background .2s;">'+
-        'Save & Join PBallConnect 🏓'+
+        'Save & Join PBallConnect'+
       '</button>'+
       '<div style="text-align:center;">'+
         '<span onclick="window._qcSwitchFull()" style="font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline;">Switch to Full Profile</span>'+
@@ -11534,7 +11534,7 @@ function showQuickConnectForm(email, inv){
         await sendEmail({
           to_email: 'david@pballconnect.com',
           type:     'admin_registration_alert',
-          subject:  `🎾 New PBallConnect Registration — ${fn}`,
+          subject:  `New PBallConnect Registration — ${fn}`,
           personal_note: `Name: ${fn}<br>Email: ${email}<br>Path: Quick Connect Registration<br>Skill Level: ${skill}<br>Zip: ${zip||'—'}<br>Gender: ${S.gender||'—'}<br>SMS Opt-In: ${_qcSmsOptIn ? 'Yes' : 'No'}<br>Registered At: ${new Date().toISOString()}`,
         });
       } catch (e) {
@@ -11572,11 +11572,11 @@ function showQuickConnectForm(email, inv){
           setTimeout(() => showIcSection('requests'), 400);
         } else {
           showPage('dashboard');
-          showToast('Welcome to PBallConnect! 🎾','#1a7a3a');
+          showToast('Welcome to PBallConnect!','#1a7a3a');
         }
       });
     }catch(e){
-      if(btn){ btn.disabled=false; btn.textContent='Save & Join PBallConnect 🏓'; btn.style.background='#1a7a3a'; btn.style.cursor='pointer'; }
+      if(btn){ btn.disabled=false; btn.textContent='Save & Join PBallConnect'; btn.style.background='#1a7a3a'; btn.style.cursor='pointer'; }
       if(errEl){ errEl.textContent='Save failed: '+(e.message||'Unknown error'); errEl.style.display='block'; }
     }
   };
@@ -11594,7 +11594,7 @@ function showQuickConnectForm(email, inv){
     if(sb) sb.disabled = true;
     document.getElementById('lessonSection') && (document.getElementById('lessonSection').style.display = 'none');
     document.getElementById('lessonOfferSection') && (document.getElementById('lessonOfferSection').style.display = 'none');
-    _doStartFullProfile(email, 'Great! Let\'s build your full profile — it\'s quick and fun! 🎾');
+    _doStartFullProfile(email, 'Great! Let\'s build your full profile — it\'s quick and fun!');
   };
 
   setTimeout(()=>document.getElementById('qcFirstName')?.focus(), 150);
@@ -11618,8 +11618,8 @@ async function showFoundingMemberOverlay(onDismiss){
   overlay.innerHTML =
     '<div style="background:#0f1f12;border:1px solid rgba(245,158,11,0.4);border-radius:20px;'+
     'padding:32px 28px;max-width:440px;width:92%;text-align:center;">'+
-      '<div style="font-size:48px;margin-bottom:12px;">🎾</div>'+
-      '<h2 style="color:#fff;font-size:20px;font-weight:800;margin:0 0 12px;">Welcome to the founding team! 🎾</h2>'+
+      '<div style="margin-bottom:12px;"><img src="/icon-192.png" style="width:48px;height:48px;object-fit:contain;"/></div>'+
+      '<h2 style="color:#fff;font-size:20px;font-weight:800;margin:0 0 12px;">Welcome to PBallConnect!</h2>'+
       '<p style="color:rgba(255,255,255,0.7);font-size:14px;line-height:1.7;margin:0 0 24px;">'+
         'You\'re one of '+countStr+' helping shape PBallConnect. Your feedback matters — use the 💬 button anytime.'+
       '</p>'+
@@ -11645,7 +11645,7 @@ function showOrganizerQuestion(email, inv){
   overlay.innerHTML =
     '<div style="background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'+
       '<div style="text-align:center;margin-bottom:20px;">'+
-        '<div style="font-size:40px;margin-bottom:8px;">🏓</div>'+
+        '<div style="margin-bottom:8px;"><img src="/icon-192.png" style="width:40px;height:40px;object-fit:contain;"/></div>'+
         '<div style="font-size:18px;font-weight:800;color:#111;margin-bottom:6px;">One quick question!</div>'+
         '<div style="font-size:13px;color:#555;line-height:1.6;">Do you plan on organizing matches for your group?</div>'+
       '</div>'+
@@ -11681,7 +11681,7 @@ function showOrganizerQuestion(email, inv){
       body:JSON.stringify({wants_organizer:false})
     }).catch(()=>{});
     showPage('dashboard');
-    showToast('Welcome to PBallConnect! 🎾','#1a7a3a');
+    showToast('Welcome to PBallConnect!','#1a7a3a');
   };
 }
 
@@ -11698,7 +11698,7 @@ function showCourtCaptainNudge(email){
       '</div>'+
       '<div style="display:flex;flex-direction:column;gap:10px;">'+
         '<button onclick="window._courtCaptainFull()" style="width:100%;padding:14px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-weight:800;font-size:15px;cursor:pointer;">'+
-          'Complete Full Profile 🏓</button>'+
+          'Complete Full Profile</button>'+
         '<button onclick="window._courtCaptainLater()" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb;background:#fff;color:#6b7280;font-size:13px;cursor:pointer;">'+
           'I\'ll do it later</button>'+
       '</div>'+
@@ -11710,13 +11710,13 @@ function showCourtCaptainNudge(email){
     showPage('playerProfile');
     unlockProfileForm();
     goTo(1);
-    showToast('🎾 Let\'s build your full profile!','#1a7a3a');
+    showToast('Let\'s build your full profile!','#1a7a3a');
     setTimeout(()=>{ const fn=document.getElementById('firstName'); if(fn) fn.focus(); }, 350);
   };
   window._courtCaptainLater = function(){
     overlay.remove();
     showPage('dashboard');
-    showToast('Welcome to PBallConnect! Complete your profile anytime to unlock Court Captain tools. 🏓','#1a7a3a');
+    showToast('Welcome to PBallConnect! Complete your profile anytime to unlock Court Captain tools.','#1a7a3a');
   };
 }
 
@@ -11983,7 +11983,7 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
           headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal,resolution=ignore-duplicates'},
           body:JSON.stringify({requester_email:newPlayerEmail,requester_name:newPlayerName,recipient_email:inv.inviter_email||inv._resolvedInviterEmail,recipient_name:inv.inviter_name||'',status:'pending'})
         });
-        showToast('🎾 You joined '+shortName+'\'s IC! They\'ll be notified to connect back.','#4CAF7D');
+        showToast('You joined '+shortName+'\'s IC! They\'ll be notified to connect back.','#4CAF7D');
       }catch(e){}
     }
     // If declined, original row stays pending — new user can accept from IC → Requests later
@@ -12412,7 +12412,7 @@ async function loadDashboard(){
       const _isReturningDash = !!localStorage.getItem(_wbDashKey);
       nameEl.textContent = SESSION_PLAYER.first_name ? (_isReturningDash ? 'Welcome back, ' : 'Welcome, ')+SESSION_PLAYER.first_name+'!' : '';
     }
-    if(emojiEl) emojiEl.textContent = SESSION_PLAYER.avatar_emoji || '🎾';
+    if(emojiEl) emojiEl.textContent = SESSION_PLAYER.avatar_emoji || '';
   }
 
   // Load everything in parallel
@@ -12583,10 +12583,10 @@ async function loadDashNextMatch(myEmail){
     // No confirmed matches
     el.innerHTML=
       '<div style="background:#fff;border-radius:16px;padding:20px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);">'+
-        '<div style="margin-bottom:8px;"><img src="/pickleball.jpg" style="width:48px;height:48px;object-fit:contain;"/></div>'+
+        '<div style="margin-bottom:8px;"><img src="/icon-192.png" style="width:48px;height:48px;object-fit:contain;"/></div>'+
         '<div style="color:#111;font-size:14px;font-weight:700;margin-bottom:6px;">No confirmed matches yet</div>'+
         '<div style="color:#666;font-size:12px;margin-bottom:14px;">Set up a match and invite your Inner Circle!</div>'+
-        '<button onclick="showPage(&quot;setupMatch&quot;)" style="padding:10px 20px;border-radius:10px;border:none;background:#1a7a3a;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">🎾 Set Up A Match</button>'+
+        '<button onclick="showPage(&quot;setupMatch&quot;)" style="padding:10px 20px;border-radius:10px;border:none;background:#1a7a3a;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">Set Up A Match</button>'+
       '</div>';
   }catch(e){
     if(el) el.innerHTML='<div style="color:#888;font-size:13px;padding:16px;text-align:center;">Could not load match data.</div>';
@@ -12633,7 +12633,7 @@ async function loadDashPendingInvites(myEmail){
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'+
           '<div>'+
             '<div style="color:#111;font-size:14px;font-weight:700;">'+dateStr+' · '+timeStr+'</div>'+
-            '<div style="color:var(--dim);font-size:12px;">'+(m.match_type==='doubles'?'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Doubles':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Singles')+' · '+((m.court_name&&m.court_name.toLowerCase()!=='tbd')?m.court_name:(m.court_address||'Court TBD'))+'</div>'+
+            '<div style="color:var(--dim);font-size:12px;">'+(m.match_type==='doubles'?'<img src="/icon-192.png" class="pb-icon" alt="pickleball"/><img src="/icon-192.png" class="pb-icon" alt="pickleball"/> Doubles':'<img src="/icon-192.png" class="pb-icon" alt="pickleball"/> Singles')+' · '+((m.court_name&&m.court_name.toLowerCase()!=='tbd')?m.court_name:(m.court_address||'Court TBD'))+'</div>'+
           '</div>'+
           '<div style="text-align:right;">'+
             '<div style="font-size:20px;font-weight:900;color:'+remainColor+';">'+remaining+'</div>'+
@@ -12705,11 +12705,11 @@ async function loadDashInvitedToPlay(myEmail){
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'+
           '<div>'+
             '<div style="color:#111;font-size:14px;font-weight:700;">'+dateStr+' · '+timeStr+'</div>'+
-            '<div style="color:#555;font-size:12px;">'+(m.match_type==='doubles'?'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Doubles':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Singles')+'</div>'+
+            '<div style="color:#555;font-size:12px;">'+(m.match_type==='doubles'?'<img src="/icon-192.png" class="pb-icon" alt="pickleball"/><img src="/icon-192.png" class="pb-icon" alt="pickleball"/> Doubles':'<img src="/icon-192.png" class="pb-icon" alt="pickleball"/> Singles')+'</div>'+
             '<div style="color:#555;font-size:12px;">From: <span style="color:#1d4ed8;font-weight:700;">'+(m.organizer_name||'').split(' ')[0]+'</span></div>'+
             renderCountdown(m.match_date,m.time_start)+
           '</div>'+
-          '<div style="font-size:22px;">'+(m.match_type==='doubles'?'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/>':'<img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/>')+'</div>'+
+          '<div style="font-size:22px;">'+(m.match_type==='doubles'?'<img src="/icon-192.png" class="pb-icon" alt="pickleball"/><img src="/icon-192.png" class="pb-icon" alt="pickleball"/>':'<img src="/icon-192.png" class="pb-icon" alt="pickleball"/>')+'</div>'+
         '</div>'+
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'+
           '<button onclick="respondToMatch(this.dataset.id,\'in\')" data-id="'+m.id+'" '+

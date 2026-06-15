@@ -116,13 +116,13 @@
     <div class="nav-logo">
       <div style="padding:16px 16px 12px;border-bottom:1px solid #d1d5db;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-          <img src="/pickleball.jpg" style="width:36px;height:36px;object-fit:contain;" alt="pickleball"/>
+          <img src="/icon-192.png" style="width:36px;height:36px;object-fit:contain;" alt="pickleball"/>
           <div>
             <div style="font-size:16px;font-weight:900;color:#111;line-height:1.1;letter-spacing:-0.3px;"><span style="color:#1a7a3a;">PBall</span>Connect</div>
             <div style="display:inline-block;margin-top:2px;padding:1px 6px;border-radius:3px;background:#1a1a1a;color:#f5f5f5;font-size:8px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;">BETA</div>
           </div>
         </div>
-        <div style="font-size:10px;font-weight:700;color:#1a7a3a;letter-spacing:.02em;font-style:italic;margin-top:4px;"><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> For the Love of Pickleball</div>
+        <div style="font-size:10px;font-weight:700;color:#1a7a3a;letter-spacing:.02em;font-style:italic;margin-top:4px;"><img src="/icon-192.png" class="pb-icon" alt="pickleball"/> For the Love of Pickleball</div>
       </div>
     </div>
     <div class="nav-items">
@@ -310,7 +310,6 @@
           <button onclick="showPage('setupMatch')"
             style="width:100%;margin-top:10px;padding:13px 16px;border-radius:12px;background:#1a7a3a;border:none;cursor:pointer;text-align:center;font-family:inherit;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:8px;"
             onmouseover="this.style.background='#15682f'" onmouseout="this.style.background='#1a7a3a'">
-            <span style="font-size:16px;">🎾</span>
             <span style="font-size:14px;font-weight:800;color:#ffffff;">Set Up a Match</span>
             <span style="font-size:14px;color:rgba(255,255,255,0.7);">→</span>
           </button>
@@ -535,8 +534,8 @@
     <div class="field">
       <label>Play Format</label>
       <div class="chips" id="playFormatChips">
-        <button class="chip" onclick="selChip('playFormatChips',this,'playFormat')">Singles 🎾</button>
-        <button class="chip" onclick="selChip('playFormatChips',this,'playFormat')">Doubles 🎾🎾</button>
+        <button class="chip" onclick="selChip('playFormatChips',this,'playFormat')">Singles</button>
+        <button class="chip" onclick="selChip('playFormatChips',this,'playFormat')">Doubles</button>
         <button class="chip on" onclick="selChip('playFormatChips',this,'playFormat')">Both</button>
       </div>
     </div>
@@ -742,7 +741,7 @@
       <div id="sumSection1" style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;">
         <div style="font-size:12px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">👤 Personal Info</div>
         <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.06);">
-          <div id="sumEmojiDisplay" style="width:52px;height:52px;border-radius:50%;background:rgba(76,175,125,0.12);border:2px solid rgba(76,175,125,0.25);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;">🎾</div>
+          <div id="sumEmojiDisplay" style="width:52px;height:52px;border-radius:50%;background:rgba(76,175,125,0.12);border:2px solid rgba(76,175,125,0.25);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><img src="/icon-192.png" style="width:28px;height:28px;object-fit:contain;"/></div>
           <div>
             <div id="sumNameBig" style="color:#fff;font-size:17px;font-weight:700;">—</div>
             <div id="sumNicknameSub" style="color:var(--dim);font-size:13px;margin-top:2px;">—</div>
@@ -1274,7 +1273,7 @@
           border-radius:50%;cursor:pointer;font-size:14px;">✕</button>
 
         <div style="text-align:center;margin-bottom:24px;">
-          <div style="font-size:32px;margin-bottom:8px;">🏓</div>
+          <div style="margin-bottom:8px;"><img src="/icon-192.png" style="width:32px;height:32px;object-fit:contain;"/></div>
           <div id="loginModalTitle" style="color:#fff;font-size:20px;font-weight:700;">Sign In</div>
           <div id="loginModalSub" style="color:var(--dim);font-size:13px;margin-top:4px;">Enter your email — we'll send you a magic link to sign in</div>
         </div>
@@ -1593,7 +1592,7 @@
         </div>
         <button id="matchSendBtn" onclick="submitMatch()"
           style="width:100%;padding:15px;border-radius:12px;border:none;background:#1a7a3a;color:#fff;font-size:15px;font-weight:800;font-family:inherit;opacity:0.4;cursor:not-allowed;transition:opacity .15s;"
-          disabled>🎾 Send Invites</button>
+          disabled>Send Invites</button>
         <div id="matchSendStatus" style="font-size:12px;color:#6b7280;margin-top:8px;text-align:center;"></div>
       </div>
 
@@ -1993,7 +1992,7 @@
 
     <!-- Player info strip -->
     <div id="qrPlayerInfo" style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:20px;padding:12px 16px;background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.25);border-radius:12px;">
-      <span id="qrEmoji" style="font-size:28px;">🎾</span>
+      <span id="qrEmoji" style="font-size:28px;"></span>
       <div style="text-align:left;">
         <div id="qrName" style="font-size:15px;font-weight:700;color:#fff;"></div>
         <div id="qrSkill" style="font-size:12px;color:var(--green);"></div>
@@ -2040,8 +2039,8 @@
     <div class="field" style="margin-bottom:14px;">
       <label>Match Type</label>
       <div style="display:flex;gap:8px;margin-top:6px;">
-        <button id="walkOnDoubles" onclick="walkOnSetType('doubles')" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(76,175,125,0.4);background:rgba(76,175,125,0.15);color:var(--green);font-weight:700;font-size:13px;cursor:pointer;"><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Doubles</button>
-        <button id="walkOnSingles" onclick="walkOnSetType('singles')" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;"><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Singles</button>
+        <button id="walkOnDoubles" onclick="walkOnSetType('doubles')" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(76,175,125,0.4);background:rgba(76,175,125,0.15);color:var(--green);font-weight:700;font-size:13px;cursor:pointer;"><img src="/icon-192.png" class="pb-icon" alt="pickleball"/><img src="/icon-192.png" class="pb-icon" alt="pickleball"/> Doubles</button>
+        <button id="walkOnSingles" onclick="walkOnSetType('singles')" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;"><img src="/icon-192.png" class="pb-icon" alt="pickleball"/> Singles</button>
       </div>
     </div>
     <div id="walkOnTeamsSection">
@@ -2080,7 +2079,7 @@
 
     <!-- Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-      <div style="font-size:18px;font-weight:800;color:#fff;"><img src="/pickleball.jpg" class="pb-icon" alt="pickleball"/> Record Score</div>
+      <div style="font-size:18px;font-weight:800;color:#fff;"><img src="/icon-192.png" class="pb-icon" alt="pickleball"/> Record Score</div>
       <button onclick="closeScoreRecorder()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:22px;padding:0;">✕</button>
     </div>
 
@@ -2323,7 +2322,7 @@
 
 <div class="confirm-overlay" id="confirmOverlay" style="display:none">
   <div class="confirm-card">
-    <div class="confirm-icon"><img src="/pickleball.jpg" class="pb-icon-xl" alt="pickleball"/></div>
+    <div class="confirm-icon"><img src="/icon-192.png" class="pb-icon-xl" alt="pickleball"/></div>
     <h2>You're In!</h2>
     <div class="sub">Welcome to the directory</div>
     <div class="confirm-profile">
@@ -2387,7 +2386,7 @@
       <button onclick="closeBetaBanner(); window.location.href='/join.html'" style="width:100%;padding:14px 16px;border-radius:12px;border:none;
         background:var(--green);color:var(--dark);font-weight:800;font-size:14px;cursor:pointer;
         font-family:'DM Sans',sans-serif;text-align:left;">
-        🎾 Join PBallConnect &rarr;
+        Join PBallConnect &rarr;
       </button>
       <button onclick="closeBetaBanner(); window.location.href='/join.html?path=quickinvite'" style="width:100%;padding:14px 16px;border-radius:12px;
         border:1.5px solid rgba(255,255,255,0.3);background:transparent;color:#fff;font-weight:800;
