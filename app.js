@@ -11411,10 +11411,12 @@ function showQuickConnectForm(email, inv){
       '<div style="margin-bottom:16px;">'+
         '<label style="'+lbl+'">Personal Skill Rating <span style="color:#dc2626;">*</span></label>'+
         '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'+
-          '<input id="qcSkillSlider" type="range" min="0" max="21" value="8" style="flex:1;" oninput="document.getElementById(\'qcSkillVal\').textContent=DUPR_VALS[+this.value]||\'4.0\';window._qcUpdateBtn()"/>'+
+          '<div style="flex:1;display:flex;flex-direction:column;">'+
+            '<input id="qcSkillSlider" type="range" min="0" max="21" step="1" value="8" style="width:100%;--pct:38.1%;" oninput="const _v=+this.value;document.getElementById(\'qcSkillVal\').textContent=DUPR_VALS[_v]||\'4.0\';this.style.setProperty(\'--pct\',(_v/21*100)+\'%\');window._qcUpdateBtn()"/>'+
+            '<div id="qcSkillTicks" style="position:relative;width:100%;margin-top:2px;"></div>'+
+          '</div>'+
           '<span id="qcSkillVal" style="font-weight:800;color:#1a7a3a;min-width:40px;text-align:right;">4.0</span>'+
         '</div>'+
-        '<div style="font-size:10px;color:#9ca3af;text-align:center;">2.0 (beginner) → 7.0+ (pro)</div>'+
         '<div style="text-align:center;margin-top:4px;"><a href="#" onclick="showSkillGuide();return false;" style="font-size:0.85rem;color:#16a34a;text-decoration:underline;">❓ What\'s my level?</a></div>'+
       '</div>'+
       '<div style="margin-bottom:16px;">'+
@@ -11455,6 +11457,7 @@ function showQuickConnectForm(email, inv){
     '</div>';
 
   document.body.appendChild(overlay);
+  setTimeout(()=>buildStaticSliderTicks('qcSkillTicks'), 300);
 
   let _qcPrivacyOn = false, _qcRiskOn = false;
 
