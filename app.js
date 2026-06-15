@@ -11362,7 +11362,7 @@ function showQuickConnectForm(email, inv){
 
   const overlay = document.createElement('div');
   overlay.id = 'quickConnectOverlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:900;background:#fff;overflow-y:auto;-webkit-overflow-scrolling:touch;';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:900;background:#fff;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;';
 
   let yearOpts = '<option value="">Select year</option>';
   for(let y=2026;y>=1985;y--) yearOpts += '<option>'+y+'</option>';
@@ -11379,7 +11379,7 @@ function showQuickConnectForm(email, inv){
   const lbl = 'display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#374151;margin-bottom:6px;';
 
   overlay.innerHTML =
-    '<div style="max-width:440px;margin:0 auto;padding:28px 20px 60px;">'+
+    '<div style="max-width:440px;width:100%;box-sizing:border-box;margin:0 auto;padding:28px 20px 60px;">'+
       '<div style="text-align:center;margin-bottom:24px;">'+
         '<div style="font-size:36px;margin-bottom:8px;">⚡</div>'+
         '<div style="font-size:20px;font-weight:800;color:#111;margin-bottom:4px;">Quick Connect</div>'+
