@@ -11457,7 +11457,11 @@ function showQuickConnectForm(email, inv){
     '</div>';
 
   document.body.appendChild(overlay);
-  setTimeout(()=>buildStaticSliderTicks('qcSkillTicks'), 300);
+  setTimeout(()=>{
+    buildStaticSliderTicks('qcSkillTicks');
+    const sl = document.getElementById('qcSkillSlider');
+    if(sl) sl.dispatchEvent(new Event('input'));
+  }, 300);
 
   let _qcPrivacyOn = false, _qcRiskOn = false;
 
@@ -11562,6 +11566,8 @@ function showQuickConnectForm(email, inv){
       const _hadPendingInvite = !!PENDING_INVITE;
       document.getElementById('navLoginBtn')?.style.removeProperty('display');
       _newUserRegistrationStarted = false;
+      const t = document.getElementById('qcSkillTicks');
+      if(t) t.innerHTML = '';
       document.getElementById('quickConnectOverlay')?.remove();
       await restoreSession(email.toLowerCase());
       await handlePostRegistrationInvite(email.toLowerCase(), fn);
@@ -11585,6 +11591,8 @@ function showQuickConnectForm(email, inv){
   };
 
   window._qcSwitchFull = function(){
+    const t = document.getElementById('qcSkillTicks');
+    if(t) t.innerHTML = '';
     document.getElementById('quickConnectOverlay')?.remove();
     const emailEl = document.getElementById('email');
     if(emailEl) emailEl.value = email;
