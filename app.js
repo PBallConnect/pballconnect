@@ -7046,20 +7046,18 @@ window._smSaveNewCourt = async function(){
   const numCourts = parseInt(document.getElementById('smAddCourtNum')?.value)||null;
   const notes     = (document.getElementById('smAddCourtNotes')?.value||'').trim()||null;
   const is_indoor = window._addCourtIndoor_smAdd === true;
+  const newCourtId = crypto.randomUUID();
   try{
     const cRes = await fetch(`${SUPABASE_URL}/rest/v1/courts`,{
       method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=representation'},
-      body:JSON.stringify({ name:courtName, address, is_private:true, is_indoor, num_courts:numCourts, notes })
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+      body:JSON.stringify({ id:newCourtId, name:courtName, address, is_private:true, is_indoor, num_courts:numCourts, notes })
     });
     if(!cRes.ok){ const err=await cRes.text(); throw new Error(err); }
-    const rows = await cRes.json();
-    const newCourt = Array.isArray(rows) ? rows[0] : rows;
-    if(!newCourt?.id) throw new Error('No court ID returned');
     await fetch(`${SUPABASE_URL}/rest/v1/player_courts`,{
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
-      body:JSON.stringify({ player_email:myEmail, court_id:newCourt.id, court_name:courtName, is_private:true })
+      body:JSON.stringify({ player_email:myEmail, court_id:newCourtId, court_name:courtName, is_private:true })
     });
     smLoadCourtsPriority();
     loadCourtBadgesForNav(myEmail);
