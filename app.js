@@ -2062,6 +2062,19 @@ async function loadMyCourts(){
   document.getElementById('privateCourtsBody').innerHTML='<div class="courts-loading-msg">🔍 Searching for courts near you…</div>';
   document.getElementById('publicCourtsBody').innerHTML='<div class="courts-loading-msg">🔍 Searching for courts near you…</div>';
 
+  // Pre-populate selected set from player_courts before proximity search so saved courts render checked
+  const myEmail = getMyEmail();
+  if(myEmail){
+    try{
+      const savedRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(myEmail)}&select=court_id`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+      );
+      const savedRows = savedRes.ok ? await savedRes.json() : [];
+      savedRows.forEach(r => { if(r.court_id) myCourtsState.selected.add(r.court_id); });
+    }catch(e){}
+  }
+
   // Load courts from Supabase — try PostGIS RPC first, then multiple fallbacks
   let dbCourts = [];
   if(cityData){
@@ -2186,11 +2199,6 @@ async function loadMyCourts(){
       ? `✅ Found ${total} courts — ${priv} private, ${pub} public`
       : '⚠️ No courts found in this area yet';
   }
-  // Update nav court badges
-  // Count only SELECTED courts for accurate badge
-  const _selPub  = [...myCourtsState.selected].filter(id=>myCourtsState.public.find(ct=>(ct.id||ct.name)===id)).length;
-  const _selPriv = [...myCourtsState.selected].filter(id=>myCourtsState.private.find(ct=>(ct.id||ct.name)===id)).length;
-  updateNavCourtBadges(_selPub, _selPriv);
 }
 
 function getCityLatLon(){
