@@ -2335,7 +2335,7 @@ async function addCustomCourt(type){
     return; // Let user fill in details then click Add again
   }
   const address=(document.getElementById(addrId)?.value||'').trim()||S.city+', '+S.state;
-  const is_indoor=document.getElementById(indoorId)?.checked||false;
+  const is_indoor = window['_addCourtIndoor_'+type] === true;
   const num_courts=parseInt(document.getElementById(numId)?.value)||0;
   const notes=(document.getElementById(notesId)?.value||'').trim();
   const playerEmail=getMyEmail()||document.getElementById('email')?.value||'';
@@ -2423,6 +2423,17 @@ async function saveMyCourts(){
   }
 }
 
+
+window.smToggleCourtType = function(type, val){
+  const indoorBtn  = document.getElementById('add'+type.charAt(0).toUpperCase()+type.slice(1)+'IndoorBtn');
+  const outdoorBtn = document.getElementById('add'+type.charAt(0).toUpperCase()+type.slice(1)+'OutdoorBtn');
+  if(!indoorBtn || !outdoorBtn) return;
+  const sel   = 'border:1px solid var(--green);background:var(--green);color:#fff;';
+  const unsel = 'border:1px solid var(--border);background:transparent;color:var(--dim);';
+  indoorBtn.style.cssText  = indoorBtn.style.cssText.replace(/border:[^;]+;background:[^;]+;color:[^;]+;/,'')  + (val==='indoor'  ? sel : unsel);
+  outdoorBtn.style.cssText = outdoorBtn.style.cssText.replace(/border:[^;]+;background:[^;]+;color:[^;]+;/,'') + (val==='outdoor' ? sel : unsel);
+  window['_addCourtIndoor_'+type] = (val==='indoor');
+};
 
 // ── Address Autocomplete (Nominatim) ──────────────────
 let addrDebounce = null;
@@ -6971,6 +6982,93 @@ async function smLoadCourtsPriority(){
     if(priorityEl) priorityEl.innerHTML='<div style="font-size:12px;color:#dc2626;">Could not load courts.</div>';
   }
 }
+
+window.smShowAddCourtModal = function(){
+  const existing = document.getElementById('smAddCourtModal');
+  if(existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'smAddCourtModal';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML =
+    '<div style="max-width:420px;width:90%;background:#fff;border-radius:16px;padding:24px;box-shadow:0 8px 32px rgba(0,0,0,0.2);">'+
+      '<h3 style="margin:0 0 16px;font-size:17px;font-weight:800;color:#111;">Add a Court</h3>'+
+      '<div style="margin-bottom:10px;">'+
+        '<label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">Court name *</label>'+
+        '<input id="smAddCourtName" type="text" placeholder="Court or club name…" autocomplete="off" '+
+          'style="width:100%;padding:10px 12px;border-radius:8px;border:1.5px solid #d1d5db;font-size:16px;color:#111;box-sizing:border-box;font-family:inherit;"/>'+
+      '</div>'+
+      '<div style="margin-bottom:10px;">'+
+        '<label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">Address (optional)</label>'+
+        '<input id="smAddCourtAddress" type="text" placeholder="Address…" autocomplete="off" '+
+          'style="width:100%;padding:10px 12px;border-radius:8px;border:1.5px solid #d1d5db;font-size:16px;color:#111;box-sizing:border-box;font-family:inherit;"/>'+
+      '</div>'+
+      '<div style="margin-bottom:10px;">'+
+        '<label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:6px;">Type</label>'+
+        '<div style="display:flex;gap:6px;">'+
+          '<button type="button" id="addSmAddIndoorBtn" onclick="window.smToggleCourtType(\'smAdd\',\'indoor\')" '+
+            'style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:12px;cursor:pointer;font-family:inherit;">Indoor</button>'+
+          '<button type="button" id="addSmAddOutdoorBtn" onclick="window.smToggleCourtType(\'smAdd\',\'outdoor\')" '+
+            'style="padding:4px 12px;border-radius:20px;border:1px solid var(--green);background:var(--green);color:#fff;font-size:12px;cursor:pointer;font-family:inherit;">Outdoor</button>'+
+        '</div>'+
+      '</div>'+
+      '<div style="margin-bottom:10px;">'+
+        '<label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;"># Courts (optional)</label>'+
+        '<input id="smAddCourtNum" type="number" placeholder="# courts" min="1" max="50" '+
+          'style="width:100px;padding:8px 10px;border-radius:8px;border:1.5px solid #d1d5db;font-size:16px;color:#111;font-family:inherit;"/>'+
+      '</div>'+
+      '<div style="margin-bottom:16px;">'+
+        '<label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">Notes (optional)</label>'+
+        '<input id="smAddCourtNotes" type="text" placeholder="Hours, fees, contact…" autocomplete="off" '+
+          'style="width:100%;padding:10px 12px;border-radius:8px;border:1.5px solid #d1d5db;font-size:16px;color:#111;box-sizing:border-box;font-family:inherit;"/>'+
+      '</div>'+
+      '<div id="smAddCourtError" style="display:none;font-size:12px;color:#dc2626;margin-bottom:10px;"></div>'+
+      '<div style="display:flex;gap:10px;">'+
+        '<button type="button" onclick="document.getElementById(\'smAddCourtModal\').remove()" '+
+          'style="flex:1;padding:11px;border-radius:10px;border:1.5px solid #e5e7eb;background:#fff;color:#111;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Cancel</button>'+
+        '<button type="button" onclick="window._smSaveNewCourt()" '+
+          'style="flex:1;padding:11px;border-radius:10px;border:none;background:#1a7a3a;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Save Court</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(overlay);
+};
+
+window._smSaveNewCourt = async function(){
+  const myEmail = getMyEmail();
+  if(!myEmail){ showToast('⚠️ Please sign in first','#f59e0b'); return; }
+  const courtName = (document.getElementById('smAddCourtName')?.value||'').trim();
+  const errEl = document.getElementById('smAddCourtError');
+  if(!courtName){
+    if(errEl){ errEl.textContent='Court name is required.'; errEl.style.display='block'; }
+    return;
+  }
+  if(errEl) errEl.style.display='none';
+  const address   = (document.getElementById('smAddCourtAddress')?.value||'').trim()||null;
+  const numCourts = parseInt(document.getElementById('smAddCourtNum')?.value)||null;
+  const notes     = (document.getElementById('smAddCourtNotes')?.value||'').trim()||null;
+  const is_indoor = window._addCourtIndoor_smAdd === true;
+  try{
+    const cRes = await fetch(`${SUPABASE_URL}/rest/v1/courts`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=representation'},
+      body:JSON.stringify({ name:courtName, address, is_private:true, is_indoor, num_courts:numCourts, notes })
+    });
+    if(!cRes.ok){ const err=await cRes.text(); throw new Error(err); }
+    const rows = await cRes.json();
+    const newCourt = Array.isArray(rows) ? rows[0] : rows;
+    if(!newCourt?.id) throw new Error('No court ID returned');
+    await fetch(`${SUPABASE_URL}/rest/v1/player_courts`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+      body:JSON.stringify({ player_email:myEmail, court_id:newCourt.id, court_name:courtName, is_private:true })
+    });
+    smLoadCourtsPriority();
+    loadCourtBadgesForNav(myEmail);
+    showToast('Court added!','#4CAF7D');
+    document.getElementById('smAddCourtModal')?.remove();
+  }catch(e){
+    showToast('⚠️ Could not save court: '+e.message,'#dc2626');
+  }
+};
 
 function _smRenderCompactCourtRow(court, container){
   const selected = MS.selectedCourts.has(court.id);
