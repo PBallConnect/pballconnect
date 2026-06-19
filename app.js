@@ -2062,16 +2062,30 @@ async function loadMyCourts(){
   document.getElementById('privateCourtsBody').innerHTML='<div class="courts-loading-msg">🔍 Searching for courts near you…</div>';
   document.getElementById('publicCourtsBody').innerHTML='<div class="courts-loading-msg">🔍 Searching for courts near you…</div>';
 
-  // Pre-populate selected set from player_courts before proximity search so saved courts render checked
+  // Phase 1: fetch saved courts with full details and render immediately before proximity search
   const myEmail = getMyEmail();
+  let savedPrivate = [], savedPublic = [];
   if(myEmail){
     try{
       const savedRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(myEmail)}&select=court_id`,
+        `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(myEmail)}&select=court_id,is_member,courts(id,name,address,is_private,is_indoor,lat,lon)`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
       );
       const savedRows = savedRes.ok ? await savedRes.json() : [];
-      savedRows.forEach(r => { if(r.court_id) myCourtsState.selected.add(r.court_id); });
+      savedRows.forEach(r => {
+        if(r.court_id) myCourtsState.selected.add(r.court_id);
+        if(r.is_member) myCourtsState.members.add(r.court_id);
+      });
+      const savedCourts = savedRows.filter(r => r.courts).map(r => ({...r.courts, source:'db'}));
+      savedPrivate = savedCourts.filter(c => c.is_private);
+      savedPublic  = savedCourts.filter(c => !c.is_private);
+      if(savedCourts.length){
+        myCourtsState.private = savedPrivate;
+        myCourtsState.public  = savedPublic;
+        renderCourtsList('privateCourtsBody', savedPrivate, 'private');
+        renderCourtsList('publicCourtsBody',  savedPublic,  'public');
+        if(statusEl) statusEl.textContent=`✅ ${savedCourts.length} saved court${savedCourts.length===1?'':'s'} • Loading nearby…`;
+      }
     }catch(e){}
   }
 
@@ -2179,16 +2193,25 @@ async function loadMyCourts(){
   // legacy dedup removed
   const _x=[...[]].filter(c=>{ if(seen.has(c.name)) return false; seen.add(c.name); return true; });
 
-  myCourtsState.private = allCourts.filter(c=>c.is_private);
-  myCourtsState.public  = allCourts.filter(c=>!c.is_private);
-
-  // If no courts found at all, show helpful message
+  // If no proximity courts found, preserve saved courts or show empty message
   if(!allCourts.length){
-    const msg='<div class="courts-loading-msg">No courts found in our database yet for this area.<br><span style="font-size:11px;color:var(--green);margin-top:6px;display:block;">Use the Add button below to add courts you play at!</span></div>';
-    document.getElementById('privateCourtsBody').innerHTML=msg;
-    document.getElementById('publicCourtsBody').innerHTML=msg;
+    if(!savedPrivate.length && !savedPublic.length){
+      const msg='<div class="courts-loading-msg">No courts found in our database yet for this area.<br><span style="font-size:11px;color:var(--green);margin-top:6px;display:block;">Use the Add button below to add courts you play at!</span></div>';
+      document.getElementById('privateCourtsBody').innerHTML=msg;
+      document.getElementById('publicCourtsBody').innerHTML=msg;
+      return;
+    }
+    const statusEl2 = document.getElementById('courtsLoadStatus');
+    if(statusEl2) statusEl2.textContent=`✅ Showing ${savedPrivate.length+savedPublic.length} saved court${savedPrivate.length+savedPublic.length===1?'':'s'}`;
     return;
   }
+
+  // Merge proximity results with saved courts — never drop courts already in myCourtsState.selected
+  const proximityIds = new Set(allCourts.map(c => c.id||c.name).filter(Boolean));
+  const savedOnlyPrivate = savedPrivate.filter(c => !proximityIds.has(c.id||c.name));
+  const savedOnlyPublic  = savedPublic.filter(c => !proximityIds.has(c.id||c.name));
+  myCourtsState.private = [...savedOnlyPrivate, ...allCourts.filter(c=>c.is_private)];
+  myCourtsState.public  = [...savedOnlyPublic,  ...allCourts.filter(c=>!c.is_private)];
   renderCourtsContainers();
   const statusEl2 = document.getElementById('courtsLoadStatus');
   if(statusEl2){
