@@ -2068,7 +2068,7 @@ async function loadMyCourts(){
   if(myEmail){
     try{
       const savedRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(myEmail)}&select=court_id,is_member,courts(id,name,address,is_private,is_indoor,lat,lon)`,
+        `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(myEmail)}&select=court_id,is_member,courts(id,name,address,is_private,is_indoor,latitude,longitude,num_courts)`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
       );
       const savedRows = savedRes.ok ? await savedRes.json() : [];
