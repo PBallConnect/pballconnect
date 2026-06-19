@@ -2067,25 +2067,34 @@ async function loadMyCourts(){
   let savedPrivate = [], savedPublic = [];
   if(myEmail){
     try{
-      const savedRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(myEmail)}&select=court_id,is_member,courts(id,name,address,is_private,is_indoor,latitude,longitude,num_courts)`,
+      // Step 1: fetch saved court IDs + member status from player_courts
+      const pcRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(myEmail)}&select=court_id,is_member`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
       );
-      const savedRows = savedRes.ok ? await savedRes.json() : [];
-      console.log('Phase1 savedRows:', JSON.stringify(savedRows));
-      savedRows.forEach(r => {
+      const pcRows = pcRes.ok ? await pcRes.json() : [];
+      pcRows.forEach(r => {
         if(r.court_id) myCourtsState.selected.add(r.court_id);
         if(r.is_member) myCourtsState.members.add(r.court_id);
       });
-      const savedCourts = savedRows.filter(r => r.courts).map(r => ({...r.courts, source:'db'}));
-      savedPrivate = savedCourts.filter(c => c.is_private);
-      savedPublic  = savedCourts.filter(c => !c.is_private);
-      if(savedCourts.length){
-        myCourtsState.private = savedPrivate;
-        myCourtsState.public  = savedPublic;
-        renderCourtsList('privateCourtsBody', savedPrivate, 'private');
-        renderCourtsList('publicCourtsBody',  savedPublic,  'public');
-        if(statusEl) statusEl.textContent=`✅ ${savedCourts.length} saved court${savedCourts.length===1?'':'s'} • Loading nearby…`;
+      const savedIds = pcRows.map(r => r.court_id).filter(Boolean);
+      if(savedIds.length){
+        // Step 2: fetch full court details for those IDs
+        const cRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/courts?id=in.(${savedIds.map(id=>encodeURIComponent(id)).join(',')})&select=id,name,address,is_private,is_indoor,latitude,longitude,num_courts`,
+          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+        );
+        const courtRows = cRes.ok ? await cRes.json() : [];
+        const savedCourts = courtRows.map(c => ({...c, source:'db'}));
+        savedPrivate = savedCourts.filter(c => c.is_private);
+        savedPublic  = savedCourts.filter(c => !c.is_private);
+        if(savedCourts.length){
+          myCourtsState.private = savedPrivate;
+          myCourtsState.public  = savedPublic;
+          renderCourtsList('privateCourtsBody', savedPrivate, 'private');
+          renderCourtsList('publicCourtsBody',  savedPublic,  'public');
+          if(statusEl) statusEl.textContent=`✅ ${savedCourts.length} saved court${savedCourts.length===1?'':'s'} • Loading nearby…`;
+        }
       }
     }catch(e){}
   }
