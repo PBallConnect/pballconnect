@@ -2072,6 +2072,7 @@ async function loadMyCourts(){
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
       );
       const savedRows = savedRes.ok ? await savedRes.json() : [];
+      console.log('Phase1 savedRows:', JSON.stringify(savedRows));
       savedRows.forEach(r => {
         if(r.court_id) myCourtsState.selected.add(r.court_id);
         if(r.is_member) myCourtsState.members.add(r.court_id);
