@@ -12356,6 +12356,7 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
     }
     // If declined, original row stays pending — new user can accept from IC → Requests later
     document.getElementById('confirmOverlay').style.display='none';
+    if(!SESSION_PLAYER) SESSION_PLAYER = { email: newPlayerEmail, first_name: (newPlayerName||'').split(' ')[0] };
     showPage('dashboard');
   };
 
