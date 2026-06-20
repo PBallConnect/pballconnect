@@ -11676,7 +11676,8 @@ function showQuickConnectForm(email, inv){
   const lbl = 'display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#374151;margin-bottom:6px;';
 
   overlay.innerHTML =
-    '<div style="max-width:440px;width:100%;box-sizing:border-box;margin:0 auto;padding:28px 20px 60px;">'+
+    '<div style="position:relative;max-width:440px;width:100%;box-sizing:border-box;margin:0 auto;padding:28px 20px 60px;">'+
+      '<button onclick="window._qcConfirmLeave()" style="position:absolute;top:8px;right:8px;background:none;border:none;font-size:24px;color:#9ca3af;cursor:pointer;line-height:1;padding:4px 8px;z-index:1;" aria-label="Close">&#x2715;</button>'+
       '<div style="text-align:center;margin-bottom:24px;">'+
         '<div style="font-size:36px;margin-bottom:8px;">⚡</div>'+
         '<div style="font-size:20px;font-weight:800;color:#111;margin-bottom:4px;">Quick Connect</div>'+
@@ -11749,7 +11750,7 @@ function showQuickConnectForm(email, inv){
         'Save & Join PBallConnect'+
       '</button>'+
       '<div style="text-align:center;">'+
-        '<span onclick="window._qcSwitchFull()" style="font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline;">Switch to Full Profile</span>'+
+        '<span onclick="window._qcSwitchFull()" style="display:none;font-size:12px;color:#9ca3af;cursor:pointer;text-decoration:underline;">Switch to Full Profile</span>'+
       '</div>'+
     '</div>';
 
@@ -11773,6 +11774,38 @@ function showQuickConnectForm(email, inv){
       btn.style.background  = ok ? '#1a7a3a' : '#9ca3af';
       btn.style.cursor      = ok ? 'pointer'  : 'not-allowed';
     }
+  };
+
+  window._qcIsDirty = function(){
+    const fn  = document.getElementById('qcFirstName')?.value?.trim() || '';
+    const zip = (document.getElementById('qcZip')?.value||'').trim();
+    const ph  = (document.getElementById('qcPhone')?.value||'').trim();
+    const sl  = document.getElementById('qcSkillSlider')?.value;
+    const smsCb = document.getElementById('qcSmsOptIn');
+    return fn.length > 0 || zip.length > 0 || ph.length > 0 || S.gender !== '' || sl !== '8' || !!(smsCb && smsCb.checked);
+  };
+
+  window._qcClose = function(){
+    const t = document.getElementById('qcSkillTicks');
+    if(t) t.innerHTML = '';
+    document.getElementById('quickConnectOverlay')?.remove();
+  };
+
+  window._qcConfirmLeave = function(){
+    if(!window._qcIsDirty()){ window._qcClose(); return; }
+    const dlg = document.createElement('div');
+    dlg.id = 'qcLeaveDlg';
+    dlg.style.cssText = 'position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:20px;';
+    dlg.innerHTML =
+      '<div style="background:#fff;border-radius:16px;padding:28px 24px;max-width:340px;width:100%;text-align:center;">'+
+        '<div style="font-size:17px;font-weight:800;color:#111;margin-bottom:10px;">You\'re not done yet!</div>'+
+        '<div style="font-size:14px;color:#6b7280;margin-bottom:24px;line-height:1.5;">Leave without saving your registration?</div>'+
+        '<div style="display:flex;flex-direction:column;gap:10px;">'+
+          '<button onclick="document.getElementById(\'qcLeaveDlg\')?.remove()" style="padding:13px;border-radius:10px;border:none;background:#1a7a3a;color:#fff;font-weight:800;font-size:14px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Continue Registration</button>'+
+          '<button onclick="document.getElementById(\'qcLeaveDlg\')?.remove();window._qcClose();" style="padding:13px;border-radius:10px;border:2px solid #d1d5db;background:#fff;color:#374151;font-weight:600;font-size:14px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Leave</button>'+
+        '</div>'+
+      '</div>';
+    document.body.appendChild(dlg);
   };
 
   window._qcToggle = function(id){
