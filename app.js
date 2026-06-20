@@ -10265,7 +10265,14 @@ async function loadIcInvites(){
     const res=await fetch(`${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(myEmail)}&select=*&order=created_at.desc`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     if(!res.ok) return;
     const allSent=await res.json();
-    const pending=allSent.filter(c=>c.status==='pending');
+    // Build set of emails already connected (approved in allSent, or already in IC via reciprocal row)
+    const _approvedRecips = new Set();
+    allSent.filter(c=>c.status==='approved').forEach(c=>{
+      const e=(c.recipient_email||'').toLowerCase();
+      if(e && !e.startsWith('pending_')) _approvedRecips.add(e);
+    });
+    IC_MEMBERS.forEach(m=>{ const e=(m.player?.email||'').toLowerCase(); if(e) _approvedRecips.add(e); });
+    const pending=allSent.filter(c=>c.status==='pending' && !_approvedRecips.has((c.recipient_email||'').toLowerCase()));
     const accepted=allSent.filter(c=>c.status==='approved');
     const declined=allSent.filter(c=>c.status==='declined');
 
