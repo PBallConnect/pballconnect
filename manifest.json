@@ -2,10 +2,10 @@
   "name": "PBallConnect",
   "short_name": "PBallConnect",
   "description": "Connect with pickleball players near you",
-  "start_url": "/",
+  "start_url": "/app.html",
   "display": "standalone",
-  "background_color": "#0a120b",
-  "theme_color": "#0a120b",
+  "background_color": "#1a7a3a",
+  "theme_color": "#1a7a3a",
   "orientation": "portrait-primary",
   "icons": [
     {
