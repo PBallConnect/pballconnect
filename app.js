@@ -771,7 +771,8 @@ const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, 
   auth: {
     detectSessionInUrl: true,
     persistSession: true,
-    autoRefreshToken: true
+    autoRefreshToken: true,
+    storageKey: 'pb_session'
   }
 });
 
@@ -8788,6 +8789,8 @@ async function initApp(){
     }
   }
   try{
+    // iOS PWA (home screen launch) needs extra time for Supabase to read localStorage
+    if(window.navigator.standalone) await new Promise(r => setTimeout(r, 300));
     const { data: { session } } = await _supabase.auth.getSession();
     if(session && !SESSION_PLAYER){
       SUPABASE_ACCESS_TOKEN = session.access_token;
