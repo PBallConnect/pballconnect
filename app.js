@@ -9562,13 +9562,18 @@ function buildIcMemberCard(player, conn, myEmail, lastPlayed){
 
   // Avatar (small)
   const avatarEl=document.createElement('div');
-  avatarEl.style.cssText='width:32px;height:32px;border-radius:50%;background:#d1fae5;'+
+  avatarEl.style.cssText='width:32px;height:32px;border-radius:50%;'+
     'display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;'+
-    'color:#1a7a3a;flex-shrink:0;overflow:hidden;';
+    'flex-shrink:0;overflow:hidden;';
   if(player.photo_url){
+    avatarEl.style.background='#1a7a3a';avatarEl.style.color='#fff';
     avatarEl.innerHTML=`<img src="${player.photo_url}" style="width:100%;height:100%;object-fit:cover;"/>`;
+  } else if(emoji){
+    avatarEl.style.background='#d1fae5';avatarEl.style.color='#1a7a3a';
+    avatarEl.textContent=emoji;
   } else {
-    avatarEl.textContent=emoji||initials;
+    avatarEl.style.background='#1a7a3a';avatarEl.style.color='#fff';
+    avatarEl.textContent=initials;
   }
 
   // Name (flex-grow so it takes available space)
@@ -10251,7 +10256,7 @@ async function loadIcInvites(){
         const emailLine=(conn.recipient_email&&!conn.recipient_email.startsWith('pending_'))
           ?'<div style="font-size:11px;color:#6b7280;margin-top:1px;">'+conn.recipient_email+'</div>':'';
         row.innerHTML=
-          '<div class="ic-invite-avatar" style="background:rgba(255,255,255,0.08);color:#fff;">'+initials+'</div>'+
+          '<div class="ic-invite-avatar">'+initials+'</div>'+
           '<div style="flex:1;"><div class="ic-invite-name">'+name+'</div>'+
           emailLine+
           '<div class="ic-invite-meta">'+meta+'</div></div>'+
