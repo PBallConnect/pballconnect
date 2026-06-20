@@ -8250,11 +8250,11 @@ window.showEmergencyFill = async function(matchId, droppedInfo){
     try{
       const myEmail = getMyEmail();
       const cRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/connections?or=(requester_email.eq.${encodeURIComponent(myEmail)},recipient_email.eq.${encodeURIComponent(myEmail)})&status=eq.approved&select=requester_email,recipient_email`,
+        `${SUPABASE_URL}/rest/v1/connections?recipient_email=eq.${encodeURIComponent(myEmail)}&status=eq.approved&select=requester_email`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
       );
       const conns = cRes.ok ? await cRes.json() : [];
-      const icEmails = conns.map(c => c.requester_email === myEmail ? c.recipient_email : c.requester_email);
+      const icEmails = conns.map(c => c.requester_email);
       if(icEmails.length){
         const pRes = await fetch(
           `${SUPABASE_URL}/rest/v1/public_profiles?email=in.(${icEmails.map(e=>encodeURIComponent(e)).join(',')})&select=email,first_name,last_name,skill_self,skill_level,gender`,
@@ -9509,14 +9509,14 @@ async function loadInnerCircle(){
   if(!myEmail) return;
   try{
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/connections?or=(requester_email.eq.${encodeURIComponent(myEmail)},recipient_email.eq.${encodeURIComponent(myEmail)})&status=eq.approved&select=*`,
+      `${SUPABASE_URL}/rest/v1/connections?recipient_email=eq.${encodeURIComponent(myEmail)}&status=eq.approved&select=*`,
       {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
     );
     if(!res.ok) return;
     const conns = await res.json();
-    // Load favorites
-    IC_FAVORITES = new Set(conns.filter(c=>c.is_favorite).map(c=>c.requester_email===myEmail?c.recipient_email:c.requester_email));
-    const otherEmails = conns.map(c=>c.requester_email===myEmail?c.recipient_email:c.requester_email);
+    // Load favorites — all rows have recipient_email=myEmail so other side is always requester_email
+    IC_FAVORITES = new Set(conns.filter(c=>c.is_favorite).map(c=>c.requester_email));
+    const otherEmails = conns.map(c=>c.requester_email);
     IC_MEMBERS = [];
     if(otherEmails.length){
       const pr = await fetch(
@@ -9525,7 +9525,7 @@ async function loadInnerCircle(){
       );
       if(pr.ok){
         const players = await pr.json();
-        IC_MEMBERS = players.map(player=>({player, conn:conns.find(c=>c.requester_email===player.email||c.recipient_email===player.email), lastPlayed:null}));
+        IC_MEMBERS = players.map(player=>({player, conn:conns.find(c=>c.requester_email===player.email), lastPlayed:null}));
       }
     }
     renderInnerCircleList();
@@ -13504,12 +13504,12 @@ async function showCreateGroupModal(){
     if(myEmail){
       try{
         const connsRes = await fetch(
-          `${SUPABASE_URL}/rest/v1/connections?or=(requester_email.eq.${encodeURIComponent(myEmail)},recipient_email.eq.${encodeURIComponent(myEmail)})&status=eq.approved&select=requester_email,recipient_email`,
+          `${SUPABASE_URL}/rest/v1/connections?recipient_email=eq.${encodeURIComponent(myEmail)}&status=eq.approved&select=requester_email`,
           {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
         );
         if(connsRes.ok){
           const conns = await connsRes.json();
-          const others = conns.map(c=>c.requester_email===myEmail?c.recipient_email:c.requester_email);
+          const others = conns.map(c=>c.requester_email);
           if(others.length){
             const pr = await fetch(
               `${SUPABASE_URL}/rest/v1/public_profiles?email=in.(${others.map(e=>encodeURIComponent(e)).join(',')})&select=email,first_name,last_name,nickname,avatar_emoji,skill_level,gender,city,state`,
