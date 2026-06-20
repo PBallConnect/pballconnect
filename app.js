@@ -2310,10 +2310,10 @@ function renderCourtsList(containerId, courts, type){
     const tagsHtml=tags.map(t=>'<span class="court-item-tag '+t.cls+'">'+t.label+'</span>').join('');
     const addrHtml=court.address?'<div class="court-item-addr">'+court.address+'</div>':'';
     const memberHtml=isPrivate&&isSelected?
-      '<div class="member-check-row">'+
+      '<div class="member-check-row" style="background:rgba(255,255,255,0.8);">'+
         '<input type="checkbox" id="member-'+id+'" '+(isMember?'checked':'')+
         ' onchange="toggleMember(this.dataset.mid,this.checked)" data-mid="'+id+'" onclick="event.stopPropagation()"/>'+
-        '<label for="member-'+id+'" onclick="event.stopPropagation()">I am a member of this club</label>'+
+        '<label for="member-'+id+'" style="color:#4b5563;" onclick="event.stopPropagation()">I am a member of this club</label>'+
       '</div>':'';
     div.innerHTML=
       '<div class="'+checkClass+'" id="check-'+id+'"></div>'+
@@ -2350,44 +2350,126 @@ function toggleMember(id, checked){
   else myCourtsState.members.delete(id);
 }
 
-async function addCustomCourt(type){
-  const inputId = type==='private'?'addPrivateCourtInput':'addPublicCourtInput';
-  const detailId = type==='private'?'addPrivateDetail':'addPublicDetail';
-  const addrId   = type==='private'?'addPrivateAddr':'addPublicAddr';
-  const indoorId = type==='private'?'addPrivateIndoor':'addPublicIndoor';
-  const numId    = type==='private'?'addPrivateNumCourts':'addPublicNumCourts';
-  const notesId  = type==='private'?'addPrivateNotes':'addPublicNotes';
-  const inp=document.getElementById(inputId);
-  const name=inp.value.trim();
-  if(!name){ showToast('⚠️ Please enter a court name','#f59e0b'); return; }
-  // Show detail fields on first click if not yet showing
-  const detail=document.getElementById(detailId);
-  if(detail && detail.style.display==='none'){
-    detail.style.display='block';
-    document.getElementById(addrId)?.focus();
-    return; // Let user fill in details then click Add again
+let _addCourtTypeVal = 'outdoor';
+
+window.showAddCourtModal = function(type){
+  const existing = document.getElementById('addCourtModal');
+  if(existing) existing.remove();
+  _addCourtTypeVal = 'outdoor';
+  const isPrivate = type === 'private';
+  const title = isPrivate ? 'Add a Private Court' : 'Add a Public Court';
+  const overlay = document.createElement('div');
+  overlay.id = 'addCourtModal';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;';
+  const btnBase = 'flex:1;padding:8px;border-radius:20px;font-size:13px;cursor:pointer;font-family:inherit;';
+  const btnSel = btnBase+'border:1px solid var(--green);background:var(--green);color:#fff;';
+  const btnUnsel = btnBase+'border:1px solid #d1d5db;background:transparent;color:#6b7280;';
+  overlay.innerHTML =
+    '<div style="max-width:440px;width:90%;background:#fff;border-radius:16px;padding:24px;box-sizing:border-box;">'+
+      '<div style="font-weight:700;font-size:18px;color:#111;margin-bottom:16px;">'+title+'</div>'+
+      '<div id="addCourtModalErr" style="display:none;color:#dc2626;font-size:13px;margin-bottom:8px;"></div>'+
+      '<label style="display:block;font-size:13px;color:#4b5563;font-weight:600;margin-bottom:4px;">Court / Club Name *</label>'+
+      '<input id="acmName" type="text" placeholder="Name…" autocomplete="off"'+
+        ' style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;box-sizing:border-box;margin-bottom:12px;"/>'+
+      '<label style="display:block;font-size:13px;color:#4b5563;font-weight:600;margin-bottom:4px;">Street Address (optional)</label>'+
+      '<input id="acmAddr" type="text" placeholder="123 Main St…" autocomplete="off"'+
+        ' style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;box-sizing:border-box;margin-bottom:12px;"/>'+
+      '<div style="display:flex;gap:8px;margin-bottom:12px;">'+
+        '<div style="flex:1;">'+
+          '<label style="display:block;font-size:13px;color:#4b5563;font-weight:600;margin-bottom:4px;">City *</label>'+
+          '<input id="acmCity" type="text" placeholder="City…" autocomplete="off"'+
+            ' style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;box-sizing:border-box;"/>'+
+        '</div>'+
+        '<div style="width:70px;">'+
+          '<label style="display:block;font-size:13px;color:#4b5563;font-weight:600;margin-bottom:4px;">State *</label>'+
+          '<input id="acmState" type="text" placeholder="NH" value="NH" autocomplete="off"'+
+            ' style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;box-sizing:border-box;"/>'+
+        '</div>'+
+      '</div>'+
+      '<label style="display:block;font-size:13px;color:#4b5563;font-weight:600;margin-bottom:6px;">Court Type</label>'+
+      '<div style="display:flex;gap:8px;margin-bottom:12px;">'+
+        '<button type="button" id="acmBtnIndoor" onclick="window._acmSetType(\'indoor\')" style="'+btnUnsel+'">Indoor</button>'+
+        '<button type="button" id="acmBtnOutdoor" onclick="window._acmSetType(\'outdoor\')" style="'+btnSel+'">Outdoor</button>'+
+        '<button type="button" id="acmBtnBoth" onclick="window._acmSetType(\'both\')" style="'+btnUnsel+'">Both</button>'+
+      '</div>'+
+      '<label style="display:block;font-size:13px;color:#4b5563;font-weight:600;margin-bottom:4px;">Number of Courts (optional)</label>'+
+      '<input id="acmNum" type="number" min="1" max="50" placeholder="e.g. 4"'+
+        ' style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;color:#111;box-sizing:border-box;margin-bottom:12px;"/>'+
+      '<label style="display:block;font-size:13px;color:#4b5563;font-weight:600;margin-bottom:4px;">Notes (optional)</label>'+
+      '<input id="acmNotes" type="text" placeholder="Hours, fees, contact…" autocomplete="off"'+
+        ' style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;box-sizing:border-box;margin-bottom:12px;"/>'+
+      (isPrivate?
+        '<div style="background:rgba(255,255,255,0.8);border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;">'+
+          '<input type="checkbox" id="acmMember" onclick="event.stopPropagation()"/>'+
+          '<label for="acmMember" style="color:#4b5563;font-size:14px;cursor:pointer;" onclick="event.stopPropagation()">I am a member of this club</label>'+
+        '</div>':'')+
+      '<div style="display:flex;gap:10px;margin-top:4px;">'+
+        '<button type="button" onclick="document.getElementById(\'addCourtModal\')?.remove()"'+
+          ' style="flex:1;padding:12px;border-radius:10px;border:1px solid #d1d5db;background:transparent;color:#6b7280;font-size:15px;cursor:pointer;font-family:inherit;">Cancel</button>'+
+        '<button type="button" id="acmSaveBtn" onclick="window._acmSave(\''+type+'\')"'+
+          ' style="flex:1;padding:12px;border-radius:10px;border:none;background:var(--green);color:#fff;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;">Save Court</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(overlay);
+};
+
+window._acmSetType = function(val){
+  _addCourtTypeVal = val;
+  const btnBase = 'flex:1;padding:8px;border-radius:20px;font-size:13px;cursor:pointer;font-family:inherit;';
+  const sel = btnBase+'border:1px solid var(--green);background:var(--green);color:#fff;';
+  const unsel = btnBase+'border:1px solid #d1d5db;background:transparent;color:#6b7280;';
+  const bi = document.getElementById('acmBtnIndoor');
+  const bo = document.getElementById('acmBtnOutdoor');
+  const bb = document.getElementById('acmBtnBoth');
+  if(bi) bi.style.cssText = (val==='indoor'?sel:unsel);
+  if(bo) bo.style.cssText = (val==='outdoor'?sel:unsel);
+  if(bb) bb.style.cssText = (val==='both'?sel:unsel);
+};
+
+window._acmSave = async function(type){
+  const name  = (document.getElementById('acmName')?.value||'').trim();
+  const addr  = (document.getElementById('acmAddr')?.value||'').trim();
+  const city  = (document.getElementById('acmCity')?.value||'').trim();
+  const state = (document.getElementById('acmState')?.value||'').trim();
+  const errEl = document.getElementById('addCourtModalErr');
+  if(!name||!city||!state){
+    if(errEl){ errEl.textContent='Please fill in Court Name, City, and State.'; errEl.style.display='block'; }
+    return;
   }
-  const address=(document.getElementById(addrId)?.value||'').trim()||S.city+', '+S.state;
-  const is_indoor = window['_addCourtIndoor_'+type] === true;
-  const num_courts=parseInt(document.getElementById(numId)?.value)||0;
-  const notes=(document.getElementById(notesId)?.value||'').trim();
-  const playerEmail=getMyEmail()||document.getElementById('email')?.value||'';
+  if(errEl) errEl.style.display='none';
+  const num_courts = parseInt(document.getElementById('acmNum')?.value)||null;
+  const notes = (document.getElementById('acmNotes')?.value||'').trim()||null;
+  const isMemberChecked = type==='private' && (document.getElementById('acmMember')?.checked||false);
+  const address = addr ? addr+', '+city+', '+state : city+', '+state;
+  const myEmail = getMyEmail()||'';
   const newCourtId = crypto.randomUUID();
-  const newCourt={
-    id: newCourtId, name, address,
-    is_private:type==='private', is_indoor, num_courts, source:'user'
-  };
-  // Save to Supabase courts table, then immediately link to player_courts
+  // Geocode via Nominatim
+  let latitude = null, longitude = null;
+  try{
+    const q = encodeURIComponent(address+', US');
+    const gRes = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${q}&format=json&addressdetails=1&countrycodes=us&limit=1`,
+      {headers:{'Accept-Language':'en','User-Agent':'PBallConnect/1.0'}}
+    );
+    if(gRes.ok){
+      const gData = await gRes.json();
+      if(gData.length){ latitude=parseFloat(gData[0].lat); longitude=parseFloat(gData[0].lon); }
+    }
+  }catch(e){ console.warn('addCourtModal geocode failed:',e); }
+  const saveBtn = document.getElementById('acmSaveBtn');
+  if(saveBtn){ saveBtn.disabled=true; saveBtn.textContent='Saving…'; }
   try{
     const cRes = await fetch(`${SUPABASE_URL}/rest/v1/courts`,{
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
       body:JSON.stringify({
-        id: newCourtId,
-        name, address, city:S.city||address.split(',')[1]?.trim()||'',
-        state:S.state||'', is_private:type==='private',
-        is_indoor, num_courts:num_courts||null, notes:notes||null,
-        added_by_player:playerEmail
+        id:newCourtId, name, address, city, state,
+        is_private:type==='private',
+        is_indoor:_addCourtTypeVal==='indoor'||_addCourtTypeVal==='both',
+        is_outdoor:_addCourtTypeVal==='outdoor'||_addCourtTypeVal==='both',
+        num_courts:num_courts||null, notes:notes||null,
+        latitude:latitude||null, longitude:longitude||null,
+        added_by_player:myEmail
       })
     });
     if(!cRes.ok){ const err=await cRes.text(); throw new Error(err); }
@@ -2395,39 +2477,20 @@ async function addCustomCourt(type){
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
       body:JSON.stringify({
-        player_email: playerEmail,
-        court_id: newCourtId,
-        court_name: name,
-        is_private: type==='private',
-        is_member: false
+        player_email:myEmail, court_id:newCourtId,
+        court_name:name, is_private:type==='private', is_member:isMemberChecked
       })
     });
-    loadCourtBadgesForNav(playerEmail);
-    showToast('✅ Court saved to database — thank you!','#4CAF7D');
+    loadCourtBadgesForNav(myEmail);
+    await loadMyCourts();
+    showToast('Court saved to My Courts!','#4CAF7D');
+    document.getElementById('addCourtModal')?.remove();
   }catch(e){
-    console.warn('Could not save court to DB:',e);
-    showToast('✅ Court added locally!','#4CAF7D');
+    console.warn('addCourtModal save failed:',e);
+    if(saveBtn){ saveBtn.disabled=false; saveBtn.textContent='Save Court'; }
+    showToast('⚠️ Could not save court: '+e.message,'#dc2626');
   }
-  myCourtsState[type].push(newCourt);
-  myCourtsState.selected.add(newCourt.id);
-  // Reset fields
-  inp.value='';
-  if(detail) detail.style.display='none';
-  ['addrId','numId','notesId'].forEach(fId=>{
-    const el=document.getElementById(eval(fId)); if(el) el.value='';
-  });
-  const cb=document.getElementById(indoorId); if(cb) cb.checked=false;
-  renderCourtsContainers();
-  const statusEl2 = document.getElementById('courtsLoadStatus');
-  if(statusEl2){
-    const total = myCourtsState.private.length + myCourtsState.public.length;
-    const priv = myCourtsState.private.length;
-    const pub = myCourtsState.public.length;
-    statusEl2.textContent = total > 0
-      ? `✅ Found ${total} courts — ${priv} private, ${pub} public`
-      : '⚠️ No courts found in this area yet';
-  }
-}
+};
 
 async function saveMyCourts(){
   if(myCourtsState.selected.size===0){showToast('⚠️ No courts selected yet.','#f59e0b');return;}

@@ -835,26 +835,10 @@
           </div>
           <div id="privateCourtsBody"><div class="courts-loading-msg">🔍 Select your profile location first</div></div>
           <div class="courts-add-section">
-            <div class="courts-add-title">➕ Add a private court not listed</div>
-            <div class="courts-add-row">
-              <input type="text" id="addPrivateCourtInput" placeholder="Court or club name…" autocomplete="off"/>
-              <button class="courts-add-btn-purple" onclick="addCustomCourt('private')">Add</button>
-            </div>
-            <div class="courts-add-detail" id="addPrivateDetail" style="display:none;">
-              <input type="text" id="addPrivateAddr" placeholder="Address (optional)" autocomplete="off" style="margin-top:6px;"/>
-              <div style="display:flex;gap:8px;margin-top:6px;align-items:center;">
-                <div style="display:flex;gap:6px;">
-                  <button type="button" id="addPrivateIndoorBtn" onclick="window.smToggleCourtType('private','indoor')"
-                    style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:12px;cursor:pointer;font-family:inherit;">Indoor</button>
-                  <button type="button" id="addPrivateOutdoorBtn" onclick="window.smToggleCourtType('private','outdoor')"
-                    style="padding:4px 12px;border-radius:20px;border:1px solid var(--green);background:var(--green);color:#fff;font-size:12px;cursor:pointer;font-family:inherit;">Outdoor</button>
-                </div>
-                <input type="number" id="addPrivateNumCourts" placeholder="# courts" min="1" max="100"
-                  style="width:90px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:#111;font-size:12px;"/>
-              </div>
-              <input type="text" id="addPrivateNotes" placeholder="Notes (hours, fees, contact…)" autocomplete="off" style="margin-top:6px;"/>
-              <button class="courts-add-btn-purple" onclick="addCustomCourt('private')" style="margin-top:8px;width:100%;padding:8px;">✅ Save This Court</button>
-            </div>
+            <button onclick="window.showAddCourtModal('private')"
+              style="width:100%;padding:12px;border-radius:10px;border:2px dashed var(--border);background:transparent;color:var(--green);font-weight:700;font-size:14px;cursor:pointer;margin-top:12px;">
+              + Add a Private Court
+            </button>
           </div>
         </div>
         <!-- Public Courts -->
@@ -868,26 +852,10 @@
           </div>
           <div id="publicCourtsBody"><div class="courts-loading-msg">🔍 Select your profile location first</div></div>
           <div class="courts-add-section">
-            <div class="courts-add-title">➕ Add a public court not listed</div>
-            <div class="courts-add-row">
-              <input type="text" id="addPublicCourtInput" placeholder="Park or facility name…" autocomplete="off"/>
-              <button class="courts-add-btn-green" onclick="addCustomCourt('public')">Add</button>
-            </div>
-            <div class="courts-add-detail" id="addPublicDetail" style="display:none;">
-              <input type="text" id="addPublicAddr" placeholder="Address (optional)" autocomplete="off" style="margin-top:6px;"/>
-              <div style="display:flex;gap:8px;margin-top:6px;align-items:center;">
-                <div style="display:flex;gap:6px;">
-                  <button type="button" id="addPublicIndoorBtn" onclick="window.smToggleCourtType('public','indoor')"
-                    style="padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:12px;cursor:pointer;font-family:inherit;">Indoor</button>
-                  <button type="button" id="addPublicOutdoorBtn" onclick="window.smToggleCourtType('public','outdoor')"
-                    style="padding:4px 12px;border-radius:20px;border:1px solid var(--green);background:var(--green);color:#fff;font-size:12px;cursor:pointer;font-family:inherit;">Outdoor</button>
-                </div>
-                <input type="number" id="addPublicNumCourts" placeholder="# courts" min="1" max="100"
-                  style="width:90px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:#111;font-size:12px;"/>
-              </div>
-              <input type="text" id="addPublicNotes" placeholder="Notes (hours, fees, contact…)" autocomplete="off" style="margin-top:6px;"/>
-              <button class="courts-add-btn-green" onclick="addCustomCourt('public')" style="margin-top:8px;width:100%;padding:8px;">✅ Save This Court</button>
-            </div>
+            <button onclick="window.showAddCourtModal('public')"
+              style="width:100%;padding:12px;border-radius:10px;border:2px dashed var(--border);background:transparent;color:var(--green);font-weight:700;font-size:14px;cursor:pointer;margin-top:12px;">
+              + Add a Public Court
+            </button>
           </div>
         </div>
       </div>
