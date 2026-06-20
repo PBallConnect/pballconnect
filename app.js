@@ -1253,7 +1253,8 @@ async function doSaveProfile(){
     // Clean up edit mode fully
     stopChangeDetection();
     _editModeActive = false;
-    document.getElementById('editProfileBtnEl')?.classList.remove('active');
+    const _svBtn=document.getElementById('editProfileBtnEl');
+    if(_svBtn){_svBtn.classList.remove('active');_svBtn.textContent='✏️ Edit Profile';}
     document.getElementById('editModeBanner')?.remove();
     document.getElementById('readOnlyBanner')?.remove();
     document.getElementById('editModeStickyBanner').style.display='none';
@@ -1436,6 +1437,8 @@ function showPage(page){
   }
   if(page!=='playerProfile'){
     stopChangeDetection();_editModeActive=false;
+    const _navBtn=document.getElementById('editProfileBtnEl');
+    if(_navBtn){_navBtn.classList.remove('active');_navBtn.textContent='✏️ Edit Profile';}
     document.getElementById('editModeStickyBanner').style.display='none';
     const _pshNav=document.getElementById('profileStickyHeader');if(_pshNav)_pshNav.style.top='';
     const _ppNav=document.getElementById('page-playerProfile');if(_ppNav)_ppNav.style.paddingTop='';
@@ -9035,7 +9038,8 @@ async function openEditProfile(){
     if(_psh) _psh.style.top='96px';
     const _pp=document.getElementById('page-playerProfile');
     if(_pp) _pp.style.paddingTop='44px';
-    document.getElementById('editProfileBtnEl')?.classList.add('active');
+    const _epbEl=document.getElementById('editProfileBtnEl');
+    if(_epbEl){_epbEl.classList.add('active');_epbEl.textContent='✕ Cancel Edit';}
     const card=document.getElementById('step1');
     const h2=card?.querySelector('h2');
     if(h2&&!document.getElementById('editModeBanner')){
@@ -9341,6 +9345,74 @@ function startChangeDetection(){
   },400);
 }
 function stopChangeDetection(){if(_changeTimer){clearInterval(_changeTimer);_changeTimer=null;}}
+
+function _profileHasChanges(){
+  if(!SESSION_PLAYER)return false;
+  const p=SESSION_PLAYER;
+  const currentEmoji=document.getElementById('avatarEmoji')?.value||S.avatarEmoji||'';
+  return (
+    v('firstName')!==(p.first_name||'')||
+    v('nickname')!==(p.nickname||'')||
+    v('addrZip')!==(p.zip_code||'')||
+    (v('phone')||'').replace(/\D/g,'')!==decodePhone(p.phone||'')||
+    !!(document.getElementById('phone')?.value.replace(/\D/g,'').length>=10&&document.getElementById('smsOptIn')?.checked)!==!!(p.sms_opt_in)||
+    S.gender!==(p.gender||'')||
+    S.handedness!==(p.handedness||'')||
+    S.playFormat!==(p.play_format||'Both')||
+    S.playStyle!==(p.play_style||'')||
+    S.venuePref!==(p.play_venues||'')||
+    (S.isCoach==='Yes')!==(p.is_coach||false)||
+    [...(S.coachCerts||[])].sort().join(',')!==(p.coach_certifications||'').split(',').map(s=>s.trim()).filter(Boolean).sort().join(',')||
+    [...(S.coachLessonTypes||[])].sort().join(',')!==(p.coach_lesson_types||'').split(',').map(s=>s.trim()).filter(Boolean).sort().join(',')||
+    [...(S.coachFormats||[])].sort().join(',')!==(p.coach_formats||'').split(',').map(s=>s.trim()).filter(Boolean).sort().join(',')||
+    String(document.getElementById('coachRateMin')?.value||'')!==String(p.coach_rate_min||'')||
+    String(document.getElementById('coachRateMax')?.value||'')!==String(p.coach_rate_max||'')||
+    (document.getElementById('coachBio')?.value||'').trim()!==(p.coach_bio||'').trim()||
+    currentEmoji!==(p.avatar_emoji||'')||
+    String(S.skill||'')!==String(p.skill_level||'')||
+    String(S.goalRating||'')!==String(p.goal_rating||'')||
+    String(S.duprVal||'')!==String(p.dupr_rating||'')||
+    (document.getElementById('playerAge')?.value||'')!==(p.age_range||'')
+  );
+}
+function _closeEditMode(){
+  stopChangeDetection();
+  _editModeActive=false;
+  const btn=document.getElementById('editProfileBtnEl');
+  if(btn){btn.classList.remove('active');btn.textContent='✏️ Edit Profile';}
+  document.getElementById('editModeStickyBanner').style.display='none';
+  const _psh=document.getElementById('profileStickyHeader');if(_psh)_psh.style.top='';
+  const _pp=document.getElementById('page-playerProfile');if(_pp)_pp.style.paddingTop='';
+  if(SESSION_PLAYER){
+    S.avatarEmoji='';
+    restoreProfileForm(SESSION_PLAYER);
+    S.avatarEmoji=SESSION_PLAYER.avatar_emoji||'';
+  } else {
+    lockProfileForm();
+  }
+}
+window.toggleEditProfile=function(){
+  if(_editModeActive){window.cancelEditProfile();}
+  else{openEditProfile();}
+};
+window.cancelEditProfile=function(){
+  if(!_profileHasChanges()){_closeEditMode();return;}
+  const existing=document.getElementById('editCancelDialog');if(existing)existing.remove();
+  const overlay=document.createElement('div');
+  overlay.id='editCancelDialog';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9500;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML=
+    '<div style="background:#fff;border-radius:16px;padding:24px;max-width:360px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">'+
+    '<div style="font-size:18px;font-weight:800;color:#111;margin-bottom:10px;">Unsaved Changes</div>'+
+    '<div style="font-size:14px;color:#6b7280;margin-bottom:20px;line-height:1.5;">You have unsaved changes. Save them before leaving?</div>'+
+    '<div style="display:flex;gap:10px;">'+
+    '<button id="editCancelDiscard" style="flex:1;padding:11px;border-radius:10px;border:1.5px solid #e5e7eb;background:#fff;color:#dc2626;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Discard</button>'+
+    '<button id="editCancelSave" style="flex:1;padding:11px;border-radius:10px;border:none;background:var(--green);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Save Changes</button>'+
+    '</div></div>';
+  document.body.appendChild(overlay);
+  document.getElementById('editCancelDiscard').onclick=function(){overlay.remove();_closeEditMode();};
+  document.getElementById('editCancelSave').onclick=function(){overlay.remove();submitForm();};
+};
 
 function _profileIsLocked(){
   return !!SESSION_PLAYER && !document.getElementById('editProfileBtnEl')?.classList.contains('active');
