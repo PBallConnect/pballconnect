@@ -2372,22 +2372,37 @@ async function addCustomCourt(type){
   const num_courts=parseInt(document.getElementById(numId)?.value)||0;
   const notes=(document.getElementById(notesId)?.value||'').trim();
   const playerEmail=getMyEmail()||document.getElementById('email')?.value||'';
+  const newCourtId = crypto.randomUUID();
   const newCourt={
-    id:'custom_'+Date.now(), name, address,
+    id: newCourtId, name, address,
     is_private:type==='private', is_indoor, num_courts, source:'user'
   };
-  // Save to Supabase courts table
+  // Save to Supabase courts table, then immediately link to player_courts
   try{
-    await fetch(`${SUPABASE_URL}/rest/v1/courts`,{
+    const cRes = await fetch(`${SUPABASE_URL}/rest/v1/courts`,{
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
       body:JSON.stringify({
+        id: newCourtId,
         name, address, city:S.city||address.split(',')[1]?.trim()||'',
         state:S.state||'', is_private:type==='private',
         is_indoor, num_courts:num_courts||null, notes:notes||null,
         added_by_player:playerEmail
       })
     });
+    if(!cRes.ok){ const err=await cRes.text(); throw new Error(err); }
+    await fetch(`${SUPABASE_URL}/rest/v1/player_courts`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+      body:JSON.stringify({
+        player_email: playerEmail,
+        court_id: newCourtId,
+        court_name: name,
+        is_private: type==='private',
+        is_member: false
+      })
+    });
+    loadCourtBadgesForNav(playerEmail);
     showToast('✅ Court saved to database — thank you!','#4CAF7D');
   }catch(e){
     console.warn('Could not save court to DB:',e);
@@ -2432,6 +2447,7 @@ async function saveMyCourts(){
   const promises=[...myCourtsState.selected].map(id=>{
     const court=allCourts.find(c=>(c.id||c.name)===id);
     const courtId=court?.id&&!court.id.startsWith('osm_')&&!court.id.startsWith('custom_')?court.id:null;
+    if(!courtId){ console.warn('saveMyCourts: skipping court with no valid DB id',id); return Promise.resolve(); }
     return fetch(`${SUPABASE_URL}/rest/v1/player_courts`,{
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
