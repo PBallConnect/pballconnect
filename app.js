@@ -548,11 +548,6 @@ function selChip(gid,el,key){
   }
   if(key==='gender') chk1();
   if(key==='skill')  chk2();
-  if(key==='playStyle'){
-    const goalField = document.getElementById('goalRatingField');
-    if(goalField) goalField.style.display = (val==='Competitive'||val==='Both') ? 'block' : 'none';
-    if(val!=='Competitive'&&val!=='Both'){ S.goalRating=null; }
-  }
 }
 
 // ── Coach multi-select chips ─────────────────────────────
@@ -606,7 +601,6 @@ function selectImproveGoal(val){
     buildGoalTicks(psIdx);
     updateGoalGapViz();
   } else {
-    if(goalField) goalField.style.display='none';
     if(lessonSec) lessonSec.style.display='none';
     S.goalRating=null; S.hasHadLesson=''; S.wantsLesson='';
   }
@@ -704,10 +698,18 @@ function populateSummary(){
   if(emojiEl){
     if(S.photoSrc){
       emojiEl.style.overflow='hidden'; emojiEl.style.padding='0';
+      emojiEl.style.background=''; emojiEl.style.color='';
       emojiEl.innerHTML=`<img src="${S.photoSrc}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`;
+    } else if(emoji){
+      emojiEl.style.overflow=''; emojiEl.style.padding='';
+      emojiEl.style.background='rgba(76,175,125,0.12)'; emojiEl.style.color='';
+      emojiEl.style.fontSize=''; emojiEl.style.fontWeight='';
+      emojiEl.textContent=emoji;
     } else {
       emojiEl.style.overflow=''; emojiEl.style.padding='';
-      emojiEl.textContent = emoji;
+      emojiEl.style.background='#1a7a3a'; emojiEl.style.color='#fff';
+      emojiEl.style.fontSize='22px'; emojiEl.style.fontWeight='700';
+      emojiEl.textContent=(firstName.charAt(0)||'').toUpperCase()||'?';
     }
   }
   const nameBig = document.getElementById('sumNameBig');
@@ -739,7 +741,8 @@ function populateSummary(){
 
   // — Player info rows —
   set('sumSince',     since  || '—');
-  set('sumHandedness',hand   || '—');
+  const _hFmt=hand.replace('RightHanded','Right-Handed').replace('LeftHanded','Left-Handed').replace('Right Handed','Right-Handed').replace('Left Handed','Left-Handed');
+  set('sumHandedness',_hFmt||'—');
   set('sumFormat',    format || '—');
   set('sumStyle',     style  || '—');
   set('sumVenuePref', venue  || '—');
@@ -1325,7 +1328,7 @@ function resetForm(){
   document.getElementById('sumDuprRow').style.display='none';
   document.getElementById('sumCourtRow').style.display='none';
   document.getElementById('cCourtStat').style.display='none';
-  const grf=document.getElementById('goalRatingField');if(grf)grf.style.display='none';
+  const grf=document.getElementById('goalRatingField');if(grf)grf.style.display='block';
   const gsl=document.getElementById('goalRatingSlider');
   if(gsl){gsl.value=0;gsl.style.setProperty('--pct','0%');}
   const gdisp=document.getElementById('goalRatingDisplay');
@@ -9171,7 +9174,7 @@ function restoreProfileForm(player){
   S.venuePref=player.play_venues||''; S.playStyle=player.play_style||'';
   // Show goal rating field if play style is Competitive
   const goalField = document.getElementById('goalRatingField');
-  if(goalField) goalField.style.display = (S.playStyle==='Competitive'||S.playStyle==='Both') ? 'block' : 'none';
+  if(goalField) goalField.style.display = 'block';
 
   if(player.skill_level){
     const idx=DUPR_VALS.findIndex(v=>String(v)===String(player.skill_level));
@@ -9220,15 +9223,16 @@ function restoreProfileForm(player){
     if(removeBtn) removeBtn.style.display='inline-block';
   }
 
-  // Restore goal rating if Competitive or Both play style
-  if((S.playStyle==='Competitive'||S.playStyle==='Both')&&player.goal_rating){
-    S.goalRating=player.goal_rating;
-    const goalIdx=DUPR_VALS.findIndex(v=>String(v)===String(player.goal_rating));
-    if(goalIdx>=0){
+  // Restore goal rating slider — defaults to personal rating position if no goal is saved
+  {
+    const _grRaw=player.goal_rating||player.skill_level;
+    const _grIdx=_grRaw?DUPR_VALS.findIndex(v=>String(v)===String(_grRaw)):-1;
+    if(_grIdx>=0){
+      S.goalRating=player.goal_rating||null;
       const gsl=document.getElementById('goalRatingSlider');
-      if(gsl){gsl.value=goalIdx;gsl.style.setProperty('--pct',(goalIdx/21*100).toFixed(1)+'%');}
+      if(gsl){gsl.value=_grIdx;gsl.style.setProperty('--pct',(_grIdx/21*100).toFixed(1)+'%');}
       const grd=document.getElementById('goalRatingDisplay');
-      if(grd) grd.innerHTML=player.goal_rating+' <span>Goal Rating</span>';
+      if(grd) grd.innerHTML=_grRaw+' <span>'+(player.goal_rating?'Goal Rating':'Personal Rating')+'</span>';
     }
     updateGoalGapViz();
   }
