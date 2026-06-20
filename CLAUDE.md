@@ -1,11 +1,11 @@
 # CLAUDE.md — PBallConnect Reference
 
-_Last updated: June 14, 2026_
+_Last updated: June 19, 2026_
 
 ---
 
 ## Related Documentation
-- [CLAUDE-RULES.md](CLAUDE-RULES.md) — all 56 numbered coding rules
+- [CLAUDE-RULES.md](CLAUDE-RULES.md) — all 57 numbered coding rules
 - [CLAUDE-SCHEMA.md](CLAUDE-SCHEMA.md) — full database schema, architecture patterns, feature behavior specs, UI patterns
 - [CLAUDE-SMS.md](CLAUDE-SMS.md) — SMS infrastructure and match invite SMS system architecture
 - [CLAUDE-FLOWS.md](CLAUDE-FLOWS.md) — all user flow definitions, regression checklist
@@ -100,6 +100,8 @@ No tests, no linter, no build commands.
 
 6. **IC member count includes pending connections.** New user's "My IC" tile shows 1 immediately after joining via invite, before the organizer accepts the reciprocal connection. Count should only include `status = 'approved'` rows where the current user is requester or recipient. Affects all paths.
 
+8. **`saveMyCourts()` OSM courts write null court_id.** Courts sourced from Overpass/OSM proximity search have `osm_`-prefixed IDs which are not valid UUIDs. `saveMyCourts()` correctly guards against writing these as `null` — but any OSM court a user checks will be silently skipped. OSM courts need to be inserted into the `courts` table with a real UUID before they can be saved to `player_courts`. Not yet fixed.
+
 **Resolved (do not re-introduce):**
 - ~~**Bug C — link/text invite paths: IC connection never established**~~ — Fixed June 2026. `handlePostRegistrationInvite()` now includes a fallback that queries `connections` by `recipient_email = 'pending_' + inv.invite_token`. Two RLS policies added to `connections` table: SELECT and UPDATE for `recipient_email ILIKE 'pending_%'`. Reciprocal POST fixed by resolving `inv._resolvedInviterEmail` from the fallback row, used as fallback when `inv.inviter_email` is undefined (token paths only). QR path unaffected.
 - ~~**Registration flow regression (June 2026)**~~ — `const _isNewRegistration` declared inside `try{}` caused silent `ReferenceError` after save; new users saw "You're All Set" then were dumped to `page-welcome`. Fixed by moving the declaration before `try{}`.
@@ -120,6 +122,11 @@ No tests, no linter, no build commands.
 - ~~Gender data in `registrations` used legacy values `'Male'`/`'Female'`~~ — one-time migration run May 30: `UPDATE registrations SET gender='Man' WHERE gender='Male'; UPDATE registrations SET gender='Woman' WHERE gender='Female';`. All rows now use `'Man'`/`'Woman'`. Users with `null` gender still need outreach or a login-time prompt.
 - ~~Organic signup pre-population failing~~ — root cause: `id="lbl3\"` in `index.html` (backslash before closing quote) caused `goTo()` to crash before the pre-population IIFE ran. Fixed May 31. All 4 fields (email, skill, age range, playing since) confirmed pre-populating correctly end-to-end.
 - ~~Goal rating slider track fill not rendering~~ — `updateGoalRedBar()` bailed immediately because `goalSliderRedBar`, `goalSliderGreenBar`, `goalRedLabel` were never added to `index.html`. Added as `position:absolute` overlays inside the `position:relative` slider wrapper (May 31). Bars: `top:50%; transform:translateY(-50%); height:6px`. Red bar (#dc2626) = floor below personal rating; blue bar (#2563eb) = goal range above personal rating. Tick builds also moved from `DOMContentLoaded` to `unlockProfileForm()` to fix zero-width timing.
+- ~~Courts: `addCustomCourt()` wrote `null` `court_id` to `player_courts`~~ — Fixed June 2026. Function generated a synthetic `custom_`+timestamp ID that `saveMyCourts()` could not resolve. Fixed by generating a real UUID via `crypto.randomUUID()` client-side before the `courts` INSERT and writing it directly to `player_courts` immediately — no reliance on SELECT-back. `saveMyCourts()` now silently skips courts with `null` or `osm_`/`custom_`-prefixed IDs (logs warning).
+- ~~Courts: Phase 1 fetch used PostgREST embedded join with no FK~~ — Fixed June 2026. `loadMyCourts()` Phase 1 used `player_courts?select=*,courts(*)` but no FK exists between the tables; PostgREST silently returned no joined data. Replaced with a two-step fetch: query `player_courts` for saved IDs, then `courts?id=in.(...)` for court details.
+- ~~Courts: Phase 1 fetch used wrong column names `lat`/`lon`~~ — Fixed June 2026. `courts` table stores `latitude`/`longitude`; Phase 1 was reading `c.lat`/`c.lon` which were `undefined`. Fixed column references to `c.latitude`/`c.longitude`.
+- ~~Courts: nav badge count overwritten by proximity search~~ — Fixed June 2026. `loadMyCourts()` Phase 2 (proximity search) was calling `updateNavCourtBadges()` directly with the nearby count, overwriting the saved-courts badge. Fixed by making `loadCourtBadgesForNav(email)` the exclusive owner of the badge; Phase 2 no longer touches it.
+- ~~Courts: saved courts not showing when user is outside their saved court's search radius~~ — Fixed June 2026. `loadMyCourts()` Phase 1 now renders saved courts immediately from `player_courts` before Phase 2 runs. Saved courts always appear regardless of the user's current location radius.
 
 ---
 
@@ -195,13 +202,15 @@ No tests, no linter, no build commands.
 13. **Recurring matches v2** — gap alert delivery via Cloudflare Cron Worker.
 14. **Web push notifications** — browser push for match invites, IC requests, gap alerts.
 15. **Player statistics dashboard** — `playerStats` page needs data and UX.
-16. ~~**Emergency Fill screen**~~ ✅ — organizer tool built; see CLAUDE-SMS.md Emergency Fill Screen section.
-17. ~~**Verify: organizer SMS on player cancellation**~~ ✅ — verified with a verified Twilio number: drop a player, organizer receives SMS notification, `sms_log` shows `event_type:'player_dropped'`.
-18. ~~**Verify: match time in cancellation notification email**~~ ✅ — confirmed organizer notification email includes match time; `send-email.js` `match_update` template verified.
-19. ~~**Consent log Part 2**~~ ✅ — `doSaveProfile()` and `_qcSave()` both call `POST /api/log-sms-consent` on opt-in. All three registration paths now write to `sms_consent_log`.
-20. ~~**Fix stray Send Invites button in Step 4 of Set Up a Match wizard**~~ ✅ — `smInviteContinueBtn` removed from `buildSmInviteGrid()`; real send button is `matchSendBtn` in the sticky progress bar.
-21. ~~**End-to-end SMS invite test**~~ ✅ — full flow verified with a verified Twilio number: organizer sends match invite → SMS delivered → recipient RSVPs → `match_responses` updated → `invites` row updated.
-22. ~~**Staging environment**~~ ✅ — staging branch/deployment configured on Cloudflare Pages.
+16. **Unified Add Court modal** — `window.showAddCourtModal(type)` replacing the old `addCustomCourt()`. Collects name, street address, city, state, indoor/outdoor/both chip buttons, num courts, notes, and a member checkbox (private courts only). Geocodes via Nominatim before saving. Saves immediately with a client-generated UUID — no reliance on SELECT-back. Built June 2026.
+17. **OSM court save flow** — Courts returned by the Overpass/OSM proximity search carry `osm_`-prefixed IDs that are not valid UUIDs. `saveMyCourts()` currently silently skips them (logs warning). These courts must first be inserted into the `courts` table with a real UUID before they can be linked in `player_courts`. Requires UX decision: auto-insert on Save, or explicit "Add this court to registry" button.
+18. ~~**Emergency Fill screen**~~ ✅ — organizer tool built; see CLAUDE-SMS.md Emergency Fill Screen section.
+19. ~~**Verify: organizer SMS on player cancellation**~~ ✅ — verified with a verified Twilio number: drop a player, organizer receives SMS notification, `sms_log` shows `event_type:'player_dropped'`.
+20. ~~**Verify: match time in cancellation notification email**~~ ✅ — confirmed organizer notification email includes match time; `send-email.js` `match_update` template verified.
+21. ~~**Consent log Part 2**~~ ✅ — `doSaveProfile()` and `_qcSave()` both call `POST /api/log-sms-consent` on opt-in. All three registration paths now write to `sms_consent_log`.
+22. ~~**Fix stray Send Invites button in Step 4 of Set Up a Match wizard**~~ ✅ — `smInviteContinueBtn` removed from `buildSmInviteGrid()`; real send button is `matchSendBtn` in the sticky progress bar.
+23. ~~**End-to-end SMS invite test**~~ ✅ — full flow verified with a verified Twilio number: organizer sends match invite → SMS delivered → recipient RSVPs → `match_responses` updated → `invites` row updated.
+24. ~~**Staging environment**~~ ✅ — staging branch/deployment configured on Cloudflare Pages.
 
 ---
 
