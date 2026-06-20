@@ -1526,6 +1526,13 @@
         </div>
         <!-- Selected court chip (shown after selection, hides list) -->
         <div id="smSelectedCourtChip" style="display:none;margin-bottom:14px;"></div>
+        <!-- Public/Private toggle — always visible, first choice before seeing courts -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+          <button id="smCourtTypePublic" onclick="smSetCourtType('public')"
+            style="padding:9px 16px;border-radius:999px;border:1.5px solid #1a7a3a;background:#1a7a3a;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🌳 Public</button>
+          <button id="smCourtTypePrivate" onclick="smSetCourtType('private')"
+            style="padding:9px 16px;border-radius:999px;border:1.5px solid #d1d5db;background:#f3f4f6;color:#374151;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🏢 Private</button>
+        </div>
         <!-- Priority courts list: recent history + saved, compact single-line rows -->
         <div id="smPriorityCourtsList" style="margin-bottom:8px;"></div>
         <!-- Show all courts toggle -->
@@ -1533,14 +1540,8 @@
           <button id="smShowAllCourtsBtn" onclick="smToggleAllCourts()"
             style="width:100%;padding:8px 14px;border-radius:8px;border:1px solid #d1d5db;background:#f9fafb;color:#6b7280;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;text-align:left;">Show all courts ▼</button>
         </div>
-        <!-- Expanded section: Public/Private tabs + full saved + nearby lists -->
+        <!-- Expanded section: full saved + nearby lists -->
         <div id="smAllCourtsSection" style="display:none;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-            <button id="smCourtTypePublic" onclick="smSetCourtType('public')"
-              style="padding:9px 16px;border-radius:999px;border:1.5px solid #1a7a3a;background:#1a7a3a;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🌳 Public</button>
-            <button id="smCourtTypePrivate" onclick="smSetCourtType('private')"
-              style="padding:9px 16px;border-radius:999px;border:1.5px solid #d1d5db;background:#f3f4f6;color:#374151;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🏢 Private</button>
-          </div>
           <div id="smSavedCourtsLabel" style="font-size:11px;font-weight:700;color:#1a7a3a;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;">My saved public courts</div>
           <div id="smSavedCourts" style="margin-bottom:14px;"></div>
           <div id="smOtherCourtsLabel" style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;">Other public courts nearby</div>

@@ -7102,24 +7102,64 @@ async function smLoadCourtsPriority(){
   }
 }
 
+let _smNewCourtVisibility = null;
+
+window._smAcmSetVisibility = function(val){
+  _smNewCourtVisibility = val;
+  const selStyle = 'padding:9px;border-radius:8px;border:1.5px solid #1a7a3a;background:#1a7a3a;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;';
+  const defStyle = 'padding:9px;border-radius:8px;border:1.5px solid #d1d5db;background:#f3f4f6;color:#374151;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;';
+  const pubBtn = document.getElementById('smAcmVisBtn_public');
+  const prvBtn = document.getElementById('smAcmVisBtn_private');
+  if(pubBtn) pubBtn.style.cssText = val==='public' ? selStyle : defStyle;
+  if(prvBtn) prvBtn.style.cssText = val==='private' ? selStyle : defStyle;
+};
+
 window.smShowAddCourtModal = function(){
+  _smNewCourtVisibility = null;
+  window._addCourtIndoor_smAdd = false;
   const existing = document.getElementById('smAddCourtModal');
   if(existing) existing.remove();
   const overlay = document.createElement('div');
   overlay.id = 'smAddCourtModal';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;padding:20px;';
   overlay.innerHTML =
-    '<div style="max-width:420px;width:90%;background:#fff;border-radius:16px;padding:24px;box-shadow:0 8px 32px rgba(0,0,0,0.2);">'+
+    '<div style="max-width:420px;width:90%;background:#fff;border-radius:16px;padding:24px;box-shadow:0 8px 32px rgba(0,0,0,0.2);max-height:90vh;overflow-y:auto;">'+
       '<h3 style="margin:0 0 16px;font-size:17px;font-weight:800;color:#111;">Add a Court</h3>'+
+      '<div style="margin-bottom:14px;">'+
+        '<label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:6px;">Public or Private? <span style="color:#dc2626;">*</span></label>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'+
+          '<button type="button" id="smAcmVisBtn_public" onclick="window._smAcmSetVisibility(\'public\')" '+
+            'style="padding:9px;border-radius:8px;border:1.5px solid #d1d5db;background:#f3f4f6;color:#374151;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🌳 Public</button>'+
+          '<button type="button" id="smAcmVisBtn_private" onclick="window._smAcmSetVisibility(\'private\')" '+
+            'style="padding:9px;border-radius:8px;border:1.5px solid #d1d5db;background:#f3f4f6;color:#374151;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🏢 Private</button>'+
+        '</div>'+
+      '</div>'+
       '<div style="margin-bottom:10px;">'+
-        '<label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">Court name *</label>'+
+        '<label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">Court name <span style="color:#dc2626;">*</span></label>'+
         '<input id="smAddCourtName" type="text" placeholder="Court or club name…" autocomplete="off" '+
           'style="width:100%;padding:10px 12px;border-radius:8px;border:1.5px solid #d1d5db;font-size:16px;color:#111;box-sizing:border-box;font-family:inherit;"/>'+
       '</div>'+
       '<div style="margin-bottom:10px;">'+
-        '<label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">Address (optional)</label>'+
-        '<input id="smAddCourtAddress" type="text" placeholder="Address…" autocomplete="off" '+
+        '<label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">Street address (optional)</label>'+
+        '<input id="smAddCourtStreet" type="text" placeholder="123 Main St" autocomplete="off" '+
           'style="width:100%;padding:10px 12px;border-radius:8px;border:1.5px solid #d1d5db;font-size:16px;color:#111;box-sizing:border-box;font-family:inherit;"/>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">'+
+        '<div>'+
+          '<label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">City <span style="color:#dc2626;">*</span></label>'+
+          '<input id="smAddCourtCity" type="text" placeholder="City" autocomplete="off" '+
+            'style="width:100%;padding:10px 12px;border-radius:8px;border:1.5px solid #d1d5db;font-size:16px;color:#111;box-sizing:border-box;font-family:inherit;"/>'+
+        '</div>'+
+        '<div>'+
+          '<label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">State <span style="color:#dc2626;">*</span></label>'+
+          '<input id="smAddCourtState" type="text" placeholder="NH" maxlength="2" autocomplete="off" '+
+            'style="width:100%;padding:10px 12px;border-radius:8px;border:1.5px solid #d1d5db;font-size:16px;color:#111;box-sizing:border-box;font-family:inherit;"/>'+
+        '</div>'+
+      '</div>'+
+      '<div style="margin-bottom:10px;">'+
+        '<label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">Zip (optional)</label>'+
+        '<input id="smAddCourtZip" type="text" placeholder="12345" maxlength="10" autocomplete="off" '+
+          'style="width:160px;padding:10px 12px;border-radius:8px;border:1.5px solid #d1d5db;font-size:16px;color:#111;box-sizing:border-box;font-family:inherit;"/>'+
       '</div>'+
       '<div style="margin-bottom:10px;">'+
         '<label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:6px;">Type</label>'+
@@ -7155,33 +7195,55 @@ window._smSaveNewCourt = async function(){
   const myEmail = getMyEmail();
   if(!myEmail){ showToast('⚠️ Please sign in first','#f59e0b'); return; }
   const courtName = (document.getElementById('smAddCourtName')?.value||'').trim();
-  const errEl = document.getElementById('smAddCourtError');
-  if(!courtName){
-    if(errEl){ errEl.textContent='Court name is required.'; errEl.style.display='block'; }
-    return;
-  }
+  const city      = (document.getElementById('smAddCourtCity')?.value||'').trim();
+  const state     = (document.getElementById('smAddCourtState')?.value||'').trim();
+  const errEl     = document.getElementById('smAddCourtError');
+  const showErr   = msg => { if(errEl){ errEl.textContent=msg; errEl.style.display='block'; } };
+  if(!_smNewCourtVisibility){ showErr('Please select Public or Private.'); return; }
+  if(!courtName){ showErr('Court name is required.'); return; }
+  if(!city){ showErr('City is required.'); return; }
+  if(!state){ showErr('State is required.'); return; }
   if(errEl) errEl.style.display='none';
-  const address   = (document.getElementById('smAddCourtAddress')?.value||'').trim()||null;
+  const street    = (document.getElementById('smAddCourtStreet')?.value||'').trim()||null;
+  const zip       = (document.getElementById('smAddCourtZip')?.value||'').trim()||null;
   const numCourts = parseInt(document.getElementById('smAddCourtNum')?.value)||null;
   const notes     = (document.getElementById('smAddCourtNotes')?.value||'').trim()||null;
-  const is_indoor = window._addCourtIndoor_smAdd === true;
+  const is_indoor  = window._addCourtIndoor_smAdd === true;
+  const is_private = _smNewCourtVisibility === 'private';
+  const addrParts = [];
+  if(street) addrParts.push(street);
+  addrParts.push(city+', '+state+(zip?' '+zip:''));
+  const address = addrParts.join(', ');
   const newCourtId = crypto.randomUUID();
   try{
     const cRes = await fetch(`${SUPABASE_URL}/rest/v1/courts`,{
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
-      body:JSON.stringify({ id:newCourtId, name:courtName, address, is_private:true, is_indoor, num_courts:numCourts, notes })
+      body:JSON.stringify({ id:newCourtId, name:courtName, address, is_private, is_indoor, num_courts:numCourts, notes })
     });
     if(!cRes.ok){ const err=await cRes.text(); throw new Error(err); }
     await fetch(`${SUPABASE_URL}/rest/v1/player_courts`,{
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
-      body:JSON.stringify({ player_email:myEmail, court_id:newCourtId, court_name:courtName, is_private:true })
+      body:JSON.stringify({ player_email:myEmail, court_id:newCourtId, court_name:courtName, is_private })
     });
-    smLoadCourtsPriority();
-    loadCourtBadgesForNav(myEmail);
-    showToast('Court added!','#4CAF7D');
     document.getElementById('smAddCourtModal')?.remove();
+    // Fix 4: switch main wizard toggle to match the added court's visibility
+    smSetCourtType(is_private ? 'private' : 'public');
+    // Fix 3: auto-select the new court
+    if(!MS.selectedCourts) MS.selectedCourts = new Map();
+    MS.selectedCourts.clear();
+    MS.selectedCourts.set(newCourtId, { name:courtName, isPrivate:is_private, address });
+    MS.courtId = newCourtId;
+    MS.courtName = courtName;
+    MS.isPrivate = is_private;
+    smUpdateCourtPickerView();
+    renderCourtCapacityWarning();
+    smUpdateSendBtn();
+    smUpdateSummary();
+    smUpdateProgress(6);
+    loadCourtBadgesForNav(myEmail);
+    showToast('Court added and selected!','#4CAF7D');
   }catch(e){
     showToast('⚠️ Could not save court: '+e.message,'#dc2626');
   }
