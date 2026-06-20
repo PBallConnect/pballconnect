@@ -1087,18 +1087,6 @@
                 <span style="color:#2563eb;flex-shrink:0;">→</span>
               </button>
 
-              <!-- Copy Link -->
-              <button id="icChannelLink" onclick="selectIcChannel('link')"
-                style="width:100%;padding:14px 16px;background:#fefce8;border:2px solid #ca8a04;border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:12px;font-family:inherit;text-align:left;transition:background .15s;"
-                onmouseover="this.style.background='#fef9c3'" onmouseout="this.style.background='#fefce8'">
-                <span style="font-size:24px;flex-shrink:0;">🔗</span>
-                <div style="flex:1;min-width:0;">
-                  <div style="font-size:14px;font-weight:800;color:#713f12;">Copy Invite Link</div>
-                  <div style="font-size:11px;color:#ca8a04;">Paste anywhere — WhatsApp, Slack, LinkedIn, wherever</div>
-                </div>
-                <span style="color:#ca8a04;flex-shrink:0;">→</span>
-              </button>
-
             </div>
 
             <!-- QR option -->
@@ -1139,18 +1127,6 @@
                   style="width:100%;padding:13px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:background .15s;">
                   Open Messages 💬
                 </button>
-              </div>
-
-              <!-- Link fields -->
-              <div id="icLinkFields" style="display:none;">
-                <input id="icFormNameLink" type="text" placeholder="Their name"
-                  style="width:100%;padding:10px 12px;border:2px solid #9ca3af;border-radius:10px;font-size:16px;color:#111;background:#fff;box-sizing:border-box;outline:none;margin-bottom:10px;font-family:inherit;"
-                  oninput="this.style.borderColor=this.value.trim()?'#ca8a04':'#9ca3af'"/>
-                <button onclick="sendIcLinkInvite()"
-                  style="width:100%;padding:13px;background:#ca8a04;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:background .15s;">
-                  Copy Link 🔗
-                </button>
-                <div id="icLinkConfirm" style="display:none;"></div>
               </div>
 
             </div>

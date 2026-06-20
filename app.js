@@ -10990,20 +10990,6 @@ async function smIcInviteEmail(){
 }
 window.smIcInviteEmail = smIcInviteEmail;
 
-async function smIcInviteLink(){
-  const recipient = icGetRecipient();
-  if(!recipient) return;
-  try{
-    const { url } = await icCreateSingleUseInvite(recipient, 'link');
-    if(!url) throw new Error('Invite creation failed');
-    await icCopyToClipboard(url);
-    showToast('✅ Link copied for '+recipient.name+' — paste it anywhere!','#4CAF7D');
-    icClearRecipientForm();
-    loadIcInvites();
-  }catch(e){ showToast('Could not create invite','#f87171'); }
-}
-window.smIcInviteLink = smIcInviteLink;
-
 // ── IC Invite Panel (redesigned flow in icSectionMembers) ────────────────
 
 const _icIsMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -11027,11 +11013,11 @@ function selectIcChannel(channel){
   const form = document.getElementById('icChannelForm');
   if(form) form.style.display = 'block';
   // Hide all field groups then show the selected one
-  ['icEmailFields','icTextFields','icLinkFields'].forEach(function(id){
+  ['icEmailFields','icTextFields'].forEach(function(id){
     const el = document.getElementById(id);
     if(el) el.style.display = 'none';
   });
-  const map = { email:'icEmailFields', text:'icTextFields', link:'icLinkFields' };
+  const map = { email:'icEmailFields', text:'icTextFields' };
   const target = document.getElementById(map[channel]);
   if(target) target.style.display = 'block';
   // Focus the first input in the selected group
@@ -11040,11 +11026,9 @@ function selectIcChannel(channel){
   // Any channel selected: hide all channel buttons and QR line for focus
   const emailBtn = document.getElementById('icChannelEmail');
   const textBtn  = document.getElementById('icChannelText');
-  const linkBtn  = document.getElementById('icChannelLink');
   const qrLine   = document.getElementById('icQrLine');
   if(emailBtn) emailBtn.style.display = 'none';
   if(textBtn)  textBtn.style.display  = 'none';
-  if(linkBtn)  linkBtn.style.display  = 'none';
   if(qrLine)   qrLine.style.display   = 'none';
 }
 window.selectIcChannel = selectIcChannel;
@@ -11052,22 +11036,18 @@ window.selectIcChannel = selectIcChannel;
 function resetIcChannelForm(){
   const form = document.getElementById('icChannelForm');
   if(form) form.style.display = 'none';
-  ['icFormName','icFormEmail','icFormNameText','icFormNameLink'].forEach(function(id){
+  ['icFormName','icFormEmail','icFormNameText'].forEach(function(id){
     const el = document.getElementById(id);
     if(el){ el.value = ''; el.style.borderColor = '#9ca3af'; }
   });
   const conf1 = document.getElementById('icEmailConfirm');
-  const conf2 = document.getElementById('icLinkConfirm');
   if(conf1) conf1.style.display = 'none';
-  if(conf2) conf2.style.display = 'none';
   // Restore all channel buttons and QR line to default visibility
   const emailBtn = document.getElementById('icChannelEmail');
   const textBtn  = document.getElementById('icChannelText');
-  const linkBtn  = document.getElementById('icChannelLink');
   const qrLine   = document.getElementById('icQrLine');
   if(emailBtn) emailBtn.style.display = 'flex';
   if(textBtn)  textBtn.style.display  = _icIsMobile ? 'flex' : 'none';
-  if(linkBtn)  linkBtn.style.display  = 'flex';
   if(qrLine)   qrLine.style.display   = 'block';
 }
 window.resetIcChannelForm = resetIcChannelForm;
@@ -11236,31 +11216,6 @@ async function sendIcTextInvite(){
   }catch(e){ showToast('Could not send invite — please try again','#f87171'); }
 }
 window.sendIcTextInvite = sendIcTextInvite;
-
-async function sendIcLinkInvite(){
-  const nameEl = document.getElementById('icFormNameLink');
-  const name   = nameEl?.value?.trim();
-  if(!name){
-    if(nameEl){ nameEl.classList.add('ic-shake'); setTimeout(function(){ nameEl.classList.remove('ic-shake'); }, 600); }
-    showToast('Please enter their name','#f59e0b');
-    return;
-  }
-  try{
-    const { token, url } = await icCreateSingleUseInvite({ name, email:null }, 'link');
-    if(!url) throw new Error('Invite creation failed');
-    await icPostPendingConnection(null, name, token);
-    await icCopyToClipboard(url);
-    const conf = document.getElementById('icLinkConfirm');
-    if(conf){
-      conf.innerHTML = '✅ Link copied for <strong>'+name+'</strong> — paste it anywhere!';
-      conf.style.cssText = 'display:block;color:#713f12;font-size:13px;font-weight:600;margin-top:10px;padding:10px;background:#fef9c3;border-radius:8px;';
-    }
-    if(nameEl){ nameEl.value=''; nameEl.style.borderColor='#9ca3af'; }
-    loadIcInvites();
-    setTimeout(()=>{ icDoneInviting(); }, 3500);
-  }catch(e){ showToast('Could not create invite','#f87171'); }
-}
-window.sendIcLinkInvite = sendIcLinkInvite;
 
 async function sendInvite(method){
   const myEmail = getMyEmail();
