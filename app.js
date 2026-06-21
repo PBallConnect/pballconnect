@@ -7027,9 +7027,7 @@ function smSetCourtType(type){
     privBtn.style.borderColor=type==='private'?'#1a7a3a':'#d1d5db';
   }
   const savedLbl=document.getElementById('smSavedCourtsLabel');
-  const otherLbl=document.getElementById('smOtherCourtsLabel');
   if(savedLbl) savedLbl.textContent='My saved '+type+' courts';
-  if(otherLbl) otherLbl.textContent='Other '+type+' courts nearby';
   // Clear selection when switching types
   MS.selectedCourts.clear();
   MS.courtId=null; MS.courtName=null; MS.isPrivate=false;
@@ -7294,10 +7292,8 @@ async function smLoadCourts(){
   const myEmail=getMyEmail();
   if(!myEmail) return;
   const savedEl=document.getElementById('smSavedCourts');
-  const otherEl=document.getElementById('smOtherCourts');
   if(!savedEl) return;
   savedEl.innerHTML='<div style="font-size:11px;color:#6b7280;">Loading…</div>';
-  if(otherEl) otherEl.innerHTML='';
   const isPrivate = MS.courtType==='private';
   try{
     const pcRes = await fetch(
@@ -7319,31 +7315,6 @@ async function smLoadCourts(){
       savedEl.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:4px 0;font-style:italic;">No '+(isPrivate?'private':'public')+' courts saved yet.</div>';
     } else {
       savedCourts.forEach(c=>_smRenderCourtRow(c, savedEl, false));
-    }
-    if(otherEl){
-      // Build saved-court dedup sets (ID + fuzzy normalized name)
-      const savedCourtIdSet      = new Set(savedCourts.map(c=>c.id));
-      const savedCourtNormalized = new Set(savedCourts.map(c=>normalizeCourtName(c.court_name||c.name)));
-      const allExcludeIds = [...new Set([...allSavedIds, ...savedCourtIdSet])];
-      let q=`${SUPABASE_URL}/rest/v1/courts?is_private=eq.${isPrivate}&select=id,name,address,city,is_private,num_courts&limit=12`;
-      if(allExcludeIds.length) q+=`&id=not.in.(${allExcludeIds.join(',')})`;
-      const oRes = await fetch(q,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
-      // FIX 1: fuzzy dedup against saved list; FIX 2: dedup within nearby list itself
-      const seenNormalized = new Set();
-      const otherCourts = (oRes.ok ? await oRes.json() : []).filter(c=>{
-        if(savedCourtIdSet.has(c.id)) return false;
-        const norm = normalizeCourtName(c.name);
-        if(savedCourtNormalized.has(norm)) return false;
-        if(seenNormalized.has(norm)) return false;
-        seenNormalized.add(norm);
-        return true;
-      });
-      otherEl.innerHTML='';
-      if(!otherCourts.length){
-        otherEl.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:4px 0;font-style:italic;">No other '+(isPrivate?'private':'public')+' courts found.</div>';
-      } else {
-        otherCourts.forEach(c=>_smRenderCourtRow(c, otherEl, true));
-      }
     }
   }catch(e){ if(savedEl) savedEl.innerHTML='<div style="font-size:12px;color:#dc2626;">Could not load courts.</div>'; }
 }
@@ -7415,9 +7386,19 @@ function _smRenderCourtRow(court, container, showSaveBtn){
     smUpdateSendBtn();
     smUpdateSummary();
     smUpdateCourtPickerView();
+    if(MS.selectedCourts && MS.selectedCourts.size > 0) smUpdateProgress(6);
   };
   container.appendChild(row);
 }
+
+// Fix 4: re-fetch saved courts when player returns to the wizard tab after adding a court in My Courts
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState !== 'visible') return;
+  const wizardPage = document.getElementById('page-setupMatch');
+  if(!wizardPage || !wizardPage.offsetParent) return;
+  smLoadCourtsPriority();
+  if(_smAllCourtsExpanded) smLoadCourts();
+});
 
 function smSelectInvite(mode, skipProgress){
   MS.inviteMode = mode;

@@ -1516,16 +1516,14 @@
           <button id="smShowAllCourtsBtn" onclick="smToggleAllCourts()"
             style="width:100%;padding:8px 14px;border-radius:8px;border:1px solid #d1d5db;background:#f9fafb;color:#6b7280;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;text-align:left;">Show all courts ▼</button>
         </div>
-        <!-- Expanded section: full saved + nearby lists -->
+        <!-- Expanded section: full saved courts list -->
         <div id="smAllCourtsSection" style="display:none;">
           <div id="smSavedCourtsLabel" style="font-size:11px;font-weight:700;color:#1a7a3a;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;">My saved public courts</div>
-          <div id="smSavedCourts" style="margin-bottom:14px;"></div>
-          <div id="smOtherCourtsLabel" style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;">Other public courts nearby</div>
-          <div id="smOtherCourts" style="margin-bottom:10px;"></div>
+          <div id="smSavedCourts" style="margin-bottom:10px;"></div>
         </div>
         <div id="matchCourtCapacityWarn" style="display:none;margin-bottom:10px;padding:10px 12px;border-radius:10px;border:1.5px solid;font-size:12px;font-weight:600;line-height:1.5;"></div>
-        <button id="smAddCourtBtn" onclick="window.smShowAddCourtModal()"
-          style="width:100%;padding:10px;border-radius:10px;border:1.5px dashed #d1d5db;background:#f9fafb;color:#6b7280;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">+ Add a new court</button>
+        <button id="smAddCourtBtn" onclick="window.open('/app.html#myCourts','_blank')"
+          style="width:100%;padding:10px;border-radius:10px;border:1.5px dashed #d1d5db;background:#f9fafb;color:#6b7280;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">+ Add a court to My Courts →</button>
       </div>
 
       <!-- Container 7: Review & Send -->
