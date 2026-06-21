@@ -588,8 +588,8 @@ function selectImproveGoal(val){
   document.getElementById('improveFunBtn')?.classList.toggle('on', val==='fun');
   const goalField = document.getElementById('goalRatingField');
   const lessonSec = document.getElementById('lessonSection');
+  if(goalField) goalField.style.display='block';
   if(val==='improve'){
-    if(goalField){ goalField.style.display='block'; }
     if(lessonSec){ lessonSec.style.display = SESSION_PLAYER?.id ? 'block' : 'none'; }
     const _ps=document.getElementById('personalRatingSlider');
     const psIdx=_ps?parseInt(_ps.value):0;
@@ -602,7 +602,7 @@ function selectImproveGoal(val){
     updateGoalGapViz();
   } else {
     if(lessonSec) lessonSec.style.display='none';
-    S.goalRating=null; S.hasHadLesson=''; S.wantsLesson='';
+    S.hasHadLesson=''; S.wantsLesson='';
   }
   chk2();
 }
@@ -2300,7 +2300,8 @@ function renderCourtsList(containerId, courts, type){
     return;
   }
   el.innerHTML='';
-  courts.forEach(court=>{
+  const _sorted=[...courts].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  _sorted.forEach(court=>{
     const id=court.id||court.name;
     const isSelected=myCourtsState.selected.has(id);
     const isMember=myCourtsState.members.has(id);
@@ -8832,7 +8833,16 @@ async function restoreSession(email, playerData){
     setTimeout(()=>window.showEmergencyFill(_rsEfMatchId, null), 600);
   } else if(_rsParams.get('page') === 'myCourts'){
     history.replaceState(null, '', window.location.pathname);
-    setTimeout(()=>showPage('myCourts'), 600);
+    const _ctTarget = _rsParams.get('courtType');
+    setTimeout(()=>{
+      showPage('myCourts');
+      if(_ctTarget === 'public'){
+        setTimeout(()=>{
+          const pubEl = document.querySelector('.courts-container.public');
+          if(pubEl) pubEl.scrollIntoView({behavior:'smooth', block:'start'});
+        }, 300);
+      }
+    }, 600);
   }
 }
 
@@ -9119,7 +9129,7 @@ function restoreProfileForm(player){
 
   // Restore goal rating slider — defaults to personal rating position if no goal is saved
   {
-    const _grRaw=player.goal_rating||player.skill_level;
+    const _grRaw=player.goal_rating||player.skill_self||player.skill_level;
     const _grIdx=_grRaw?DUPR_VALS.findIndex(v=>String(v)===String(_grRaw)):-1;
     if(_grIdx>=0){
       S.goalRating=player.goal_rating||null;
