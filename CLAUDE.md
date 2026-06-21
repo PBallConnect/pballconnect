@@ -214,6 +214,18 @@ No tests, no linter, no build commands.
 
 ---
 
+## Post-Beta Roadmap
+
+### Authentication Improvements
+- Add Google Sign In and Apple Sign In via Supabase OAuth as alternatives to Magic Link
+- Both are free for web apps (no App Store fees apply — PBallConnect is a browser-based web app)
+- Benefits: one-tap login, fixes iOS PWA session persistence issue, more intuitive for 50+ demographic
+- Supabase OAuth setup is relatively straightforward — enable Google/Apple providers in Supabase Auth settings
+- Keep Magic Link as fallback for users without Google/Apple accounts
+- Priority: medium — implement after beta feedback confirms login friction is a real user pain point
+
+---
+
 ## Admin Registration Alerts
 
 An alert email fires to `david@pballconnect.com` on every new player registration, regardless of path. Three code paths:
