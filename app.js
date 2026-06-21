@@ -2533,10 +2533,7 @@ async function saveMyCourts(){
   try{
     await Promise.all(promises);
     showToast('✅ Your courts saved!','#4CAF7D');
-    // Count selected public vs private for accurate nav badge
-    const selPub  = [...myCourtsState.selected].filter(id=>myCourtsState.public.find(c=>(c.id||c.name)===id)).length;
-    const selPriv = [...myCourtsState.selected].filter(id=>myCourtsState.private.find(c=>(c.id||c.name)===id)).length;
-    updateNavCourtBadges(selPub, selPriv);
+    loadCourtBadgesForNav(playerEmail);
   }catch(e){
     showToast('⚠️ Could not save courts: '+e.message);
   }
@@ -8834,6 +8831,9 @@ async function restoreSession(email, playerData){
     history.replaceState(null, '', window.location.pathname);
     sessionStorage.removeItem('pb_ef_matchId');
     setTimeout(()=>window.showEmergencyFill(_rsEfMatchId, null), 600);
+  } else if(_rsParams.get('page') === 'myCourts'){
+    history.replaceState(null, '', window.location.pathname);
+    setTimeout(()=>showPage('myCourts'), 600);
   }
 }
 
