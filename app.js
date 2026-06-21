@@ -6304,7 +6304,6 @@ document.addEventListener('click', function(e){
 const _smStepLabels = ['Play Structure','Match Type','Number of Courts','Invites','Date & Time','Court','Review & Send'];
 let _smCurrentStep = 1;
 let _smInitializing = false;
-let _smAllCourtsExpanded = false;
 
 // ── Set Up a Match: navigation guard (Bug 3) ──────────
 // Set to true immediately before post-submit showPage('dashboard') so the guard is bypassed.
@@ -6957,12 +6956,10 @@ async function smCheckConflict(){
 }
 
 function smUpdateCourtPickerView(){
-  const chip         = document.getElementById('smSelectedCourtChip');
-  const priorityList = document.getElementById('smPriorityCourtsList');
-  const showAllWrap  = document.getElementById('smShowAllCourtsWrap');
-  const allSection   = document.getElementById('smAllCourtsSection');
-  const addBtn       = document.getElementById('smAddCourtBtn');
-  const hasSel       = MS.selectedCourts && MS.selectedCourts.size > 0;
+  const chip      = document.getElementById('smSelectedCourtChip');
+  const courtList = document.getElementById('smCourtList');
+  const addBtn    = document.getElementById('smAddCourtBtn');
+  const hasSel    = MS.selectedCourts && MS.selectedCourts.size > 0;
   if(hasSel){
     let court; MS.selectedCourts.forEach(c=>{ court=c; });
     if(chip){
@@ -6979,40 +6976,25 @@ function smUpdateCourtPickerView(){
           '<button onclick="smChangeCourt()" style="font-size:12px;font-weight:700;color:#6b7280;background:#fff;border:1.5px solid #d1d5db;border-radius:8px;padding:6px 12px;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">Change</button>'+
         '</div>';
     }
-    if(priorityList) priorityList.style.display='none';
-    if(showAllWrap)  showAllWrap.style.display='none';
-    if(allSection)   allSection.style.display='none';
-    if(addBtn)       addBtn.style.display='none';
+    if(courtList) courtList.style.display='none';
+    if(addBtn)    addBtn.style.display='none';
   } else {
     if(chip){ chip.style.display='none'; chip.innerHTML=''; }
-    if(priorityList) priorityList.style.display='';
-    if(showAllWrap)  showAllWrap.style.display='';
-    if(allSection)   allSection.style.display=_smAllCourtsExpanded?'':'none';
-    const _showAllBtn=document.getElementById('smShowAllCourtsBtn');
-    if(_showAllBtn)  _showAllBtn.textContent=_smAllCourtsExpanded?'Show fewer ▲':'Show all courts ▼';
-    if(addBtn)       addBtn.style.display='';
+    if(courtList) courtList.style.display='';
+    if(addBtn)    addBtn.style.display='';
   }
 }
 
 window.smChangeCourt = function(){
   MS.selectedCourts.clear();
   MS.courtId=null; MS.courtName=null; MS.isPrivate=false;
-  _smAllCourtsExpanded = false;
   smUpdateCourtPickerView();
-  smLoadCourtsPriority();
+  smLoadCourtList();
   renderCourtCapacityWarning();
   smUpdateSendBtn();
   smUpdateSummary();
 };
 
-window.smToggleAllCourts = function(){
-  _smAllCourtsExpanded = !_smAllCourtsExpanded;
-  const sec = document.getElementById('smAllCourtsSection');
-  const btn = document.getElementById('smShowAllCourtsBtn');
-  if(sec) sec.style.display = _smAllCourtsExpanded ? '' : 'none';
-  if(btn) btn.textContent = _smAllCourtsExpanded ? 'Show fewer ▲' : 'Show all courts ▼';
-  if(_smAllCourtsExpanded) smLoadCourts();
-};
 
 function smSetCourtType(type){
   MS.courtType = type;
@@ -7028,77 +7010,47 @@ function smSetCourtType(type){
     privBtn.style.color=type==='private'?'#fff':'#374151';
     privBtn.style.borderColor=type==='private'?'#1a7a3a':'#d1d5db';
   }
-  const savedLbl=document.getElementById('smSavedCourtsLabel');
-  if(savedLbl) savedLbl.textContent='My saved '+type+' courts';
-  // Clear selection when switching types
   MS.selectedCourts.clear();
   MS.courtId=null; MS.courtName=null; MS.isPrivate=false;
   smUpdateCourtPickerView();
-  smLoadCourtsPriority();
-  if(_smAllCourtsExpanded) smLoadCourts();
+  smLoadCourtList();
 }
 
 function normalizeCourtName(name){
   return (name||'').toLowerCase().replace(/[^a-z0-9]/g,'').trim();
 }
 
-async function smLoadCourtsPriority(){
+async function smLoadCourtList(){
   const myEmail = getMyEmail();
   if(!myEmail) return;
-  const priorityEl = document.getElementById('smPriorityCourtsList');
-  if(!priorityEl) return;
-  priorityEl.innerHTML='<div style="font-size:11px;color:#6b7280;padding:4px 0;">Loading…</div>';
-  const isPrivate = MS.courtType==='private';
+  const listEl = document.getElementById('smCourtList');
+  if(!listEl) return;
+  listEl.innerHTML='<div style="font-size:11px;color:#6b7280;padding:4px 0;">Loading…</div>';
+  const isPrivate = MS.courtType === 'private';
   try{
-    // Step A: 3 most recently used courts from match history
-    const mRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/matches?organizer_email=eq.${encodeURIComponent(myEmail)}&select=court_id,court_name,match_date&order=match_date.desc&limit=20`,
-      {headers:{apikey:SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
-    );
-    const matchRows = mRes.ok ? await mRes.json() : [];
-    const seenIds = new Set();
-    const recentCourtIds = [];
-    for(const m of matchRows){
-      if(m.court_id && !seenIds.has(m.court_id)){
-        seenIds.add(m.court_id);
-        recentCourtIds.push(m.court_id);
-        if(recentCourtIds.length >= 3) break;
-      }
-    }
-    // Step B: fill remaining slots from saved courts (up to 5 total)
     const pcRes = await fetch(
       `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(myEmail)}&select=court_id`,
       {headers:{apikey:SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
     );
     const pcRows = pcRes.ok ? await pcRes.json() : [];
-    const savedCourtIds = pcRows.map(r=>r.court_id).filter(Boolean);
-    // Build priority order: recent courts first, then ALL remaining saved courts (no cap).
-    // Including all saved IDs ensures the is_private filter finds courts of any type.
-    const priorityOrder = [...recentCourtIds];
-    for(const id of savedCourtIds){
-      if(!seenIds.has(id)){
-        seenIds.add(id);
-        priorityOrder.push(id);
-      }
-    }
+    const savedIds = pcRows.map(r=>r.court_id).filter(Boolean);
     let courts = [];
-    if(priorityOrder.length){
+    if(savedIds.length){
       const cRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/courts?id=in.(${priorityOrder.join(',')})&is_private=eq.${isPrivate}&select=id,name,address,city,is_private,num_courts`,
+        `${SUPABASE_URL}/rest/v1/courts?id=in.(${savedIds.join(',')})&is_private=eq.${isPrivate}&select=id,name,address,city,is_private,num_courts`,
         {headers:{apikey:SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
       );
       courts = cRes.ok ? await cRes.json() : [];
-      courts.sort((a,b)=>priorityOrder.indexOf(a.id)-priorityOrder.indexOf(b.id));
-      courts = courts.slice(0,5);
+      courts.sort((a,b)=>a.name.localeCompare(b.name));
     }
-    priorityEl.innerHTML='';
+    listEl.innerHTML='';
     if(!courts.length){
-      priorityEl.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:4px 0;font-style:italic;">No '+(isPrivate?'private':'public')+' courts saved yet.</div>';
+      listEl.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:6px 0;font-style:italic;">No '+(isPrivate?'private':'public')+' courts saved yet. Add one below.</div>';
     } else {
-      courts.forEach(c=>_smRenderCompactCourtRow(c,priorityEl));
+      courts.forEach(c=>_smRenderCompactCourtRow(c, listEl));
     }
   }catch(e){
-    if(priorityEl) priorityEl.innerHTML='<div style="font-size:12px;color:#dc2626;">Could not load courts.</div>';
+    if(listEl) listEl.innerHTML='<div style="font-size:12px;color:#dc2626;">Could not load courts.</div>';
   }
 }
 
@@ -7290,134 +7242,12 @@ function _smRenderCompactCourtRow(court, container){
   container.appendChild(row);
 }
 
-async function smLoadCourts(){
-  const myEmail=getMyEmail();
-  if(!myEmail) return;
-  const savedEl=document.getElementById('smSavedCourts');
-  if(!savedEl) return;
-  savedEl.innerHTML='<div style="font-size:11px;color:#6b7280;">Loading…</div>';
-  const isPrivate = MS.courtType==='private';
-  try{
-    const pcRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(myEmail)}&select=court_id`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
-    );
-    const pcRows = pcRes.ok ? await pcRes.json() : [];
-    const allSavedIds = pcRows.map(r=>r.court_id).filter(Boolean);
-    let savedCourts=[];
-    if(allSavedIds.length){
-      const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/courts?id=in.(${allSavedIds.join(',')})&is_private=eq.${isPrivate}&select=id,name,address,city,is_private,num_courts`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
-      );
-      savedCourts = res.ok ? await res.json() : [];
-    }
-    savedEl.innerHTML='';
-    if(!savedCourts.length){
-      savedEl.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:4px 0;font-style:italic;">No '+(isPrivate?'private':'public')+' courts saved yet.</div>';
-    } else {
-      savedCourts.forEach(c=>_smRenderCourtRow(c, savedEl, false));
-    }
-  }catch(e){ if(savedEl) savedEl.innerHTML='<div style="font-size:12px;color:#dc2626;">Could not load courts.</div>'; }
-}
-
-function _smRenderCourtRow(court, container, showSaveBtn){
-  const selected = MS.selectedCourts.has(court.id);
-  const row = document.createElement('div');
-  row.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;'+
-    'border:2px solid '+(selected?'#1a7a3a':'#d1d5db')+';'+
-    'background:'+(selected?'#f0fdf4':'#f9fafb')+';cursor:pointer;margin-bottom:8px;transition:all .15s;';
-  const info=document.createElement('div');
-  info.style.cssText='flex:1;min-width:0;';
-  info.innerHTML='<div style="font-size:13px;font-weight:600;color:#111;">'+(selected?'<span style="color:#1a7a3a;margin-right:4px;">✓</span>':'')+court.name+'</div>'+
-    '<div style="font-size:11px;color:#6b7280;">'+(court.city||'')+(court.num_courts?' · '+court.num_courts+' court'+(court.num_courts!==1?'s':''):'')+'</div>';
-  row.appendChild(info);
-  if(showSaveBtn && !selected){
-    const sv=document.createElement('button');
-    sv.textContent='+ Save';
-    sv.style.cssText='font-size:11px;color:#1a7a3a;background:rgba(26,122,58,0.08);border:1px solid rgba(26,122,58,0.3);border-radius:6px;padding:4px 10px;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;';
-    sv.onclick=async(e)=>{
-      e.stopPropagation();
-      try{
-        const myEmail = getMyEmail();
-        // Duplicate check: fetch saved court IDs, then names, compare normalized
-        const pcRes = await fetch(
-          `${SUPABASE_URL}/rest/v1/player_courts?player_email=eq.${encodeURIComponent(myEmail)}&select=court_id`,
-          {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
-        );
-        const pcRows = pcRes.ok ? await pcRes.json() : [];
-        const savedIds = pcRows.map(r=>r.court_id).filter(Boolean);
-        let savedCourts = [];
-        if(savedIds.length){
-          const scRes = await fetch(
-            `${SUPABASE_URL}/rest/v1/courts?id=in.(${savedIds.join(',')})&select=id,name`,
-            {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
-          );
-          savedCourts = scRes.ok ? await scRes.json() : [];
-        }
-        const normalizedNew = normalizeCourtName(court.name);
-        const existingMatch = savedCourts.find(c=>normalizeCourtName(c.name)===normalizedNew);
-        if(existingMatch){
-          showToast('📍 You already have "'+existingMatch.name+'" saved — looks like the same court.','#d97706');
-          return;
-        }
-        await fetch(`${SUPABASE_URL}/rest/v1/player_courts`,{method:'POST',
-          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
-          body:JSON.stringify({player_email:myEmail,court_id:court.id})});
-        const useNow = confirm('Court saved! Use this court for today\'s match?');
-        if(useNow){
-          MS.selectedCourts.clear();
-          MS.selectedCourts.set(court.id,{
-            name:court.name,
-            address:(court.address||'')+(court.city?', '+court.city:''),
-            isPrivate:court.is_private||false,
-            preferred:true,
-            numCourts:court.num_courts??null
-          });
-          MS.courtId=court.id; MS.courtName=court.name; MS.isPrivate=court.is_private||false;
-          renderCourtCapacityWarning();
-          smUpdateSendBtn();
-          smUpdateSummary();
-          smUpdateCourtPickerView();
-          smUpdateProgress(6);
-        } else {
-          smLoadCourts();
-        }
-      }catch(e2){}
-    };
-    row.appendChild(sv);
-  }
-  row.onclick=()=>{
-    if(MS.selectedCourts.has(court.id)){
-      MS.selectedCourts.delete(court.id);
-      MS.courtId=null; MS.courtName=null; MS.isPrivate=false;
-    } else {
-      MS.selectedCourts.clear();
-      MS.selectedCourts.set(court.id,{
-        name:court.name,
-        address:(court.address||'')+(court.city?', '+court.city:''),
-        isPrivate:court.is_private||false,
-        preferred:true,
-        numCourts:court.num_courts??null
-      });
-      MS.courtId=court.id; MS.courtName=court.name; MS.isPrivate=court.is_private||false;
-    }
-    renderCourtCapacityWarning();
-    smUpdateSendBtn();
-    smUpdateSummary();
-    smUpdateCourtPickerView();
-    if(MS.selectedCourts && MS.selectedCourts.size > 0) smUpdateProgress(6);
-  };
-  container.appendChild(row);
-}
-
-// Fix 4: re-fetch saved courts when player returns to the wizard tab after adding a court in My Courts
+// re-fetch saved courts when player returns to the wizard tab after adding a court in My Courts
 document.addEventListener('visibilitychange', function(){
   if(document.visibilityState !== 'visible') return;
   const wizardPage = document.getElementById('page-setupMatch');
   if(!wizardPage || !wizardPage.offsetParent) return;
-  smLoadCourtsPriority();
-  if(_smAllCourtsExpanded) smLoadCourts();
+  smLoadCourtList();
 });
 
 function smSelectInvite(mode, skipProgress){
@@ -7679,7 +7509,6 @@ function initSetupMatch(){
   window._smGroupGridSelectedId=null;
   MS.isFeeler=false; MS.duration=2; MS.selectedCourts=new Map();
   MS.hasOverlapConflict=false; MS.courtType='public'; MS.inviteMode='all';
-  _smAllCourtsExpanded=false;
   MS.timeStart=null; MS.timeEnd=null; MS.date=null;
   MS.courtId=null; MS.courtName=null; MS.courtAddress=null; MS.isPrivate=false;
 
