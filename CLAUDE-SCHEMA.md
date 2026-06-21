@@ -20,7 +20,7 @@ _Last updated: June 13, 2026_
 | `matches` | Match events | `id`, `organizer_email`, `match_date`, `time_start`, `time_end`, `court_id`, `court_name`, `format`, `num_courts`, `gender_pref`, `max_players` |
 | `match_responses` | Per-player responses | `match_id`, `player_email`, `response` ('in'/'out'/'pending'/'waitlist') |
 | `match_results` / `match_scores` | Recorded scores | — |
-| `courts` | Court locations | `id`, `name`, `address`, `is_private`, `court_count`, `lat`, `lon` |
+| `courts` | Court locations | `id` (uuid), `name`, `address`, `city`, `state`, `is_private` (boolean), `is_indoor` (boolean — `true`=indoor, `false`=outdoor; `null` means unknown/both), `num_courts` (integer), `latitude`, `longitude`, `notes`, `added_by_player` |
 | `player_courts` | Courts a player uses | `player_email`, `court_id` |
 | `invites` | App invite links | `invite_token`, `invite_type` ('single'/'qr'), `is_used` (boolean, default false), `inviter_email`, `inviter_name`, `invitee_email`, `invitee_name`, `invite_method`, `status`, `invitee_phone` (text — added May 16, 2026; 10-digit; populated for SMS match invite rows), `match_id` (uuid FK → matches, on delete cascade — added May 16, 2026; populated for SMS match invite rows) |
 | `waitlist` | Public marketing waitlist | `id`, `first_name`, `email` (unique), `zip_code`, `requested_at`, `invited_at` (nullable — set when invite sent), `notes` (internal) |
