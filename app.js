@@ -2473,7 +2473,6 @@ window._acmSave = async function(type){
         id:newCourtId, name, address, city, state,
         is_private:type==='private',
         is_indoor:_addCourtTypeVal==='indoor'||_addCourtTypeVal==='both',
-        is_outdoor:_addCourtTypeVal==='outdoor'||_addCourtTypeVal==='both',
         num_courts:num_courts||null, notes:notes||null,
         latitude:latitude||null, longitude:longitude||null,
         added_by_player:myEmail
