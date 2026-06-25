@@ -2394,6 +2394,9 @@ window.showAddCourtModal = function(type){
             ' style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;box-sizing:border-box;"/>'+
         '</div>'+
       '</div>'+
+      '<label style="display:block;font-size:13px;color:#4b5563;font-weight:600;margin-bottom:4px;">Zip code — optional, helps with location search</label>'+
+      '<input id="acmZip" type="text" maxlength="10" placeholder="e.g. 03247" autocomplete="off"'+
+        ' style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;box-sizing:border-box;margin-bottom:12px;"/>'+
       '<label style="display:block;font-size:13px;color:#4b5563;font-weight:600;margin-bottom:6px;">Court Type</label>'+
       '<div style="display:flex;gap:8px;margin-bottom:12px;">'+
         '<button type="button" id="acmBtnIndoor" onclick="window._acmSetType(\'indoor\')" style="'+btnUnsel+'">Indoor</button>'+
@@ -2472,6 +2475,7 @@ window._acmSave = async function(type){
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
       body:JSON.stringify({
         id:newCourtId, name, address, city, state,
+        zip:document.getElementById('acmZip')?.value.trim()||null,
         is_private:type==='private',
         is_indoor:_addCourtTypeVal==='indoor'||_addCourtTypeVal==='both',
         num_courts:num_courts||null, notes:notes||null,
