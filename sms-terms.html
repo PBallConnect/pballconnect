@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="PBallConnect SMS Consent & Terms — SMS program details, opt-in/opt-out information, and message frequency disclosure."/>
+  <title>PBallConnect SMS Consent &amp; Terms</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #111827;
+      background: #f9fafb;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: #1a7a3a;
+      color: #fff;
+      padding: 0 1.5rem;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header-logo {
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+    .header-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    /* ── Content ── */
+    .page-wrap {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 3rem;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #1a7a3a;
+      margin-bottom: 0.35rem;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: #6b7280;
+      margin-bottom: 1.75rem;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 1.25rem 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .card-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #6b7280;
+      margin-bottom: 1rem;
+    }
+
+    /* ── Opt-in mockup ── */
+    .optin-mock {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 1rem 1.1rem;
+      margin-bottom: 0.85rem;
+    }
+
+    .optin-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .mock-checkbox {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      margin-top: 2px;
+      border: 2px solid #d1d5db;
+      border-radius: 4px;
+      background: #fff;
+    }
+
+    .optin-label {
+      font-size: 0.875rem;
+      color: #374151;
+      line-height: 1.5;
+    }
+
+    .optin-sub {
+      font-size: 0.8rem;
+      color: #6b7280;
+      margin-top: 0.6rem;
+      line-height: 1.5;
+    }
+
+    /* ── Program details table ── */
+    .detail-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .detail-table tr {
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .detail-table tr:last-child {
+      border-bottom: none;
+    }
+
+    .detail-table td {
+      padding: 0.55rem 0;
+      font-size: 0.9rem;
+      vertical-align: top;
+    }
+
+    .detail-table td:first-child {
+      font-weight: 600;
+      color: #374151;
+      width: 140px;
+      padding-right: 1rem;
+    }
+
+    .detail-table td:last-child {
+      color: #4b5563;
+    }
+
+    /* ── Links ── */
+    a {
+      color: #1a7a3a;
+      text-decoration: underline;
+    }
+
+    a:hover {
+      color: #15652f;
+    }
+
+    .links-row {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      font-size: 0.9rem;
+      margin-top: 0.25rem;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      text-align: center;
+      font-size: 0.8rem;
+      color: #9ca3af;
+      margin-top: 2rem;
+    }
+
+    .footer a {
+      color: #9ca3af;
+    }
+
+    @media (max-width: 480px) {
+      .detail-table td:first-child {
+        width: 120px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <span class="header-logo">🏓</span>
+    <span class="header-title">PBallConnect</span>
+  </header>
+
+  <div class="page-wrap">
+
+    <h1>SMS Consent &amp; Terms</h1>
+    <p class="subtitle">Information about the PBallConnect text messaging program</p>
+
+    <!-- Opt-in mockup -->
+    <div class="card">
+      <div class="card-title">How You Opt In</div>
+      <p style="font-size:0.85rem;color:#6b7280;margin-bottom:0.85rem;">
+        During registration at
+        <a href="https://pballconnect.com/app.html" target="_blank" rel="noopener">pballconnect.com/app.html</a>,
+        players see the following unchecked checkbox:
+      </p>
+      <div class="optin-mock">
+        <div class="optin-row">
+          <div class="mock-checkbox"></div>
+          <span class="optin-label">
+            I agree to receive match invites, reminders, and updates from PBallConnect by text message.
+            Message frequency varies. Message &amp; data rates may apply. Reply STOP to unsubscribe or HELP for help.
+          </span>
+        </div>
+        <p class="optin-sub">
+          By checking this box you provide express written consent for PBallConnect to send automated text messages
+          to the number provided. Consent is not a condition of registration or use of the service.
+        </p>
+      </div>
+      <p style="font-size:0.8rem;color:#6b7280;">
+        The checkbox is <strong>unchecked by default</strong>. Opt-in requires an explicit action by the player.
+      </p>
+    </div>
+
+    <!-- Program details -->
+    <div class="card">
+      <div class="card-title">SMS Program Details</div>
+      <table class="detail-table">
+        <tbody>
+          <tr>
+            <td>Program name</td>
+            <td>PBallConnect</td>
+          </tr>
+          <tr>
+            <td>Message types</td>
+            <td>Match invitations, RSVP confirmations, waitlist alerts, match updates</td>
+          </tr>
+          <tr>
+            <td>Opt-in method</td>
+            <td>Unchecked checkbox during registration at
+              <a href="https://pballconnect.com/app.html" target="_blank" rel="noopener">pballconnect.com/app.html</a>
+            </td>
+          </tr>
+          <tr>
+            <td>Message frequency</td>
+            <td>Varies based on match activity</td>
+          </tr>
+          <tr>
+            <td>Rates</td>
+            <td>Message &amp; data rates may apply</td>
+          </tr>
+          <tr>
+            <td>To opt out</td>
+            <td>Reply <strong>STOP</strong> to any message</td>
+          </tr>
+          <tr>
+            <td>For help</td>
+            <td>Reply <strong>HELP</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Policies -->
+    <div class="card">
+      <div class="card-title">Policies</div>
+      <div class="links-row">
+        <a href="https://pballconnect.com/privacy" target="_blank" rel="noopener">Privacy Policy</a>
+        <a href="https://pballconnect.com/terms" target="_blank" rel="noopener">Terms of Service</a>
+      </div>
+    </div>
+
+    <p class="footer">
+      &copy; 2026 PBallConnect &nbsp;&middot;&nbsp;
+      <a href="https://pballconnect.com/app.html">Open the app</a>
+    </p>
+
+  </div>
+
+</body>
+</html>
