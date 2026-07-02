@@ -11973,7 +11973,22 @@ function showMutualInvitePrompt(theirEmail, theirName){
 async function sendMutualInvite(theirEmail, theirName){
   const btn = document.getElementById('mutualYesBtn');
   if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
-  await icSendRequest(theirEmail, theirName, btn);
+  const myEmail = SESSION_PLAYER?.email || getMyEmail();
+  const myName  = getMyName();
+  if(!myEmail){ showToast('Please sign in first','#f59e0b'); document.getElementById('mutualInvitePrompt')?.remove(); return; }
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal,resolution=ignore-duplicates'},
+      body:JSON.stringify({requester_email:myEmail,requester_name:myName,recipient_email:theirEmail,recipient_name:theirName||'',status:'pending'})
+    });
+    showToast('✅ Inner Circle invite sent to '+(theirName||theirEmail).split(' ')[0]+'!','#4CAF7D');
+    loadIcInvites();
+  }catch(e){
+    showToast('⚠️ Could not send invite — try again','#f59e0b');
+    if(btn){ btn.disabled=false; btn.textContent='✅ Yes, add them'; }
+    return;
+  }
   setTimeout(()=>document.getElementById('mutualInvitePrompt')?.remove(), 1500);
 }
 
@@ -12175,21 +12190,13 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
     overlay.remove();
     if(accepted && inviterEmail){
       try{
-        // Email invite path: connections row has recipient_email = newPlayerEmail
+        // Patch inviter's pending connection to approved (inviterEmail → newPlayerEmail)
         await fetch(`${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(inviterEmail)}&recipient_email=eq.${encodeURIComponent(newPlayerEmail)}&status=eq.pending`,{
           method:'PATCH',
           headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
           body:JSON.stringify({status:'approved'})
         });
-        // Link/text/SMS invite path: connections row has recipient_email = 'pending_TOKEN'
-        if(inv.invite_token){
-          await fetch(`${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(inviterEmail)}&recipient_email=eq.${encodeURIComponent('pending_'+inv.invite_token)}`,{
-            method:'PATCH',
-            headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
-            body:JSON.stringify({recipient_email:newPlayerEmail, status:'approved'})
-          });
-        }
-        // Create reciprocal connection (new user → inviter) as pending — inviter must accept before it counts in their IC
+        // Create reciprocal connection (new user → inviter) as pending
         await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
           method:'POST',
           headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal,resolution=ignore-duplicates'},
