@@ -12104,13 +12104,29 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
   const inv = PENDING_INVITE;
   PENDING_INVITE = null;
 
+  // invite_tokens VIEW doesn't expose inviter_email — look it up from invites table directly
+  let inviterEmail = inv.inviter_email || null;
+  if(!inviterEmail && inv.invite_token){
+    try{
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/invites?invite_token=eq.${encodeURIComponent(inv.invite_token)}&select=inviter_email`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+      );
+      const rows = r.ok ? await r.json() : [];
+      if(rows.length) inviterEmail = rows[0].inviter_email;
+    }catch(e){}
+  }
+  if(!inviterEmail){
+    console.warn('handlePostRegistrationInvite: could not resolve inviter_email for token', inv.invite_token);
+  }
+
   if(inv.invite_type === 'qr'){
     // QR multi-use: create a new invite row for this specific registration
     fetch(`${SUPABASE_URL}/rest/v1/invites`,{
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
       body:JSON.stringify({
-        inviter_email: inv.inviter_email,
+        inviter_email: inviterEmail,
         inviter_name:  inv.inviter_name,
         invitee_email: newPlayerEmail,
         invite_method: 'qr',
@@ -12157,42 +12173,27 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
   // Step 2 — finalize connections based on new user's choice
   const showStep2 = async (accepted)=>{
     overlay.remove();
-    if(accepted){
+    if(accepted && inviterEmail){
       try{
-        // Patch original invite row (inviter → new user) to approved — the new user accepted
-        await fetch(`${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(inv.inviter_email)}&recipient_email=eq.${encodeURIComponent(newPlayerEmail)}&status=eq.pending`,{
+        // Email invite path: connections row has recipient_email = newPlayerEmail
+        await fetch(`${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(inviterEmail)}&recipient_email=eq.${encodeURIComponent(newPlayerEmail)}&status=eq.pending`,{
           method:'PATCH',
           headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
           body:JSON.stringify({status:'approved'})
         });
-        // Fallback for link/text invite paths — connection row stored as pending_TOKEN when no email was known at invite time
+        // Link/text/SMS invite path: connections row has recipient_email = 'pending_TOKEN'
         if(inv.invite_token){
-          try{
-            const pendingKey = 'pending_'+inv.invite_token;
-            const fbRes = await fetch(
-              `${SUPABASE_URL}/rest/v1/connections?recipient_email=eq.${encodeURIComponent(pendingKey)}&select=id,requester_email`,
-              {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
-            );
-            const fbRows = fbRes.ok ? await fbRes.json() : [];
-            if(fbRows.length){
-              inv._resolvedInviterEmail = fbRows[0].requester_email;
-              await fetch(`${SUPABASE_URL}/rest/v1/connections?id=eq.${fbRows[0].id}`,{
-                method:'PATCH',
-                headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
-                body:JSON.stringify({recipient_email:newPlayerEmail, status:'approved'})
-              });
-            } else {
-              console.warn('handlePostRegistrationInvite: no pending_TOKEN connection found for', inv.invite_token);
-            }
-          }catch(e){
-            console.warn('handlePostRegistrationInvite: fallback patch failed', e.message, e);
-          }
+          await fetch(`${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(inviterEmail)}&recipient_email=eq.${encodeURIComponent('pending_'+inv.invite_token)}`,{
+            method:'PATCH',
+            headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+            body:JSON.stringify({recipient_email:newPlayerEmail, status:'approved'})
+          });
         }
         // Create reciprocal connection (new user → inviter) as pending — inviter must accept before it counts in their IC
-        const recipRes = await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
+        await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
           method:'POST',
           headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal,resolution=ignore-duplicates'},
-          body:JSON.stringify({requester_email:newPlayerEmail,requester_name:newPlayerName,recipient_email:inv.inviter_email||inv._resolvedInviterEmail,recipient_name:inv.inviter_name||'',status:'pending'})
+          body:JSON.stringify({requester_email:newPlayerEmail,requester_name:newPlayerName,recipient_email:inviterEmail,recipient_name:inv.inviter_name||'',status:'pending'})
         });
         showToast('You joined '+shortName+'\'s IC! They\'ll be notified to connect back.','#4CAF7D');
       }catch(e){}
