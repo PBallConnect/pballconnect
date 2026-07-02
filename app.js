@@ -12119,6 +12119,8 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
   const inv = PENDING_INVITE;
   PENDING_INVITE = null;
 
+  console.log('[HPRI] start | newPlayerEmail:', newPlayerEmail, '| invite_type:', inv.invite_type, '| invite_token:', inv.invite_token, '| inv.inviter_email:', inv.inviter_email);
+
   // invite_tokens VIEW doesn't expose inviter_email — look it up from invites table directly
   let inviterEmail = inv.inviter_email || null;
   if(!inviterEmail && inv.invite_token){
@@ -12128,11 +12130,15 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
       );
       const rows = r.ok ? await r.json() : [];
+      console.log('[HPRI] invites lookup → status:', r.status, '| rows:', JSON.stringify(rows));
       if(rows.length) inviterEmail = rows[0].inviter_email;
-    }catch(e){}
+    }catch(e){
+      console.error('[HPRI] invites lookup exception:', e);
+    }
   }
+  console.log('[HPRI] inviterEmail resolved to:', inviterEmail);
   if(!inviterEmail){
-    console.warn('handlePostRegistrationInvite: could not resolve inviter_email for token', inv.invite_token);
+    console.warn('[HPRI] could not resolve inviter_email — IC connection will be skipped');
   }
 
   if(inv.invite_type === 'qr'){
@@ -12149,18 +12155,70 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
         is_used:       true,
         status:        'registered'
       })
-    }).catch(()=>{});
+    }).catch(e=>console.warn('[HPRI] QR invite POST error:', e));
   } else {
     // Single-use token: mark as used + registered
     fetch(`${SUPABASE_URL}/rest/v1/invites?invite_token=eq.${inv.invite_token}`,{
       method:'PATCH',
       headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
       body:JSON.stringify({status:'registered', is_used:true})
-    }).catch(()=>{});
+    }).catch(e=>console.warn('[HPRI] invite row PATCH error:', e));
   }
 
   const inviterName = inv.inviter_name || 'Your inviter';
   const shortName   = inviterName.split(' ')[0];
+
+  // Step 3 overlay — ask new user if they want to send a reciprocal IC request
+  const showStep3 = ()=>{
+    const o2 = document.createElement('div');
+    o2.id = 'inviteReciprocateOverlay';
+    o2.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);display:flex;align-items:center;justify-content:center;padding:20px;z-index:700;';
+    o2.innerHTML =
+      '<div style="background:#0f1f12;border:1px solid rgba(76,175,125,0.4);border-radius:20px;padding:28px 24px;max-width:420px;width:100%;text-align:center;">'+
+        '<div style="font-size:48px;margin-bottom:12px;">➕</div>'+
+        '<div style="font-size:19px;font-weight:800;color:#fff;margin-bottom:8px;">Add '+shortName+' to your IC?</div>'+
+        '<div style="font-size:13px;color:var(--dim);margin-bottom:20px;line-height:1.6;">'+
+          'Want to add '+shortName+' to YOUR Inner Circle too? They\'ll get a request to confirm.'+
+        '</div>'+
+        '<div style="display:flex;gap:10px;">'+
+          '<button id="icRecipYes" style="flex:1;padding:13px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:14px;cursor:pointer;">'+
+            'Yes — Add '+shortName+' to My IC'+
+          '</button>'+
+          '<button id="icRecipNo" style="flex:1;padding:13px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;">'+
+            'Maybe Later'+
+          '</button>'+
+        '</div>'+
+      '</div>';
+    document.body.appendChild(o2);
+
+    const finalize = async (reciprocate)=>{
+      o2.remove();
+      if(reciprocate && inviterEmail){
+        const postBody = {requester_email:newPlayerEmail, requester_name:newPlayerName, recipient_email:inviterEmail, recipient_name:inv.inviter_name||'', status:'pending'};
+        console.log('[HPRI] POST reciprocal connection | body:', JSON.stringify(postBody));
+        try{
+          const postRes = await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
+            method:'POST',
+            headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal,resolution=ignore-duplicates'},
+            body:JSON.stringify(postBody)
+          });
+          const postText = await postRes.text();
+          console.log('[HPRI] POST reciprocal → status:', postRes.status, '| body:', postText);
+          if(!postRes.ok) console.error('[HPRI] POST reciprocal FAILED:', postRes.status, postText);
+          else console.log('[HPRI] POST reciprocal succeeded');
+        }catch(e){
+          console.error('[HPRI] POST reciprocal exception:', e);
+        }
+        showToast('Request sent to '+shortName+'! They\'ll see it in their Inner Circle.','#4CAF7D');
+      }
+      document.getElementById('confirmOverlay').style.display='none';
+      if(!SESSION_PLAYER) SESSION_PLAYER = { email: newPlayerEmail, first_name: (newPlayerName||'').split(' ')[0] };
+      showPage('dashboard');
+    };
+
+    document.getElementById('icRecipYes').onclick = ()=>finalize(true);
+    document.getElementById('icRecipNo').onclick  = ()=>finalize(false);
+  };
 
   // Step 1 overlay — Accept IC invite from inviter
   const overlay = document.createElement('div');
@@ -12185,30 +12243,57 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
     '</div>';
   document.body.appendChild(overlay);
 
-  // Step 2 — finalize connections based on new user's choice
+  // Step 2 — PATCH inviter's connection row to approved (single DB write, no reciprocal yet)
   const showStep2 = async (accepted)=>{
     overlay.remove();
     if(accepted && inviterEmail){
+      // Primary PATCH: email invite path stores recipient_email as the real email
+      const primaryUrl = `${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(inviterEmail)}&recipient_email=eq.${encodeURIComponent(newPlayerEmail)}`;
+      console.log('[HPRI] PATCH connections (primary) | url:', primaryUrl, '| body:', JSON.stringify({status:'approved'}));
       try{
-        // Patch inviter's pending connection to approved (inviterEmail → newPlayerEmail)
-        await fetch(`${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(inviterEmail)}&recipient_email=eq.${encodeURIComponent(newPlayerEmail)}&status=eq.pending`,{
+        const pRes = await fetch(primaryUrl,{
           method:'PATCH',
           headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
           body:JSON.stringify({status:'approved'})
         });
-        // Create reciprocal connection (new user → inviter) as pending
-        await fetch(`${SUPABASE_URL}/rest/v1/connections`,{
-          method:'POST',
-          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal,resolution=ignore-duplicates'},
-          body:JSON.stringify({requester_email:newPlayerEmail,requester_name:newPlayerName,recipient_email:inviterEmail,recipient_name:inv.inviter_name||'',status:'pending'})
-        });
-        showToast('You joined '+shortName+'\'s IC! They\'ll be notified to connect back.','#4CAF7D');
-      }catch(e){}
+        const pText = await pRes.text();
+        console.log('[HPRI] PATCH connections (primary) → status:', pRes.status, '| body:', pText);
+        if(!pRes.ok) console.error('[HPRI] PATCH connections (primary) FAILED:', pRes.status, pText);
+        else console.log('[HPRI] PATCH connections (primary) succeeded');
+      }catch(e){
+        console.error('[HPRI] PATCH connections (primary) exception:', e);
+      }
+
+      // Fallback PATCH: link/text invite paths store recipient_email as 'pending_TOKEN'
+      // Also updates recipient_email to the real email so the row is queryable going forward
+      if(inv.invite_token){
+        const pendingKey = 'pending_' + inv.invite_token;
+        const fallbackUrl = `${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(inviterEmail)}&recipient_email=eq.${encodeURIComponent(pendingKey)}`;
+        const fallbackBody = {recipient_email:newPlayerEmail, status:'approved'};
+        console.log('[HPRI] PATCH connections (fallback pending_TOKEN) | url:', fallbackUrl, '| body:', JSON.stringify(fallbackBody));
+        try{
+          const fRes = await fetch(fallbackUrl,{
+            method:'PATCH',
+            headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+            body:JSON.stringify(fallbackBody)
+          });
+          const fText = await fRes.text();
+          console.log('[HPRI] PATCH connections (fallback) → status:', fRes.status, '| body:', fText);
+          if(!fRes.ok) console.error('[HPRI] PATCH connections (fallback) FAILED:', fRes.status, fText);
+          else console.log('[HPRI] PATCH connections (fallback) succeeded');
+        }catch(e){
+          console.error('[HPRI] PATCH connections (fallback) exception:', e);
+        }
+      }
+
+      showToast('You joined '+shortName+'\'s IC!','#4CAF7D');
+      showStep3();
+    } else {
+      // Declined: original row stays pending — new user can accept from IC → Requests later
+      document.getElementById('confirmOverlay').style.display='none';
+      if(!SESSION_PLAYER) SESSION_PLAYER = { email: newPlayerEmail, first_name: (newPlayerName||'').split(' ')[0] };
+      showPage('dashboard');
     }
-    // If declined, original row stays pending — new user can accept from IC → Requests later
-    document.getElementById('confirmOverlay').style.display='none';
-    if(!SESSION_PLAYER) SESSION_PLAYER = { email: newPlayerEmail, first_name: (newPlayerName||'').split(' ')[0] };
-    showPage('dashboard');
   };
 
   document.getElementById('icJoinYes').onclick = ()=>showStep2(true);
