@@ -3,7 +3,7 @@
 _Created June 2026. Cross-reference: CLAUDE.md, CLAUDE-SCHEMA.md, CLAUDE-RULES.md, CLAUDE-SMS.md._
 _Update this file whenever any function in a flow chain is modified. Never change a flow without updating here first._
 
-_Last updated: June 13, 2026_
+_Last updated: July 2, 2026_
 
 ---
 
@@ -47,13 +47,14 @@ Each flow defines the exact sequence of steps a user experiences, the URL params
 | 14 | Profile row saved to `registrations` | — | — | — |
 | 15 | Re-fetch populates `SESSION_PLAYER` | — | `SESSION_PLAYER` now set | — |
 | 16 | `_isNewRegistration` is true → `showFoundingMemberOverlay()` → calls `handlePostRegistrationInvite()` | — | — | "You're All Set" screen |
-| 17 | `handlePostRegistrationInvite()` finds `PENDING_INVITE` → shows "Join [inviter]'s IC?" prompt | — | — | IC join prompt overlay |
-| 18 | Invitee taps Yes → original `connections` row patched to `approved`. Reciprocal row created as `pending` — inviter must explicitly accept before it counts in their My IC | — | — | — |
+| 17 | `handlePostRegistrationInvite()` finds `PENDING_INVITE` → resolves `inviter_email` by querying `invites` table directly via `invite_token=eq.TOKEN` (never `invite_tokens` view) → shows "Join [inviter]'s IC?" overlay | — | — | IC join prompt overlay |
+| 18 | Invitee taps Yes → **primary PATCH**: `connections?requester_email=eq.INVITER_EMAIL&recipient_email=eq.NEW_PLAYER_EMAIL` → `{status:'approved'}`. No status filter. Raw email values in URL (no `encodeURIComponent`). **Fallback PATCH** also fires for link/text invite paths where the row was stored with `recipient_email='pending_TOKEN'`: patches both `recipient_email` to real email and `status` to `approved`. Toast shown. | — | — | Step 3 overlay appears |
+| 18b | Step 3 overlay — "Add [inviter] to YOUR Inner Circle?" — if Yes: POSTs reciprocal row `{requester_email:newPlayerEmail, recipient_email:inviterEmail, status:'pending'}`. Inviter must explicitly accept before it counts in their My IC. If Maybe Later: skipped. | — | — | Reciprocal IC request overlay |
 | 19 | `confirmOverlay` hidden → `showPage('dashboard')` | — | — | Dashboard — green IC tile = 1 |
 
 **Critical rules:** Rule 51 (redirects → `app.html`), Rule 16 (check `is_used`), Rule 36 (`Prefer: return=minimal`).
 
-**Known regression history:** June 2026 — `_isNewRegistration` declared inside `try{}` caused silent `ReferenceError` after save. Fix: declare before `try{}`.
+**Known regression history:** June 2026 — `_isNewRegistration` declared inside `try{}` caused silent `ReferenceError` after save. Fix: declare before `try{}`. July 2026 — PATCH returning 400 due to `encodeURIComponent` on email values and stale `&status=eq.pending` filter. Fix: use raw emails in URL, remove status filter. See commit `2c43072`.
 
 ---
 
@@ -66,8 +67,9 @@ Steps 1–10 identical to Flow 1. Then:
 | 11 | Invitee taps Quick Connect | Minimal overlay: First Name + gender chips + skill slider + zip + email |
 | 12 | Invitee completes form, taps Save | — |
 | 13 | `_qcSave()` saves row, checks `PENDING_INVITE` → calls `handlePostRegistrationInvite()` | "You're All Set" screen |
-| 14 | `handlePostRegistrationInvite()` shows "Join [inviter]'s IC?" prompt | IC join prompt |
-| 15 | Invitee taps Yes → original connection row patched to `approved`. Reciprocal row created as `status='pending'` — inviter must explicitly accept before it counts in their My IC | — |
+| 14 | `handlePostRegistrationInvite()` resolves `inviter_email` from `invites` table (never `invite_tokens` view) → shows "Join [inviter]'s IC?" overlay | IC join prompt |
+| 15 | Invitee taps Yes → **primary PATCH**: `connections?requester_email=eq.INVITER_EMAIL&recipient_email=eq.NEW_PLAYER_EMAIL` → `{status:'approved'}`. No status filter. **Fallback PATCH** fires for `pending_TOKEN` rows. Toast shown. | — |
+| 15b | Step 3 overlay — "Add [inviter] to YOUR Inner Circle?" — if Yes: POSTs reciprocal row as `status='pending'`. Inviter must explicitly accept. If Maybe Later: skipped. | Reciprocal IC request overlay |
 | 16 | `confirmOverlay` hidden → `showPage('dashboard')` | Dashboard — green IC tile = 1 |
 
 **Note:** `_qcSave()` must also call `handlePostRegistrationInvite()` when `PENDING_INVITE` is set — same as `doSaveProfile()`.
@@ -169,7 +171,7 @@ This flow applies to ALL registration paths (Full Profile, Quick Connect, SMS) a
 | 2 | `showFoundingMemberOverlay()` fires | "You're All Set — Welcome to PBallConnect!" |
 | 3 | Copy reads: "Taking you to your dashboard..." (NOT "Head to your dashboard") | — |
 | 4a | If `PENDING_INVITE` exists → `handlePostRegistrationInvite()` shows IC join prompt | "Join [inviter]'s Inner Circle?" overlay |
-| 4b | User taps Yes → connection approved → `confirmOverlay` hidden → `showPage('dashboard')` | Dashboard |
+| 4b | User taps Yes → primary + fallback PATCH approves connection → Step 3 overlay: "Add [inviter] to YOUR Inner Circle?" → if Yes, reciprocal `pending` row POSTed → `confirmOverlay` hidden → `showPage('dashboard')` | Step 3 overlay, then Dashboard |
 | 4c | User taps Maybe Later → `confirmOverlay` hidden → `showPage('dashboard')` | Dashboard |
 | 5a | If NO `PENDING_INVITE` → `showFoundingMemberOverlay` callback hides `confirmOverlay` → `showPage('dashboard')` directly | Dashboard |
 
@@ -242,3 +244,5 @@ Run this before pushing ANY change to auth, registration, or invite flows:
 - [ ] `startNewRegistration()` does NOT fire when `SESSION_PLAYER` exists after re-fetch
 - [ ] Reciprocal connection rows created as `pending` — never `approved` at creation (Flows 1, 2, 10)
 - [ ] Re-invite pre-check fires before `sendIcEmailInvite()` sends — existing approved or pending connection aborts with toast (Rule 56)
+- [ ] `handlePostRegistrationInvite()` PATCH URL uses `requester_email=eq.X&recipient_email=eq.Y` format — no status filter, no `encodeURIComponent` on email values
+- [ ] `inviter_email` in `handlePostRegistrationInvite()` sourced from `invites` table (`/rest/v1/invites?invite_token=eq.TOKEN&select=inviter_email`) — never from `invite_tokens` view

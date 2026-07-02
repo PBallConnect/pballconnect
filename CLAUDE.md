@@ -1,6 +1,6 @@
 # CLAUDE.md — PBallConnect Reference
 
-_Last updated: June 19, 2026_
+_Last updated: July 2, 2026_
 
 ---
 
@@ -103,7 +103,8 @@ No tests, no linter, no build commands.
 8. **`saveMyCourts()` OSM courts write null court_id.** Courts sourced from Overpass/OSM proximity search have `osm_`-prefixed IDs which are not valid UUIDs. `saveMyCourts()` correctly guards against writing these as `null` — but any OSM court a user checks will be silently skipped. OSM courts need to be inserted into the `courts` table with a real UUID before they can be saved to `player_courts`. Not yet fixed.
 
 **Resolved (do not re-introduce):**
-- ~~**Bug C — link/text invite paths: IC connection never established**~~ — Fixed June 2026. `handlePostRegistrationInvite()` now includes a fallback that queries `connections` by `recipient_email = 'pending_' + inv.invite_token`. Two RLS policies added to `connections` table: SELECT and UPDATE for `recipient_email ILIKE 'pending_%'`. Reciprocal POST fixed by resolving `inv._resolvedInviterEmail` from the fallback row, used as fallback when `inv.inviter_email` is undefined (token paths only). QR path unaffected.
+- ~~**Bug C — link/text invite paths: IC connection never established**~~ — Fixed June–July 2026. `handlePostRegistrationInvite()` runs two PATCHes: (1) primary PATCH by `recipient_email=eq.NEW_PLAYER_EMAIL` (email invite path); (2) fallback PATCH by `recipient_email=eq.pending_TOKEN` (link/text invite path — writes real email + `approved` in one shot). `inviter_email` fetched from `invites` table directly via `invite_token=eq.TOKEN`, never from `invite_tokens` view. Two RLS policies added to `connections` table: SELECT and UPDATE for `recipient_email ILIKE 'pending_%'`. QR path unaffected.
+- ~~**`handlePostRegistrationInvite()` PATCH returning 400**~~ — Fixed July 2026 (commit `2c43072`). Root cause: `encodeURIComponent` was encoding `@` to `%40` in the PostgREST filter values, causing bad request errors. Also a stale `&status=eq.pending` filter was silently excluding rows whose status had been changed. Fixed by using raw email strings in both PATCH URLs and removing the status filter entirely. If this regresses: check the PATCH URL in `handlePostRegistrationInvite()` — ensure format is `requester_email=eq.EMAIL&recipient_email=eq.EMAIL` with no status filter and no percent-encoding on the email values.
 - ~~**Registration flow regression (June 2026)**~~ — `const _isNewRegistration` declared inside `try{}` caused silent `ReferenceError` after save; new users saw "You're All Set" then were dumped to `page-welcome`. Fixed by moving the declaration before `try{}`.
 - ~~`invites` table RLS INSERT policy missing~~ — policy added in Supabase; invites now write correctly
 - ~~`invite_token` missing from INSERT payload~~ — client-side token generated via `crypto.getRandomValues` and included in payload
