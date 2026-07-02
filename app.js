@@ -12248,8 +12248,9 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
     overlay.remove();
     if(accepted && inviterEmail){
       // Primary PATCH: email invite path stores recipient_email as the real email
-      const primaryUrl = `${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(inviterEmail)}&recipient_email=eq.${encodeURIComponent(newPlayerEmail)}`;
-      console.log('[HPRI] PATCH connections (primary) | url:', primaryUrl, '| body:', JSON.stringify({status:'approved'}));
+      // URL uses raw (unencoded) email values — PostgREST eq. filter expects plain text
+      const primaryUrl = `${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${inviterEmail}&recipient_email=eq.${newPlayerEmail}`;
+      console.log('[HPRI] PATCH URL (primary):', primaryUrl);
       try{
         const pRes = await fetch(primaryUrl,{
           method:'PATCH',
@@ -12257,20 +12258,20 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
           body:JSON.stringify({status:'approved'})
         });
         const pText = await pRes.text();
-        console.log('[HPRI] PATCH connections (primary) → status:', pRes.status, '| body:', pText);
-        if(!pRes.ok) console.error('[HPRI] PATCH connections (primary) FAILED:', pRes.status, pText);
-        else console.log('[HPRI] PATCH connections (primary) succeeded');
+        console.log('[HPRI] PATCH (primary) → HTTP', pRes.status, '| response body:', pText || '(empty)');
+        if(!pRes.ok) console.error('[HPRI] PATCH (primary) FAILED:', pRes.status, pText);
+        else console.log('[HPRI] PATCH (primary) succeeded');
       }catch(e){
-        console.error('[HPRI] PATCH connections (primary) exception:', e);
+        console.error('[HPRI] PATCH (primary) exception:', e);
       }
 
       // Fallback PATCH: link/text invite paths store recipient_email as 'pending_TOKEN'
-      // Also updates recipient_email to the real email so the row is queryable going forward
+      // Also writes the real email into recipient_email so the row is queryable going forward
       if(inv.invite_token){
         const pendingKey = 'pending_' + inv.invite_token;
-        const fallbackUrl = `${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${encodeURIComponent(inviterEmail)}&recipient_email=eq.${encodeURIComponent(pendingKey)}`;
+        const fallbackUrl = `${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${inviterEmail}&recipient_email=eq.${pendingKey}`;
+        console.log('[HPRI] PATCH URL (fallback):', fallbackUrl);
         const fallbackBody = {recipient_email:newPlayerEmail, status:'approved'};
-        console.log('[HPRI] PATCH connections (fallback pending_TOKEN) | url:', fallbackUrl, '| body:', JSON.stringify(fallbackBody));
         try{
           const fRes = await fetch(fallbackUrl,{
             method:'PATCH',
@@ -12278,11 +12279,11 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
             body:JSON.stringify(fallbackBody)
           });
           const fText = await fRes.text();
-          console.log('[HPRI] PATCH connections (fallback) → status:', fRes.status, '| body:', fText);
-          if(!fRes.ok) console.error('[HPRI] PATCH connections (fallback) FAILED:', fRes.status, fText);
-          else console.log('[HPRI] PATCH connections (fallback) succeeded');
+          console.log('[HPRI] PATCH (fallback) → HTTP', fRes.status, '| response body:', fText || '(empty)');
+          if(!fRes.ok) console.error('[HPRI] PATCH (fallback) FAILED:', fRes.status, fText);
+          else console.log('[HPRI] PATCH (fallback) succeeded');
         }catch(e){
-          console.error('[HPRI] PATCH connections (fallback) exception:', e);
+          console.error('[HPRI] PATCH (fallback) exception:', e);
         }
       }
 
