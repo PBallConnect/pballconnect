@@ -4751,11 +4751,11 @@ async function showPostMatchFeedback(matchId, players){
       '</div>'+
       '<div style="font-size:12px;color:var(--dim);margin-bottom:16px;">Your feedback is private — it helps others know what to expect. '+(currentIdx+1)+' of '+others.length+'</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">'+
-        '<button onclick="submitFeedback(\''+matchId+'\',\''+player.player_email+'\',true)" '+
+        '<button onclick="submitPostMatchFeedback(\''+matchId+'\',\''+player.player_email+'\',true)" '+
           'style="padding:14px;border-radius:12px;border:none;background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.4);color:var(--green);font-size:22px;cursor:pointer;">'+
           '&#128522;<div style="font-size:12px;font-weight:700;margin-top:4px;">Great — would play again</div>'+
         '</button>'+
-        '<button onclick="submitFeedback(\''+matchId+'\',\''+player.player_email+'\',false)" '+
+        '<button onclick="submitPostMatchFeedback(\''+matchId+'\',\''+player.player_email+'\',false)" '+
           'style="padding:14px;border-radius:12px;border:none;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#f87171;font-size:22px;cursor:pointer;">'+
           '&#128528;<div style="font-size:12px;font-weight:700;margin-top:4px;">Had some concerns</div>'+
         '</button>'+
@@ -4763,7 +4763,7 @@ async function showPostMatchFeedback(matchId, players){
       '<button onclick="skipFeedback()" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:12px;cursor:pointer;">Skip for now</button>';
   }
 
-  window.submitFeedback = async(matchId, reviewedEmail, wouldPlayAgain)=>{
+  window.submitPostMatchFeedback = async(matchId, reviewedEmail, wouldPlayAgain)=>{
     try{
       await fetch(`${SUPABASE_URL}/rest/v1/player_feedback`,{
         method:'POST',
