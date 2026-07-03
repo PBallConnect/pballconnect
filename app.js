@@ -6278,23 +6278,38 @@ async function loadInvitedByOthersPage(){
 // ── Init match page ────────────────────────────────────
 // Delegated handler for Invited by Others respond buttons
 // Must be at document level to catch dynamically rendered buttons
-document.addEventListener('click', function(e){
+document.addEventListener('click', async function(e){
   const btn = e.target.closest('.ibo-respond-btn');
   if(!btn) return;
   e.stopPropagation();
   const matchId = btn.dataset.mid;
   const resp = btn.dataset.resp;
   if(!matchId || !resp) return;
-  // Immediately disable all buttons in the row and replace with response message
+  // Immediately disable the row and show a neutral in-progress state —
+  // the real outcome (in/waitlist/out/error) isn't known until respondToMatch() resolves,
+  // since the race-condition handling can silently change 'in' into 'waitlist'.
   const btnRow = btn.parentElement;
-  btnRow.querySelectorAll('.ibo-respond-btn').forEach(b=>{ b.disabled=true; b.style.pointerEvents='none'; });
-  if(resp==='in'){
+  const originalRowHtml = btnRow.innerHTML;
+  btnRow.innerHTML='<div style="padding:8px 12px;background:rgba(100,100,100,0.06);border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--dim);font-weight:600;">Responding…</div>';
+
+  let outcome;
+  try{
+    outcome = await respondToMatch(matchId, resp);
+  }catch(err){
+    outcome = 'error';
+  }
+
+  if(outcome==='in'){
     btnRow.innerHTML='<div style="padding:8px 12px;background:rgba(76,175,125,0.08);border:1px solid rgba(76,175,125,0.3);border-radius:8px;font-size:13px;color:var(--green);font-weight:600;">✅ You\'re in! See you on the court.</div>';
-  } else {
+  } else if(outcome==='waitlist'){
+    btnRow.innerHTML='<div style="padding:8px 12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;font-size:13px;color:#f59e0b;font-weight:600;">⏳ You\'re on the waitlist.</div>';
+  } else if(outcome==='out'){
     btnRow.innerHTML='<div style="padding:8px 12px;background:rgba(100,100,100,0.06);border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--dim);font-weight:600;">Got it — response saved.</div>';
+  } else {
+    // 'error', 'cancelled', 'unchanged', 'login_required' — nothing was confirmed, let them retry
+    btnRow.innerHTML = originalRowHtml;
   }
   loadAllMatchBadges();
-  respondToMatch(matchId, resp);
 });
 
 // ══════════════════════════════════════════════════════
@@ -7737,6 +7752,8 @@ function showMatchFullConfirm(){
 
 // Called when the prevent_match_overfill DB trigger rejects an 'in' write because
 // someone else claimed the spot between this player's read and their write.
+// Returns 'waitlist' if the player chose to join the waitlist and the write succeeded,
+// 'unchanged' if they dismissed/declined (no write made), or 'error' if the waitlist write itself failed.
 async function handleMatchFullRace(matchId, myEmail, myName, btn){
   const joinWaitlist = await showMatchFullConfirm();
   if(joinWaitlist){
@@ -7778,11 +7795,16 @@ async function handleMatchFullRace(matchId, myEmail, myName, btn){
         }
       }
       showToast('Added to the waitlist','#f59e0b');
+      if(btn){ btn.disabled=false; btn.textContent = '✅ I\'m In!'; }
+      return 'waitlist';
     }catch(e){
       showToast('Could not join waitlist: '+e.message,'#f87171');
+      if(btn){ btn.disabled=false; btn.textContent = '✅ I\'m In!'; }
+      return 'error';
     }
   }
   if(btn){ btn.disabled=false; btn.textContent = '✅ I\'m In!'; }
+  return 'unchanged';
 }
 
 async function respondToMatch(matchId, response){
@@ -7790,7 +7812,7 @@ async function respondToMatch(matchId, response){
   if(!myEmail){
     showToast('Please sign in to respond','#f59e0b');
     openLoginModal();
-    return;
+    return 'login_required';
   }
   const btn = event?.target;
   if(btn){ btn.disabled=true; btn.textContent='Saving...'; }
@@ -7805,7 +7827,7 @@ async function respondToMatch(matchId, response){
     const matches = matchRes.ok ? await matchRes.json() : [];
     const confirmed = confirmedRes.ok ? await confirmedRes.json() : [];
     const match = matches[0];
-    if(!match){ showToast('Match not found','#f87171'); return; }
+    if(!match){ showToast('Match not found','#f87171'); return 'error'; }
     const needed = match.max_players || (match.match_type==='doubles' ? 4 : 2);
     const spotsLeft = needed - confirmed.length;
     const alreadyIn = confirmed.some(r=>r.player_email===myEmail);
@@ -7818,7 +7840,7 @@ async function respondToMatch(matchId, response){
       const conflicts = await checkMatchConflict(myEmail, match);
       if(conflicts.length){
         const proceed = await showConflictConfirm(conflicts, match);
-        if(!proceed){ if(btn){ btn.disabled=false; btn.textContent='✅ I\'m In!'; } return; }
+        if(!proceed){ if(btn){ btn.disabled=false; btn.textContent='✅ I\'m In!'; } return 'cancelled'; }
       }
     }
     // ──────────────────────────────────────────────────
@@ -7865,8 +7887,7 @@ async function respondToMatch(matchId, response){
         if(!insertRes.ok){
           const insertErrText = await insertRes.text();
           if(insertErrText.includes('MATCH_FULL')){
-            await handleMatchFullRace(matchId, myEmail, myName, btn);
-            return;
+            return await handleMatchFullRace(matchId, myEmail, myName, btn);
           }
           throw new Error('Save failed: '+insertErrText);
         }
@@ -7874,8 +7895,7 @@ async function respondToMatch(matchId, response){
     } else {
       const patchErrText = await patchRes.text();
       if(patchErrText.includes('MATCH_FULL')){
-        await handleMatchFullRace(matchId, myEmail, myName, btn);
-        return;
+        return await handleMatchFullRace(matchId, myEmail, myName, btn);
       }
       throw new Error('Save failed: '+patchErrText);
     }
@@ -7907,9 +7927,11 @@ async function respondToMatch(matchId, response){
     const activePage = document.querySelector('.page-section.active')?.id?.replace('page-','');
     if(activePage==='invitedByOthers') setTimeout(()=>loadInvitedByOthersPage(), 600);
     if(activePage==='confirmedMatches') setTimeout(()=>loadConfirmedMatches(), 600);
+    return actualResponse;
   }catch(e){
     showToast('Error: '+e.message,'#f87171');
     if(btn){ btn.disabled=false; btn.textContent='Try again'; }
+    return 'error';
   }
 }
 
