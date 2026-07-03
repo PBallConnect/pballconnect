@@ -7739,9 +7739,9 @@ function showMatchFullConfirm(){
       '<div style="background:#fff;border:2px solid #f59e0b;border-radius:16px;padding:24px;max-width:380px;width:100%;font-family:\'DM Sans\',sans-serif;">'+
         '<div style="font-size:16px;font-weight:800;color:#111;margin-bottom:6px;">⏳ Spot Already Taken</div>'+
         '<div style="font-size:13px;color:#374151;margin-bottom:20px;line-height:1.6;">Someone claimed that spot just before you. Would you like to join the waitlist for this match?</div>'+
-        '<div style="display:flex;gap:10px;">'+
+        '<div style="display:flex;gap:10px;align-items:center;">'+
+          '<button id="matchFullYes" style="flex:1.6;padding:16px;border-radius:10px;border:none;background:#f59e0b;color:#fff;font-weight:800;font-size:16px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Join Waitlist</button>'+
           '<button id="matchFullNo" style="flex:1;padding:10px;border-radius:8px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;font-weight:600;font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">No thanks</button>'+
-          '<button id="matchFullYes" style="flex:1;padding:10px;border-radius:8px;border:none;background:#f59e0b;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Join Waitlist</button>'+
         '</div>'+
       '</div>';
     document.body.appendChild(overlay);
