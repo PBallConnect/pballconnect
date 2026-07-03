@@ -13445,6 +13445,8 @@ function updateNavForUserType(){
   });
   const bfBtn = document.getElementById('nav-betaFeedback');
   if(bfBtn) bfBtn.style.display = (SESSION_PLAYER && SESSION_PLAYER.is_beta_tester === true) ? 'flex' : 'none';
+  const dbgWrap = document.getElementById('debugLogWrap');
+  if(dbgWrap) dbgWrap.style.display = (SESSION_PLAYER && SESSION_PLAYER.is_beta_tester === true) ? 'block' : 'none';
 }
 
 // ══════════════════════════════════════════════════════════════
