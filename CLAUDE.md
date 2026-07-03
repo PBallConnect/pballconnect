@@ -227,6 +227,19 @@ No tests, no linter, no build commands.
 
 ---
 
+## Future Features
+
+### Cross-match waitlist conflict detection
+If a player is on the waitlist for Match A, and separately becomes confirmed (`'in'`) for a different Match B whose time window overlaps Match A's, the system should:
+1. Notify the player that they're now double-booked and ask whether they want to remain on Match A's waitlist or be removed from it — do not auto-remove them without asking, since they may prefer Match A if it comes through.
+2. If the player chooses to leave Match A's waitlist (or a future decision is made to auto-remove), notify Match A's organizer specifically that this player is no longer available, so the organizer has accurate visibility into their real waitlist rather than a stale one.
+3. Time-overlap detection logic likely already exists for this purpose in `smCheckConflict()` (Rule 28) and could potentially be reused or adapted rather than built from scratch.
+4. Open design question, not yet decided: should this check run in real time whenever a player's `match_responses` changes anywhere in the app, or only at specific trigger points (e.g. right after a new `'in'` confirmation)? Real-time is more thorough but has more performance/complexity cost.
+
+This is a clear communication/respect-for-organizer-time feature — the guiding principle is that all parties (the player, and especially the organizer who is planning around a real roster) should always have accurate, current information rather than finding out someone's unavailable only when they don't show up.
+
+---
+
 ## Admin Registration Alerts
 
 An alert email fires to `david@pballconnect.com` on every new player registration, regardless of path. Three code paths:
