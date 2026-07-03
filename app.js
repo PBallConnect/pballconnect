@@ -7831,9 +7831,15 @@ async function respondToMatch(matchId, response){
     const needed = match.max_players || (match.match_type==='doubles' ? 4 : 2);
     const spotsLeft = needed - confirmed.length;
     const alreadyIn = confirmed.some(r=>r.player_email===myEmail);
-    // If spots full and not already in, go to waitlist
+    const myName = getMyName() || myEmail.split('@')[0];
+    // Spots already full on this client-side read (before any write attempt) — same
+    // "someone beat you to it" situation as the MATCH_FULL DB-trigger race, just caught
+    // earlier. Reuse the exact same confirm overlay + write path so both cases feel
+    // identical to the player instead of silently downgrading to waitlist.
+    if(response==='in' && spotsLeft <= 0 && !alreadyIn){
+      return await handleMatchFullRace(matchId, myEmail, myName, btn);
+    }
     let actualResponse = response;
-    if(response==='in' && spotsLeft <= 0 && !alreadyIn) actualResponse = 'waitlist';
 
     // ── Scheduling conflict check ──────────────────────
     if(actualResponse==='in' && match.match_date && match.time_start){
@@ -7845,7 +7851,6 @@ async function respondToMatch(matchId, response){
     }
     // ──────────────────────────────────────────────────
     // UPSERT the response — use PATCH to update existing row (avoids duplicate key error)
-    const myName = getMyName() || myEmail.split('@')[0];
     // First try PATCH (update existing pending row)
     const patchRes = await fetch(
       `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&player_email=eq.${encodeURIComponent(myEmail)}`,{
