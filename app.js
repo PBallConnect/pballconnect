@@ -7716,6 +7716,75 @@ function showConflictConfirm(existingMatches, newMatch){
   });
 }
 
+function showMatchFullConfirm(){
+  return new Promise(resolve=>{
+    const overlay = document.createElement('div');
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.innerHTML=
+      '<div style="background:#fff;border:2px solid #f59e0b;border-radius:16px;padding:24px;max-width:380px;width:100%;font-family:\'DM Sans\',sans-serif;">'+
+        '<div style="font-size:16px;font-weight:800;color:#111;margin-bottom:6px;">⏳ Spot Already Taken</div>'+
+        '<div style="font-size:13px;color:#374151;margin-bottom:20px;line-height:1.6;">Someone claimed that spot just before you. Would you like to join the waitlist for this match?</div>'+
+        '<div style="display:flex;gap:10px;">'+
+          '<button id="matchFullNo" style="flex:1;padding:10px;border-radius:8px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;font-weight:600;font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">No thanks</button>'+
+          '<button id="matchFullYes" style="flex:1;padding:10px;border-radius:8px;border:none;background:#f59e0b;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Join Waitlist</button>'+
+        '</div>'+
+      '</div>';
+    document.body.appendChild(overlay);
+    overlay.querySelector('#matchFullNo').onclick=()=>{ overlay.remove(); resolve(false); };
+    overlay.querySelector('#matchFullYes').onclick=()=>{ overlay.remove(); resolve(true); };
+  });
+}
+
+// Called when the prevent_match_overfill DB trigger rejects an 'in' write because
+// someone else claimed the spot between this player's read and their write.
+async function handleMatchFullRace(matchId, myEmail, myName, btn){
+  const joinWaitlist = await showMatchFullConfirm();
+  if(joinWaitlist){
+    try{
+      const wPatchRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&player_email=eq.${encodeURIComponent(myEmail)}`,{
+        method:'PATCH',
+        headers:{
+          'Content-Type':'application/json',
+          'apikey':SUPABASE_ANON_KEY,
+          'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,
+          'Prefer':'return=minimal'
+        },
+        body:JSON.stringify({
+          response:'waitlist',
+          player_name:myName,
+          responded_at:new Date().toISOString()
+        })
+      });
+      if(wPatchRes.ok){
+        const count = wPatchRes.headers.get('content-range');
+        if(count === '*/0' || count === null){
+          await fetch(`${SUPABASE_URL}/rest/v1/match_responses`,{
+            method:'POST',
+            headers:{
+              'Content-Type':'application/json',
+              'apikey':SUPABASE_ANON_KEY,
+              'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,
+              'Prefer':'return=minimal'
+            },
+            body:JSON.stringify({
+              match_id:matchId,
+              player_email:myEmail,
+              player_name:myName,
+              response:'waitlist',
+              responded_at:new Date().toISOString()
+            })
+          });
+        }
+      }
+      showToast('Added to the waitlist','#f59e0b');
+    }catch(e){
+      showToast('Could not join waitlist: '+e.message,'#f87171');
+    }
+  }
+  if(btn){ btn.disabled=false; btn.textContent = '✅ I\'m In!'; }
+}
+
 async function respondToMatch(matchId, response){
   const myEmail = getMyEmail() || localStorage.getItem('pb_email');
   if(!myEmail){
@@ -7793,10 +7862,22 @@ async function respondToMatch(matchId, response){
             responded_at:new Date().toISOString()
           })
         });
-        if(!insertRes.ok){ throw new Error('Save failed: '+await insertRes.text()); }
+        if(!insertRes.ok){
+          const insertErrText = await insertRes.text();
+          if(insertErrText.includes('MATCH_FULL')){
+            await handleMatchFullRace(matchId, myEmail, myName, btn);
+            return;
+          }
+          throw new Error('Save failed: '+insertErrText);
+        }
       }
     } else {
-      throw new Error('Save failed: '+await patchRes.text());
+      const patchErrText = await patchRes.text();
+      if(patchErrText.includes('MATCH_FULL')){
+        await handleMatchFullRace(matchId, myEmail, myName, btn);
+        return;
+      }
+      throw new Error('Save failed: '+patchErrText);
     }
     const banner = document.getElementById('matchResponseBanner');
     if(banner) banner.remove();
