@@ -1,6 +1,6 @@
 # CLAUDE.md — PBallConnect Reference
 
-_Last updated: July 2, 2026_
+_Last updated: July 3, 2026_
 
 ---
 
@@ -316,3 +316,19 @@ When Claude Chat provides instructions they should follow this format:
 - End with `node --check app.js` for any JS change and `git push --force origin main`
 
 _Past session learnings (May 16 – June 8, 2026) archived in [CLAUDE-ARCHIVE.md](CLAUDE-ARCHIVE.md)._
+
+---
+
+## Session Log — July 3, 2026
+
+- Fixed `handlePostRegistrationInvite()` 400 error (commit `2c43072`) and verified the full invite→register→IC-approve flow live end to end.
+- Fixed "My IC" count to be requester-directional per Model B (commit `126f4dd`) — was incorrectly counting recipient-side approved connections; fixed in `loadInnerCircle()`, the Emergency Fill fallback, and the `showCreateGroupModal()` fallback. Verified live on both inviter and invitee sides.
+- Added database-level match overfill protection: `prevent_match_overfill` trigger on `match_responses`, tested and confirmed live in Supabase.
+- Built client-side race handling: `showMatchFullConfirm()` + `handleMatchFullRace()`, unified across both the early-detection (`spotsLeft<=0`) and late database-trigger-rejection paths — both now show the same "Someone claimed that spot" confirmation with a real Yes/No choice.
+- Fixed Pending Matches page (`.ibo-respond-btn` handler) to show the real accept/waitlist outcome instead of an optimistic false "You're in!" message.
+- Fixed a `submitFeedback()` naming collision between the beta feedback modal and post-match peer review — renamed the latter to `submitPostMatchFeedback`.
+- Added a collapsible, beta-tester-gated debug log dropdown (red/green error summary, copy button) in place of the always-expanded bottom log bar; `console.error` is now captured (previously only `console.log`/`console.warn` were).
+- Built a complete waitlist promotion tap-to-respond feature in 5 steps: new signed-link Pages Functions (`waitlist-promo-token`/`lookup`/`respond.js`, email-keyed, expires at match start + 12h buffer), a standalone no-login response page (`waitlist-promo.html`), wiring into all three real promotion notification paths (with safe fallback to the old plain URL if link generation fails), and full in-app parity on a new "⏳ Waitlist" nav page (dual red/green badge, Promoted section with IN/OUT buttons, existing Waiting section with Leave Waitlist).
+- Added `filled_from_waitlist` tracking (boolean column, already existed but was unused) for future admin/KPI reporting on how many spots get filled from the waitlist with zero organizer action.
+- Documented two future features: cross-match waitlist conflict detection, and an Admin/KPI dashboard (not yet built).
+- Known open items: verify Stats & History pages (Player Statistics, Record/View Scores) are real vs. stub before deciding on nav restructuring into a "Future Features" section; nav restructuring itself (Future Features container, grayed-out with interest-tracking) discussed but not yet built; `app.js` modularization discussed as a post-beta initiative.
