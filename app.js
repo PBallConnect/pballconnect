@@ -8112,12 +8112,29 @@ async function promoteFromWaitlist(matchId, match){
       ? new Date(match.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) : '';
     const timeStr = match.time_start ? fmt12(match.time_start)+(match.time_end?' – '+fmt12(match.time_end):'') : '';
     const courtStr = match.court_name && match.court_name!=='TBD' ? ' @ '+match.court_name : '';
-    const matchUrl = window.location.origin+window.location.pathname+'?match='+matchId;
+    // Best-effort signed direct-action link — falls back to the plain app URL on any
+    // failure (Rule 38: notification-adjacent calls must never block the promotion itself).
+    let matchUrl = window.location.origin+window.location.pathname+'?match='+matchId;
+    try{
+      const tokenRes = await fetch('/api/waitlist-promo-token',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ matchId, playerEmail: next.player_email })
+      });
+      if(tokenRes.ok){
+        const tokenData = await tokenRes.json();
+        if(tokenData.url) matchUrl = window.location.origin + tokenData.url;
+      } else {
+        console.warn('waitlist-promo-token failed, using fallback URL:', tokenRes.status);
+      }
+    }catch(tokenErr){
+      console.warn('waitlist-promo-token error, using fallback URL:', tokenErr);
+    }
     try{
       await sendEmail({
         to_email: next.player_email,
         type: 'match_update',
-        personal_note: 'Good news — a spot just opened up! '+(match.organizer_name||'Your organizer')+' has a '+match.match_type+' match on '+dateStr+(timeStr?' at '+timeStr:'')+courtStr+'. Open the app and accept before the spot fills again.',
+        personal_note: 'Good news — a spot just opened up! '+(match.organizer_name||'Your organizer')+' has a '+match.match_type+' match on '+dateStr+(timeStr?' at '+timeStr:'')+courtStr+'. Tap here to claim your spot: '+matchUrl,
         invite_url: matchUrl,
         inviter_name: match.organizer_name || '',
         match_date_str: dateStr
@@ -8259,7 +8276,6 @@ window.confirmCantMakeIt = async function(matchId){
     const dateStr = d?.dateStr || '';
     const courtStr = d?.courtName && d.courtName !== 'Court TBD' ? d.courtName : '';
     const orgFirst = (d?.organizerName||'').split(' ')[0] || 'Your organizer';
-    const matchUrl = window.location.origin + window.location.pathname + '?match=' + matchId;
 
     for(const w of toPromote){
       try{
@@ -8275,13 +8291,32 @@ window.confirmCantMakeIt = async function(matchId){
         );
       }catch(_){}
 
+      // Best-effort signed direct-action link, generated per-player (email-keyed) — falls
+      // back to the plain app URL on any failure (Rule 38: must never block the promotion).
+      let matchUrl = window.location.origin + window.location.pathname + '?match=' + matchId;
+      try{
+        const tokenRes = await fetch('/api/waitlist-promo-token',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({ matchId, playerEmail: w.player_email })
+        });
+        if(tokenRes.ok){
+          const tokenData = await tokenRes.json();
+          if(tokenData.url) matchUrl = window.location.origin + tokenData.url;
+        } else {
+          console.warn('waitlist-promo-token failed, using fallback URL:', tokenRes.status);
+        }
+      }catch(tokenErr){
+        console.warn('waitlist-promo-token error, using fallback URL:', tokenErr);
+      }
+
       if(isScramble){
         try{
           await sendEmail({
             to_email: w.player_email,
             type: 'match_update',
             subject: '⚡ Urgent: Spot opened in '+dateStr+' match!',
-            personal_note: '⚡ Time-sensitive: A spot just opened in '+orgFirst+'\'s match '+dateStr+(courtStr?' at '+courtStr:'')+'. This match is coming up very soon — first to accept gets the spot! Log in to PBallConnect now.',
+            personal_note: '⚡ Time-sensitive: A spot just opened in '+orgFirst+'\'s match '+dateStr+(courtStr?' at '+courtStr:'')+'. This match is coming up very soon — first to accept gets the spot! Tap here to claim your spot: '+matchUrl,
             invite_url: matchUrl,
             inviter_name: d?.organizerName || '',
             match_date_str: dateStr
@@ -8289,8 +8324,12 @@ window.confirmCantMakeIt = async function(matchId){
         }catch(e){ console.warn('scramble email failed:',e); }
 
         try{
-          const sms = '⚡ Spot just opened in '+orgFirst+'\'s match'+(courtStr?' at '+courtStr:'')+'! First to accept gets it. Open app now!';
-          await sendSms({ player_email:w.player_email, message:sms.substring(0,160), match_id:matchId, event_type:'waitlist_scramble' });
+          // No 160-char truncation here — the signed link alone can run ~180-205 chars,
+          // already over that cap. Sending untruncated means Twilio splits this into
+          // multiple concatenated segments (slightly higher cost, no functional downside),
+          // which is acceptable for this time-sensitive, action-critical message.
+          const sms = '⚡ Spot just opened in '+orgFirst+'\'s match'+(courtStr?' at '+courtStr:'')+'! First to accept gets it. Tap to claim: '+matchUrl;
+          await sendSms({ player_email:w.player_email, message:sms, match_id:matchId, event_type:'waitlist_scramble' });
         }catch(e){ console.warn('scramble SMS failed:',e); }
 
       }else{
@@ -8299,7 +8338,7 @@ window.confirmCantMakeIt = async function(matchId){
             to_email: w.player_email,
             type: 'match_update',
             subject: 'A spot opened up in '+orgFirst+'\'s match on '+dateStr+'!',
-            personal_note: 'Good news — a spot just opened up in '+orgFirst+'\'s match on '+dateStr+(courtStr?' at '+courtStr:'')+'. Log in to PBallConnect to accept or decline. Respond soon — others may be waiting!',
+            personal_note: 'Good news — a spot just opened up in '+orgFirst+'\'s match on '+dateStr+(courtStr?' at '+courtStr:'')+'. Tap here to claim your spot: '+matchUrl,
             invite_url: matchUrl,
             inviter_name: d?.organizerName || '',
             match_date_str: dateStr
@@ -8307,8 +8346,9 @@ window.confirmCantMakeIt = async function(matchId){
         }catch(e){ console.warn('waitlist promote email failed:',e); }
 
         try{
-          const sms = 'A spot opened in '+orgFirst+'\'s '+dateStr+' match'+(courtStr?' at '+courtStr:'')+'! Open app to respond.';
-          await sendSms({ player_email:w.player_email, message:sms.substring(0,160), match_id:matchId, event_type:'waitlist_promote' });
+          // No 160-char truncation here — same reasoning as the scramble SMS above.
+          const sms = 'A spot opened in '+orgFirst+'\'s '+dateStr+' match'+(courtStr?' at '+courtStr:'')+'! Tap to claim: '+matchUrl;
+          await sendSms({ player_email:w.player_email, message:sms, match_id:matchId, event_type:'waitlist_promote' });
         }catch(e){ console.warn('waitlist promote SMS failed:',e); }
       }
     }
