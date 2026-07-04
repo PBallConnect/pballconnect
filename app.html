@@ -140,9 +140,12 @@
         <span class="nav-icon">✅</span><span class="nav-label">Confirmed Matches</span>
         <span id="confirmedMatchesBadge" style="display:inline-flex;min-width:20px;height:20px;border-radius:50%;background:rgba(76,175,125,0.2);color:rgba(76,175,125,0.5);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;">0></span>
       </button>
-      <button class="nav-item" onclick="showPage('myWaitlist')" id="nav-myWaitlist" title="Waitlist — matches you're currently waitlisted for">
+      <button class="nav-item" onclick="showPage('myWaitlist')" id="nav-myWaitlist" title="Waitlist — red: matches you're waiting on; green: matches you've been promoted for and can respond to">
         <span class="nav-icon">⏳</span><span class="nav-label">Waitlist</span>
-        <span id="waitlistBadge" style="display:inline-flex;min-width:20px;height:20px;border-radius:50%;background:rgba(245,158,11,0.2);color:rgba(245,158,11,0.6);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;">0</span>
+        <div style="display:flex;gap:4px;margin-left:auto;">
+          <span id="waitlistWaitingBadge" title="Waiting for a spot" style="display:inline-flex;min-width:20px;height:20px;border-radius:50%;background:rgba(220,38,38,0.2);color:rgba(220,38,38,0.6);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;">0</span>
+          <span id="waitlistPromotedBadge" title="Awaiting your response" style="display:inline-flex;min-width:20px;height:20px;border-radius:50%;background:rgba(76,175,125,0.2);color:rgba(76,175,125,0.6);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;">0</span>
+        </div>
       </button>
       <button class="nav-item" onclick="showPage('findPlayers')" id="nav-findPlayers" title="Players Wanting to Play">
         <span class="nav-icon">🔍</span><span class="nav-label">Players Wanting to Play</span>
