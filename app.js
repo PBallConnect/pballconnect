@@ -5188,8 +5188,9 @@ async function leaveWaitlist(matchId, btn){
   if(!myEmail) return;
   if(btn){ btn.disabled=true; btn.textContent='Leaving…'; }
   try{
-    // NOTE: 'waitlist_left' has not been confirmed safe against any live Supabase CHECK
-    // constraint on match_responses.response — see investigation report.
+    // 'waitlist_left' is a confirmed-safe value — match_responses_response_check was
+    // explicitly altered in Supabase (July 3, 2026) to allow it alongside
+    // 'pending'/'in'/'out'/'waitlist'.
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&player_email=eq.${encodeURIComponent(myEmail)}`,{
       method:'PATCH',
