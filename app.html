@@ -140,6 +140,10 @@
         <span class="nav-icon">✅</span><span class="nav-label">Confirmed Matches</span>
         <span id="confirmedMatchesBadge" style="display:inline-flex;min-width:20px;height:20px;border-radius:50%;background:rgba(76,175,125,0.2);color:rgba(76,175,125,0.5);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;">0></span>
       </button>
+      <button class="nav-item" onclick="showPage('myWaitlist')" id="nav-myWaitlist" title="Waitlist — matches you're currently waitlisted for">
+        <span class="nav-icon">⏳</span><span class="nav-label">Waitlist</span>
+        <span id="waitlistBadge" style="display:inline-flex;min-width:20px;height:20px;border-radius:50%;background:rgba(245,158,11,0.2);color:rgba(245,158,11,0.6);font-size:10px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;">0</span>
+      </button>
       <button class="nav-item" onclick="showPage('findPlayers')" id="nav-findPlayers" title="Players Wanting to Play">
         <span class="nav-icon">🔍</span><span class="nav-label">Players Wanting to Play</span>
       </button>
@@ -1559,6 +1563,15 @@
         <p>Upcoming matches you're confirmed to play</p>
       </div>
       <div id="confirmedMatchesList"></div>
+    </div>
+
+    <!-- WAITLIST PAGE -->
+    <div class="page-section" id="page-myWaitlist">
+      <div class="page-header">
+        <h1 style="color:#111;">&#8987; My <span style="color:#1a7a3a;">Waitlist</span></h1>
+        <p>Matches you're currently waitlisted for</p>
+      </div>
+      <div id="myWaitlistList"></div>
     </div>
 
     <!-- RECORD / VIEW SCORES PAGE -->

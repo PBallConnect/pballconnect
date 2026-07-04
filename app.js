@@ -1479,6 +1479,7 @@ function showPage(page){
   if(page==='myGroups')          loadMyGroups();
   if(page==='recurringMatches')  loadRecurringMatches();
   if(page==='confirmedMatches') { loadConfirmedMatches(); }
+  if(page==='myWaitlist')      { loadMyWaitlistPage(); }
   if(page==='recordScores')  { loadRecordScores(); }
   if(page==='myInvites')      { loadMyInvitesPage(); }
   if(page==='invitedByOthers'){ loadInvitedByOthersPage(); }
@@ -5017,6 +5018,88 @@ async function loadConfirmedMatches(){
   }
 }
 
+async function loadMyWaitlistPage(){
+  const myEmail = getMyEmail();
+  const container = document.getElementById('myWaitlistList');
+  if(!container) return;
+  if(!myEmail){ container.innerHTML='<div style="color:var(--dim);padding:20px;">Please sign in.</div>'; return; }
+  container.innerHTML='<div style="color:var(--dim);font-size:13px;padding:20px 0;">Loading...</div>';
+  try{
+    const wRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.waitlist&select=match_id`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+    const myWaitlistRows = wRes.ok ? await wRes.json() : [];
+    if(!myWaitlistRows.length){
+      container.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--dim);font-size:14px;">You\'re not currently waitlisted for any matches.</div>';
+      updateMatchBadge('waitlistBadge', 0, 'rgba(245,158,11,0.85)');
+      return;
+    }
+    const matchIds = myWaitlistRows.map(r=>r.match_id);
+    const mRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/matches?id=in.(${matchIds.join(',')})&status=neq.cancelled&select=id,match_date,time_start,time_end,court_name,court_address,organizer_name,match_type&order=match_date.asc,time_start.asc`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+    const matches = mRes.ok ? await mRes.json() : [];
+    const upcoming = matches.filter(m=>!isMatchPast(m));
+    if(!upcoming.length){
+      container.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--dim);font-size:14px;">You\'re not currently waitlisted for any matches.</div>';
+      updateMatchBadge('waitlistBadge', 0, 'rgba(245,158,11,0.85)');
+      return;
+    }
+    updateMatchBadge('waitlistBadge', upcoming.length, 'rgba(245,158,11,0.85)');
+    container.innerHTML='';
+    for(const m of upcoming){
+      // Reuses the same position-# logic already used in respondToMatch()'s waitlist toast
+      const posRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${m.id}&response=eq.waitlist&select=player_email&order=responded_at.asc`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+      const matchWaitlist = posRes.ok ? await posRes.json() : [];
+      const pos = matchWaitlist.findIndex(r=>r.player_email===myEmail)+1;
+
+      const dateStr = m.match_date ? new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}) : '-';
+      const timeStr = m.time_start ? fmt12(m.time_start)+(m.time_end?' - '+fmt12(m.time_end):'') : '-';
+      const locationStr = m.court_name && m.court_name!=='TBD' ? m.court_name : (m.court_address || 'Court TBD');
+      const formatStr = m.match_type==='doubles' ? 'Doubles' : 'Singles';
+
+      const card = document.createElement('div');
+      card.style.cssText='background:#fff;border-radius:16px;padding:16px 18px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border-left:4px solid #f59e0b;';
+      card.innerHTML=
+        '<div style="font-size:15px;font-weight:700;color:#111;">'+dateStr+' · '+timeStr+'</div>'+
+        '<div style="font-size:12px;color:#555;margin-top:4px;">&#128205; '+locationStr+'</div>'+
+        '<div style="font-size:12px;color:#555;margin-top:2px;">From: <span style="color:#92400e;font-weight:700;">'+(m.organizer_name||'Unknown')+'</span> · '+formatStr+'</div>'+
+        '<div style="display:inline-block;margin-top:10px;padding:4px 10px;border-radius:999px;background:#fef3c7;border:1px solid #f59e0b;color:#92400e;font-size:12px;font-weight:700;">&#8987; Waitlist position #'+pos+'</div>'+
+        '<div style="margin-top:12px;">'+
+          '<button onclick="leaveWaitlist(\''+m.id+'\',this)" style="padding:8px 14px;border-radius:8px;border:1.5px solid #dc2626;background:transparent;color:#dc2626;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Leave Waitlist</button>'+
+        '</div>';
+      container.appendChild(card);
+    }
+  }catch(e){
+    container.innerHTML='<div style="color:#f87171;font-size:13px;">Error: '+e.message+'</div>';
+  }
+}
+
+async function leaveWaitlist(matchId, btn){
+  const myEmail = getMyEmail();
+  if(!myEmail) return;
+  if(btn){ btn.disabled=true; btn.textContent='Leaving…'; }
+  try{
+    // NOTE: 'waitlist_left' has not been confirmed safe against any live Supabase CHECK
+    // constraint on match_responses.response — see investigation report.
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&player_email=eq.${encodeURIComponent(myEmail)}`,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
+      body:JSON.stringify({response:'waitlist_left', responded_at:new Date().toISOString()})
+    });
+    if(!res.ok) throw new Error('Save failed: '+await res.text());
+    showToast('You\'ve left the waitlist','#6b7280');
+    loadMyWaitlistPage();
+    loadAllMatchBadges();
+  }catch(e){
+    showToast('Error: '+e.message,'#f87171');
+    if(btn){ btn.disabled=false; btn.textContent='Leave Waitlist'; }
+  }
+}
+
 async function openEditMatchModal(matchId){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}&select=*&limit=1`,
     {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
@@ -5480,6 +5563,22 @@ async function loadAllMatchBadges(){
     }).length;
     updateConfirmedBadge(confirmedCount);
     { const el=document.getElementById('dashSqConfirmed'); if(el) el.textContent=confirmedCount; }
+
+    // Waitlist — matches this player is currently waitlisted for, upcoming only
+    const wlRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/match_responses?player_email=eq.${encodeURIComponent(myEmail)}&response=eq.waitlist&select=match_id`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+    const wlRows = wlRes.ok ? await wlRes.json() : [];
+    let waitlistCount = 0;
+    if(wlRows.length){
+      const wlIds = wlRows.map(r=>r.match_id);
+      const wlMatchRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/matches?id=in.(${wlIds.join(',')})&status=neq.cancelled&select=id,match_date,time_start,time_end`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+      const wlMatches = wlMatchRes.ok ? await wlMatchRes.json() : [];
+      waitlistCount = wlMatches.filter(m=>!isMatchPast(m)).length;
+    }
+    updateMatchBadge('waitlistBadge', waitlistCount, 'rgba(245,158,11,0.85)');
   }catch(e){}
 }
 
@@ -7995,13 +8094,17 @@ async function promoteFromWaitlist(matchId, match){
     const waitlisted = wRes.ok ? await wRes.json() : [];
     if(!waitlisted.length) return;
     const next = waitlisted[0];
-    // Promote to pending — they now have an active invite to accept or decline
+    // Promote to pending — they now have an active invite to accept or decline.
+    // filled_from_waitlist stages true here so it's already set by the time this player's
+    // eventual 'in' write happens in respondToMatch() — that write doesn't touch this field,
+    // so the flag persists through untouched, correctly distinguishing a promoted confirmation
+    // from a normal direct 'in' response to a fresh invite.
     await fetch(
       `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&player_email=eq.${encodeURIComponent(next.player_email)}`,
       {
         method:'PATCH',
         headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
-        body:JSON.stringify({response:'pending', responded_at:new Date().toISOString()})
+        body:JSON.stringify({response:'pending', responded_at:new Date().toISOString(), filled_from_waitlist:true})
       }
     );
     // Notify the promoted player
@@ -8160,12 +8263,14 @@ window.confirmCantMakeIt = async function(matchId){
 
     for(const w of toPromote){
       try{
+        // filled_from_waitlist stages true here (same reasoning as promoteFromWaitlist()) so it
+        // persists through untouched into this player's eventual 'in' write in respondToMatch().
         await fetch(
           `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&player_email=eq.${encodeURIComponent(w.player_email)}`,
           {
             method:'PATCH',
             headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
-            body:JSON.stringify({ response:'pending', responded_at:new Date().toISOString() })
+            body:JSON.stringify({ response:'pending', responded_at:new Date().toISOString(), filled_from_waitlist:true })
           }
         );
       }catch(_){}
