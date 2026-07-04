@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spot Available - PBallConnect</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f3f4f6;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 24px 16px 64px;
+    }
+    #app { width: 100%; max-width: 420px; }
+
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 28px 24px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+    }
+
+    .logo { text-align: center; margin-bottom: 20px; }
+    .logo-text { font-size: 20px; font-weight: 800; color: #1a7a3a; letter-spacing: -0.5px; }
+    .logo-ball { color: #f59e0b; }
+
+    /* Loading */
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid #e5e7eb;
+      border-top-color: #1a7a3a;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 40px auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Error / informational */
+    .error-icon { font-size: 40px; text-align: center; margin-bottom: 12px; }
+    .error-title { font-size: 18px; font-weight: 700; color: #1f2937; text-align: center; margin-bottom: 8px; }
+    .error-body { font-size: 15px; color: #6b7280; text-align: center; line-height: 1.5; }
+
+    /* Invite card */
+    .greeting { font-size: 24px; font-weight: 800; color: #1f2937; margin-bottom: 4px; }
+    .invite-subtitle { font-size: 15px; color: #6b7280; margin-bottom: 20px; }
+
+    .match-details {
+      background: #f9fafb;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+    .detail-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+    .detail-row:last-child { margin-bottom: 0; }
+    .detail-icon { font-size: 16px; flex-shrink: 0; margin-top: 2px; }
+    .detail-label { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.06em; }
+    .detail-value { font-size: 15px; font-weight: 600; color: #1f2937; }
+
+    /* Primary/secondary button row — mirrors showMatchFullConfirm()'s dominant/secondary
+       weight relationship in app.js, reversed here since IN is the dominant action */
+    .btn-row { display: flex; gap: 10px; align-items: center; }
+    .btn-in {
+      flex: 1.6;
+      padding: 16px;
+      border-radius: 10px;
+      border: none;
+      background: #1a7a3a;
+      color: #fff;
+      font-weight: 800;
+      font-size: 16px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-out {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      color: #374151;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-in:disabled, .btn-out:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Standalone action buttons (confirm step, retry, etc.) */
+    .btn {
+      display: block;
+      width: 100%;
+      min-height: 52px;
+      border-radius: 14px;
+      border: none;
+      font-size: 17px;
+      font-weight: 800;
+      font-family: inherit;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      margin-bottom: 12px;
+      padding: 0 16px;
+    }
+    .btn:last-child { margin-bottom: 0; }
+    .btn:active { opacity: 0.8; }
+    .btn-primary { background: #1a7a3a; color: #fff; }
+    .btn-outline { background: #fff; color: #374151; border: 2px solid #d1d5db; }
+    .btn-ghost { background: #f3f4f6; color: #6b7280; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Confirmation (all success/info paths) */
+    .big-icon { font-size: 52px; text-align: center; margin-bottom: 14px; }
+    .confirm-title { font-size: 22px; font-weight: 800; color: #1f2937; text-align: center; margin-bottom: 8px; }
+    .confirm-msg { font-size: 15px; color: #6b7280; text-align: center; line-height: 1.5; margin-bottom: 24px; }
+
+    /* Match-full informational card — mirrors showMatchFullConfirm()'s amber treatment */
+    .match-full-card { border: 2px solid #f59e0b; }
+    .match-full-title { font-size: 16px; font-weight: 800; color: #111; margin-bottom: 6px; text-align: center; }
+    .match-full-body { font-size: 13px; color: #374151; line-height: 1.6; text-align: center; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Loading -->
+  <div id="stateLoading">
+    <div class="card" style="margin-top:40px;">
+      <div class="logo"><span class="logo-text">PBall<span class="logo-ball">Connect</span></span></div>
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+  <!-- Error: invalid/expired link -->
+  <div id="stateError" class="hidden">
+    <div class="card" style="margin-top:40px;">
+      <div class="logo"><span class="logo-text">PBall<span class="logo-ball">Connect</span></span></div>
+      <div class="error-icon">🔗</div>
+      <div class="error-title">Link unavailable</div>
+      <div class="error-body" id="errorMsg">This link has expired or is invalid.</div>
+    </div>
+  </div>
+
+  <!-- Informational: player is no longer in a promotable ('pending') state -->
+  <div id="stateNotPromotable" class="hidden">
+    <div class="card" style="margin-top:40px;">
+      <div class="logo"><span class="logo-text">PBall<span class="logo-ball">Connect</span></span></div>
+      <div class="error-icon">ℹ️</div>
+      <div class="error-title">Nothing to respond to</div>
+      <div class="error-body" id="notPromotableMsg">This match is no longer available.</div>
+    </div>
+  </div>
+
+  <!-- State 1: Invite card -->
+  <div id="stateInvite" class="hidden">
+    <div class="card">
+      <div class="logo"><span class="logo-text">PBall<span class="logo-ball">Connect</span></span></div>
+      <div class="greeting" id="inviteGreeting">A spot opened up!</div>
+      <div class="invite-subtitle" id="inviteSubtitle">Here's the match:</div>
+      <div class="match-details" id="matchDetailsFull"></div>
+      <div class="btn-row">
+        <button class="btn-in" id="btnIn" onclick="handleInTap()">✅ I'M IN</button>
+        <button class="btn-out" id="btnOut" onclick="handleOutTap()">OUT</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- State 2: Confirm before submitting 'in' -->
+  <div id="stateConfirmIn" class="hidden">
+    <div class="card" style="margin-top:40px;">
+      <div class="logo"><span class="logo-text">PBall<span class="logo-ball">Connect</span></span></div>
+      <div class="big-icon">🎾</div>
+      <div class="confirm-title">Are you sure?</div>
+      <div class="confirm-msg">You'll be confirmed for this match.</div>
+      <button class="btn btn-primary" id="btnConfirmIn" onclick="confirmIn()">Yes, Confirm Me</button>
+      <button class="btn btn-outline" id="btnCancelIn" onclick="cancelIn()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- State 3: Match already claimed (mirrors showMatchFullConfirm() styling) — informational only -->
+  <div id="stateMatchFull" class="hidden">
+    <div class="card match-full-card" style="margin-top:40px;">
+      <div class="logo"><span class="logo-text">PBall<span class="logo-ball">Connect</span></span></div>
+      <div class="match-full-title">⏳ Spot Already Taken</div>
+      <div class="match-full-body">Someone claimed that spot just before you. Nothing more to do here — check the app to see other matches.</div>
+    </div>
+  </div>
+
+  <!-- State 4: Generic submit error -->
+  <div id="stateSubmitError" class="hidden">
+    <div class="card" style="margin-top:40px;">
+      <div class="logo"><span class="logo-text">PBall<span class="logo-ball">Connect</span></span></div>
+      <div class="error-icon">⚠️</div>
+      <div class="error-title">Something went wrong</div>
+      <div class="error-body" style="margin-bottom:20px;">Please try again, or open the app to respond.</div>
+      <button class="btn btn-outline" onclick="showState('stateInvite')">Try Again</button>
+    </div>
+  </div>
+
+  <!-- State 5: Success / acknowledgment (in or out) -->
+  <div id="stateConfirm" class="hidden">
+    <div class="card" style="margin-top:40px;">
+      <div class="logo"><span class="logo-text">PBall<span class="logo-ball">Connect</span></span></div>
+      <div class="big-icon" id="confirmIcon">🎾</div>
+      <div class="confirm-title" id="confirmTitle">You're confirmed!</div>
+      <div class="confirm-msg" id="confirmMsg">See you on the court.</div>
+    </div>
+  </div>
+
+</div>
+<script>
+  var _token = '';
+  var _sig = '';
+
+  var ALL_STATES = ['stateLoading','stateError','stateNotPromotable','stateInvite','stateConfirmIn','stateMatchFull','stateSubmitError','stateConfirm'];
+
+  function showState(id) {
+    ALL_STATES.forEach(function(s) {
+      document.getElementById(s).classList.toggle('hidden', s !== id);
+    });
+  }
+
+  function showError(msg) {
+    document.getElementById('errorMsg').textContent = msg || 'This link has expired or is invalid.';
+    showState('stateError');
+  }
+
+  function showConfirm(icon, title, msg) {
+    document.getElementById('confirmIcon').textContent = icon;
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMsg').textContent = msg;
+    showState('stateConfirm');
+  }
+
+  function esc(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function fmtDate(dateStr) {
+    if (!dateStr) return '';
+    var d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  }
+
+  function fmtTime(timeStr) {
+    if (!timeStr) return '';
+    var parts = timeStr.split(':');
+    var h = parseInt(parts[0], 10);
+    var m = parts[1] || '00';
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return h + ':' + m + ' ' + ampm;
+  }
+
+  function fmtMatchType(matchType) {
+    if (matchType === 'singles') return 'Singles';
+    if (matchType === 'doubles') return 'Doubles';
+    return matchType || '';
+  }
+
+  function fmtGenderPref(genderPref) {
+    var map = { open: 'Open', either: 'Open', mixed: 'Mixed', same: 'Same Gender', mens: "Men's", womens: "Women's" };
+    return map[genderPref] || '';
+  }
+
+  function detailRow(icon, label, value) {
+    return '<div class="detail-row">' +
+      '<span class="detail-icon">' + icon + '</span>' +
+      '<div><div class="detail-label">' + esc(label) + '</div>' +
+      '<div class="detail-value">' + esc(value) + '</div></div>' +
+      '</div>';
+  }
+
+  function buildDetailRows(details) {
+    if (!details) return '<div style="color:#9ca3af;font-size:14px;">Match details unavailable.</div>';
+    var html = '';
+    html += detailRow('👤', 'Organizer', details.organizer_name || (details.organizer_email ? details.organizer_email.split('@')[0] : 'Unknown'));
+    if (details.court_name) html += detailRow('📍', 'Location', details.court_name);
+    if (details.match_date) html += detailRow('📅', 'Date', fmtDate(details.match_date));
+    if (details.time_start) {
+      var timeVal = fmtTime(details.time_start) + (details.time_end ? ' – ' + fmtTime(details.time_end) : '');
+      html += detailRow('⏰', 'Time', timeVal);
+    }
+    var typeLabel = [fmtMatchType(details.match_type), fmtGenderPref(details.gender_pref)].filter(Boolean).join(' · ');
+    if (typeLabel) html += detailRow('🏓', 'Format', typeLabel);
+    return html;
+  }
+
+  function notPromotableMessage(status) {
+    if (status === 'in')            return "You're already confirmed for this match!";
+    if (status === 'out')           return "You've already responded to this match.";
+    if (status === 'waitlist')      return "You're back on the waitlist for this match.";
+    if (status === 'waitlist_left') return "You've already left the waitlist for this match.";
+    return 'This match is no longer available.';
+  }
+
+  // ── IN / OUT handlers ──────────────────────────────────────────────────────
+  function handleInTap() {
+    showState('stateConfirmIn');
+  }
+
+  function handleOutTap() {
+    document.getElementById('btnIn').disabled = true;
+    document.getElementById('btnOut').disabled = true;
+    respond('out');
+  }
+
+  function confirmIn() {
+    document.getElementById('btnConfirmIn').disabled = true;
+    document.getElementById('btnCancelIn').disabled = true;
+    respond('in');
+  }
+
+  function cancelIn() {
+    showState('stateInvite');
+  }
+
+  // ── Submit response ────────────────────────────────────────────────────────
+  function respond(response) {
+    fetch('/api/waitlist-promo-respond', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: _token, signature: _sig, response: response })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success && data.response === 'in') {
+        showConfirm('🎾', "You're confirmed!", 'See you on the court.');
+      } else if (data.success && data.response === 'out') {
+        showConfirm('👋', 'Got it', "Thanks for letting us know.");
+      } else if (!data.success && data.reason === 'MATCH_FULL') {
+        showState('stateMatchFull');
+      } else {
+        showState('stateSubmitError');
+      }
+    })
+    .catch(function() {
+      showState('stateSubmitError');
+    });
+  }
+
+  // ── Init ────────────────────────────────────────────────────────────────────
+  (function init() {
+    var params = new URLSearchParams(window.location.search);
+    _token = params.get('t') || '';
+    _sig = params.get('s') || '';
+
+    if (!_token || !_sig) {
+      showError('This link is invalid.');
+      return;
+    }
+
+    fetch('/api/waitlist-promo-lookup?t=' + encodeURIComponent(_token) + '&s=' + encodeURIComponent(_sig))
+    .then(function(r) {
+      if (!r.ok) {
+        return r.json().then(function(d) { throw new Error(d.error || 'Invalid link.'); });
+      }
+      return r.json();
+    })
+    .then(function(data) {
+      var status = data.currentResponseStatus;
+      if (status !== 'pending') {
+        document.getElementById('notPromotableMsg').textContent = notPromotableMessage(status);
+        showState('stateNotPromotable');
+        return;
+      }
+
+      var firstName = data.playerFirstName || '';
+      document.getElementById('inviteGreeting').textContent = firstName ? ('Hey ' + firstName + '!') : 'A spot opened up!';
+      document.getElementById('inviteSubtitle').textContent = 'A spot opened up:';
+      document.getElementById('matchDetailsFull').innerHTML = buildDetailRows(data.matchDetails);
+
+      showState('stateInvite');
+    })
+    .catch(function(e) {
+      showError((e && e.message) || 'This link has expired or is invalid.');
+    });
+  }());
+</script>
+<footer style="text-align:center;padding:24px 16px;font-size:13px;color:#9ca3af;">
+  <a href="privacy.html" target="_blank" style="color:#2d6a4f;text-decoration:none;">Privacy Policy</a>
+  &nbsp;&middot;&nbsp;
+  <a href="terms.html" target="_blank" style="color:#2d6a4f;text-decoration:none;">Terms of Service</a>
+</footer>
+</body>
+</html>
