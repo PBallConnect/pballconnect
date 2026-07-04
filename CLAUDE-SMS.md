@@ -1,9 +1,9 @@
 # CLAUDE-SMS.md — SMS System Architecture
 
-_General SMS infrastructure + Match Invite SMS system (added May 16, 2026)._
-_Cross-reference: CLAUDE.md (overview), CLAUDE-SCHEMA.md (schema), CLAUDE-RULES.md (Rules 33, 37–43, 48)._
+_General SMS infrastructure + Match Invite SMS system (added May 16, 2026) + Waitlist Promotion SMS/Email system (added July 3, 2026)._
+_Cross-reference: CLAUDE.md (overview), CLAUDE-SCHEMA.md (schema), CLAUDE-RULES.md (Rules 33, 37–43, 48, 59, 60)._
 
-_Last updated: June 13, 2026_
+_Last updated: July 3, 2026_
 
 ---
 
@@ -162,3 +162,48 @@ Two new columns added (May 16, 2026):
 - **`phone` and `sms_opt_in` must never be added to `public_profiles`** — use `/api/match-invite-sms-data` (service key) for any server-side lookup of these fields. See Rule 48.
 - Token signature must be verified before any DB write — `match-invite-lookup` and `match-invite-respond` both verify HMAC before acting.
 - SMS is always best-effort. Token/lookup failures per player are caught and logged; they never abort the match creation flow.
+
+---
+
+## Waitlist Promotion SMS/Email System
+
+_Added July 3, 2026_
+
+Signed, no-login-required tap-to-respond links sent when a waitlisted player is promoted to a pending spot (a player ahead of them declined, or another player dropped and the spot cascades to the waitlist). Mirrors the Match Invite SMS System's signed-link pattern above, but is email-keyed (the player is always already registered) rather than phone-keyed, and expires at the match's own start time rather than a fixed 7-day window.
+
+### Token format
+
+`${matchId}|${playerEmail}|${expiry}`
+
+- Signed with HMAC-SHA256 using the same `MATCH_INVITE_SECRET` env var as the match invite tokens
+- `expiry` = `new Date(match_date + 'T' + time_start).getTime() + 12 hours` — the match's own start time plus a fixed 12-hour safety buffer, **not** a fixed 7-day window
+- The 12h buffer exists because the Worker runtime has no fixed local timezone (effectively UTC) while `match_date`/`time_start` are interpreted in the player's local browser timezone elsewhere in the app — a naive combined timestamp could be off by several hours either way. Worst-case US timezone skew is under 10 hours, so +12h guarantees the token can never expire *before* the real match start. The only downside is the link staying valid a few extra hours after the match has actually started, which is low-risk since the `prevent_match_overfill` DB trigger (Rule 59) still protects against genuine overfill regardless of when the link is clicked
+- URL: `/waitlist-promo.html?t=ENCODED_TOKEN&s=HEX_SIGNATURE`
+- If the match's `match_date`/`time_start` can't be found or parsed, token generation fails (400/404/500) and the caller falls back to the plain app URL (see Fallback below)
+
+### Pages Functions
+
+| Function | Method | Purpose |
+|---|---|---|
+| `functions/api/waitlist-promo-token.js` | POST `{ matchId, playerEmail }` | Fetches the match's `match_date`/`time_start` via service key, computes expiry, builds and signs the token, returns `{ token, signature, url }` |
+| `functions/api/waitlist-promo-lookup.js` | GET `?t=TOKEN&s=SIG` | Verifies HMAC (re-derived from scratch, nothing trusted from client), checks expiry, then returns `{ playerFirstName, matchDetails, currentResponseStatus }`. `matchDetails` selects `match_date,time_start,time_end,court_name,match_type,gender_pref,organizer_name,organizer_email` from `matches` — deliberately omits `format` (no live query anywhere selects a `format` column from `matches`; it's derived client-side from `match_type` + `gender_pref` instead). `currentResponseStatus` is read fresh from `match_responses` so the page can tell whether this player is actually still `'pending'` (promotable) or has since responded/been reassigned. |
+| `functions/api/waitlist-promo-respond.js` | POST `{ token, signature, response }` (`response` must be `'in'` or `'out'`) | Verifies HMAC + expiry independently of the lookup function, then PATCHes `match_responses` (falls back to INSERT if the PATCH matches zero rows — mirrors `respondToMatch()`'s PATCH-then-INSERT-fallback pattern in `app.js`, applied here to both `'in'` and `'out'`, not just the merge-duplicates POST that the older `match-invite-respond.js` uses). |
+
+**`MATCH_FULL` handling in `waitlist-promo-respond.js`:** if the PATCH or fallback INSERT fails with error text containing `MATCH_FULL` (the `prevent_match_overfill` trigger — Rule 59), the endpoint returns HTTP 200 with `{ success:false, reason:'MATCH_FULL' }` rather than an error status — `waitlist-promo.html` checks `data.reason === 'MATCH_FULL'` and shows the "⏳ Spot Already Taken" informational state, styled to mirror `showMatchFullConfirm()`'s amber treatment in the main app. Note: a decline (`response:'out'`) from this link never writes `'waitlist_left'` — by the time this link is reachable the player's row is already `'pending'` (flipped from `'waitlist'` at promotion time), so `'out'` is the correct value, identical to any other pending-invite decline. `'waitlist_left'` is reserved for the Leave Waitlist button (`leaveWaitlist()` in `app.js`), which acts on a still-`'waitlist'`-status row.
+
+### `waitlist-promo.html`
+
+Standalone page, no app.js dependency, no login required. States: loading → invite card (or an informational "nothing to respond to" state if `currentResponseStatus !== 'pending'`, with per-status messaging including `'waitlist_left'`) → response. The invite card shows a two-button row: **✅ I'M IN** (`.btn-in`, large/primary, `flex:1.6`, green) and **OUT** (`.btn-out`, small/secondary, `flex:1`, gray outline). Tapping IN shows a confirm-first step ("Are you sure? You'll be confirmed for this match." / Yes, Confirm Me / Cancel) before submitting — tapping OUT submits immediately with no confirmation step. On success shows a themed confirmation (🎾 "You're confirmed!" for IN, 👋 "Got it" for OUT); on `MATCH_FULL` shows the amber "Spot Already Taken" card; on any other failure shows a generic retry state.
+
+### Two callers, two notification profiles
+
+- **`promoteFromWaitlist(matchId, match)`** (app.js ~line 8209) — fires from `respondToMatch()` when a player's decline drops the confirmed count below the needed count. Promotes the single earliest-waitlisted player (`order=responded_at.asc&limit=1`) to `'pending'` with `filled_from_waitlist:true`. Sends a `match_update` email only — **does not currently send an SMS**.
+- **`confirmCantMakeIt()`'s promotion loop** (app.js ~line 8395) — fires from the "Can't Make It" drop flow. Threshold logic per Rule 43: `hoursUntilMatch <= 24` → scramble (ALL waitlisted players promoted to `'pending'` with `filled_from_waitlist:true`, notified simultaneously, `event_type:'waitlist_scramble'`); otherwise → standard (first waitlisted player only, `event_type:'waitlist_promote'`). Sends **both** a `match_update` email and an SMS for each promoted player.
+
+### SMS length — no 160-char truncation for these two event types
+
+Every other SMS in the app that includes free text truncates defensively with `.substring(0,160)` (e.g. the organizer drop notification, `event_type:'player_dropped'`, at app.js ~line 8373). The `waitlist_scramble` and `waitlist_promote` messages (app.js ~lines 8453 and 8472) deliberately skip this truncation — the signed link alone typically runs ~180–205 characters, already over the single-segment SMS limit, so truncating would cut off the link itself. Twilio automatically splits the untruncated message into multiple concatenated segments (slightly higher cost, no functional downside) — this is an intentional, documented exception, not an oversight.
+
+### Fallback: best-effort link generation, never blocks the promotion
+
+Both callers wrap the `POST /api/waitlist-promo-token` call in its own try/catch. If the call fails or returns non-OK, `matchUrl` stays at its pre-set fallback value — the old plain app URL (`window.location.origin + window.location.pathname + '?match=' + matchId`) — and the notification (email and/or SMS) still sends with that URL instead of the signed tap-to-respond link. Per Rule 38, notification-adjacent failures must never abort the promotion itself; a promoted player who gets the plain-URL fallback can still open the app and respond normally from the Waitlist page.

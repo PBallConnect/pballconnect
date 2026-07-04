@@ -3,7 +3,7 @@
 _Created June 2026. Cross-reference: CLAUDE.md, CLAUDE-SCHEMA.md, CLAUDE-RULES.md, CLAUDE-SMS.md._
 _Update this file whenever any function in a flow chain is modified. Never change a flow without updating here first._
 
-_Last updated: July 2, 2026_
+_Last updated: July 3, 2026_
 
 ---
 
@@ -246,3 +246,6 @@ Run this before pushing ANY change to auth, registration, or invite flows:
 - [ ] Re-invite pre-check fires before `sendIcEmailInvite()` sends — existing approved or pending connection aborts with toast (Rule 56)
 - [ ] `handlePostRegistrationInvite()` PATCH URL uses `requester_email=eq.X&recipient_email=eq.Y` format — no status filter, no `encodeURIComponent` on email values
 - [ ] `inviter_email` in `handlePostRegistrationInvite()` sourced from `invites` table (`/rest/v1/invites?invite_token=eq.TOKEN&select=inviter_email`) — never from `invite_tokens` view
+- [ ] "My IC" (and any IC candidate pool — Emergency Fill fallback, `showCreateGroupModal()` fallback) queries `connections` filtered on `requester_email`, never `recipient_email` or both directions OR'd together (Model B, Rule 58)
+- [ ] Any new code path that writes `response='pending'` to an existing `match_responses` row explicitly sets `filled_from_waitlist` — `true` only for genuine waitlist promotions (`promoteFromWaitlist()`, `confirmCantMakeIt()`'s promotion loop), `false` explicitly everywhere else (Rule 60)
+- [ ] Waitlist promotion notifications (scramble and standard) use the signed `waitlist-promo.html` link from `/api/waitlist-promo-token`, not a plain app URL — plain URL is fallback-only, on token-generation failure

@@ -3,7 +3,7 @@
 _Full database schema, architecture patterns, feature behavior specs, and UI patterns._
 _Cross-reference: CLAUDE.md (overview), CLAUDE-RULES.md (rules), CLAUDE-SMS.md (SMS system)._
 
-_Last updated: June 13, 2026_
+_Last updated: July 3, 2026_
 
 ---
 
@@ -18,7 +18,7 @@ _Last updated: June 13, 2026_
 | `sms_consent_log` | Append-only TCPA consent audit trail (added May 17, 2026) | `player_email`, `event` ('opt_in'/'opt_out'), `method`, `ip_address`, `user_agent`, `created_at` — never UPDATE or DELETE; service role INSERT only |
 | `connections` | Inner Circle relationships | `requester_email`, `recipient_email`, `status` (valid values: `'pending'` and `'approved'` only — never `'accepted'`; reciprocal rows are ALWAYS created as `'pending'`, never `'approved'`, regardless of path), `requester_name`, `recipient_name`, `message`, `responded_at`, `is_favorite` |
 | `matches` | Match events | `id`, `organizer_email`, `match_date`, `time_start`, `time_end`, `court_id`, `court_name`, `format`, `num_courts`, `gender_pref`, `max_players` |
-| `match_responses` | Per-player responses | `match_id`, `player_email`, `response` ('in'/'out'/'pending'/'waitlist') |
+| `match_responses` | Per-player responses | `match_id`, `player_email`, `player_name`, `response` ('in'/'out'/'pending'/'waitlist' — plus `'waitlist_left'`, written by `leaveWaitlist()` when a player voluntarily leaves a `'waitlist'`-status row; **not yet confirmed against a live Supabase CHECK constraint update** — `app.js` carries an explicit code comment flagging this as unconfirmed, so verify the constraint in Supabase before relying on it elsewhere), `responded_at`, `filled_from_waitlist` (boolean — true only when a `'pending'` row was created by a genuine waitlist promotion; see CLAUDE-RULES.md Rule 60) |
 | `match_results` / `match_scores` | Recorded scores | — |
 | `courts` | Court locations | `id` (uuid), `name`, `address`, `city`, `state`, `is_private` (boolean), `is_indoor` (boolean — `true`=indoor, `false`=outdoor; `null` means unknown/both), `num_courts` (integer), `latitude`, `longitude`, `notes`, `added_by_player` |
 | `player_courts` | Courts a player uses | `player_email`, `court_id` |
@@ -31,6 +31,8 @@ _Last updated: June 13, 2026_
 | `beta_applications` | Beta applicant queue — gated intake form submissions pending founder review | `id`, `first_name`, `email`, `city`, `state`, `skill_level`, `playing_since`, `age_range`, `heard_from`, `wants_beta` (boolean), `wants_video_call` (boolean), `calendly_shown` (boolean, default false), `status` (default 'pending'), `created_at` |
 
 > **RLS:** No public read or write. Service role only for INSERT via /api/beta-apply. Never expose to client. Status values: 'pending' (awaiting review), 'approved' (invite sent), 'rejected' (declined).
+
+> **DB trigger:** `prevent_match_overfill` on `match_responses` (added July 2026, confirmed live in Supabase) rejects any INSERT/UPDATE that would set `response='in'` on a match already at `matches.max_players`. The rejection error text contains the substring `MATCH_FULL`. This is a hard backstop — application code must handle it gracefully rather than assuming client-side capacity checks alone are sufficient. See CLAUDE-RULES.md Rule 59.
 
 ### Views
 
@@ -51,7 +53,9 @@ _Last updated: June 13, 2026_
 
 `showPage(page)` is the sole navigation function. Toggles `.active` on `.page-section` elements and fires a page-specific loader. Calls `window.scrollTo(0, 0)` on every navigation.
 
-Page IDs: `dashboard`, `playerProfile`, `findPlayers`, `playerStats`, `innerCircle`, `myCourts`, `myGroups`, `lessons`, `myLessons`, `setupMatch`, `confirmedMatches`, `recordScores`, `myInvites`, `invitedByOthers`, `recurringMatches`, `tos`.
+Page IDs: `dashboard`, `playerProfile`, `findPlayers`, `playerStats`, `innerCircle`, `myCourts`, `myGroups`, `lessons`, `myLessons`, `setupMatch`, `confirmedMatches`, `myWaitlist`, `recordScores`, `myInvites`, `invitedByOthers`, `recurringMatches`, `tos`.
+
+`myWaitlist` (added July 2026) — "⏳ Waitlist" nav item, positioned directly under Confirmed Matches in the MATCHES nav section. `loadMyWaitlistPage()` fires on `showPage('myWaitlist')`. Renders two sections: Promoted (`response='pending' AND filled_from_waitlist=true` — IN/OUT response buttons) and Waiting (`response='waitlist'` — Leave Waitlist button, calls `leaveWaitlist()`).
 
 Floating "← Dashboard" pill: removed and re-added on every `showPage()` call. Calls `showBackToDashboard()` for all pages except dashboard.
 
@@ -301,7 +305,7 @@ Last updated: April 2026.
 ## Navigation Structure
 
 ### Left Nav Sections
-- **MATCHES:** Confirmed Matches, Players Wanting to Play, Recurring Matches
+- **MATCHES:** Confirmed Matches, Waitlist _(added July 2026 — directly under Confirmed Matches; dual red/green badge, see Dual Badge Pattern below)_, Players Wanting to Play, Recurring Matches
 - **ORGANIZER:** Set Up a Match, My Match Invites, My Groups, Recurring Matches _(grayed at 40% opacity for non-organizers)_
 - **INNER CIRCLE:** Members, Invite, Requests _(no badge numbers; Find Players removed)_
 - **MY COURTS:** Private (`#navCourtPrivate` / `#navCourtPrivateNum`) + Public (`#navCourtPublic` / `#navCourtPublicNum`) — wrappers hidden when count = 0
@@ -622,6 +626,12 @@ Full width, `background:#1a7a3a`, `color:#fff`, `font-size:16px`, `font-weight:8
 ### Skill Level Guide Modal (`skillGuideModal`)
 
 Reusable modal showing 5 USA Pickleball skill levels (1.0–2.5 Beginner through 4.5+ Advanced/Elite). Opened by `window.showSkillGuide()`, closed by `window.hideSkillGuide()` or clicking the backdrop. Uses the existing `modal-overlay` / `modal` CSS class pattern (same as waiver modal). Displayed in the app via "❓ What's my level?" link (color `#16a34a`, font-size 0.85rem, underlined) placed directly below the Personal Skill Rating slider in registration step 2 and the Quick Connect skill slider. The link is also displayed inline (no modal) on `landing.html` as a dedicated "Know Your Game / Find Your Level" section between features and waitlist.
+
+### Dual-Toned Nav Badge Pattern
+
+_Added July 2026 — precedent for any future nav item needing two independent, simultaneously-visible counts._
+
+The Waitlist nav item (`nav-myWaitlist`) shows two separate circular badges side by side instead of one: `waitlistWaitingBadge` (red, `rgba(220,38,38,...)`, count of `response='waitlist'` rows — spots still waiting on) and `waitlistPromotedBadge` (green, `rgba(76,175,125,...)`, count of `response='pending' AND filled_from_waitlist=true` rows — promotions awaiting the player's YES/NO). Both live in a `display:flex;gap:4px` wrapper inside the nav button, each updated independently via `updateMatchBadge('waitlistWaitingBadge', count, color)` / `updateMatchBadge('waitlistPromotedBadge', count, color)`. Unlike the single-badge nav items elsewhere (e.g. `confirmedMatchesBadge`), never collapse these two counts into one number — the color distinction (red = waiting, green = action needed) is the point. Use this same two-badge-in-one-button pattern for any future nav item that needs to distinguish "passive/waiting" state from "action needed" state at a glance.
 
 ### Build Badge
 
