@@ -8072,6 +8072,18 @@ async function respondToMatch(matchId, response){
       }
     }
     // ──────────────────────────────────────────────────
+    // Read filled_from_waitlist BEFORE the write — the PATCH/INSERT below never touches this
+    // column, so this pre-write read reliably reflects whether this response is completing a
+    // waitlist promotion (see promoteFromWaitlist()/confirmCantMakeIt(), which stage this flag).
+    let wasWaitlistFill = false;
+    try{
+      const fwRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&player_email=eq.${encodeURIComponent(myEmail)}&select=filled_from_waitlist`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+      const fwRows = fwRes.ok ? await fwRes.json() : [];
+      wasWaitlistFill = fwRows.length ? !!fwRows[0].filled_from_waitlist : false;
+    }catch(e){}
+
     // UPSERT the response — use PATCH to update existing row (avoids duplicate key error)
     // First try PATCH (update existing pending row)
     const patchRes = await fetch(
@@ -8136,6 +8148,7 @@ async function respondToMatch(matchId, response){
         // Also refresh the top blue badge
         refreshTopInviteBadge();
       }, 800);
+      if(wasWaitlistFill) notifyOrganizerOfWaitlistFillResponse(matchId, myEmail, myName, 'in');
     } else if(actualResponse==='waitlist'){
       const wRes = await fetch(
         `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.waitlist&select=player_email&order=responded_at.asc`,
@@ -8145,7 +8158,11 @@ async function respondToMatch(matchId, response){
       showToast('On the waitlist - position #'+pos,'#f59e0b');
     } else {
       showToast('Declined','var(--dim)');
-      notifyOrganizerOfDecline(matchId, myEmail);
+      if(wasWaitlistFill){
+        notifyOrganizerOfWaitlistFillResponse(matchId, myEmail, myName, 'out');
+      } else {
+        notifyOrganizerOfDecline(matchId, myEmail);
+      }
       const wasIn = confirmed.some(r=>r.player_email===myEmail);
       const newInCount = wasIn ? confirmed.length - 1 : confirmed.length;
       if(newInCount < needed) await promoteFromWaitlist(matchId, match);
@@ -8204,6 +8221,65 @@ async function notifyOrganizerOfDecline(matchId, declinerEmail){
       ? new Date(match.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) : '';
 
     sendEmail({ to_email:match.organizer_email, type:'match_decline', personal_note:declinerEmail+' declined your '+match.match_type+' match invite for '+dateStr+'. You have an open spot — invite someone from your Inner Circle to fill it!', invite_url:window.location.origin+window.location.pathname+'?setupmatch=1' });
+  }catch(e){}
+}
+
+async function notifyOrganizerOfWaitlistFillResponse(matchId, playerEmail, playerName, outcome){
+  // outcome is 'in' or 'out'
+  try{
+    const matchRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}&select=organizer_email,organizer_name,match_type,match_date,time_start,court_name,max_players`,
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+    );
+    const matches = matchRes.ok ? await matchRes.json() : [];
+    if(!matches.length) return;
+    const match = matches[0];
+    const dateStr = match.match_date
+      ? new Date(match.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) : '';
+
+    let spotsOpen = null;
+    try{
+      const inRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.in&select=player_email`,
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
+      );
+      const inRows = inRes.ok ? await inRes.json() : [];
+      spotsOpen = Math.max(0, match.max_players - inRows.length);
+    }catch(e){}
+
+    const spotsMsg = spotsOpen === null ? ''
+      : spotsOpen === 0 ? ' Your match is now full!'
+      : ` You still need ${spotsOpen} more player(s).`;
+
+    const message = outcome === 'in'
+      ? `${playerName||playerEmail} accepted their spot off the waitlist for your ${match.match_type} match on ${dateStr}.${spotsMsg}`
+      : `${playerName||playerEmail} declined their spot off the waitlist for your ${match.match_type} match on ${dateStr}. The spot is open again.${spotsMsg} Invite someone from your Inner Circle to fill it!`;
+
+    try{
+      await sendEmail({
+        to_email: match.organizer_email,
+        type: 'match_update',
+        personal_note: message,
+        invite_url: window.location.origin + window.location.pathname + '?setupmatch=1'
+      });
+    }catch(e){}
+
+    try{
+      const smsDataRes = await fetch('/api/match-invite-sms-data', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ playerEmail: match.organizer_email })
+      });
+      const smsData = smsDataRes.ok ? await smsDataRes.json() : null;
+      if(smsData && smsData.sms_opt_in && smsData.phone){
+        await sendSms({
+          player_email: match.organizer_email,
+          message: message.substring(0,160),
+          match_id: matchId,
+          event_type: outcome === 'in' ? 'waitlist_fill_accepted' : 'waitlist_fill_declined'
+        });
+      }
+    }catch(e){}
   }catch(e){}
 }
 
