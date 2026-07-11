@@ -17,6 +17,18 @@ _Added May 9, 2026_
 - **Cloudflare env vars:** `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER` (all Secret)
 - **Status:** Trial mode — can only SMS verified numbers. Upgrade to Pay as you go before launch.
 
+### A2P 10DLC Campaign Status
+
+_July 11, 2026_
+
+Campaign SID `CM8af18ff91355fb4cf0702200301d8d8b`, Brand "PBallConnect, LLC" (already Approved), had been rejected 3-4 times prior to today, each time with Error Code 30896 (Opt-in Error).
+
+- **Root cause diagnosed today:** the `message_flow` field's opt-in description was accurate, but PBallConnect's opt-in happens behind a gated login (`app.html` registration flow, Step 1 — the `#smsOptIn` checkbox), and Twilio requires hosted visual evidence (a screenshot) for any opt-in flow that isn't reachable by an anonymous reviewer. No such evidence had been provided in prior attempts.
+- **Fix applied:** a screenshot of the actual live opt-in checkbox and its exact consent language was captured, hosted at `https://pballconnect.com/sms-optin-evidence.png` (committed as a static asset, no `app.js` changes), and referenced in the `message_flow` field on resubmission.
+- **Also noted:** the "List all opt-in keywords" field should stay blank — this is a web/app checkbox opt-in, not a keyword-texted opt-in, so that field doesn't apply. Prior attempts had mistakenly included "START" there, which isn't a valid custom opt-in keyword — START is the standard CTIA resubscribe keyword, not something declared in that field.
+- **Messaging Service:** Sender `+19789453787` has been linked to the Messaging Service (`MGad7e0105d44062a97a692c94ab44e2cc`) and is ready to activate the moment the campaign is approved — currently shows "Messaging disabled" pending that approval.
+- **Status as of July 11, 2026:** Campaign shows "In review" in the Twilio Console. Not yet approved. Twilio's stated current review backlog is 10-15 days. **The Trial mode / verified-numbers-only limitation described above is still in effect** until this campaign is approved.
+
 ### Google Workspace
 - **Primary:** zorro@pballconnect.com
 - **Aliases:** app@, noreply@, david@, support@pballconnect.com
