@@ -1,6 +1,6 @@
 # CLAUDE-RULES.md — Important Rules for Claude Code
 
-_All 62 rules. No trimming. Cross-reference with CLAUDE.md, CLAUDE-SCHEMA.md, CLAUDE-SMS.md._
+_All 63 rules. No trimming. Cross-reference with CLAUDE.md, CLAUDE-SCHEMA.md, CLAUDE-SMS.md._
 
 _Last updated: July 3, 2026_
 
@@ -129,3 +129,5 @@ _Last updated: July 3, 2026_
 61. **`submitFeedback` and `submitPostMatchFeedback` must stay permanently distinct — never rename or reuse either name for the other's purpose.** `submitFeedback()` (app.js ~line 13496) is the beta feedback modal handler only. `submitPostMatchFeedback()` (app.js ~line 4767) is the post-match peer review handler only. A naming collision between the two (`submitFeedback` used for both) was fixed July 3, 2026 — do not reintroduce it.
 
 62. **The on-screen debug log panel is gated to beta testers only.** `#debugLogWrap` (in `app.html`) is shown/hidden exclusively by `updateNavForUserType()` checking `SESSION_PLAYER.is_beta_tester === true` (app.js ~line 13726) — same gate used for the beta feedback nav button. Regular players (`is_beta_tester` false or `null`) must never see this panel. `console.error` is captured into it (in addition to `console.log`/`console.warn`) via a wrapped `console.error` in `app.html` (~line 2505) that increments an error count and updates the collapsed summary line's red/green state; the panel is collapsed by default and expands via `toggleDebugLog()`, with a `copyDebugLog()` button for pasting logs into a bug report.
+
+63. **Self-scheduled wakeups are read-only — never a write, merge, or push.** A self-scheduled wakeup (a delayed re-check or resume that Claude Code schedules itself, rather than a fresh request from the user each time) may only be used for read-only verification — e.g. re-checking whether a URL is reachable, confirming a deployment finished, polling a status. It must never be scheduled to perform a data write, a merge, or a push. Any action that changes data, code state, or what's live requires the user's explicit in-the-moment confirmation — a scheduled wakeup is not that confirmation, even if the write was already discussed or seemed like the obvious next step.
