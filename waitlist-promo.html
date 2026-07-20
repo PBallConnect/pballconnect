@@ -216,7 +216,6 @@
 </div>
 <script>
   var _token = '';
-  var _sig = '';
 
   var ALL_STATES = ['stateLoading','stateError','stateNotPromotable','stateInvite','stateConfirmIn','stateMatchFull','stateSubmitError','stateConfirm'];
 
@@ -326,7 +325,7 @@
     fetch('/api/waitlist-promo-respond', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: _token, signature: _sig, response: response })
+      body: JSON.stringify({ token: _token, response: response })
     })
     .then(function(r) { return r.json(); })
     .then(function(data) {
@@ -349,14 +348,13 @@
   (function init() {
     var params = new URLSearchParams(window.location.search);
     _token = params.get('t') || '';
-    _sig = params.get('s') || '';
 
-    if (!_token || !_sig) {
+    if (!_token) {
       showError('This link is invalid.');
       return;
     }
 
-    fetch('/api/waitlist-promo-lookup?t=' + encodeURIComponent(_token) + '&s=' + encodeURIComponent(_sig))
+    fetch('/api/waitlist-promo-lookup?t=' + encodeURIComponent(_token))
     .then(function(r) {
       if (!r.ok) {
         return r.json().then(function(d) { throw new Error(d.error || 'Invalid link.'); });

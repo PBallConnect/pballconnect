@@ -1,5 +1,7 @@
 // Cloudflare Pages Function — /api/match-invite-lookup
-// Validates a signed HMAC match-invite token and returns invitee + match details.
+// Resolves an opaque action_tokens token and returns invitee + match details.
+import { resolveActionToken } from '../_shared/action-tokens.js';
+
 export async function onRequestGet(context) {
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -9,44 +11,27 @@ export async function onRequestGet(context) {
 
   // ── 1. READ QUERY PARAMS ──────────────────────────────────────────────────
   const url = new URL(context.request.url);
-  const token     = url.searchParams.get('t');
-  const signature = url.searchParams.get('s');
+  const token = url.searchParams.get('t');
 
-  if (!token || !signature) return err('Missing token or signature.', 400, corsHeaders);
+  if (!token) return err('Missing token.', 400, corsHeaders);
 
   // ── 2. LOAD ENV ───────────────────────────────────────────────────────────
-  const secret           = context.env.MATCH_INVITE_SECRET;
   const SUPABASE_URL     = context.env.SUPABASE_URL;
   const SUPABASE_SERVICE_KEY = context.env.SUPABASE_SERVICE_KEY;
 
-  if (!secret || !SUPABASE_URL || !SUPABASE_SERVICE_KEY)
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY)
     return err('Service configuration error.', 500, corsHeaders);
 
-  // ── 3. VERIFY SIGNATURE ───────────────────────────────────────────────────
-  const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw',
-    enc.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const sigBuf = await crypto.subtle.sign('HMAC', keyMaterial, enc.encode(token));
-  const expected = Array.from(new Uint8Array(sigBuf))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+  // ── 3. RESOLVE TOKEN ──────────────────────────────────────────────────────
+  // resolveActionToken() returns null for "not found", "wrong link_type", and
+  // "expired" alike, so this single message now covers all three cases rather than
+  // the old code's distinct "Invalid token" vs "Token expired" wording.
+  const row = await resolveActionToken(context.env, token, 'match_invite');
+  if (!row) return err('This invite link is invalid or has expired.', 401, corsHeaders);
 
-  if (expected !== signature) return err('Invalid token.', 401, corsHeaders);
+  const { matchId, inviteePhone, inviteeName, organizerEmail } = row.payload || {};
 
-  // ── 4. PARSE PAYLOAD ──────────────────────────────────────────────────────
-  const parts = token.split('|');
-  if (parts.length !== 5) return err('Malformed token.', 400, corsHeaders);
-  const [matchId, inviteePhone, inviteeName, organizerEmail, expiryStr] = parts;
-
-  // ── 5. CHECK EXPIRY ───────────────────────────────────────────────────────
-  if (Date.now() > parseInt(expiryStr, 10)) return err('Token expired.', 401, corsHeaders);
-
-  // ── 6. SUPABASE LOOKUPS ───────────────────────────────────────────────────
+  // ── 4. SUPABASE LOOKUPS ───────────────────────────────────────────────────
   const svcHdrs = {
     'apikey': SUPABASE_SERVICE_KEY,
     'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
@@ -80,7 +65,7 @@ export async function onRequestGet(context) {
     }
   } catch (_) {}
 
-  // ── 7. RESPOND ────────────────────────────────────────────────────────────
+  // ── 5. RESPOND ────────────────────────────────────────────────────────────
   return new Response(JSON.stringify({
     registered,
     inviteeName,

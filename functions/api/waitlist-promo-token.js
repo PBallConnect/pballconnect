@@ -1,7 +1,9 @@
 // Cloudflare Pages Function — /api/waitlist-promo-token
-// Generates a signed HMAC-SHA256 token for a waitlist-promotion response link.
+// Generates a short opaque action_tokens token for a waitlist-promotion response link.
 // Unlike match-invite-token.js (phone-keyed, fixed 7-day window), this is email-keyed
 // (player is always already registered) and expires at the match's own start time.
+import { createActionToken } from '../_shared/action-tokens.js';
+
 export async function onRequestPost(context) {
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -20,11 +22,10 @@ export async function onRequestPost(context) {
   if (!playerEmail) return err('playerEmail is required.', 400, corsHeaders);
 
   // ── 2. LOAD ENV ───────────────────────────────────────────────────────────
-  const secret             = context.env.MATCH_INVITE_SECRET;
   const SUPABASE_URL        = context.env.SUPABASE_URL;
   const SUPABASE_SERVICE_KEY = context.env.SUPABASE_SERVICE_KEY;
 
-  if (!secret || !SUPABASE_URL || !SUPABASE_SERVICE_KEY)
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY)
     return err('Service configuration error.', 500, corsHeaders);
 
   // ── 3. FETCH MATCH START TIME ─────────────────────────────────────────────
@@ -58,29 +59,29 @@ export async function onRequestPost(context) {
   // prevent_match_overfill DB trigger still protects against genuine overfill regardless
   // of when this link is clicked.
   const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
-  const expiry = new Date(`${matchDate}T${timeStart}`).getTime() + TWELVE_HOURS_MS;
-  if (Number.isNaN(expiry)) return err('Could not compute match start time.', 500, corsHeaders);
+  const expiryAt = new Date(`${matchDate}T${timeStart}`).getTime() + TWELVE_HOURS_MS;
+  if (Number.isNaN(expiryAt)) return err('Could not compute match start time.', 500, corsHeaders);
 
-  // ── 4. BUILD PAYLOAD ───────────────────────────────────────────────────────
-  const token = `${matchId}|${playerEmail}|${expiry}`;
+  // ── 4. CREATE TOKEN ────────────────────────────────────────────────────────
+  // ttlMs may be negative if the match has already started/passed — createActionToken
+  // still issues the token, expiry just ends up in the past, and resolveActionToken()
+  // will reject it as expired at read time (same behavior as the old HMAC token).
+  const ttlMs = expiryAt - Date.now();
+  let token;
+  try {
+    token = await createActionToken(
+      context.env,
+      'waitlist_promo',
+      { matchId, playerEmail },
+      ttlMs
+    );
+  } catch (e) {
+    return err('Could not create response link. Please try again.', 500, corsHeaders);
+  }
 
-  // ── 5. SIGN WITH HMAC-SHA256 (identical method to match-invite-token.js) ──
-  const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw',
-    enc.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const sigBuf = await crypto.subtle.sign('HMAC', keyMaterial, enc.encode(token));
-  const signature = Array.from(new Uint8Array(sigBuf))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-
-  // ── 6. RESPOND ────────────────────────────────────────────────────────────
-  const url = `/waitlist-promo.html?t=${encodeURIComponent(token)}&s=${signature}`;
-  return new Response(JSON.stringify({ token, signature, url }), {
+  // ── 5. RESPOND ────────────────────────────────────────────────────────────
+  const url = `/waitlist-promo.html?t=${encodeURIComponent(token)}`;
+  return new Response(JSON.stringify({ token, url }), {
     status: 200,
     headers: { 'Content-Type': 'application/json', ...corsHeaders },
   });

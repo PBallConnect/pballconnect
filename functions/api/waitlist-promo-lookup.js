@@ -1,5 +1,7 @@
 // Cloudflare Pages Function — /api/waitlist-promo-lookup
-// Validates a signed HMAC waitlist-promotion token and returns player + match details.
+// Resolves an opaque action_tokens token and returns player + match details.
+import { resolveActionToken } from '../_shared/action-tokens.js';
+
 export async function onRequestGet(context) {
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -9,51 +11,34 @@ export async function onRequestGet(context) {
 
   // ── 1. READ QUERY PARAMS ──────────────────────────────────────────────────
   const url = new URL(context.request.url);
-  const token     = url.searchParams.get('t');
-  const signature = url.searchParams.get('s');
+  const token = url.searchParams.get('t');
 
-  if (!token || !signature) return err('Missing token or signature.', 400, corsHeaders);
+  if (!token) return err('Missing token.', 400, corsHeaders);
 
   // ── 2. LOAD ENV ───────────────────────────────────────────────────────────
-  const secret               = context.env.MATCH_INVITE_SECRET;
   const SUPABASE_URL          = context.env.SUPABASE_URL;
   const SUPABASE_SERVICE_KEY  = context.env.SUPABASE_SERVICE_KEY;
 
-  if (!secret || !SUPABASE_URL || !SUPABASE_SERVICE_KEY)
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY)
     return err('Service configuration error.', 500, corsHeaders);
 
-  // ── 3. VERIFY SIGNATURE (re-derived from scratch — nothing trusted from client) ──
-  const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw',
-    enc.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const sigBuf = await crypto.subtle.sign('HMAC', keyMaterial, enc.encode(token));
-  const expected = Array.from(new Uint8Array(sigBuf))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-
-  if (expected !== signature) return err('Invalid token.', 401, corsHeaders);
-
-  // ── 4. PARSE PAYLOAD ──────────────────────────────────────────────────────
-  const parts = token.split('|');
-  if (parts.length !== 3) return err('Malformed token.', 400, corsHeaders);
-  const [matchId, playerEmail, expiryStr] = parts;
-
-  // ── 5. CHECK EXPIRY ────────────────────────────────────────────────────────
+  // ── 3. RESOLVE TOKEN ──────────────────────────────────────────────────────
   // Expiry is the match's own start time (set by waitlist-promo-token.js) — once the
-  // match has started, this link is no longer valid for responding.
-  if (Date.now() > parseInt(expiryStr, 10)) return err('This match has already started — the link has expired.', 401, corsHeaders);
+  // match has started, resolveActionToken() rejects the token as expired. Note:
+  // resolveActionToken() returns null for "not found", "wrong link_type", and
+  // "expired" alike, so this single message now covers all three cases rather than
+  // the old code's distinct "already started" vs "invalid" wording.
+  const row = await resolveActionToken(context.env, token, 'waitlist_promo');
+  if (!row) return err('This response link is invalid or has expired.', 401, corsHeaders);
+
+  const { matchId, playerEmail } = row.payload || {};
 
   const svcHdrs = {
     'apikey': SUPABASE_SERVICE_KEY,
     'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
   };
 
-  // ── 6. MATCH DETAILS ───────────────────────────────────────────────────────
+  // ── 4. MATCH DETAILS ───────────────────────────────────────────────────────
   // NOTE: only columns confirmed real via extensive live usage elsewhere in app.js are
   // selected here. CLAUDE-SCHEMA.md lists a `format` column, but no query anywhere in
   // app.js actually selects `format` from `matches` — every real usage derives a
@@ -73,7 +58,7 @@ export async function onRequestGet(context) {
     if (Array.isArray(matchRows) && matchRows.length > 0) matchDetails = matchRows[0];
   } catch (_) {}
 
-  // ── 7. CURRENT RESPONSE STATUS ─────────────────────────────────────────────
+  // ── 5. CURRENT RESPONSE STATUS ─────────────────────────────────────────────
   // Confirms whether this player is actually still in the 'pending' (promoted) state
   // this link assumes — they may have already responded, or the spot may have been
   // claimed/reassigned since the notification went out.
@@ -87,7 +72,7 @@ export async function onRequestGet(context) {
     if (Array.isArray(respRows) && respRows.length > 0) currentResponseStatus = respRows[0].response;
   } catch (_) {}
 
-  // ── 8. PLAYER NAME (registrations, service role — never phone/sms_opt_in, per Rule 48) ──
+  // ── 6. PLAYER NAME (registrations, service role — never phone/sms_opt_in, per Rule 48) ──
   let playerFirstName = '';
   try {
     const regRes = await fetch(
@@ -98,7 +83,7 @@ export async function onRequestGet(context) {
     if (Array.isArray(regRows) && regRows.length > 0) playerFirstName = regRows[0].first_name || '';
   } catch (_) {}
 
-  // ── 9. RESPOND ─────────────────────────────────────────────────────────────
+  // ── 7. RESPOND ─────────────────────────────────────────────────────────────
   return new Response(JSON.stringify({
     playerFirstName,
     matchDetails,

@@ -1,5 +1,8 @@
 // Cloudflare Pages Function — /api/waitlist-promo-respond
-// Records a promoted waitlist player's YES ('in') or NO ('out') response via signed HMAC token.
+// Records a promoted waitlist player's YES ('in') or NO ('out') response via an
+// opaque action_tokens token.
+import { resolveActionToken, markActionTokenUsed } from '../_shared/action-tokens.js';
+
 export async function onRequestPost(context) {
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -12,42 +15,23 @@ export async function onRequestPost(context) {
   try { body = await context.request.json(); }
   catch (_) { return err('Invalid request body.', 400, corsHeaders); }
 
-  const { token, signature, response } = body || {};
+  const { token, response } = body || {};
 
-  if (!token || !signature)                    return err('Missing token or signature.', 400, corsHeaders);
-  if (response !== 'in' && response !== 'out')  return err('response must be "in" or "out".', 400, corsHeaders);
+  if (!token)                                  return err('Missing token.', 400, corsHeaders);
+  if (response !== 'in' && response !== 'out') return err('response must be "in" or "out".', 400, corsHeaders);
 
   // ── 2. LOAD ENV ───────────────────────────────────────────────────────────
-  const secret               = context.env.MATCH_INVITE_SECRET;
   const SUPABASE_URL          = context.env.SUPABASE_URL;
   const SUPABASE_SERVICE_KEY  = context.env.SUPABASE_SERVICE_KEY;
 
-  if (!secret || !SUPABASE_URL || !SUPABASE_SERVICE_KEY)
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY)
     return err('Service configuration error.', 500, corsHeaders);
 
-  // ── 3. VERIFY SIGNATURE (independent of waitlist-promo-lookup.js) ─────────
-  const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw',
-    enc.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const sigBuf = await crypto.subtle.sign('HMAC', keyMaterial, enc.encode(token));
-  const expected = Array.from(new Uint8Array(sigBuf))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+  // ── 3. RESOLVE TOKEN (independent of waitlist-promo-lookup.js) ────────────
+  const row = await resolveActionToken(context.env, token, 'waitlist_promo');
+  if (!row) return err('This response link is invalid or has expired.', 401, corsHeaders);
 
-  if (expected !== signature) return err('Invalid token.', 401, corsHeaders);
-
-  // ── 4. PARSE PAYLOAD ──────────────────────────────────────────────────────
-  const parts = token.split('|');
-  if (parts.length !== 3) return err('Malformed token.', 400, corsHeaders);
-  const [matchId, playerEmail, expiryStr] = parts;
-
-  // ── 5. CHECK EXPIRY ────────────────────────────────────────────────────────
-  if (Date.now() > parseInt(expiryStr, 10)) return err('This match has already started — the link has expired.', 401, corsHeaders);
+  const { matchId, playerEmail } = row.payload || {};
 
   const svcHdrs = {
     'Content-Type': 'application/json',
@@ -55,7 +39,7 @@ export async function onRequestPost(context) {
     'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
   };
 
-  // ── 6. WRITE MATCH RESPONSE ────────────────────────────────────────────────
+  // ── 4. WRITE MATCH RESPONSE ────────────────────────────────────────────────
   // Mirrors respondToMatch()'s dual PATCH-then-INSERT-fallback pattern in app.js (used
   // for both 'in' and 'out', not just the merge-duplicates POST that the older
   // match-invite-respond.js uses) for consistency with the rest of the app's write path.
@@ -113,7 +97,10 @@ export async function onRequestPost(context) {
     return errorResponse(corsHeaders);
   }
 
-  // ── 7. RESPOND ─────────────────────────────────────────────────────────────
+  // ── 5. MARK TOKEN USED (best-effort, observability only) ──────────────────
+  await markActionTokenUsed(context.env, token);
+
+  // ── 6. RESPOND ─────────────────────────────────────────────────────────────
   return new Response(JSON.stringify({ success: true, response }), {
     status: 200,
     headers: { 'Content-Type': 'application/json', ...corsHeaders },
