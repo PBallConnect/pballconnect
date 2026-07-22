@@ -371,7 +371,7 @@
     if (details.location) html += detailRow('📍', 'Location', details.location);
     if (details.match_date) html += detailRow('📅', 'Date', fmtDate(details.match_date));
     if (details.start_time) html += detailRow('⏰', 'Time', fmtTime(details.start_time));
-    var typeLabel = [fmtMatchType(details.match_type), fmtGenderPref(details.format)].filter(Boolean).join(' · ');
+    var typeLabel = [fmtMatchType(details.match_type), fmtGenderPref(details.gender_pref)].filter(Boolean).join(' · ');
     if (typeLabel) html += detailRow('🏓', 'Format', typeLabel);
     return html;
   }
