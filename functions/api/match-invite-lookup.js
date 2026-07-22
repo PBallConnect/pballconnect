@@ -53,15 +53,24 @@ export async function onRequestGet(context) {
   } catch (_) {}
 
   // Match details
+  // NOTE: `location` and `start_time` are not real columns on `matches` (per
+  // CLAUDE-SCHEMA.md, the real columns are `court_name` and `time_start`). Aliased
+  // here via PostgREST's `alias:column` select syntax so the response keeps the
+  // exact field names match-invite.html already reads (details.location,
+  // details.start_time) — no client-side change needed.
   let matchDetails = null;
   try {
     const matchRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/matches?id=eq.${encodeURIComponent(matchId)}&select=location,match_date,start_time,format,match_type,organizer_email&limit=1`,
+      `${SUPABASE_URL}/rest/v1/matches?id=eq.${encodeURIComponent(matchId)}&select=location:court_name,match_date,start_time:time_start,format,match_type,organizer_email&limit=1`,
       { headers: svcHdrs }
     );
-    const matchRows = await matchRes.json();
-    if (Array.isArray(matchRows) && matchRows.length > 0) {
-      matchDetails = matchRows[0];
+    if (!matchRes.ok) {
+      console.error('match-invite-lookup: matches query failed', matchRes.status, await matchRes.text());
+    } else {
+      const matchRows = await matchRes.json();
+      if (Array.isArray(matchRows) && matchRows.length > 0) {
+        matchDetails = matchRows[0];
+      }
     }
   } catch (_) {}
 
