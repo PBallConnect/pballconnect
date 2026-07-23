@@ -73,6 +73,7 @@ export async function onRequestPost(context) {
     );
     if (!upsertRes.ok) {
       const text = await upsertRes.text();
+      console.error('match-invite-respond: match_responses write failed', upsertRes.status, text);
       throw new Error(text);
     }
   } catch (e) {
