@@ -9063,7 +9063,7 @@ async function doLogin(){
   try{
     const { error } = await _supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: window.location.origin + window.location.pathname }
+      options: { emailRedirectTo: window.location.origin + '/app.html' }
     });
     if(error) throw error;
     if(loadingEl) loadingEl.style.display='none';
