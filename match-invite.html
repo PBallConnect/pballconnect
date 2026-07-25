@@ -83,6 +83,7 @@
     .btn-outline { background: #fff; color: #374151; border: 2px solid #d1d5db; }
     .btn-ghost { background: #f3f4f6; color: #6b7280; }
     .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    a.btn { display: flex; align-items: center; justify-content: center; text-decoration: none; }
 
     /* Form */
     .form-title { font-size: 20px; font-weight: 800; color: #1f2937; margin-bottom: 4px; }
@@ -300,6 +301,7 @@
       <div class="big-icon" id="confirmIcon">🎾</div>
       <div class="confirm-title" id="confirmTitle">You're in!</div>
       <div class="confirm-msg" id="confirmMsg">See you on the court!</div>
+      <a class="btn btn-primary hidden" id="btnSeeMatch" href="#">See Match Details</a>
     </div>
   </div>
 
@@ -325,10 +327,17 @@
     showState('stateError');
   }
 
-  function showConfirm(icon, title, msg) {
+  function showConfirm(icon, title, msg, matchUrl) {
     document.getElementById('confirmIcon').textContent = icon;
     document.getElementById('confirmTitle').textContent = title;
     document.getElementById('confirmMsg').textContent = msg;
+    var btnSeeMatch = document.getElementById('btnSeeMatch');
+    if (matchUrl) {
+      btnSeeMatch.href = matchUrl;
+      btnSeeMatch.classList.remove('hidden');
+    } else {
+      btnSeeMatch.classList.add('hidden');
+    }
     showState('stateConfirm');
   }
 
@@ -454,7 +463,8 @@
     .then(function(data) {
       if (data.success) {
         if (response === 'in') {
-          showConfirm('🎾', "You're in!", "See you on the court!");
+          var matchUrl = (_matchDetails && _matchDetails.id) ? '/app.html?match=' + encodeURIComponent(_matchDetails.id) : '';
+          showConfirm('🎾', "You're in!", "See you on the court!", matchUrl);
         } else {
           showConfirm('👋', 'No worries!', 'Maybe next time!');
         }
