@@ -803,12 +803,11 @@
       loadingEl.style.display = 'block';
 
       try {
-        var res = await fetch(_siSupabaseUrl + '/auth/v1/otp', {
+        var res = await fetch(_siSupabaseUrl + '/auth/v1/otp?redirect_to=' + encodeURIComponent(window.location.origin + '/app.html'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'apikey': _siAnonKey },
           body: JSON.stringify({
-            email: email,
-            options: { emailRedirectTo: window.location.origin + '/app.html' }
+            email: email
           })
         });
         loadingEl.style.display = 'none';
