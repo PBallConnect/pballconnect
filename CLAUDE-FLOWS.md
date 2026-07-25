@@ -183,18 +183,20 @@ This flow applies to ALL registration paths (Full Profile, Quick Connect, SMS) a
 
 ## Flow 9 — SMS Match Invite → Registered Player RSVP
 
+**Updated July 2026:** token mechanism changed from an HMAC-signed URL to a short opaque token resolved server-side — see Security note below.
+
 | Step | Function / Action | User Sees |
 |---|---|---|
 | 1 | Organizer creates match, invite loop fires for opted-in IC members | — |
-| 2 | `/api/match-invite-token` generates signed HMAC token | — |
-| 3 | `sendSms()` sends: "Hey [name]! [organizer] invited you to pickleball on [date]..." with signed URL | SMS on phone |
-| 4 | Player taps URL | `match-invite.html?t=TOKEN&s=SIG` |
-| 5 | GET `/api/match-invite-lookup` validates signature + expiry, returns match details + registration status | — |
+| 2 | `/api/match-invite-token` generates an opaque token via `createActionToken()` — stores `{matchId, inviteePhone, inviteeName, organizerEmail}` as `payload` in `action_tokens` (`link_type:'match_invite'`) | — |
+| 3 | `sendSms()` sends: "Hey [name]! [organizer] invited you to pickleball on [date]..." with the tap-to-respond URL | SMS on phone |
+| 4 | Player taps URL | `match-invite.html?t=TOKEN` (short opaque token — no `&s=` signature param) |
+| 5 | GET `/api/match-invite-lookup` resolves the token via `resolveActionToken()` (checks existence, `link_type`, and expiry server-side against `action_tokens`), returns match details + registration status | — |
 | 6 | Player is registered → YES / NO buttons shown with match details | Match RSVP card |
-| 7 | Player taps YES → POST `/api/match-invite-respond` upserts `match_responses`, patches `invites` row | "You're in!" confirmation |
+| 7 | Player taps YES → POST `/api/match-invite-respond` resolves the token again, upserts `match_responses`, patches `invites` row, marks the token `used_at` (best-effort, non-blocking, observability only) | "You're in!" confirmation |
 | 8 | Player taps NO → same endpoint, `response = 'out'` | Warm decline message |
 
-**Security:** Token signature verified before ANY DB write. Expiry = 7 days from send. See CLAUDE-SMS.md § Match Invite SMS System.
+**Security (updated July 2026):** No HMAC signature anymore — the token is a short random opaque ID (`functions/_shared/action-tokens.js`) that resolves server-side against `action_tokens`; nothing meaningful travels in the URL. Expiry is stored per-row (`action_tokens.expiry`) and checked at resolve time — still 7 days from send for this flow. This replaced the prior HMAC-SHA256-signed long-URL design (`?t=TOKEN&s=SIGNATURE`) after that format was confirmed to get corrupted in transit over real SMS delivery to a real user. See CLAUDE-SCHEMA.md § `action_tokens` and CLAUDE-SMS.md § Match Invite SMS System.
 
 ---
 

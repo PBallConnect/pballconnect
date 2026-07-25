@@ -15,7 +15,7 @@ _Added May 9, 2026_
 - **Account email:** app@pballconnect.com
 - **Sending number:** +1 978 945 3787
 - **Cloudflare env vars:** `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER` (all Secret)
-- **Status:** Trial mode — can only SMS verified numbers. Upgrade to Pay as you go before launch.
+- **Status:** A2P 10DLC campaign **Approved** as of July 23, 2026 (see below) — no longer limited to Twilio-verified numbers for US carrier delivery. Note this is separate from Twilio account billing mode; confirm the Pay as you go upgrade independently before launch if not already done.
 
 ### A2P 10DLC Campaign Status
 
@@ -28,6 +28,7 @@ Campaign SID `CM8af18ff91355fb4cf0702200301d8d8b`, Brand "PBallConnect, LLC" (al
 - **Also noted:** the "List all opt-in keywords" field should stay blank — this is a web/app checkbox opt-in, not a keyword-texted opt-in, so that field doesn't apply. Prior attempts had mistakenly included "START" there, which isn't a valid custom opt-in keyword — START is the standard CTIA resubscribe keyword, not something declared in that field.
 - **Messaging Service:** Sender `+19789453787` has been linked to the Messaging Service (`MGad7e0105d44062a97a692c94ab44e2cc`) and is ready to activate the moment the campaign is approved — currently shows "Messaging disabled" pending that approval.
 - **Status as of July 11, 2026:** Campaign shows "In review" in the Twilio Console. Not yet approved. Twilio's stated current review backlog is 10-15 days. **The Trial mode / verified-numbers-only limitation described above is still in effect** until this campaign is approved.
+- **Status as of July 23, 2026: ✅ APPROVED.** The campaign is now approved in the Twilio Console. Sender `+19789453787` is linked to the Messaging Service (`MGad7e0105d44062a97a692c94ab44e2cc`) and can now send to any real phone number — **the Trial mode / verified-numbers-only limitation described above is LIFTED.** The July 11 entries above are kept for historical context.
 
 ### Google Workspace
 - **Primary:** zorro@pballconnect.com
@@ -125,6 +126,8 @@ Full-screen organizer tool for quickly filling an open spot when the waitlist is
 ## Match Invite SMS System
 
 _Added May 16, 2026_
+
+> **⚠️ SUPERSEDED (July 2026):** The signed-URL mechanism described below (an HMAC-SHA256 token embedded in the URL as `?t=TOKEN&s=SIGNATURE`) was replaced with a short opaque token backed by the new `action_tokens` table — see CLAUDE-SCHEMA.md § `action_tokens` for the table definition and `functions/_shared/action-tokens.js` (`createActionToken`, `resolveActionToken`, `markActionTokenUsed`) for the implementation. URLs are now `?t=TOKEN` only — no `&s=` signature parameter. This was a real bug fix: the long, plaintext HMAC-signed URL was confirmed to get corrupted in transit over real SMS delivery to a real user (both the embedded phone number and the signature arrived corrupted). The step-by-step flow below (who sends what, when) is otherwise still accurate — see CLAUDE-FLOWS.md Flow 9 for the updated version reflecting the new token mechanism. The **Waitlist Promotion SMS/Email System** section further below was migrated to the same `action_tokens` mechanism at the same time.
 
 Sends a signed SMS to opted-in IC members when an organizer creates a match. The recipient can RSVP YES or NO directly from the link — no app login required.
 
