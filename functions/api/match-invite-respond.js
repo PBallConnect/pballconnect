@@ -56,7 +56,7 @@ export async function onRequestPost(context) {
   // ── 5. UPSERT MATCH RESPONSE ──────────────────────────────────────────────
   try {
     const upsertRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/match_responses`,
+      `${SUPABASE_URL}/rest/v1/match_responses?on_conflict=match_id,player_email`,
       {
         method: 'POST',
         headers: {
