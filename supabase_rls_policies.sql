@@ -379,21 +379,58 @@ create policy "Users can delete their own player courts"
 
 -- ── INVITES ─────────────────────────────────────────────────
 -- Authenticated users see only their own invites (sent or received).
--- Pre-auth invite-link reads use the invite_tokens view (below),
--- which exposes only invite_token, inviter_name, and status to anon.
+-- Pre-auth invite-link reads use the invite_tokens view (below); the
+-- pre-auth "opened" status write goes through a service-role Function
+-- (/api/mark-invite-opened) instead of a direct client write — see the
+-- RLS AUDIT notes below.
 
 -- ── INVITE_TOKENS view (safe anon read for invite landing page) ──
 -- Query: /rest/v1/invite_tokens?invite_token=eq.<token>
 -- Returns only the columns needed before the recipient has signed in.
+--
+-- RLS AUDIT (July 2026): this view was found to have live anon AND
+-- authenticated grants for INSERT, UPDATE, DELETE, and TRUNCATE — not just
+-- SELECT. Because it's a plain single-table view with no security_invoker
+-- setting and no DISTINCT/GROUP BY/joins/set operations, Postgres treats it
+-- as automatically updatable: a write sent to this view passes straight
+-- through to the base `invites` table, limited to the view's 4 exposed
+-- columns — and `status` is one of those columns. This was a live, working
+-- bypass of every RLS policy on `invites` itself, completely independent of
+-- whatever policies existed on the base table (fixing only the base table's
+-- policies would NOT have closed this). No code anywhere (app.js,
+-- invite.html) was found to write through this view — every call site is a
+-- GET-only read. Locked to SELECT-only for both roles.
 drop view if exists invite_tokens;
 
 create view invite_tokens as
   select invite_token, inviter_name, invitee_email, status
   from invites;
 
+revoke insert, update, delete, truncate on invite_tokens from anon;
+revoke insert, update, delete, truncate on invite_tokens from authenticated;
+grant select on invite_tokens to anon;
+grant select on invite_tokens to authenticated;
+
 alter table invites enable row level security;
 
-drop policy if exists "Anyone can read invites" on invites;
+-- RLS AUDIT (July 2026): five untracked, live anon/public-role policies
+-- were found on this table via pg_policies — anon_all (role public, cmd
+-- ALL), "Anyone can insert invites" (public), "Anyone can read by token"
+-- (public), "Public can read invite by token" (role anon, despite the
+-- name), and "Anyone can update status" (public). None appear anywhere in
+-- this file's history — untracked live drift, same as every other table
+-- audited tonight. The two confirmed genuine pre-auth needs are both now
+-- served without any anon-role policy on this base table at all: reads go
+-- through the SELECT-only invite_tokens view above, and the "opened"
+-- status write goes through /api/mark-invite-opened (service role,
+-- replacing the direct client-side PATCH previously at app.js ~line 11840).
+-- No anon-role replacement policy needed here. Dropped as Phase 3 of RLS
+-- hardening.
+drop policy if exists anon_all on invites;
+drop policy if exists "Anyone can insert invites" on invites;
+drop policy if exists "Anyone can read by token" on invites;
+drop policy if exists "Public can read invite by token" on invites;
+drop policy if exists "Anyone can update status" on invites;
 drop policy if exists "Authenticated users can read invites" on invites;
 drop policy if exists "Authenticated users can update invites" on invites;
 drop policy if exists "Authenticated users can insert invites" on invites;
