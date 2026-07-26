@@ -80,7 +80,36 @@ export async function onRequestPost(context) {
     return err('Could not record your response. Please try again.', 500, corsHeaders);
   }
 
-  // ── 6. UPDATE INVITE STATUS ───────────────────────────────────────────────
+  // ── 6. CHECK / UPDATE MATCH STATUS (mirrors in-app checkAndUpdateMatchStatus()) ──
+  if (response === 'in') {
+    try {
+      const matchRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/matches?id=eq.${encodeURIComponent(matchId)}&select=match_type,status,max_players`,
+        { headers: svcHdrs }
+      );
+      const matches = matchRes.ok ? await matchRes.json() : [];
+      if (matches.length) {
+        const match = matches[0];
+        const needed = match.max_players || (match.match_type === 'doubles' ? 4 : 2);
+        const respCountRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${encodeURIComponent(matchId)}&response=eq.in&select=player_email`,
+          { headers: svcHdrs }
+        );
+        const confirmed = respCountRes.ok ? await respCountRes.json() : [];
+        if (confirmed.length >= needed && match.status !== 'full') {
+          await fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${encodeURIComponent(matchId)}`, {
+            method: 'PATCH',
+            headers: { ...svcHdrs, 'Prefer': 'return=minimal' },
+            body: JSON.stringify({ status: 'full' }),
+          });
+        }
+      }
+    } catch (e) {
+      console.error('match-invite-respond: checkAndUpdateMatchStatus failed', e);
+    }
+  }
+
+  // ── 7. UPDATE INVITE STATUS ───────────────────────────────────────────────
   const inviteStatus = response === 'in' ? 'accepted' : 'declined';
   const patchRes = await fetch(
     `${SUPABASE_URL}/rest/v1/invites?match_id=eq.${encodeURIComponent(matchId)}&invitee_phone=eq.${encodeURIComponent(inviteePhone)}`,
@@ -95,10 +124,10 @@ export async function onRequestPost(context) {
     console.error('Failed to update invite status:', patchRes.status, patchText);
   }
 
-  // ── 7. MARK TOKEN USED (best-effort, observability only) ──────────────────
+  // ── 8. MARK TOKEN USED (best-effort, observability only) ──────────────────
   await markActionTokenUsed(context.env, token);
 
-  // ── 8. RESPOND ────────────────────────────────────────────────────────────
+  // ── 9. RESPOND ────────────────────────────────────────────────────────────
   return new Response(JSON.stringify({ success: true, response }), {
     status: 200,
     headers: { 'Content-Type': 'application/json', ...corsHeaders },
