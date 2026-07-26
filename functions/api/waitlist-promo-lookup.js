@@ -51,7 +51,7 @@ export async function onRequestGet(context) {
   let matchDetails = null;
   try {
     const matchRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/matches?id=eq.${encodeURIComponent(matchId)}&select=match_date,time_start,time_end,court_name,match_type,gender_pref,organizer_name,organizer_email&limit=1`,
+      `${SUPABASE_URL}/rest/v1/matches?id=eq.${encodeURIComponent(matchId)}&select=id,match_date,time_start,time_end,court_name,match_type,gender_pref,organizer_name,organizer_email&limit=1`,
       { headers: svcHdrs }
     );
     const matchRows = await matchRes.json();

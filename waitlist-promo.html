@@ -112,6 +112,7 @@
     .btn-outline { background: #fff; color: #374151; border: 2px solid #d1d5db; }
     .btn-ghost { background: #f3f4f6; color: #6b7280; }
     .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    a.btn { display: flex; align-items: center; justify-content: center; text-decoration: none; }
 
     /* Confirmation (all success/info paths) */
     .big-icon { font-size: 52px; text-align: center; margin-bottom: 14px; }
@@ -210,12 +211,14 @@
       <div class="big-icon" id="confirmIcon">🎾</div>
       <div class="confirm-title" id="confirmTitle">You're confirmed!</div>
       <div class="confirm-msg" id="confirmMsg">See you on the court.</div>
+      <a class="btn btn-primary hidden" id="btnSeeMatch" href="#">See Match Details</a>
     </div>
   </div>
 
 </div>
 <script>
   var _token = '';
+  var _matchDetails = null;
 
   var ALL_STATES = ['stateLoading','stateError','stateNotPromotable','stateInvite','stateConfirmIn','stateMatchFull','stateSubmitError','stateConfirm'];
 
@@ -230,10 +233,17 @@
     showState('stateError');
   }
 
-  function showConfirm(icon, title, msg) {
+  function showConfirm(icon, title, msg, matchUrl) {
     document.getElementById('confirmIcon').textContent = icon;
     document.getElementById('confirmTitle').textContent = title;
     document.getElementById('confirmMsg').textContent = msg;
+    var btnSeeMatch = document.getElementById('btnSeeMatch');
+    if (matchUrl) {
+      btnSeeMatch.href = matchUrl;
+      btnSeeMatch.classList.remove('hidden');
+    } else {
+      btnSeeMatch.classList.add('hidden');
+    }
     showState('stateConfirm');
   }
 
@@ -330,7 +340,8 @@
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data.success && data.response === 'in') {
-        showConfirm('🎾', "You're confirmed!", 'See you on the court.');
+        var matchUrl = (_matchDetails && _matchDetails.id) ? '/app.html?match=' + encodeURIComponent(_matchDetails.id) : '';
+        showConfirm('🎾', "You're confirmed!", 'See you on the court.', matchUrl);
       } else if (data.success && data.response === 'out') {
         showConfirm('👋', 'Got it', "Thanks for letting us know.");
       } else if (!data.success && data.reason === 'MATCH_FULL') {
@@ -368,6 +379,8 @@
         showState('stateNotPromotable');
         return;
       }
+
+      _matchDetails = data.matchDetails || null;
 
       var firstName = data.playerFirstName || '';
       document.getElementById('inviteGreeting').textContent = firstName ? ('Hey ' + firstName + '!') : 'A spot opened up!';
