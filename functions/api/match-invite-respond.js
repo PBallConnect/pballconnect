@@ -111,17 +111,21 @@ export async function onRequestPost(context) {
 
   // ── 7. UPDATE INVITE STATUS ───────────────────────────────────────────────
   const inviteStatus = response === 'in' ? 'accepted' : 'declined';
-  const patchRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/invites?match_id=eq.${encodeURIComponent(matchId)}&invitee_phone=eq.${encodeURIComponent(inviteePhone)}`,
-    {
-      method: 'PATCH',
-      headers: { ...svcHdrs, 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ status: inviteStatus }),
+  try {
+    const patchRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/invites?match_id=eq.${encodeURIComponent(matchId)}&invitee_phone=eq.${encodeURIComponent(inviteePhone)}`,
+      {
+        method: 'PATCH',
+        headers: { ...svcHdrs, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ status: inviteStatus }),
+      }
+    );
+    if (!patchRes.ok) {
+      const patchText = await patchRes.text().catch(() => '');
+      console.error('Failed to update invite status:', patchRes.status, patchText);
     }
-  );
-  if (!patchRes.ok) {
-    const patchText = await patchRes.text().catch(() => '');
-    console.error('Failed to update invite status:', patchRes.status, patchText);
+  } catch (e) {
+    console.error('match-invite-respond: invite status update threw', e);
   }
 
   // ── 8. MARK TOKEN USED (best-effort, observability only) ──────────────────
