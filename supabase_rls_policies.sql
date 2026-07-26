@@ -147,9 +147,20 @@ create policy "Users can delete connections they are part of"
 -- ── MATCHES ─────────────────────────────────────────────────
 -- All signed-in users can read matches (open match browsing).
 -- Only the organizer can modify/delete their own matches.
+--
+-- RLS AUDIT (July 2026): a policy named "anon_all" (PERMISSIVE, role anon,
+-- cmd ALL, qual true, with_check true) was found live on this table via
+-- pg_policies, granting unrestricted anon CRUD alongside the scoped
+-- policies below. It does not appear anywhere in this file's history —
+-- it was applied directly against the live database, never tracked here.
+-- No code in app.js or functions/api/*.js was found to depend on anon-role
+-- access to this table (every write is gated behind a logged-in session,
+-- running as `authenticated`; Functions use the service role, which
+-- bypasses RLS regardless). Dropped as Phase 1 of RLS hardening.
 
 alter table matches enable row level security;
 
+drop policy if exists anon_all on matches;
 drop policy if exists "Authenticated users can read matches" on matches;
 drop policy if exists "Users can create matches" on matches;
 drop policy if exists "Organizers can update their matches" on matches;
@@ -179,9 +190,18 @@ create policy "Organizers can delete their matches"
 -- ── MATCH_RESPONSES ─────────────────────────────────────────
 -- Users see their own responses, and match organizers see all
 -- responses to matches they own.
+--
+-- RLS AUDIT (July 2026): same "anon_all" finding as `matches` above —
+-- a live, untracked PERMISSIVE policy (role anon, cmd ALL, qual true,
+-- with_check true) granting unrestricted anon CRUD. No code was found
+-- to depend on anon-role access here (every write in app.js runs inside
+-- logged-in-only match-response functions, as `authenticated`; server
+-- Functions use the service role, unaffected either way). Dropped as
+-- Phase 1 of RLS hardening.
 
 alter table match_responses enable row level security;
 
+drop policy if exists anon_all on match_responses;
 drop policy if exists "Users can read relevant match responses" on match_responses;
 drop policy if exists "Users can insert their own match response" on match_responses;
 drop policy if exists "Users can update their own match response" on match_responses;
