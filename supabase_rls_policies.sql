@@ -115,9 +115,25 @@ create policy "Users can delete their own registration"
 -- ── CONNECTIONS (Inner Circle) ───────────────────────────────
 -- Users can only see connections they are a party to.
 -- Only the requester can create a connection request.
+--
+-- RLS AUDIT (July 2026): four untracked, live PERMISSIVE anon-role policies
+-- were found on this table via pg_policies — "anon_all" (cmd ALL, qual true,
+-- with_check true) plus "Allow public inserts"/"Allow public reads"/
+-- "Allow public updates" (same unrestricted grant, split by operation).
+-- None appear anywhere in this file's history — untracked live drift, same
+-- as the anon_all findings on matches/match_responses. Full trace of every
+-- connections read/write in app.js (IC accept/decline, remove connection,
+-- send invite, cancel pending invite, icPostPendingConnection(), and
+-- handlePostRegistrationInvite()'s reciprocal-connection writes) confirmed
+-- every single one runs as `authenticated`, never `anon` — no code
+-- dependency found. Dropped as Phase 2 of RLS hardening.
 
 alter table connections enable row level security;
 
+drop policy if exists anon_all on connections;
+drop policy if exists "Allow public inserts" on connections;
+drop policy if exists "Allow public reads" on connections;
+drop policy if exists "Allow public updates" on connections;
 drop policy if exists "Users can read their own connections" on connections;
 drop policy if exists "Users can create connection requests" on connections;
 drop policy if exists "Users can update connections they are part of" on connections;
