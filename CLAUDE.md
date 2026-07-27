@@ -321,7 +321,7 @@ Email includes: player name, email, registration path, invite source, skill leve
 2. Test locally with `npx serve .` or `python -m http.server`.
 3. For Supabase schema changes: run SQL in Supabase SQL editor, update `supabase_rls_policies.sql`, and update the `public_profiles` view if new columns need to be exposed.
 4. For Cloudflare Pages Function changes: edit files in `functions/api/`. Environment variables (`RESEND_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `TURNSTILE_SECRET_KEY`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`, `MATCH_INVITE_SECRET`) are set in the Cloudflare Pages dashboard. `RATE_LIMIT_KV` is a KV namespace binding (not an env var — set under Settings → Functions → KV namespace bindings).
-5. Deploy: `git push --force origin main` → Cloudflare Pages auto-deploys. The **pre-push hook** amends HEAD to inject the build badge hash into `version.json` — this rewrite requires `--force`. Never use `--force-with-lease` (it rejects the amended push). Never put a `git push` call inside the pre-push hook itself (causes infinite loop).
+5. Deploy: `git push origin main` → Cloudflare Pages auto-deploys. A pre-commit hook (not pre-push) automatically writes the current commit hash into `version.json` and self-stages it as part of every commit — no amend, no rewrite of HEAD, no `--force` needed or wanted. A plain `git push origin main` is correct and safe.
 6. Verify deploy at https://pballconnect.com — Cloudflare typically deploys within 60 seconds.
 
 ### Debugging on Mobile
