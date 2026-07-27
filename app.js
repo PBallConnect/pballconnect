@@ -4448,7 +4448,18 @@ async function submitMatch(){
       const playerName = ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim();
       if(matchId) await fetch(`${SUPABASE_URL}/rest/v1/match_responses`,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},body:JSON.stringify({match_id:matchId,player_email:player.email,player_name:playerName+(isSub?' (Sub)':''),response:'pending'})}).catch(()=>{});
       if(player.email){
-        const matchUrl=window.location.origin+window.location.pathname+'?match='+matchId;
+        // Per-recipient match_view token — replaces the old shared, unauthenticated
+        // ?match=ID link (Known Issue #23, Option B). No plain ?match=ID fallback —
+        // that format no longer resolves at all, so a mint failure leaves matchUrl
+        // empty and the email template omits the CTA button gracefully.
+        let matchUrl = '';
+        try{
+          const mvRes = await fetch('/api/match-view-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({matchId})});
+          if(mvRes.ok){
+            const mvData = await mvRes.json();
+            if(mvData.url) matchUrl = window.location.origin + mvData.url;
+          }
+        }catch(mvErr){ console.warn('match-view-token error, using fallback URL:', mvErr); }
         const subNote = isSub ? ' · You are listed as a SUBSTITUTE — you may be called up if a primary player cannot make it.' : '';
         try{ await sendEmail({ to_email:player.email, type:'match_invite', personal_note:(MS.format==='doubles'?'Doubles':'Singles')+' · '+dateStr+' '+timeStr+(MS.courtName?' @ '+MS.courtName:'')+(note?' · Note: '+note:'')+weatherNote+subNote, invite_url:matchUrl, inviter_name:((SESSION_PLAYER?.first_name||'')+(SESSION_PLAYER?.last_name?' '+SESSION_PLAYER.last_name:'')).trim(), match_date_str:dateStr }); }
         catch(emailErr){ showToast('⚠️ Email failed for '+((player.first_name||player.email)),'#f59e0b'); console.warn('sendEmail failed:',player.email,emailErr); }
@@ -5329,9 +5340,20 @@ async function saveMatchEdits(matchId){
     const myEmail = getMyEmail(); const myName = getMyName();
     const dateStr = date?new Date(date+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}):'';
     const timeStr = timeStart?fmt12(timeStart)+(timeEnd?' – '+fmt12(timeEnd):''):'';
-    const matchUrl= window.location.origin+window.location.pathname+'?match='+matchId;
     for(const p of players){
       if((p.player_email||'').toLowerCase()===myEmail.toLowerCase()) continue;
+      // Per-recipient match_view token — replaces the old shared, unauthenticated
+      // ?match=ID link (Known Issue #23, Option B). No plain ?match=ID fallback —
+      // that format no longer resolves at all, so a mint failure leaves matchUrl
+      // empty and the email template omits the CTA button gracefully.
+      let matchUrl = '';
+      try{
+        const mvRes = await fetch('/api/match-view-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({matchId})});
+        if(mvRes.ok){
+          const mvData = await mvRes.json();
+          if(mvData.url) matchUrl = window.location.origin + mvData.url;
+        }
+      }catch(mvErr){ console.warn('match-view-token error, using fallback URL:', mvErr); }
       sendEmail({ to_email:p.player_email, type:'match_update', personal_note:myName+' updated your match: '+dateStr+(timeStr?' at '+timeStr:'')+(courtName?' @ '+courtName:'')+(note?' — '+note:'')+'. Please re-confirm your availability.', invite_url:matchUrl });
     }
     document.getElementById('editMatchOverlay')?.remove();
@@ -7839,21 +7861,40 @@ function applyPendingMatchInvitee(){
 // Handles ?match=ID in URL — invitee clicking email link
 // ══════════════════════════════════════════════════════
 
+// Shows the "link no longer works" fallback for old ?match=ID links and any
+// unresolvable ?t=TOKEN (Known Issue #23, Option B — no dual-format support,
+// by design: old links never resolve via any path once this ships).
+function _showExpiredMatchLinkFallback(){
+  const cleanUrl = window.location.pathname + window.location.hash;
+  history.replaceState(null, '', cleanUrl);
+  showToast("This link has expired. We've upgraded our security to better protect your match details. Please log in to see your current matches.", '#f59e0b');
+  if(SESSION_PLAYER){
+    showPage('dashboard');
+  } else {
+    showLoginModal();
+  }
+}
+
 async function checkMatchToken(){
-  const params   = new URLSearchParams(window.location.search);
+  const params  = new URLSearchParams(window.location.search);
   if(params.get('action') === 'emergency_fill') return; // handled by restoreSession
-  const matchId  = params.get('match');
-  if(!matchId) return;
+
+  const token         = params.get('t');
+  const legacyMatchId = params.get('match');
+
+  // Old, unsigned ?match=ID links no longer resolve at all — by design.
+  if(!token){
+    if(legacyMatchId) _showExpiredMatchLinkFallback();
+    return;
+  }
 
   try{
-    // Fetch match details
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}&select=*`,
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
-    );
-    const matches = res.ok ? await res.json() : [];
-    if(!matches.length) return;
-    const match = matches[0];
+    // Resolve the opaque match_view token server-side — no direct client query
+    // against `matches` (replaces the old anon-key `matches?select=*` lookup).
+    const res = await fetch(`/api/match-view-lookup?t=${encodeURIComponent(token)}`);
+    const data = res.ok ? await res.json() : null;
+    if(!data || !data.matchDetails){ _showExpiredMatchLinkFallback(); return; }
+    const matchId = data.matchDetails.id;
 
     // Mark as viewed if player is logged in
     const myEmail = getMyEmail();
@@ -7865,7 +7906,7 @@ async function checkMatchToken(){
       ).catch(()=>{});
     }
 
-    // Clear ?match= from URL so a page refresh doesn't re-trigger this handler
+    // Clear ?t= from URL so a page refresh doesn't re-trigger this handler
     const cleanUrl = window.location.pathname + window.location.hash;
     history.replaceState(null, '', cleanUrl);
 
@@ -8311,9 +8352,12 @@ async function promoteFromWaitlist(matchId, match){
       ? new Date(match.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) : '';
     const timeStr = match.time_start ? fmt12(match.time_start)+(match.time_end?' – '+fmt12(match.time_end):'') : '';
     const courtStr = match.court_name && match.court_name!=='TBD' ? ' @ '+match.court_name : '';
-    // Best-effort signed direct-action link — falls back to the plain app URL on any
-    // failure (Rule 38: notification-adjacent calls must never block the promotion itself).
-    let matchUrl = window.location.origin+window.location.pathname+'?match='+matchId;
+    // Best-effort signed direct-action link — falls back to a match_view token link on
+    // any failure (Rule 38: notification-adjacent calls must never block the promotion
+    // itself). A plain ?match=ID link is never used — it no longer resolves at all
+    // once Known Issue #23's Option B ships, so the fallback-of-a-fallback must also
+    // be a minted token.
+    let matchUrl = '';
     try{
       const tokenRes = await fetch('/api/waitlist-promo-token',{
         method:'POST',
@@ -8328,6 +8372,15 @@ async function promoteFromWaitlist(matchId, match){
       }
     }catch(tokenErr){
       console.warn('waitlist-promo-token error, using fallback URL:', tokenErr);
+    }
+    if(!matchUrl){
+      try{
+        const mvRes = await fetch('/api/match-view-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({matchId})});
+        if(mvRes.ok){
+          const mvData = await mvRes.json();
+          if(mvData.url) matchUrl = window.location.origin + mvData.url;
+        }
+      }catch(mvErr){ console.warn('match-view-token fallback error:', mvErr); }
     }
     try{
       await sendEmail({
@@ -8491,8 +8544,11 @@ window.confirmCantMakeIt = async function(matchId){
       }catch(_){}
 
       // Best-effort signed direct-action link, generated per-player (email-keyed) — falls
-      // back to the plain app URL on any failure (Rule 38: must never block the promotion).
-      let matchUrl = window.location.origin + window.location.pathname + '?match=' + matchId;
+      // back to a match_view token link on any failure (Rule 38: must never block the
+      // promotion). A plain ?match=ID link is never used — it no longer resolves at all
+      // once Known Issue #23's Option B ships, so the fallback-of-a-fallback must also
+      // be a minted token.
+      let matchUrl = '';
       try{
         const tokenRes = await fetch('/api/waitlist-promo-token',{
           method:'POST',
@@ -8507,6 +8563,15 @@ window.confirmCantMakeIt = async function(matchId){
         }
       }catch(tokenErr){
         console.warn('waitlist-promo-token error, using fallback URL:', tokenErr);
+      }
+      if(!matchUrl){
+        try{
+          const mvRes = await fetch('/api/match-view-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({matchId})});
+          if(mvRes.ok){
+            const mvData = await mvRes.json();
+            if(mvData.url) matchUrl = window.location.origin + mvData.url;
+          }
+        }catch(mvErr){ console.warn('match-view-token fallback error:', mvErr); }
       }
 
       if(isScramble){
@@ -8801,12 +8866,24 @@ window.efSendInvites = async function(){
   const myName = SESSION_PLAYER ? ((SESSION_PLAYER.first_name||'')+(SESSION_PLAYER.last_name?' '+SESSION_PLAYER.last_name:'')).trim() : '';
   const dateStr  = d.dateStr  || '';
   const courtStr = d.courtName && d.courtName !== 'Court TBD' ? d.courtName : '';
-  const matchUrl = window.location.origin + window.location.pathname + '?match=' + _efMatchId;
 
   let sent = 0;
   for(const email of _efSelected){
     const player = _efCandidates.find(p => p.email === email);
     const pName  = player ? ((player.first_name||'')+(player.last_name?' '+player.last_name:'')).trim() : email;
+
+    // Per-recipient match_view token — replaces the old shared, unauthenticated
+    // ?match=ID link (Known Issue #23, Option B). No plain ?match=ID fallback —
+    // that format no longer resolves at all, so a mint failure leaves matchUrl
+    // empty and the email template omits the CTA button gracefully.
+    let matchUrl = '';
+    try{
+      const mvRes = await fetch('/api/match-view-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({matchId:_efMatchId})});
+      if(mvRes.ok){
+        const mvData = await mvRes.json();
+        if(mvData.url) matchUrl = window.location.origin + mvData.url;
+      }
+    }catch(mvErr){ console.warn('match-view-token error, using fallback URL:', mvErr); }
 
     try{
       // filled_from_waitlist:false is explicit here, not just omitted. This upsert
@@ -13518,10 +13595,21 @@ async function nudgePendingPlayers(matchId){
     const m = matches[0];
     const dateStr = m?.match_date ? new Date(m.match_date+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}) : '';
     const timeStr = m?.time_start ? fmt12(m.time_start) : '';
-    const matchUrl = window.location.origin+window.location.pathname+'?match='+matchId;
     const myName = getMyName();
 
     for(const p of players){
+      // Per-recipient match_view token — replaces the old shared, unauthenticated
+      // ?match=ID link (Known Issue #23, Option B). No plain ?match=ID fallback —
+      // that format no longer resolves at all, so a mint failure leaves matchUrl
+      // empty and the email template omits the CTA button gracefully.
+      let matchUrl = '';
+      try{
+        const mvRes = await fetch('/api/match-view-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({matchId})});
+        if(mvRes.ok){
+          const mvData = await mvRes.json();
+          if(mvData.url) matchUrl = window.location.origin + mvData.url;
+        }
+      }catch(mvErr){ console.warn('match-view-token error, using fallback URL:', mvErr); }
       await sendEmail({
         to_email:      p.player_email,
         type:          'match_invite',

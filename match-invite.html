@@ -460,10 +460,23 @@
       body: JSON.stringify({ token: _token, response: response })
     })
     .then(function(r) { return r.json(); })
-    .then(function(data) {
+    .then(async function(data) {
       if (data.success) {
         if (response === 'in') {
-          var matchUrl = (_matchDetails && _matchDetails.id) ? '/app.html?match=' + encodeURIComponent(_matchDetails.id) : '';
+          var matchUrl = '';
+          if (_matchDetails && _matchDetails.id) {
+            try {
+              var mvRes = await fetch('/api/match-view-token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ matchId: _matchDetails.id })
+              });
+              if (mvRes.ok) {
+                var mvData = await mvRes.json();
+                if (mvData.url) matchUrl = mvData.url;
+              }
+            } catch (mvErr) {}
+          }
           showConfirm('🎾', "You're in!", "See you on the court!", matchUrl);
         } else {
           showConfirm('👋', 'No worries!', 'Maybe next time!');

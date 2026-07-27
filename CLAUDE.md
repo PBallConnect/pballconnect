@@ -409,3 +409,84 @@ _Past session learnings (May 16 – June 8, 2026) archived in [CLAUDE-ARCHIVE.md
 **Next session priority:** build Option B for the `matches` SELECT exposure (item #23) — fully designed, nothing left to scope, just implement.
 
 **Process note:** this session ended as the conversation approached Claude Code's auto-compact context limit. The next session will begin as a new chat with Claude — no memory of this conversation's turn-by-turn history carries over automatically, so anything load-bearing from tonight needs to live in this file (or the other CLAUDE-*.md docs), not just in the prior chat transcript.
+
+---
+
+## Session Log — July 26-27, 2026
+
+### Item #23, Option B — mostly complete, one dependency chain opened up
+
+Built and verified: match-view-token.js, match-view-lookup.js,
+checkMatchToken() rewritten to use ?t=TOKEN instead of ?match=ID, all six
+matchUrl-minting call sites (initial invite emails, edit/cancellation
+notices, efSendInvites, nudgePendingPlayers, both waitlist-promo fallback
+sites) retrofitted to mint per-recipient tokens with '' fallback on mint
+failure (no dead ?match=ID links ship on failure). All changes verified via
+fresh Read after each edit, node --check clean throughout. STAGED, NOT
+COMMITTED.
+
+Mid-implementation, found match-view-token.js has zero authorization check —
+anyone can mint a token for any matchId with no verification of a real
+relationship to that match (narrower exposure than the original SELECT gap,
+but same shape: guess an ID, get data back). Also found match-view-token.js
+performs no existence check on matchId before minting (open write /
+action_tokens table-fill vector, separate from the read-exposure issue).
+
+This blocks Option B from being called fully closed. Fix design (confirmed
+via investigation, not yet built): two paths, since 8 call sites split into
+3 trust categories —
+  Path A (6 call sites, authenticated app.js session): verify caller via
+    new functions/_shared/verify-caller.js (see below), check email is
+    either matches.organizer_email or has a match_responses row for that
+    matchId.
+  Path B (2 call sites, match-invite.html/waitlist-promo.html, no app
+    session): pass along the already-resolved match_invite/waitlist_promo
+    token as proof, verify server-side via resolveActionToken().
+
+### Mission Critical Item #1 — COMPLETE
+
+functions/_shared/verify-caller.js written: resolves Authorization header to
+a verified email via Supabase's /auth/v1/user (GoTrue), never trusts a
+client-claimed email. Confirmed via live testing against real tokens: 200
+response has `email` at top level, non-200 means invalid full stop (no
+independent JWT/exp decode needed — GoTrue already does this server-side).
+Fails closed on missing header, invalid token, and network error. Tested
+against: no header (null, correct), garbage token (null, correct), real
+valid token (correct email returned, exact match).
+
+Deployment gap found and fixed: SUPABASE_ANON_KEY was not configured as a
+Cloudflare Pages env var in either Production or Preview — added to both
+this session. Without this the function would have failed closed in
+deployment (safe direction, but silent).
+
+### Item #2 (next session's starting point) — build Path A/B into
+match-view-token.js and match-view-lookup.js using verify-caller.js, per the
+design above. Then update all 8 call sites to pass the right proof. Then
+re-verify #3.
+
+### Item #3 (not started) — audit match-invite-token.js and
+waitlist-promo-token.js for the same open-mint gap match-view-token.js had
+— they were the template it was built from, may share the issue.
+
+### New bug found during live testing, unrelated to security work — SMS
+invite landing page (match-invite.html) doesn't detect a match is already
+full before showing "Yes, I'm in!" — submission then fails with a generic
+"Link unavailable" error instead of offering the waitlist. The logged-in
+app dashboard handles this correctly (shows "Join Waitlist"); only the
+standalone SMS-link landing page doesn't. Root cause not yet investigated —
+likely in match-invite.html's accept/decline branching and/or
+match-invite-respond.js's response handling, neither touched by tonight's
+Option B work. Confirmed NOT a regression from tonight's changes (files
+weren't touched); appears pre-existing, just not previously exercised by
+two sequential responses to the same singles invite.
+
+Confirmed working end-to-end tonight: match creation, initial single accept,
+and — notably — full waitlist promotion flow including the new
+match-view-token-based "See Match Details" link, tested live with real
+users (Lindsy accept -> Lindsy cancel -> Prosper promoted via SMS -> accept
+-> magic link -> dashboard shows confirmed, waitlist count updated
+correctly on web and mobile).
+
+### Site-wide RLS audit — logged, not started (see prior entry this
+session for full prioritized list, Priority 1-3, tables and specific policy
+gaps).
