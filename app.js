@@ -4454,7 +4454,7 @@ async function submitMatch(){
         // empty and the email template omits the CTA button gracefully.
         let matchUrl = '';
         try{
-          const mvRes = await fetch('/api/match-view-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({matchId})});
+          const mvRes = await fetch('/api/match-view-token',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN},body:JSON.stringify({matchId})});
           if(mvRes.ok){
             const mvData = await mvRes.json();
             if(mvData.url) matchUrl = window.location.origin + mvData.url;
@@ -5348,7 +5348,7 @@ async function saveMatchEdits(matchId){
       // empty and the email template omits the CTA button gracefully.
       let matchUrl = '';
       try{
-        const mvRes = await fetch('/api/match-view-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({matchId})});
+        const mvRes = await fetch('/api/match-view-token',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN},body:JSON.stringify({matchId})});
         if(mvRes.ok){
           const mvData = await mvRes.json();
           if(mvData.url) matchUrl = window.location.origin + mvData.url;
@@ -8375,7 +8375,7 @@ async function promoteFromWaitlist(matchId, match){
     }
     if(!matchUrl){
       try{
-        const mvRes = await fetch('/api/match-view-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({matchId})});
+        const mvRes = await fetch('/api/match-view-token',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN},body:JSON.stringify({matchId})});
         if(mvRes.ok){
           const mvData = await mvRes.json();
           if(mvData.url) matchUrl = window.location.origin + mvData.url;
@@ -8566,7 +8566,7 @@ window.confirmCantMakeIt = async function(matchId){
       }
       if(!matchUrl){
         try{
-          const mvRes = await fetch('/api/match-view-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({matchId})});
+          const mvRes = await fetch('/api/match-view-token',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN},body:JSON.stringify({matchId})});
           if(mvRes.ok){
             const mvData = await mvRes.json();
             if(mvData.url) matchUrl = window.location.origin + mvData.url;
@@ -8878,7 +8878,7 @@ window.efSendInvites = async function(){
     // empty and the email template omits the CTA button gracefully.
     let matchUrl = '';
     try{
-      const mvRes = await fetch('/api/match-view-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({matchId:_efMatchId})});
+      const mvRes = await fetch('/api/match-view-token',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN},body:JSON.stringify({matchId:_efMatchId})});
       if(mvRes.ok){
         const mvData = await mvRes.json();
         if(mvData.url) matchUrl = window.location.origin + mvData.url;
@@ -13604,7 +13604,7 @@ async function nudgePendingPlayers(matchId){
       // empty and the email template omits the CTA button gracefully.
       let matchUrl = '';
       try{
-        const mvRes = await fetch('/api/match-view-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({matchId})});
+        const mvRes = await fetch('/api/match-view-token',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN},body:JSON.stringify({matchId})});
         if(mvRes.ok){
           const mvData = await mvRes.json();
           if(mvData.url) matchUrl = window.location.origin + mvData.url;

@@ -469,7 +469,7 @@
               var mvRes = await fetch('/api/match-view-token', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ matchId: _matchDetails.id })
+                body: JSON.stringify({ matchId: _matchDetails.id, responseToken: _token })
               });
               if (mvRes.ok) {
                 var mvData = await mvRes.json();
