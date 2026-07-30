@@ -11088,7 +11088,7 @@ async function loadCommunitySnapshot(){
   const pct=(a,b)=>b>0?Math.round(a/b*100)+'%':'0%';
   try{
     const stateAbbr=(S.state||'NH').length===2?S.state.toUpperCase():'NH';
-    const res=await fetch(`${SUPABASE_URL}/rest/v1/registrations?state=eq.${encodeURIComponent(stateAbbr)}&select=email,skill_level,gender,lat,lon&limit=2000`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/registrations_community_snapshot?state=eq.${encodeURIComponent(stateAbbr)}&select=email,skill_level,gender,lat,lon&limit=2000`,{headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
     if(!res.ok) throw new Error('Failed');
     const all=await res.json();
     const nearby=all.filter(p=>{if(p.email===myEmail)return false;if(!p.lat||!p.lon)return false;return haversine(cityData.lat,cityData.lon,parseFloat(p.lat),parseFloat(p.lon))<=radiusMi*1.60934;});
