@@ -544,11 +544,12 @@ catalogs; any future re-verification of live policies requires running SQL
 in the Supabase editor and pasting results back to CC, not assuming CC can
 self-check).
 
-#### Priority 1 — sensitive data, fully open (investigated, NOT fixed yet)
+#### Priority 1 — sensitive data (item #1 RESOLVED; #2, #3 investigated, NOT fixed yet)
 
-**1. player_feedback** — anon_all (ALL, true/true). Reputational data
-players leave about each other.
-- No legitimate write path depends on it (submitPostMatchFeedback()
+**1. player_feedback** — RESOLVED, fixed live (July 30 session). Was
+anon_all (ALL, true/true) on reputational data players leave about each
+other.
+- No legitimate write path depended on it (submitPostMatchFeedback()
   always self-attributes reviewer_email).
 - Open unknown: fetchPlayerStats() does a cross-player SELECT
   (reviewed_email=in.(...)) with no self-scoping — need a live
@@ -560,6 +561,10 @@ players leave about each other.
   + pg_policies. anon_all is safe to drop for player_feedback, no read or
   write dependency found. See Known Bugs #24 for a separate, low-priority
   correctness issue surfaced incidentally — not blocking this RLS fix.
+- anon_all DROPPED live in Supabase (direct SQL editor change, no commit
+  hash — not a code change). Re-verified via a live pg_policies re-check
+  pasted back by the user: only the five expected authenticated/public-
+  scoped policies remain, no anon policy present. Confirmed closed.
 
 **2. registrations** — mixed exposure, needs real design work, not just
 a policy drop.
@@ -617,12 +622,12 @@ audit): profiles (public directory by design), player_groups,
 recurring_matches, player_group_members, sms_consent_log — all properly
 scoped to organizer_email/auth.email().
 
-**Not yet fixed — next session's starting point**: none of the above has
-been changed. Recommend, in order: (1) live pg_policies re-check to
-resolve player_feedback's open unknown, (2) design the registrations
-community-snapshot view/Function, (3) design match_results' real
-authorization policy, (4) drop Priority 1's anon_all/overly-broad
-policies with real replacements in place, verified live same as items
-#2/#3, (5) THEN begin Priority 2/3 investigation (not yet started —
-matches/match_responses/player_availability/player_courts/courts have
-not been audited to the same depth as Priority 1).
+**Status — next session's starting point**: step (1), player_feedback's
+anon_all drop, is DONE — fixed and verified live. Remaining, in order:
+(2) design the registrations community-snapshot view/Function, (3) design
+match_results' real authorization policy, (4) drop those two tables'
+anon_all/overly-broad policies with real replacements in place, verified
+live same as player_feedback and items #2/#3, (5) THEN begin Priority 2/3
+investigation (not yet started — matches/match_responses/
+player_availability/player_courts/courts have not been audited to the
+same depth as Priority 1).
