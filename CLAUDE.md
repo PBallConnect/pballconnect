@@ -533,7 +533,7 @@ showing "Yes, I'm in!"), and the full site-wide RLS audit list
 
 ---
 
-### Priority 1 RLS — investigation complete, no fixes applied yet
+### RLS Audit — Priority 1/2/3 — consolidated, no fixes applied yet
 
 Full audit source (was previously only in chat history, not in this file
 — corrected now): pg_policies query run manually in Supabase SQL editor
@@ -542,47 +542,79 @@ catalogs; any future re-verification of live policies requires running SQL
 in the Supabase editor and pasting results back to CC, not assuming CC can
 self-check).
 
-**player_feedback** — anon_all (ALL) has no found legitimate write
-dependency (submitPostMatchFeedback always self-attributes reviewer_email).
-ONE OPEN UNKNOWN before fixing: fetchPlayerStats() does a cross-player SELECT
-(reviewed_email=in.(...)) with no self-scoping — whether this currently
-depends on anon_all vs. an already-adequate scoped policy is NOT confirmed;
-requires a live pg_policies re-check (exact USING clause on the
-non-anon_all SELECT policy) before dropping anon_all.
+#### Priority 1 — sensitive data, fully open (investigated, NOT fixed yet)
 
-**registrations** — INSERT side ("Allow public inserts", true) has no
-legitimate dependency, safe to narrow to email=auth.email() only. SELECT
-side ("Authenticated users can read registrations", true) CANNOT simply be
-narrowed — loadCommunitySnapshot() (~app.js:11077) is a real, live feature
-that bulk-reads every registrant in a state (email, skill_level, gender,
-lat, lon) with no relationship/roster scoping, for a distance-based
-community view. RLS is row-level, not column-level, so a "safe" columns
-answer isn't expressible as a simple policy fix. Real fix: route this
-feature through a dedicated view/Function exposing only the needed
-non-sensitive columns (excluding phone, age_range, waiver fields),
-replacing the direct base-table read. This is real design work, not a
-one-line policy change.
+**1. player_feedback** — anon_all (ALL, true/true). Reputational data
+players leave about each other.
+- No legitimate write path depends on it (submitPostMatchFeedback()
+  always self-attributes reviewer_email).
+- Open unknown: fetchPlayerStats() does a cross-player SELECT
+  (reviewed_email=in.(...)) with no self-scoping — need a live
+  pg_policies re-check to confirm whether it depends on anon_all or an
+  already-adequate scoped policy, before dropping anything.
 
-**match_results** — anon_all (ALL) has no found legitimate write
-dependency (srConfirmGame(), saveWalkOnMatch() both self-attribute
-recorded_by). BUT: zero server-side authorization exists today anywhere —
-every write/read path only checks caller identity/relationship
-CLIENT-SIDE, not via RLS. Dropping anon_all with no real replacement
-policy would leave this table with no authorization at all (either fully
-locked or fully open depending on what remains) rather than a functioning
-authorized-participant model. A real fix needs a genuine scoped policy
-(e.g. organizer_email match or match_responses participation), not just
-policy removal.
+**2. registrations** — mixed exposure, needs real design work, not just
+a policy drop.
+- INSERT side ("Allow public inserts", true) — safe to narrow to
+  email = auth.email(), no legitimate dependency found.
+- SELECT side ("Authenticated users can read registrations", true) —
+  cannot simply be narrowed. loadCommunitySnapshot() (~app.js:11077) is
+  a real, live feature that bulk-reads every registrant in a state
+  (email, skill_level, gender, lat, lon) with no relationship scoping.
+  RLS is row-level, not column-level, so a "safe columns" answer isn't
+  expressible as a simple policy fix. Real fix: route this through a
+  dedicated view/Function exposing only non-sensitive columns
+  (excluding phone, age_range, waiver fields), not a direct base-table
+  policy change.
+
+**3. match_results** — anon_all (ALL). Match outcomes.
+- No legitimate write path depends on it (srConfirmGame(),
+  saveWalkOnMatch() both self-attribute recorded_by), but zero
+  server-side authorization exists anywhere today — every check is
+  client-side only. Dropping anon_all without a real replacement policy
+  (e.g. organizer/participant-scoped) would leave this table either
+  fully open or fully broken, not properly authorized.
 
 **Structural finding**: no admin/staff role concept exists anywhere in
 this codebase (confirmed via repo-wide grep). is_organizer is
 reporting-only per CLAUDE-SCHEMA.md's June 2026 note — all registered
 members already have full "organizer" UI access. Relevant for any future
-access-control design.
+access-control or admin-bypass design.
+
+#### Priority 2 — integrity gaps on core tables (NOT yet investigated)
+
+**4. matches** — "Anyone can insert matches" and "Anyone can update
+matches" (both true, unauthenticated). Anyone can fabricate a fake match
+or edit any real match directly against the database.
+
+**5. match_responses** — "Anyone can insert/read/update responses" (all
+true) sit alongside the properly-scoped policies. Since RLS policies are
+OR'd together permissively, the loose ones win regardless of the strict
+ones existing. RSVP data (names, emails, responses) is forgeable and
+exposed.
+
+#### Priority 3 — lower sensitivity, still open (NOT yet investigated)
+
+**6. player_availability** — anon_all + three separate "Allow public..."
+policies (read/update/insert).
+
+**7. player_courts** — same shape as #6.
+
+**8. courts** — anon_all (ALL). A legitimate public "Anyone can read
+courts" policy already exists separately — the actual issue is
+unauthenticated insert/update/delete access, not the read.
+
+**Not concerning, working as intended** (confirmed during the original
+audit): profiles (public directory by design), player_groups,
+recurring_matches, player_group_members, sms_consent_log — all properly
+scoped to organizer_email/auth.email().
 
 **Not yet fixed — next session's starting point**: none of the above has
 been changed. Recommend, in order: (1) live pg_policies re-check to
 resolve player_feedback's open unknown, (2) design the registrations
 community-snapshot view/Function, (3) design match_results' real
-authorization policy, (4) THEN drop the anon_all/overly-broad policies
-with real replacements in place, verified live same as items #2/#3.
+authorization policy, (4) drop Priority 1's anon_all/overly-broad
+policies with real replacements in place, verified live same as items
+#2/#3, (5) THEN begin Priority 2/3 investigation (not yet started —
+matches/match_responses/player_availability/player_courts/courts have
+not been audited to the same depth as Priority 1).
