@@ -530,3 +530,59 @@ discovered during its own implementation.
 waitlist bug (match-invite.html doesn't detect a full match before
 showing "Yes, I'm in!"), and the full site-wide RLS audit list
 (Priority 1-3, logged earlier this session).
+
+---
+
+### Priority 1 RLS — investigation complete, no fixes applied yet
+
+Full audit source (was previously only in chat history, not in this file
+— corrected now): pg_policies query run manually in Supabase SQL editor
+(CC cannot query pg_policies directly — PostgREST doesn't expose system
+catalogs; any future re-verification of live policies requires running SQL
+in the Supabase editor and pasting results back to CC, not assuming CC can
+self-check).
+
+**player_feedback** — anon_all (ALL) has no found legitimate write
+dependency (submitPostMatchFeedback always self-attributes reviewer_email).
+ONE OPEN UNKNOWN before fixing: fetchPlayerStats() does a cross-player SELECT
+(reviewed_email=in.(...)) with no self-scoping — whether this currently
+depends on anon_all vs. an already-adequate scoped policy is NOT confirmed;
+requires a live pg_policies re-check (exact USING clause on the
+non-anon_all SELECT policy) before dropping anon_all.
+
+**registrations** — INSERT side ("Allow public inserts", true) has no
+legitimate dependency, safe to narrow to email=auth.email() only. SELECT
+side ("Authenticated users can read registrations", true) CANNOT simply be
+narrowed — loadCommunitySnapshot() (~app.js:11077) is a real, live feature
+that bulk-reads every registrant in a state (email, skill_level, gender,
+lat, lon) with no relationship/roster scoping, for a distance-based
+community view. RLS is row-level, not column-level, so a "safe" columns
+answer isn't expressible as a simple policy fix. Real fix: route this
+feature through a dedicated view/Function exposing only the needed
+non-sensitive columns (excluding phone, age_range, waiver fields),
+replacing the direct base-table read. This is real design work, not a
+one-line policy change.
+
+**match_results** — anon_all (ALL) has no found legitimate write
+dependency (srConfirmGame(), saveWalkOnMatch() both self-attribute
+recorded_by). BUT: zero server-side authorization exists today anywhere —
+every write/read path only checks caller identity/relationship
+CLIENT-SIDE, not via RLS. Dropping anon_all with no real replacement
+policy would leave this table with no authorization at all (either fully
+locked or fully open depending on what remains) rather than a functioning
+authorized-participant model. A real fix needs a genuine scoped policy
+(e.g. organizer_email match or match_responses participation), not just
+policy removal.
+
+**Structural finding**: no admin/staff role concept exists anywhere in
+this codebase (confirmed via repo-wide grep). is_organizer is
+reporting-only per CLAUDE-SCHEMA.md's June 2026 note — all registered
+members already have full "organizer" UI access. Relevant for any future
+access-control design.
+
+**Not yet fixed — next session's starting point**: none of the above has
+been changed. Recommend, in order: (1) live pg_policies re-check to
+resolve player_feedback's open unknown, (2) design the registrations
+community-snapshot view/Function, (3) design match_results' real
+authorization policy, (4) THEN drop the anon_all/overly-broad policies
+with real replacements in place, verified live same as items #2/#3.
