@@ -145,7 +145,7 @@ Sends a signed SMS to opted-in IC members when an organizer creates a match. The
 
 | Function | Method | Purpose |
 |---|---|---|
-| `/api/match-invite-token` | POST `{ matchId, inviteePhone, inviteeName, organizerEmail }` | Builds and signs the token, returns `{ token, signature, url }` |
+| `/api/match-invite-token` | POST `{ matchId, inviteePhone, inviteeName, organizerEmail }` | **Updated July 2026:** no longer just builds and signs the token — first requires `verifyCaller()` (`functions/_shared/verify-caller.js`) to resolve the caller's identity, then confirms they are the match's `organizer_email` (strictly organizer-only, no participant fallback); 401s otherwise. Then builds and signs the token, returns `{ token, signature, url }`. See Rule 68. |
 | `/api/match-invite-sms-data` | POST `{ playerEmail }` | Looks up `phone` and `sms_opt_in` via service key — never exposes these through `public_profiles` |
 | `/api/match-invite-lookup` | GET `?t=TOKEN&s=SIG` | Validates signature + expiry, returns `{ registered, inviteeName, inviteePhone, inviteeData, matchDetails }` |
 | `/api/match-invite-respond` | POST `{ token, signature, response }` | Verifies token, upserts `match_responses`, PATCHes `invites` row by `match_id + invitee_phone` |
@@ -180,6 +180,37 @@ Two new columns added (May 16, 2026):
 
 ---
 
+## Match View Token System (Option B)
+
+_Added July 2026 — closes Known Issue #23: the unauthenticated `matches` SELECT exposure that `checkMatchToken()`'s old `?match=ID` deep link depended on. See CLAUDE-FLOWS.md Flow 9b, CLAUDE-RULES.md Rules 66–68._
+
+Replaces `checkMatchToken()`'s direct client-side `matches?select=*` query with a token-gated Function, following the same `action_tokens` pattern as the match-invite and waitlist-promo systems above.
+
+### Pages Functions
+
+| Function | Method | Purpose |
+|---|---|---|
+| `functions/api/match-view-token.js` | POST `{ matchId, responseToken? }` | Mints a `match_view`-type `action_tokens` row (30-day TTL). Requires Path A/Path B authorization (see below) plus a match-existence check before minting — 401 unauthorized, 404 nonexistent match. |
+| `functions/api/match-view-lookup.js` | GET `?t=TOKEN` | Resolves the token via `resolveActionToken(env, token, 'match_view')`, fetches the match row server-side with the service key (`id,match_date,time_start,time_end,court_name,match_type,gender_pref,organizer_name,organizer_email,status`). |
+
+### Authorization
+
+No unauthenticated mint path — every caller must satisfy Path A or Path B (same pattern used by `match-invite-token.js` and `waitlist-promo-token.js` above):
+- **Path A** (authenticated app.js session) — `verifyCaller()` resolves the caller's email; they must be the match's `organizer_email` or have a `match_responses` row for that `matchId`.
+- **Path B** (standalone RSVP pages, no app session — `match-invite.html`, `waitlist-promo.html`) — the caller re-submits their own already-resolved `match_invite`/`waitlist_promo` response token as proof, re-verified server-side against the same `matchId`.
+
+Both rejection paths (401 unauthorized, 404 not found) confirmed live against production.
+
+### `checkMatchToken()` rewrite
+
+`app.js`'s `checkMatchToken()` now reads `?t=TOKEN` (never `?match=ID`) and calls `match-view-lookup.js` instead of querying `matches` directly. The old `?match=ID` format is intentionally not supported — no dual-format transition window (Rule 67). An old/unrecognized link shows a friendly "we've upgraded our security" message and routes to dashboard (if logged in) or the login prompt (if not).
+
+### Call sites
+
+All 8 places that build a match deep link mint a per-recipient `match_view` token, falling back to `''` (never a dead `?match=ID` link) if minting fails: the initial match invite emails, edit/cancellation notification emails, Emergency Fill invites (`efSendInvites`), pending-player reminders (`nudgePendingPlayers`), and both waitlist-promo fallback mint sites (6 sites, Path A) — plus the "See Match Details" buttons on `match-invite.html` and `waitlist-promo.html` (2 sites, Path B).
+
+---
+
 ## Waitlist Promotion SMS/Email System
 
 _Added July 3, 2026_
@@ -200,7 +231,7 @@ Signed, no-login-required tap-to-respond links sent when a waitlisted player is 
 
 | Function | Method | Purpose |
 |---|---|---|
-| `functions/api/waitlist-promo-token.js` | POST `{ matchId, playerEmail }` | Fetches the match's `match_date`/`time_start` via service key, computes expiry, builds and signs the token, returns `{ token, signature, url }` |
+| `functions/api/waitlist-promo-token.js` | POST `{ matchId, playerEmail }` | **Updated July 2026:** first requires `verifyCaller()` + Path A authorization (caller must be the match's organizer or have any `match_responses` row for this match) — 401 otherwise. Then requires `playerEmail` to actually have a `match_responses` row in the post-promotion state (`response='pending'`, `filled_from_waitlist=true`) — 404 otherwise (prevents minting a promo link for an arbitrary email never actually promoted). Only then fetches the match's `match_date`/`time_start` via service key, computes expiry, builds and signs the token, returns `{ token, signature, url }`. See Rule 68. |
 | `functions/api/waitlist-promo-lookup.js` | GET `?t=TOKEN&s=SIG` | Verifies HMAC (re-derived from scratch, nothing trusted from client), checks expiry, then returns `{ playerFirstName, matchDetails, currentResponseStatus }`. `matchDetails` selects `match_date,time_start,time_end,court_name,match_type,gender_pref,organizer_name,organizer_email` from `matches` — deliberately omits `format` (no live query anywhere selects a `format` column from `matches`; it's derived client-side from `match_type` + `gender_pref` instead). `currentResponseStatus` is read fresh from `match_responses` so the page can tell whether this player is actually still `'pending'` (promotable) or has since responded/been reassigned. |
 | `functions/api/waitlist-promo-respond.js` | POST `{ token, signature, response }` (`response` must be `'in'` or `'out'`) | Verifies HMAC + expiry independently of the lookup function, then PATCHes `match_responses` (falls back to INSERT if the PATCH matches zero rows — mirrors `respondToMatch()`'s PATCH-then-INSERT-fallback pattern in `app.js`, applied here to both `'in'` and `'out'`, not just the merge-duplicates POST that the older `match-invite-respond.js` uses). |
 

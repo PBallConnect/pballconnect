@@ -200,6 +200,36 @@ This flow applies to ALL registration paths (Full Profile, Quick Connect, SMS) a
 
 ---
 
+## Flow 9b — match_view Deep-Link ("See Match Details")
+
+**Added July 2026 — closes Known Issue #23 (Option B):** replaces the old unauthenticated `?match=ID` deep link with a token-gated lookup.
+
+| Step | Function / Action | User Sees |
+|---|---|---|
+| 1 | A caller needs to build a link to a specific match's details (email, SMS, or an in-app button) | — |
+| 2 | POST `/api/match-view-token` — mints a `match_view`-type `action_tokens` row (30-day TTL) **only if authorized** (see Path A / Path B below) and only if the match exists | — |
+| 3 | Link built as `/app.html?t=TOKEN` (never `?match=ID`) | Email / SMS / button |
+| 4 | Recipient taps the link | `app.html?t=TOKEN` |
+| 5 | `checkMatchToken()` reads `?t=TOKEN`, calls GET `/api/match-view-lookup` which resolves the token via `resolveActionToken(env, token, 'match_view')` and returns the match row (service key, never a direct client query) | Match details shown |
+| 6 | An old or unrecognized link format (`?match=ID`, or an expired/invalid token) → `_showExpiredMatchLinkFallback()` | "This link has expired. We've upgraded our security..." → routes to dashboard if logged in, else the login prompt |
+
+**No dual-format support, by design** — `?match=ID` links never resolve again once this shipped; there is no transition window.
+
+**All 8 link-building call sites now mint per-recipient tokens** (never hardcode `?match=ID`; fall back to `''`, never a dead link, if minting fails):
+- Path A (authenticated app.js session, 6 sites): initial match invite emails, edit/cancellation notification emails, Emergency Fill invites (`efSendInvites`), pending-player reminders (`nudgePendingPlayers`), and both waitlist-promo fallback mint sites.
+- Path B (standalone RSVP pages, no app session, 2 sites): the "See Match Details" buttons on `match-invite.html` and `waitlist-promo.html`.
+
+### Authorization pattern: Path A / Path B
+
+Used by all three token-minting Functions — `match-view-token.js`, `match-invite-token.js`, `waitlist-promo-token.js`. Neither has an unauthenticated mint path.
+
+- **Path A** — caller has an authenticated app.js session. `functions/_shared/verify-caller.js`'s `verifyCaller()` resolves the `Authorization` header to a verified email via Supabase's own `/auth/v1/user` (never trusts a client-claimed email). The caller must then be either the match's `organizer_email` or have a `match_responses` row for that `matchId` (participant fallback — `match-invite-token.js` is the one exception, organizer-only, no participant fallback).
+- **Path B** — caller is on a standalone RSVP page with no app session (`match-invite.html`, `waitlist-promo.html`). Proof is the caller's own already-resolved `match_invite`/`waitlist_promo` response token, re-verified server-side and checked against the same `matchId`.
+
+Unauthorized requests → 401. Nonexistent `matchId` → 404. Both confirmed live against production for all three Functions.
+
+---
+
 ## Flow 10 — SMS Match Invite → Unregistered Player
 
 Steps 1–5 same as Flow 9. Then:
@@ -251,3 +281,4 @@ Run this before pushing ANY change to auth, registration, or invite flows:
 - [ ] "My IC" (and any IC candidate pool — Emergency Fill fallback, `showCreateGroupModal()` fallback) queries `connections` filtered on `requester_email`, never `recipient_email` or both directions OR'd together (Model B, Rule 58)
 - [ ] Any new code path that writes `response='pending'` to an existing `match_responses` row explicitly sets `filled_from_waitlist` — `true` only for genuine waitlist promotions (`promoteFromWaitlist()`, `confirmCantMakeIt()`'s promotion loop), `false` explicitly everywhere else (Rule 60)
 - [ ] Waitlist promotion notifications (scramble and standard) use the signed `waitlist-promo.html` link from `/api/waitlist-promo-token`, not a plain app URL — plain URL is fallback-only, on token-generation failure
+- [ ] Any future change to `match-view-token.js`, `match-invite-token.js`, or `waitlist-promo-token.js` must re-verify the 401 (unauthorized) and 404 (match not found) rejection paths live against a real deployment — not just via code review (Flow 9b)
