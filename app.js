@@ -4498,7 +4498,7 @@ async function submitMatch(){
         }).catch(e => console.warn('invite row insert failed for', player.email, e.message));
         const tokenRes = await fetch('/api/match-invite-token', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer '+SUPABASE_ACCESS_TOKEN },
           body: JSON.stringify({
             matchId: String(matchId),
             inviteePhone: phone10,
@@ -8361,7 +8361,7 @@ async function promoteFromWaitlist(matchId, match){
     try{
       const tokenRes = await fetch('/api/waitlist-promo-token',{
         method:'POST',
-        headers:{'Content-Type':'application/json'},
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN},
         body:JSON.stringify({ matchId, playerEmail: next.player_email })
       });
       if(tokenRes.ok){
@@ -8552,7 +8552,7 @@ window.confirmCantMakeIt = async function(matchId){
       try{
         const tokenRes = await fetch('/api/waitlist-promo-token',{
           method:'POST',
-          headers:{'Content-Type':'application/json'},
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN},
           body:JSON.stringify({ matchId, playerEmail: w.player_email })
         });
         if(tokenRes.ok){
