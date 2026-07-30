@@ -134,6 +134,8 @@ No tests, no linter, no build commands.
 
     **All three phases of tonight's RLS hardening pass are now complete.** Two things remain open: the `matches` SELECT exposure (Option B build, already scoped above in this same item) — still not built — and a new follow-up worth flagging: **`action_tokens` was only ever checked for RLS-*enabled* status early in tonight's session** (confirmed enabled, zero policies, service-role only — see CLAUDE-SCHEMA.md's `action_tokens` entry), but never got the same deep per-policy `pg_policies` audit the other four tables received. Given how much bigger the `invites` exposure turned out to be once actually dug into, `action_tokens` shouldn't be assumed clean without the same scrutiny.
 
+24. **`fetchPlayerStats()` conduct % is likely broken/near-empty in production.** The SELECT policy on `player_feedback` ("Users can read feedback they gave or received") is scoped to `auth.email() = reviewer_email OR reviewed_email` — but `fetchPlayerStats()` queries `reviewed_email=in.(...)` for other players to compute a conduct % aggregate. Under this policy, only rows where the CALLER is the reviewer come back, not the full set of feedback others have left about that player — so conduct is likely null or near-empty for most players today. Found incidentally during the Priority 1 RLS audit (July 30 session), confirmed via live `app.js` read of `fetchPlayerStats()` (lines 4690-4724) against `pg_policies`. Low priority — player feedback/conduct scoring is not currently a load-bearing feature in the app. Not fixed, not scheduled.
+
 **Resolved (do not re-introduce):**
 - ~~**Waitlist-promotion success screen missing "See Match Details" button (item #19)**~~ — Fixed July 2026 (commit `1594025`). Confirmed a genuinely separate code path from `match-invite-respond.js`/`match-invite.html` — `waitlist-promo.html`/`waitlist-promo-respond.js`/`waitlist-promo-lookup.js` are their own standalone page + Functions with their own `showConfirm()`, never touched by the match-invite button fix. Ported the same three-part change: added `id` to `waitlist-promo-lookup.js`'s `matches` select (was missing, same gap `match-invite-lookup.js` had), stored it client-side as `_matchDetails`, and wired a `See Match Details` button into `#stateConfirm`'s `response === 'in'` success branch only (`'out'`/`MATCH_FULL`/error states unaffected) — same `/app.html?match=ID` deep-link convention as the match-invite fix.
 - ~~**Bug C — link/text invite paths: IC connection never established**~~ — Fixed June–July 2026. `handlePostRegistrationInvite()` runs two PATCHes: (1) primary PATCH by `recipient_email=eq.NEW_PLAYER_EMAIL` (email invite path); (2) fallback PATCH by `recipient_email=eq.pending_TOKEN` (link/text invite path — writes real email + `approved` in one shot). `inviter_email` fetched from `invites` table directly via `invite_token=eq.TOKEN`, never from `invite_tokens` view. Two RLS policies added to `connections` table: SELECT and UPDATE for `recipient_email ILIKE 'pending_%'`. QR path unaffected.
@@ -552,6 +554,12 @@ players leave about each other.
   (reviewed_email=in.(...)) with no self-scoping — need a live
   pg_policies re-check to confirm whether it depends on anon_all or an
   already-adequate scoped policy, before dropping anything.
+- Open unknown RESOLVED (July 30 session): fetchPlayerStats() sends
+  Authorization: Bearer <user token>, so it runs as `authenticated`, not
+  `anon` — it does not depend on anon_all. Confirmed via live app.js read
+  + pg_policies. anon_all is safe to drop for player_feedback, no read or
+  write dependency found. See Known Bugs #24 for a separate, low-priority
+  correctness issue surfaced incidentally — not blocking this RLS fix.
 
 **2. registrations** — mixed exposure, needs real design work, not just
 a policy drop.
