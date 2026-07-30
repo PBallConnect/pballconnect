@@ -490,3 +490,43 @@ correctly on web and mobile).
 ### Site-wide RLS audit — logged, not started (see prior entry this
 session for full prioritized list, Priority 1-3, tables and specific policy
 gaps).
+
+### UPDATE — same session, continued: Items #2 and #3 RESOLVED
+
+Both follow-up gaps found during Option B's implementation are now closed,
+built, and verified LIVE against production (not just code review):
+
+**Item #2 — match-view-token.js — RESOLVED, deployed (commit 892a974)**
+Added Path A (verifyCaller() + organizer-or-participant check) and Path B
+(re-resolve the caller's already-proven match_invite/waitlist_promo
+response token) authorization, plus a match-existence check, before
+minting. Live-tested against production: unauthenticated request for a
+real matchId -> 401 "Not authorized..."; fake matchId -> 404 "Match not
+found." Both confirm the new logic is genuinely live, not a stale/cached
+old build.
+
+**Item #3 — match-invite-token.js and waitlist-promo-token.js — RESOLVED,
+deployed (commit 0d77e8d)**
+These had NO authorization check at all (worse than #2's original gap —
+enabled forged WRITES to real match_responses rows, not just reads: an
+attacker could fabricate/overwrite a real player's RSVP, or discover
+whether an arbitrary phone number belonged to a registered player).
+- match-invite-token.js: now strictly organizer-only via verifyCaller().
+- waitlist-promo-token.js: same Path A check as match-view-token.js, plus
+  a new check that playerEmail has an actual match_responses row in the
+  post-promotion state (response='pending', filled_from_waitlist=true)
+  before minting — prevents minting a promo token for an arbitrary email
+  never actually promoted.
+- All 3 real call sites (app.js:4499, 8362, 8553) updated to send
+  Authorization: 'Bearer '+SUPABASE_ACCESS_TOKEN.
+Live-tested against production: unauthenticated requests to both
+endpoints with arbitrary phone/email -> 401 "Authentication required."
+in both cases. Fix confirmed live.
+
+**Item #23 / Option B — now fully closed**, including both follow-up gaps
+discovered during its own implementation.
+
+**Still open, unchanged from earlier this session:** the SMS full-match
+waitlist bug (match-invite.html doesn't detect a full match before
+showing "Yes, I'm in!"), and the full site-wide RLS audit list
+(Priority 1-3, logged earlier this session).
