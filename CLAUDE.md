@@ -13,6 +13,36 @@ _Last updated: July 3, 2026_
 
 ---
 
+## Security Posture
+
+This app handles real user data — emails, phone numbers, location,
+match history, peer feedback about other real people. A version of this
+app with an open data-exposure hole is not an acceptable product,
+full stop, regardless of how minor the hole seems or how unlikely
+exploitation feels. This is not a secondary concern to be weighed
+against shipping speed or feature work — treat it as load-bearing for
+whether the product is good at all.
+
+Concretely, this means:
+- Any RLS policy, endpoint, or code path found during any session to
+  allow broader access than a real feature needs gets proposed as a fix
+  immediately (see CLAUDE-RULES.md Rule 70) — not logged as a
+  someday-item unless the user explicitly defers it.
+- A deep-dive investigation into one specific item (one table, one
+  function, one flow) that surfaces adjacent exposure outside that
+  item's original scope must name that adjacent finding explicitly, in
+  the same pass, as something that also needs fixing — not left for a
+  future session to rediscover independently.
+- "No known live dependency" is treated as sufficient grounds to
+  propose dropping/narrowing an overly-permissive policy, not just
+  grounds to note it as suspicious. Verify via live pg_policies/code
+  trace first (per the existing verification rules elsewhere in this
+  file), then propose the fix — don't stop at verification.
+- This standard applies equally to Claude (chat) and Claude Code across
+  every session — it is not specific to any one conversation.
+
+---
+
 ## Project Overview
 
 **PBallConnect** — a pickleball player-matching PWA. Players register, find others nearby, manage an Inner Circle, set up matches, and respond to invites.
