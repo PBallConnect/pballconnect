@@ -167,6 +167,20 @@ No tests, no linter, no build commands.
 24. **`fetchPlayerStats()` conduct % is likely broken/near-empty in production.** The SELECT policy on `player_feedback` ("Users can read feedback they gave or received") is scoped to `auth.email() = reviewer_email OR reviewed_email` — but `fetchPlayerStats()` queries `reviewed_email=in.(...)` for other players to compute a conduct % aggregate. Under this policy, only rows where the CALLER is the reviewer come back, not the full set of feedback others have left about that player — so conduct is likely null or near-empty for most players today. Found incidentally during the Priority 1 RLS audit (July 30 session), confirmed via live `app.js` read of `fetchPlayerStats()` (lines 4690-4724) against `pg_policies`. Low priority — player feedback/conduct scoring is not currently a load-bearing feature in the app. Not fixed, not scheduled.
 
 25. **`match_results` INSERT policy is organizer-only, but `srConfirmGame()` is legitimately called by non-organizer participants too.** The live "Authenticated users can insert match results" RLS policy only allows a write when `auth.email()` matches `matches.organizer_email`. But `loadRecordScores()` (`app.js:5516`) explicitly unions matches the caller organized AND matches the caller merely confirmed `'in'` on (via `match_responses`), and wires a "Record Score" button to `srConfirmGame()` for both. This means a non-organizer participant recording a score today likely gets silently rejected by RLS. Found incidentally during the Priority 1 / item #3 RLS audit (July 30 session), confirmed via live `app.js` read of `srConfirmGame()`, `loadRecordScores()`, and their call sites (`app.js:1815-1868, 5516-5786`) — not yet confirmed via an actual live test with a non-organizer account. Not fixed, not scheduled. A real fix needs the `match_results` INSERT (and likely UPDATE) policy to also allow callers with a `match_responses` row (`response='in'`) for that `match_id`, not `organizer_email` alone.
+    - RESOLVED (July 30 session). The `match_results` INSERT policy
+      ("Authenticated users can insert match results") was organizer-only;
+      dropped and replaced with "Organizer or participant can insert match
+      results" — WITH CHECK now allows the write if the caller is either the
+      match's organizer OR has a `match_responses` row for that `match_id`
+      with `response='in'`. This matches how `loadRecordScores()` actually
+      surfaces the "Record Score" button (to organizers AND confirmed
+      participants alike). UPDATE ("Organizers can update match results")
+      was intentionally left organizer-only for now — not extended to
+      participants — pending a decision on whether a participant should be
+      able to edit a score after initially recording it. Verified live via
+      pg_policies re-check: new policy confirmed present with the exact
+      organizer-OR-participant clause, no other `match_results` policies
+      affected.
 
 **Resolved (do not re-introduce):**
 - ~~**Waitlist-promotion success screen missing "See Match Details" button (item #19)**~~ — Fixed July 2026 (commit `1594025`). Confirmed a genuinely separate code path from `match-invite-respond.js`/`match-invite.html` — `waitlist-promo.html`/`waitlist-promo-respond.js`/`waitlist-promo-lookup.js` are their own standalone page + Functions with their own `showConfirm()`, never touched by the match-invite button fix. Ported the same three-part change: added `id` to `waitlist-promo-lookup.js`'s `matches` select (was missing, same gap `match-invite-lookup.js` had), stored it client-side as `_matchDetails`, and wired a `See Match Details` button into `#stateConfirm`'s `response === 'in'` success branch only (`'out'`/`MATCH_FULL`/error states unaffected) — same `/app.html?match=ID` deep-link convention as the match-invite fix.
@@ -644,6 +658,10 @@ a policy drop.
   behavior either way, since srConfirmGame()/saveWalkOnMatch() already run
   as authenticated (Authorization: Bearer <user token>), never anon — this
   only removed the unauthenticated exposure.
+- Note: a related but distinct issue was found and fixed separately —
+  see Known Bug #25 (INSERT policy was organizer-only, blocking
+  non-organizer participants from recording scores; now fixed to allow
+  organizer OR confirmed participant).
 
 **Structural finding**: no admin/staff role concept exists anywhere in
 this codebase (confirmed via repo-wide grep). is_organizer is
