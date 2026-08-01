@@ -80,36 +80,90 @@ create view public_profiles as
 
 
 -- ── REGISTRATIONS ───────────────────────────────────────────
--- Any signed-in user can browse registrations (needed for player
--- matching, IC lookup, and the coach directory).
+-- SELECT is self-scoped — users can only read their own registration row
+-- (narrowed July 30 2026 as part of the registrations_community_snapshot
+-- fix; player matching / IC lookup / coach directory now read via that
+-- dedicated view instead of this base table).
 -- Only the row owner can insert/update/delete their own record.
+--
+-- RLS AUDIT (July 2026): live Supabase was found to have duplicate
+-- policy pairs for SELECT/INSERT/UPDATE — one scoped to role `public`,
+-- one to role `authenticated` — plus three explicit "No anon
+-- reads/updates/deletes" deny policies. This predates the July 2026 RLS
+-- hardening session and was not created by it. Functionally redundant,
+-- not a security issue: Postgres's `public` role already includes
+-- `authenticated`, so each authenticated-role policy below is fully
+-- subsumed by its public-role twin; the "No anon ..." deny policies are
+-- also inert, since the self-scoped qual (auth.email() = email)
+-- naturally evaluates false for an unauthenticated caller regardless.
+-- Documented here as-is to match live reality; not simplified/removed,
+-- since consolidating live policy structure is a separate decision from
+-- accurately tracking current state.
 
 alter table registrations enable row level security;
 
 drop policy if exists "Authenticated users can read registrations" on registrations;
+drop policy if exists "Users can read own registration" on registrations;
+drop policy if exists "Users can read their own registration" on registrations;
+drop policy if exists "No anon reads" on registrations;
+drop policy if exists "Allow public inserts" on registrations;
+drop policy if exists "Users can insert own registration" on registrations;
 drop policy if exists "Users can insert their own registration" on registrations;
 drop policy if exists "Users can update their own registration" on registrations;
+drop policy if exists "Users can update own registration" on registrations;
+drop policy if exists "No anon updates" on registrations;
 drop policy if exists "Users can delete their own registration" on registrations;
+drop policy if exists "No anon deletes" on registrations;
 
-create policy "Authenticated users can read registrations"
+create policy "Users can read own registration"
+  on registrations for select
+  to public
+  using (auth.email() = email);
+
+create policy "Users can read their own registration"
   on registrations for select
   to authenticated
-  using (true);
+  using (auth.email() = email);
+
+create policy "No anon reads"
+  on registrations for select
+  to anon
+  using (false);
+
+create policy "Users can insert own registration"
+  on registrations for insert
+  to public
+  with check (auth.email() = email);
 
 create policy "Users can insert their own registration"
   on registrations for insert
   to authenticated
   with check (auth.email() = email);
 
+create policy "Users can update own registration"
+  on registrations for update
+  to public
+  using (auth.email() = email);
+
 create policy "Users can update their own registration"
   on registrations for update
   to authenticated
   using (auth.email() = email);
 
+create policy "No anon updates"
+  on registrations for update
+  to anon
+  using (false);
+
 create policy "Users can delete their own registration"
   on registrations for delete
   to authenticated
   using (auth.email() = email);
+
+create policy "No anon deletes"
+  on registrations for delete
+  to public
+  using (false);
 
 
 -- ── CONNECTIONS (Inner Circle) ───────────────────────────────
