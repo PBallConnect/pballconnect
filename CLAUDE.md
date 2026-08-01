@@ -708,25 +708,61 @@ exposed.
   player_email=auth.email()-only policy would have broken those flows.
   Verified live via pg_policies re-check.
 
-#### Priority 3 — lower sensitivity, still open (NOT yet investigated)
+#### Priority 3 — lower sensitivity (items #6, #7, #8 all RESOLVED)
 
 **6. player_availability** — anon_all + three separate "Allow public..."
 policies (read/update/insert).
+- RESOLVED (July 30 session). All four anon-role policies (anon_all,
+  "Allow public inserts/reads/updates") dropped live in Supabase. Code
+  trace (all 3 call sites in app.js, zero elsewhere) confirmed zero anon
+  dependency — every read/write already carries a real user's
+  Authorization: Bearer token. The existing authenticated-role policies
+  were left untouched, including the intentionally-broadcast (non-self-
+  scoped) SELECT policy — loadFindPlayers() (app.js:10331) needs to read
+  every authenticated user's availability row, not just the caller's own,
+  for the "Players Wanting to Play" discovery feature. Verified live via
+  pg_policies re-check.
 
 **7. player_courts** — same shape as #6.
+- RESOLVED (July 30 session). All three anon-role policies (anon_all,
+  "Allow public inserts/reads") dropped live in Supabase. Code trace (12
+  call sites in app.js, zero elsewhere) confirmed every one is
+  self-scoped to the caller's own player_email and sends a real
+  Authorization: Bearer token — no anon dependency, no "see other
+  players' courts" feature anywhere in the codebase (unlike
+  player_availability). Existing self-scoped authenticated policies
+  untouched. Verified live via pg_policies re-check. Incidental finding:
+  loadPlayerCourtsForSummary() (app.js:9508) has zero callers anywhere in
+  the repo — dead code, not a security issue, noting for awareness only.
 
 **8. courts** — anon_all (ALL). A legitimate public "Anyone can read
 courts" policy already exists separately — the actual issue is
 unauthenticated insert/update/delete access, not the read.
+- RESOLVED (July 30 session). anon_all dropped. "Anyone can read courts"
+  (anon+authenticated, true) narrowed to "Authenticated users can read
+  courts" (authenticated only) rather than dropped outright — the original
+  policy comment in supabase_rls_policies.sql documented a real historical
+  reason (pre-auth reads needed for the old registration flow), but code
+  trace confirmed the current registration flow (doSaveProfile()/
+  _qcSave()) is unreachable until after a real session token is set (see
+  Question 1 findings under Known Bug #25 resolution), and all 13 live
+  courts call sites already send Authorization: Bearer. Same pattern as
+  the already-closed "Anyone can read matches" — a policy the app has
+  outgrown, not a currently-needed one. Authenticated users retain full
+  read access, matching current real usage. Verified live via
+  pg_policies re-check.
 
 **Not concerning, working as intended** (confirmed during the original
 audit): profiles (public directory by design), player_groups,
 recurring_matches, player_group_members, sms_consent_log — all properly
 scoped to organizer_email/auth.email().
 
-**Status — next session's starting point**: Priority 1 AND Priority 2 are
-now fully closed. Follow-up not yet done: live end-to-end test of
-registration signup post-INSERT-narrowing, and live test of a
-non-organizer participant recording a match score (see Known Bug #25).
-Next: begin Priority 3 investigation (player_availability, player_courts,
-courts — not yet investigated).
+**Status**: Priority 1, 2, AND 3 are now all fully closed — every table
+in the original consolidated RLS audit has been investigated and fixed,
+live-verified via pg_policies. Registration signup post-INSERT-narrowing
+is confirmed safe via code trace (no live test needed — see Question 1
+findings under Known Bug #25 resolution). Non-organizer participant
+match score recording is fixed via Known Bug #25's resolution, not just
+tested. No further RLS audit items remain from the original scope — any
+new findings from here would be a fresh audit, not a continuation of
+this one.
