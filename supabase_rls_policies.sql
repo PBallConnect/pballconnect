@@ -162,24 +162,44 @@ create policy "Users can delete connections they are part of"
 
 -- ── MATCHES ─────────────────────────────────────────────────
 -- All signed-in users can read matches (open match browsing).
--- Only the organizer can modify/delete their own matches.
+-- Organizers and confirmed participants can update matches
+-- (participant updates needed for checkAndUpdateMatchStatus() flipping
+-- status to 'full'). Only the organizer can delete their own matches.
 --
--- RLS AUDIT (July 2026): a policy named "anon_all" (PERMISSIVE, role anon,
--- cmd ALL, qual true, with_check true) was found live on this table via
--- pg_policies, granting unrestricted anon CRUD alongside the scoped
--- policies below. It does not appear anywhere in this file's history —
--- it was applied directly against the live database, never tracked here.
--- No code in app.js or functions/api/*.js was found to depend on anon-role
--- access to this table (every write is gated behind a logged-in session,
--- running as `authenticated`; Functions use the service role, which
--- bypasses RLS regardless). Dropped as Phase 1 of RLS hardening.
+-- RLS AUDIT (July 2026, Phase 1): a policy named "anon_all" (PERMISSIVE,
+-- role anon, cmd ALL, qual true, with_check true) was found live on this
+-- table via pg_policies, granting unrestricted anon CRUD alongside the
+-- scoped policies below. It does not appear anywhere in this file's
+-- history — it was applied directly against the live database, never
+-- tracked here. No code in app.js or functions/api/*.js was found to
+-- depend on anon-role access to this table (every write is gated behind
+-- a logged-in session, running as `authenticated`; Functions use the
+-- service role, which bypasses RLS regardless). Dropped as Phase 1 of
+-- RLS hardening.
+--
+-- RLS AUDIT (July 2026, Phase 2 — Priority 2 item #4): two additional
+-- untracked policies were found live and dropped — "Anyone can insert
+-- matches" and "Anyone can update matches" (both PERMISSIVE, role
+-- public, with_check/qual true). Role `public` matches every role
+-- including `authenticated`, so these silently made the scoped policies
+-- below no-ops via permissive-OR. Also found and dropped: "Anyone can
+-- read matches" (role public+authenticated, qual true) — repo-wide grep
+-- confirmed zero legitimate dependency on unauthenticated reads. The
+-- UPDATE policy below was simultaneously broadened from organizer-only
+-- to organizer-or-participant, since checkAndUpdateMatchStatus()
+-- (app.js:8239) legitimately needs any confirmed 'in' participant, not
+-- just the organizer, to flip status to 'full' when the roster fills.
 
 alter table matches enable row level security;
 
 drop policy if exists anon_all on matches;
+drop policy if exists "Anyone can insert matches" on matches;
+drop policy if exists "Anyone can update matches" on matches;
+drop policy if exists "Anyone can read matches" on matches;
 drop policy if exists "Authenticated users can read matches" on matches;
 drop policy if exists "Users can create matches" on matches;
 drop policy if exists "Organizers can update their matches" on matches;
+drop policy if exists "Users can update matches they organize or participate in" on matches;
 drop policy if exists "Organizers can delete their matches" on matches;
 
 create policy "Authenticated users can read matches"
@@ -192,10 +212,18 @@ create policy "Users can create matches"
   to authenticated
   with check (auth.email() = organizer_email);
 
-create policy "Organizers can update their matches"
+create policy "Users can update matches they organize or participate in"
   on matches for update
   to authenticated
-  using (auth.email() = organizer_email);
+  using (
+    auth.email() = organizer_email
+    or exists (
+      select 1 from match_responses
+      where match_responses.match_id = matches.id
+        and match_responses.player_email = auth.email()
+        and match_responses.response = 'in'
+    )
+  );
 
 create policy "Organizers can delete their matches"
   on matches for delete
@@ -205,21 +233,36 @@ create policy "Organizers can delete their matches"
 
 -- ── MATCH_RESPONSES ─────────────────────────────────────────
 -- Users see their own responses, and match organizers see all
--- responses to matches they own.
+-- responses to matches they own. Insert is allowed for self OR for
+-- a match the caller organizes (organizers invite/promote/emergency-fill
+-- other players' rows).
 --
--- RLS AUDIT (July 2026): same "anon_all" finding as `matches` above —
--- a live, untracked PERMISSIVE policy (role anon, cmd ALL, qual true,
--- with_check true) granting unrestricted anon CRUD. No code was found
--- to depend on anon-role access here (every write in app.js runs inside
--- logged-in-only match-response functions, as `authenticated`; server
--- Functions use the service role, unaffected either way). Dropped as
--- Phase 1 of RLS hardening.
+-- RLS AUDIT (July 2026, Phase 1): same "anon_all" finding as `matches`
+-- above — a live, untracked PERMISSIVE policy (role anon, cmd ALL, qual
+-- true, with_check true) granting unrestricted anon CRUD. No code was
+-- found to depend on anon-role access here. Dropped as Phase 1 of RLS
+-- hardening.
+--
+-- RLS AUDIT (July 2026, Phase 2 — Priority 2 item #5): three additional
+-- untracked policies found live and dropped — "Anyone can insert
+-- responses", "Anyone can read responses", "Anyone can update responses"
+-- (all PERMISSIVE, role public, true) — same public-role no-op problem
+-- as `matches`. The INSERT policy below was simultaneously broadened
+-- from self-only to self-or-organizer: a real fraction of writes are the
+-- caller writing to ANOTHER player's row (organizer inviting others,
+-- waitlist promotion, emergency fill — app.js:4417/4428/4449/8343/
+-- 8537/8899); a self-only policy would have broken those flows once the
+-- loose public policy was removed.
 
 alter table match_responses enable row level security;
 
 drop policy if exists anon_all on match_responses;
+drop policy if exists "Anyone can insert responses" on match_responses;
+drop policy if exists "Anyone can read responses" on match_responses;
+drop policy if exists "Anyone can update responses" on match_responses;
 drop policy if exists "Users can read relevant match responses" on match_responses;
 drop policy if exists "Users can insert their own match response" on match_responses;
+drop policy if exists "Users can insert responses for self or their matches" on match_responses;
 drop policy if exists "Users can update their own match response" on match_responses;
 drop policy if exists "Users can delete their own match response" on match_responses;
 
@@ -235,10 +278,17 @@ create policy "Users can read relevant match responses"
     )
   );
 
-create policy "Users can insert their own match response"
+create policy "Users can insert responses for self or their matches"
   on match_responses for insert
   to authenticated
-  with check (auth.email() = player_email);
+  with check (
+    auth.email() = player_email
+    or exists (
+      select 1 from matches
+      where matches.id = match_responses.match_id
+        and matches.organizer_email = auth.email()
+    )
+  );
 
 create policy "Users can update their own match response"
   on match_responses for update
@@ -266,12 +316,28 @@ create policy "Users can delete their own match response"
 
 
 -- ── MATCH_RESULTS ────────────────────────────────────────────
--- Any signed-in user can read results. Only organizers insert them.
+-- Any signed-in user can read results. Organizers or confirmed
+-- participants can insert them. Only organizers update/delete.
+--
+-- RLS AUDIT (July 2026, Priority 1 item #3): a policy named "anon_all"
+-- (PERMISSIVE, role anon, cmd ALL, qual true, with_check true) was found
+-- live on this table via pg_policies, untracked here. No code was found
+-- to depend on anon-role access (srConfirmGame()/saveWalkOnMatch() both
+-- run as `authenticated`). Dropped.
+--
+-- RLS AUDIT (July 2026, Known Bug #25): the INSERT policy below was
+-- broadened from organizer-only to organizer-or-participant.
+-- loadRecordScores() (app.js:5516) surfaces the "Record Score" button to
+-- both organizers and confirmed 'in' participants, but the original
+-- organizer-only policy silently rejected non-organizer participants'
+-- score submissions via RLS. Fixed to allow either.
 
 alter table match_results enable row level security;
 
+drop policy if exists anon_all on match_results;
 drop policy if exists "Authenticated users can read match results" on match_results;
 drop policy if exists "Authenticated users can insert match results" on match_results;
+drop policy if exists "Organizer or participant can insert match results" on match_results;
 drop policy if exists "Organizers can update match results" on match_results;
 drop policy if exists "Organizers can delete match results" on match_results;
 
@@ -280,7 +346,7 @@ create policy "Authenticated users can read match results"
   to authenticated
   using (true);
 
-create policy "Authenticated users can insert match results"
+create policy "Organizer or participant can insert match results"
   on match_results for insert
   to authenticated
   with check (
@@ -288,6 +354,12 @@ create policy "Authenticated users can insert match results"
       select 1 from matches
       where matches.id = match_results.match_id
         and matches.organizer_email = auth.email()
+    )
+    or exists (
+      select 1 from match_responses
+      where match_responses.match_id = match_results.match_id
+        and match_responses.player_email = auth.email()
+        and match_responses.response = 'in'
     )
   );
 
@@ -315,19 +387,32 @@ create policy "Organizers can delete match results"
 
 
 -- ── COURTS ───────────────────────────────────────────────────
--- Courts are public — readable by anyone (needed before auth for
--- the registration flow). Any signed-in user can add a court.
+-- Any signed-in user can read/add courts. Only the adding player
+-- can update/delete their own court entry.
+--
+-- RLS AUDIT (July 2026, Priority 3 item #8): a policy named "anon_all"
+-- (PERMISSIVE, role anon, cmd ALL, qual true, with_check true) was found
+-- live, untracked. Dropped — no code dependency found. Separately, the
+-- "Anyone can read courts" policy below was narrowed from
+-- `to anon, authenticated` to `to authenticated` only. Its original
+-- comment (removed above) said this was needed pre-auth for the
+-- registration flow; code trace confirmed the current registration flow
+-- (doSaveProfile()/_qcSave()) is unreachable until after a real session
+-- token is set, and all live courts call sites already send
+-- Authorization: Bearer — the anon grant was unexercised by current code.
 
 alter table courts enable row level security;
 
+drop policy if exists anon_all on courts;
 drop policy if exists "Anyone can read courts" on courts;
+drop policy if exists "Authenticated users can read courts" on courts;
 drop policy if exists "Authenticated users can add courts" on courts;
 drop policy if exists "Court owners can update their courts" on courts;
 drop policy if exists "Court owners can delete their courts" on courts;
 
-create policy "Anyone can read courts"
+create policy "Authenticated users can read courts"
   on courts for select
-  to anon, authenticated
+  to authenticated
   using (true);
 
 create policy "Authenticated users can add courts"
@@ -348,9 +433,18 @@ create policy "Court owners can delete their courts"
 
 -- ── PLAYER_COURTS ────────────────────────────────────────────
 -- Users manage only their own court associations.
+--
+-- RLS AUDIT (July 2026, Priority 3 item #7): "anon_all" and two more
+-- untracked PERMISSIVE policies — "Allow public inserts", "Allow public
+-- reads" (both role anon, true) — found live and dropped. Code trace (12
+-- call sites) confirmed every one self-scoped to the caller's own
+-- player_email, no anon dependency.
 
 alter table player_courts enable row level security;
 
+drop policy if exists anon_all on player_courts;
+drop policy if exists "Allow public inserts" on player_courts;
+drop policy if exists "Allow public reads" on player_courts;
 drop policy if exists "Users can read their own player courts" on player_courts;
 drop policy if exists "Users can insert their own player courts" on player_courts;
 drop policy if exists "Users can update their own player courts" on player_courts;
@@ -455,9 +549,23 @@ create policy "Authenticated users can update invites"
 
 
 -- ── PLAYER_FEEDBACK ─────────────────────────────────────────
+-- Users read only feedback they gave or received. Insert/update/delete
+-- are self-scoped to the reviewer.
+--
+-- RLS AUDIT (July 2026, Priority 1 item #1): "anon_all" (PERMISSIVE,
+-- role anon, cmd ALL, qual true, with_check true) found live, untracked,
+-- dropped. Code trace confirmed no read or write dependency —
+-- submitPostMatchFeedback() self-attributes reviewer_email;
+-- fetchPlayerStats() sends Authorization: Bearer <user token>, running
+-- as `authenticated`, governed by the SELECT policy below, not anon_all.
+-- (fetchPlayerStats()'s cross-player conduct-% read has a separate,
+-- unrelated correctness issue under this self-scoped SELECT policy —
+-- see CLAUDE.md Known Bug #24. Not an RLS/security issue, not addressed
+-- here.)
 
 alter table player_feedback enable row level security;
 
+drop policy if exists anon_all on player_feedback;
 drop policy if exists "Users can read feedback they gave or received" on player_feedback;
 drop policy if exists "Authenticated users can insert feedback" on player_feedback;
 drop policy if exists "Reviewers can update their own feedback" on player_feedback;
@@ -485,9 +593,22 @@ create policy "Reviewers can delete their own feedback"
 
 
 -- ── PLAYER_AVAILABILITY ──────────────────────────────────────
+-- SELECT is open to any authenticated user (not self-scoped) — this is
+-- intentional: loadFindPlayers() (app.js:10331) needs to read every
+-- authenticated user's availability row for the "Players Wanting to
+-- Play" discovery feature. Insert/update/delete remain self-scoped.
+--
+-- RLS AUDIT (July 2026, Priority 3 item #6): "anon_all" and three more
+-- untracked PERMISSIVE policies — "Allow public inserts", "Allow public
+-- reads", "Allow public updates" (all role anon, true) — found live and
+-- dropped. Code trace (3 call sites) confirmed no anon dependency.
 
 alter table player_availability enable row level security;
 
+drop policy if exists anon_all on player_availability;
+drop policy if exists "Allow public inserts" on player_availability;
+drop policy if exists "Allow public reads" on player_availability;
+drop policy if exists "Allow public updates" on player_availability;
 drop policy if exists "Authenticated users can read availability" on player_availability;
 drop policy if exists "Users can manage their own availability" on player_availability;
 drop policy if exists "Users can update their own availability" on player_availability;
