@@ -621,17 +621,44 @@ reporting-only per CLAUDE-SCHEMA.md's June 2026 note — all registered
 members already have full "organizer" UI access. Relevant for any future
 access-control or admin-bypass design.
 
-#### Priority 2 — integrity gaps on core tables (NOT yet investigated)
+#### Priority 2 — integrity gaps on core tables (items #4, #5 all RESOLVED)
 
 **4. matches** — "Anyone can insert matches" and "Anyone can update
 matches" (both true, unauthenticated). Anyone can fabricate a fake match
 or edit any real match directly against the database.
+- RESOLVED (July 30 session). "Anyone can insert matches" and "Anyone can
+  update matches" (both public, true) dropped live in Supabase. Replaced
+  UPDATE with "Users can update matches they organize or participate in"
+  (organizer_email match OR an 'in' row in match_responses for that
+  match_id) — needed because checkAndUpdateMatchStatus() (app.js:8239)
+  legitimately lets any participant flip status to 'full' when the roster
+  fills, not just the organizer. INSERT remains covered by the pre-existing
+  "Users can create matches" (organizer_email = auth.email()), unaffected.
+  Additionally found and closed: "Anyone can read matches" (public SELECT,
+  true) — repo-wide grep (app.js + all 21 files under functions/ + all
+  .html files) confirmed zero call sites anywhere depend on unauthenticated
+  read access; the two pre-login pages showing real match data
+  (match-invite.html, waitlist-promo.html) both go through service-role
+  Cloudflare Functions with independent token-gating, not this policy.
+  Dropped; "Authenticated users can read matches" (already existing) now
+  governs all reads. All changes verified live via pg_policies re-check
+  after each step.
 
 **5. match_responses** — "Anyone can insert/read/update responses" (all
 true) sit alongside the properly-scoped policies. Since RLS policies are
 OR'd together permissively, the loose ones win regardless of the strict
 ones existing. RSVP data (names, emails, responses) is forgeable and
 exposed.
+- RESOLVED (July 30 session). "Anyone can insert/read/update responses"
+  (all public, true) dropped live in Supabase. SELECT/UPDATE/DELETE were
+  already correctly self-or-organizer scoped and needed no change. INSERT
+  needed a new policy — "Users can insert responses for self or their
+  matches" (player_email = auth.email() OR organizer of the match) —
+  because a real fraction of writes are the caller writing to ANOTHER
+  player's row (organizer inviting others, waitlist promotion, emergency
+  fill: app.js:4417/4428/4449/8343/8537/8899) — a naive
+  player_email=auth.email()-only policy would have broken those flows.
+  Verified live via pg_policies re-check.
 
 #### Priority 3 — lower sensitivity, still open (NOT yet investigated)
 
@@ -649,10 +676,9 @@ audit): profiles (public directory by design), player_groups,
 recurring_matches, player_group_members, sms_consent_log — all properly
 scoped to organizer_email/auth.email().
 
-**Status — next session's starting point**: Priority 1 is fully closed.
-Follow-up not yet done: live end-to-end test of registration signup
-post-INSERT-narrowing, and live test of a non-organizer participant
-recording a match score (see Known Bug #25). Next: begin Priority 2/3
-investigation (not yet started — matches/match_responses/
-player_availability/player_courts/courts have not been audited to the
-same depth as Priority 1).
+**Status — next session's starting point**: Priority 1 AND Priority 2 are
+now fully closed. Follow-up not yet done: live end-to-end test of
+registration signup post-INSERT-narrowing, and live test of a
+non-organizer participant recording a match score (see Known Bug #25).
+Next: begin Priority 3 investigation (player_availability, player_courts,
+courts — not yet investigated).
