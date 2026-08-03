@@ -171,6 +171,109 @@ catch block immediately after the toast, so a failed save stops
 execution before any success UI fires. Low risk, high value — protects
 data integrity for active testers.
 
+### Bug 3 — Invite overlays: unreadable body text (contrast)
+
+Both #inviteAcceptOverlay and #inviteReciprocateOverlay (app.js
+~12712-12782, built in handlePostRegistrationInvite()) hardcode a
+near-black card background (#0f1f12) but reuse the app's single global
+--dim gray (#6b7280, defined styles.css:14-17) for description text, and
+rgba(255,255,255,0.4) for a secondary line — both designed/used
+elsewhere for gray-text-on-white-card contexts (e.g. .header p,
+.confirm-email), not dark cards. Titles (color:#fff) read fine; body
+text is very low contrast against the dark background.
+
+Status: not fixed, not scheduled. Fix scope: replace the description
+text colors on these two overlays specifically with light colors
+appropriate for a dark card — do not change the global --dim variable,
+which is correctly used elsewhere on light backgrounds.
+
+### Bug 4 — Page renders wider than viewport on real iOS (pinch-to-zoom needed)
+
+Confirmed NOT a missing viewport meta tag (app.html:5 has a correct
+one). Confirmed: no overflow-x restriction exists anywhere on html/body
+(styles.css:262-263) — the only overflow-x usage in the codebase is
+scoped to a schedule table's own scroll container (styles.css:168), not
+a page-level safety net. Strongest candidate found: .left-nav
+(styles.css:267-268, mobile override 303-306) is position:fixed with
+transform:translateX(-240px) when closed — a known iOS Safari trigger
+for the layout viewport being computed wider than the visual viewport.
+Not confirmed with certainty from static code alone — would need live
+Safari remote inspector or a temporary `* { outline: 1px solid red }`
+pass to fully confirm .left-nav is the actual offending element.
+
+Status: not fixed, not scheduled. Fix scope (two parts): (1) add a
+global overflow-x:hidden safety net on html/body — cheap, fixes the
+symptom regardless of root cause; (2) separately investigate/fix
+.left-nav's fixed+transform pattern as the likely actual source.
+
+### Bug 5 — Founding-member/confirmation flash is a bare, purposeless 2.5s timer
+
+doSaveProfile() (app.js:1289-1303): after showFoundingMemberOverlay()'s
+user-triggered dismiss (tapping "Let's Play! ->"), a bare
+setTimeout(...,2500) runs before confirmOverlay ("You're In! Welcome to
+the directory") is hidden and the next step happens. During those 2.5
+seconds, confirmOverlay sits alone on screen with nothing else
+happening — no async work, no animation, no button. Additionally:
+showFoundingMemberOverlay() (app.js:12354) skips itself entirely if
+localStorage has pb_founding_seen set (true after a device's first test
+registration) — on repeat test registrations on the same phone, the
+founding modal never appears at all, and the 2.5s bare-confirmOverlay
+state begins immediately after tapping "Complete Registration."
+
+Status: not fixed, not scheduled. Fix scope: remove or significantly
+shorten the delay; if it's meant to give the user a moment to read
+"You're In!", consider keeping content on screen instead of blank
+waiting, or removing the pause entirely and transitioning immediately.
+
+### Bug 6 — Dashboard can render scrolled/cut off after registration or reload
+
+Two independent, stacking causes found:
+(1) showPage()'s window.scrollTo(0,0) (intended as instant, per its own
+comment "always open pages at the top") is not actually instant —
+scroll-behavior:smooth is set globally (styles.css:262, also
+index.html:36), so the 2-arg scrollTo form defers to that smooth
+animation, which can still be resolving while loadDashboard()'s four
+async tile loaders are still populating content.
+(2) history.scrollRestoration is never set anywhere in the codebase
+(confirmed via repo-wide grep) — browsers default this to "auto,"
+meaning a real page reload tries to restore the previous scroll
+position for that URL, competing with showPage()'s reset before
+dashboard content has repopulated.
+.top-header's position:sticky was checked and is not implicated — no
+evidence of a height-miscalculation there.
+
+Status: not fixed, not scheduled. Fix scope: force an instant (non-
+smooth) scroll specifically for showPage()'s reset, and explicitly set
+history.scrollRestoration = 'manual' once, early in app init.
+
+### Bug 7 — Dashboard IC counts never update without a full reload; refresh icon is a no-op for dashboard
+
+Two separate, real bugs:
+(1) refreshCurrentPage() (app.js:1898-1919)'s loaders map has no
+`dashboard` entry — tapping the refresh icon on the dashboard spins the
+icon, waits 500ms, then falls through to the else branch and shows a
+fake "Refreshed" success toast while re-fetching nothing.
+(2) The three IC dashboard tiles (dashIcMemberCount, dashIcSentCount,
+dashIcIncomingCount, app.html:348/356/364) are only ever written by
+loadInnerCircle() and its helpers — never by loadDashboard() or its four
+tile loaders (loadDashTileCounts, loadDashNextMatch,
+loadDashPendingInvites, loadDashInvitedToPlay). loadInnerCircle() only
+runs once at login (600ms after restoreSession()) or when the user
+navigates to the Inner Circle page directly. Accepting a reciprocal
+invite (handlePostRegistrationInvite()'s showStep2/finalize, already
+traced) does the connections PATCH/POST then only calls
+showPage('dashboard') — it never updates IC_INCOMING_COUNT, IC_MEMBERS,
+or any dashIc* element, and showPage('dashboard') doesn't trigger
+loadInnerCircle() either. Net effect: dashboard IC tiles are populated
+once at login and never refreshed by anything short of a full page
+reload.
+
+Status: not fixed, not scheduled. Fix scope: (1) add a dashboard entry
+to refreshCurrentPage()'s loaders map that actually re-fetches dashboard
++ IC tile data; (2) have the reciprocal-invite acceptance flow refresh
+the relevant IC counts (or just re-call loadInnerCircle()) after its
+PATCH/POST succeeds, instead of relying on a full reload.
+
 ## Full Profile flow (confirmed working / reference sequence)
 
 Verified coherent by trace, Aug 2 2026 — this is the "good" path,
