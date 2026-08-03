@@ -225,6 +225,14 @@ shorten the delay; if it's meant to give the user a moment to read
 "You're In!", consider keeping content on screen instead of blank
 waiting, or removing the pause entirely and transitioning immediately.
 
+CORRECTION (found while building a visual mockup of #confirmOverlay):
+this card includes a live, visible "Go to Dashboard ->" button
+(app.html:2308-2309) throughout the 2.5s wait — the original write-up
+above was wrong to describe this window as buttonless. Tapping that
+button during the wait creates a separate race condition — see Bug 8.
+This means Full Profile's sequencing is only clean if the user waits
+passively; a real, app-provided interaction path breaks it.
+
 ### Bug 6 — Dashboard can render scrolled/cut off after registration or reload
 
 Two independent, stacking causes found:
@@ -273,6 +281,40 @@ to refreshCurrentPage()'s loaders map that actually re-fetches dashboard
 + IC tile data; (2) have the reciprocal-invite acceptance flow refresh
 the relevant IC counts (or just re-call loadInnerCircle()) after its
 PATCH/POST succeeds, instead of relying on a full reload.
+
+### Bug 8 — "Go to Dashboard" button races against the pending invite-accept overlay
+
+doSaveProfile()'s setTimeout(...,2500) (app.js:1294-1301) is fired-and-
+forgotten — its ID is never captured into a variable, and a repo-wide
+grep for clearTimeout (3 hits, all unrelated: geocoding abort, zip-code
+debounce, IC search debounce) confirms nothing ever cancels it.
+#confirmOverlay's "Go to Dashboard ->" button (app.html:2308-2309) is
+fully visible and tappable for the entire 2.5s window (the founding-
+member overlay is REMOVED from the DOM on dismiss, not hidden, so
+nothing covers it) and its onclick runs showPage('dashboard')
+immediately, independent of the pending timer.
+
+If a user taps this button during the wait: the timer still fires 2.5s
+after the founding overlay was dismissed, regardless of where the user
+has since navigated. PENDING_INVITE is still set at that point (only
+nulled inside handlePostRegistrationInvite() itself, which hasn't run
+yet), so the if(PENDING_INVITE) branch calls
+handlePostRegistrationInvite(newEmail, newName) unconditionally --
+appending the "You're in, Name! ... Join their Inner Circle?" overlay
+directly to document.body with no check on what page is currently
+active. Net effect: the user taps through to Dashboard, starts looking
+at real content, and ~2.5s later an unexplained invite-accept prompt
+appears on top of it with no visible cause.
+
+Status: not fixed, not scheduled. Same root class as Bug 1 (an overlay
+appearing on a page the user already navigated away from) but a
+distinct cause -- an uncancelled timer racing a manual escape hatch,
+not an automatic stacking order. Fix scope: capture the setTimeout's ID
+and clearTimeout() it if the user taps "Go to Dashboard" early
+(preferred -- lets the user skip the wait AND still get the invite
+prompt immediately instead of losing it or having it ambush them later),
+or alternatively disable/hide the button during the wait so it can't be
+tapped until the timer's own logic has run.
 
 ## Full Profile flow (confirmed working / reference sequence)
 
