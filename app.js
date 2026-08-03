@@ -1290,15 +1290,20 @@ async function doSaveProfile(){
     document.getElementById('confirmOverlay').style.display='flex';
     const newEmail = v('email') || getMyEmail();
     const newName  = (v('firstName')+' '+v('lastName')).trim();
+    let _confirmTransitionDone = false;
+    window._completeRegistrationTransition = function(){
+      if(_confirmTransitionDone) return;
+      _confirmTransitionDone = true;
+      clearTimeout(window._confirmTransitionTimer);
+      document.getElementById('confirmOverlay').style.display='none';
+      if(PENDING_INVITE){
+        handlePostRegistrationInvite(newEmail, newName);
+      } else {
+        showPage('dashboard');
+      }
+    };
     showFoundingMemberOverlay(()=>{
-      setTimeout(()=>{
-        document.getElementById('confirmOverlay').style.display='none';
-        if(PENDING_INVITE){
-          handlePostRegistrationInvite(newEmail, newName);
-        } else {
-          showPage('dashboard');
-        }
-      }, 2500);
+      window._confirmTransitionTimer = setTimeout(window._completeRegistrationTransition, 2500);
     });
   }
 }
