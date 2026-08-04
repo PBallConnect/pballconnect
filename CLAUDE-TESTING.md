@@ -316,6 +316,46 @@ prompt immediately instead of losing it or having it ambush them later),
 or alternatively disable/hide the button during the wait so it can't be
 tapped until the timer's own logic has run.
 
+### Bug 9 — HIGH PRIORITY — in-app match confirmation structurally broken by RLS read-scoping
+
+checkAndUpdateMatchStatus() (app.js:8228-8254) and respondToMatch()'s
+own pre-check (app.js:8089-8093) both query match_responses under the
+responding participant's own session token. The live match_responses
+SELECT policy ("Users can read relevant match responses") is scoped to
+auth.email() = player_email OR the caller organizes the match — so a
+non-organizer participant's read of response='in' rows for a match can
+only ever return THEIR OWN row, never the organizer's or any other
+participant's row, even though those rows exist and are correct.
+
+This has exactly one call site in the entire app (app.js:8191, inside
+respondToMatch()'s 'in' branch), and that call site is structurally
+reachable ONLY by non-organizers: the organizer's own row is inserted
+directly as 'in' at match creation (never 'pending'), so the organizer
+never has an Accept button to tap for their own match and therefore
+never triggers this check. This is not an edge case -- it's the only
+way this check ever runs, for every match confirmed via the in-app
+Accept flow.
+
+Confirmed via a real test match (Aug 4 2026, organizer Tyler
+Brenneman, participant David DiPerri, Singles, max_players=2): both
+players had correct 'in' rows in match_responses, but status remained
+'open' after David accepted in-app -- David's own RLS-scoped read
+undercounted the roster to 1, never reaching needed=2.
+
+The SMS tap-to-respond path (functions/api/match-invite-respond.js:
+83-99) implements the identical check correctly, because it runs under
+SUPABASE_SERVICE_KEY (service role), which bypasses RLS entirely --
+explaining why earlier testing that went through SMS links appeared to
+work fine while the in-app button was silently broken the whole time.
+
+Status: not fixed, actively being designed. Fix direction chosen (Aug
+4 2026, user decision): move the roster-fill check server-side (new
+service-role Cloudflare Function, mirroring match-invite-respond.js's
+already-correct logic) rather than broadening the match_responses
+SELECT policy -- preserves participant privacy (an invitee shouldn't
+necessarily see who else is in/pending before accepting, which was an
+intentional design consideration, not an oversight).
+
 ## Full Profile flow (confirmed working / reference sequence)
 
 Verified coherent by trace, Aug 2 2026 — this is the "good" path,
