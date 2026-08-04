@@ -5900,6 +5900,18 @@ async function loadMyInvitesPage(){
       container.appendChild(hdr);
       container.appendChild(cancelList);
     }
+    // Background reconciliation (Bug 9 fix, CLAUDE-TESTING.md) — this page's own
+    // roster counts are already accurate (the organizer isn't RLS-scoped for matches
+    // they organize), but matches.status can still be stuck at 'open' if an earlier
+    // in-app Accept never flipped it (the original Bug 9 bug, or any future edge
+    // case). Running the service-role check here self-heals it the next time the
+    // organizer views this page — silent unless something was actually stale.
+    Promise.all(upcoming.map(m=>checkMatchStatusServer(m.id))).then(results=>{
+      if(results.some(r=>r?.wasJustFilled)){
+        loadAllMatchBadges();
+        loadMyInvitesPage();
+      }
+    });
   }catch(e){ container.innerHTML='<div style="color:#f87171;font-size:13px;">Error loading invites.</div>'; }
 }
 
@@ -8075,6 +8087,20 @@ async function handleMatchFullRace(matchId, myEmail, myName, btn){
   return 'unchanged';
 }
 
+// Calls the service-role roster-fill check (Bug 9 fix, CLAUDE-TESTING.md) — replaces
+// the old client-side checkAndUpdateMatchStatus(), which read match_responses under
+// the caller's own RLS-scoped session and silently undercounted non-organizer accepts.
+async function checkMatchStatusServer(matchId){
+  try{
+    const res = await fetch('/api/check-match-status',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN},
+      body:JSON.stringify({matchId})
+    });
+    return res.ok ? await res.json() : null;
+  }catch(e){ return null; }
+}
+
 async function respondToMatch(matchId, response){
   const myEmail = getMyEmail() || localStorage.getItem('pb_email');
   if(!myEmail){
@@ -8085,20 +8111,29 @@ async function respondToMatch(matchId, response){
   const btn = event?.target;
   if(btn){ btn.disabled=true; btn.textContent='Saving...'; }
   try{
-    // Check current match + confirmed count
-    const [matchRes, confirmedRes] = await Promise.all([
+    // Check current match (broadly readable, not RLS-scoped) + real roster-fill status
+    // via the service-role /api/check-match-status endpoint (Bug 9 fix) — run in
+    // parallel, same as the original, since checkMatchStatusServer() only needs matchId.
+    const [matchRes, csPre] = await Promise.all([
       fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}&select=match_type,status,max_players,match_date,time_start,time_end,court_name,court_address,organizer_name`,
         {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}),
-      fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.in&select=player_email`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
+      checkMatchStatusServer(matchId)
     ]);
     const matches = matchRes.ok ? await matchRes.json() : [];
-    const confirmed = confirmedRes.ok ? await confirmedRes.json() : [];
     const match = matches[0];
     if(!match){ showToast('Match not found','#f87171'); return 'error'; }
-    const needed = match.max_players || (match.match_type==='doubles' ? 4 : 2);
-    const spotsLeft = needed - confirmed.length;
-    const alreadyIn = confirmed.some(r=>r.player_email===myEmail);
+    // Fail CLOSED, not open: a failed status check must never be treated as "0
+    // players confirmed" — that would fabricate open spots the app hasn't actually
+    // verified exist, and let a player believe they're in on a match that's really full.
+    if(!csPre){
+      showToast("Couldn't check match status — please try again.",'#f87171');
+      if(btn){ btn.disabled=false; btn.textContent='Try again'; }
+      return 'error';
+    }
+    const needed = csPre.needed;
+    const confirmedCount = csPre.confirmedCount;
+    const spotsLeft = needed - confirmedCount;
+    const alreadyIn = csPre.callerIn;
     const myName = getMyName() || myEmail.split('@')[0];
     // Spots already full on this client-side read (before any write attempt) — same
     // "someone beat you to it" situation as the MATCH_FULL DB-trigger race, just caught
@@ -8188,7 +8223,13 @@ async function respondToMatch(matchId, response){
     if(banner) banner.remove();
     if(actualResponse==='in'){
       showToast("You're in! See you on the court!",'#4CAF7D');
-      setTimeout(()=>checkAndUpdateMatchStatus(matchId), 500);
+      setTimeout(async ()=>{
+        const cs = await checkMatchStatusServer(matchId);
+        if(cs?.wasJustFilled){
+          showToast('✅ Match is now full — moved to Confirmed Matches!','#4CAF7D');
+          loadAllMatchBadges();
+        }
+      }, 500);
       setTimeout(()=>{
         loadAllMatchBadges();
         // Also refresh the top blue badge
@@ -8209,8 +8250,8 @@ async function respondToMatch(matchId, response){
       } else {
         notifyOrganizerOfDecline(matchId, myEmail);
       }
-      const wasIn = confirmed.some(r=>r.player_email===myEmail);
-      const newInCount = wasIn ? confirmed.length - 1 : confirmed.length;
+      const wasIn = alreadyIn;
+      const newInCount = wasIn ? confirmedCount - 1 : confirmedCount;
       if(newInCount < needed) await promoteFromWaitlist(matchId, match);
     }
     // Refresh current page
@@ -8223,34 +8264,6 @@ async function respondToMatch(matchId, response){
     if(btn){ btn.disabled=false; btn.textContent='Try again'; }
     return 'error';
   }
-}
-
-async function checkAndUpdateMatchStatus(matchId){
-  // Check if match has enough confirmed players to be considered full
-  try{
-    const [matchRes, respRes] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}&select=match_type,status,max_players`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}),
-      fetch(`${SUPABASE_URL}/rest/v1/match_responses?match_id=eq.${matchId}&response=eq.in&select=player_email`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}})
-    ]);
-    const matches = matchRes.ok ? await matchRes.json() : [];
-    const confirmed = respRes.ok ? await respRes.json() : [];
-    if(!matches.length) return;
-    const match = matches[0];
-    const needed = match.max_players || (match.match_type==='doubles' ? 4 : 2);
-    if(confirmed.length >= needed && match.status !== 'full'){
-      // Mark match as full/confirmed
-      await fetch(`${SUPABASE_URL}/rest/v1/matches?id=eq.${matchId}`,{
-        method:'PATCH',
-        headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
-        body:JSON.stringify({status:'full'})
-      });
-      showToast('✅ Match is now full — moved to Confirmed Matches!','#4CAF7D');
-      // Refresh badges
-      loadAllMatchBadges();
-    }
-  }catch(e){}
 }
 
 async function notifyOrganizerOfDecline(matchId, declinerEmail){
