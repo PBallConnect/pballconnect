@@ -5,7 +5,7 @@ _Last updated: July 3, 2026_
 ---
 
 ## Related Documentation
-- [CLAUDE-RULES.md](CLAUDE-RULES.md) — all 57 numbered coding rules
+- [CLAUDE-RULES.md](CLAUDE-RULES.md) — all 71 numbered coding rules
 - [CLAUDE-SCHEMA.md](CLAUDE-SCHEMA.md) — full database schema, architecture patterns, feature behavior specs, UI patterns
 - [CLAUDE-SMS.md](CLAUDE-SMS.md) — SMS infrastructure and match invite SMS system architecture
 - [CLAUDE-FLOWS.md](CLAUDE-FLOWS.md) — all user flow definitions, regression checklist
@@ -40,6 +40,32 @@ Concretely, this means:
   file), then propose the fix — don't stop at verification.
 - This standard applies equally to Claude (chat) and Claude Code across
   every session — it is not specific to any one conversation.
+
+---
+
+## Design System Reference
+
+The app's established visual language (confirmed Aug 2 2026 while
+fixing overlay contrast bugs — see CLAUDE-TESTING.md Bug 3):
+
+- Card background: #ffffff, border: 1px solid #e5e7eb, radius: 20px,
+  shadow: 0 8px 24px rgba(0,0,0,0.08)
+- Heading text: #1f2937, bold (700-800 weight)
+- Primary body text: #374151, semi-bold (600 weight) — not the app's
+  --dim (#6b7280), which is reserved for tertiary/label text
+  (uppercase labels, timestamps) on light surfaces, not primary
+  reading text
+- Secondary/note text: #4b5563, medium weight (500) — still clearly
+  readable, not decorative gray
+- Accent/action color: #1a7a3a (var(--green))
+- Buttons: primary action filled green with white text; secondary
+  action outlined with #e5e7eb border, #6b7280 text
+- Abbreviations spelled out on first use per screen (e.g. "Inner
+  Circle (IC)")
+
+This reference exists so "stay consistent with the app's look" has a
+concrete definition, not just a general impression — any new UI work
+should be checked against these actual values.
 
 ---
 
