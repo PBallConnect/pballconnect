@@ -356,6 +356,60 @@ SELECT policy -- preserves participant privacy (an invitee shouldn't
 necessarily see who else is in/pending before accepting, which was an
 intentional design consideration, not an oversight).
 
+FINALIZED FIX DESIGN (Aug 4 2026, all decisions resolved):
+
+One new Cloudflare Function, /api/check-match-status (POST, JSON body
+{matchId}, Authorization: Bearer header), following match-view-token.js's
+exact Path-A pattern: confirm the match exists via service role,
+verifyCaller() for real caller identity, authorize as organizer OR
+existing match_responses row (same check as match-view-token.js),
+then run the roster-count/status-flip logic under service-role headers
+(bypasses RLS, sees every response row regardless of caller).
+
+Reused in THREE places, not just the one that surfaced the bug:
+1. respondToMatch()'s pre-check (currently the undercounted read at
+   app.js:8089-8093) -- fixes the pre-check AND the decline-branch/
+   waitlist-promotion under-trigger for free, since both currently
+   reuse that same undercounted variable downstream.
+2. respondToMatch()'s post-accept check (replaces the
+   checkAndUpdateMatchStatus() call at app.js:8191) -- the original
+   bug's main fix.
+3. loadMyInvitesPage() (organizer's pending-matches view) -- a new
+   background reconciliation call per pending match. Since the
+   organizer's own session CAN see the full roster correctly (no RLS
+   blind spot for them), this makes the fix self-healing: if a match
+   is secretly already full due to any future/edge-case failure, it
+   corrects itself the next time the organizer views their match list,
+   with no bug report needed.
+
+checkAndUpdateMatchStatus() (the old client-side function) will be
+REMOVED entirely once all call sites are migrated -- its job is fully
+absorbed into the new shared endpoint, not left as dead code.
+
+Decisions made:
+- New endpoint logs failures server-side (console.error, visible in
+  Cloudflare Function logs) rather than failing completely silently
+  like the original -- deliberate deviation from the original's silent
+  catch(e){}, so a future failure leaves a trace instead of being
+  invisible again.
+- respondToMatch()'s pre-check and the decline-branch/waitlist-
+  promotion under-count are explicitly IN SCOPE for this fix pass, not
+  deferred -- see item 1 above.
+
+Known follow-up, NOT part of this fix: Tyler/David's specific existing
+test match (match_id f6574a23-b777-4ba2-bd0a-7372b51dd9f5) is stuck in
+its broken state in the database -- the fix only prevents this going
+forward, it doesn't retroactively correct already-affected matches.
+Needs a manual one-off correction (or triggering the new endpoint
+against that specific match_id) once the fix is live, plus a direct
+follow-up with Tyler once it's actually confirmed working.
+
+STATUS: design fully finalized, NOT YET IMPLEMENTED. Next session
+should implement: (1) the new Function, (2) the three app.js call-site
+changes, (3) removal of the old checkAndUpdateMatchStatus() function,
+(4) the one-off correction for Tyler/David's stuck match, (5) live
+verification with a real second match.
+
 ## Full Profile flow (confirmed working / reference sequence)
 
 Verified coherent by trace, Aug 2 2026 — this is the "good" path,
