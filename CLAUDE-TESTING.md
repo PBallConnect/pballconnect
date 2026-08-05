@@ -285,6 +285,20 @@ to refreshCurrentPage()'s loaders map that actually re-fetches dashboard
 the relevant IC counts (or just re-call loadInnerCircle()) after its
 PATCH/POST succeeds, instead of relying on a full reload.
 
+Scope confirmed to cover BOTH directions of staleness, not just the
+"my own action didn't refresh my counts" case above — live-tested and
+traced Aug 5 2026 via a real IC accept between two test accounts
+(Ripply and David). After David accepted Ripply's reciprocal IC request
+on David's own Inner Circle page, David's own dashboard/IC page updated
+immediately and correctly, but Ripply's dashboard still showed "My IC: 0"
+until she did a full reload. Root cause confirmed identical: dashIcMemberCount
+is only ever written by updateNavCircleBadges(), which is only called from
+inside loadInnerCircle()'s own flow — populated once at login (600ms after
+restoreSession()) or on manual navigation to the Inner Circle page, never
+on a timer/poll/push. Since Ripply's session has no live-update mechanism
+at all, this is true regardless of whose action changed the underlying
+connections data — her own or someone else's.
+
 ### Bug 8 — "Go to Dashboard" button races against the pending invite-accept overlay
 
 doSaveProfile()'s setTimeout(...,2500) (app.js:1294-1301) is fired-and-
@@ -407,11 +421,42 @@ Needs a manual one-off correction (or triggering the new endpoint
 against that specific match_id) once the fix is live, plus a direct
 follow-up with Tyler once it's actually confirmed working.
 
-STATUS: design fully finalized, NOT YET IMPLEMENTED. Next session
-should implement: (1) the new Function, (2) the three app.js call-site
-changes, (3) removal of the old checkAndUpdateMatchStatus() function,
-(4) the one-off correction for Tyler/David's stuck match, (5) live
-verification with a real second match.
+STATUS: items 1-3 SHIPPED (commit 58c7c40, Aug 4 2026) — (1) the new
+/api/check-match-status Function, (2) the three app.js call-site
+changes (respondToMatch()'s pre-check and post-accept check,
+loadMyInvitesPage()'s background reconciliation), (3) removal of the
+old checkAndUpdateMatchStatus() function. Still open: (4) the one-off
+correction for Tyler/David's stuck match (match_id
+f6574a23-b777-4ba2-bd0a-7372b51dd9f5), (5) live verification with a
+real second match.
+
+### Bug 10 — Lingering ?invite=TOKEN / ?newuser=1 in URL bar after registration completes (cosmetic)
+
+New registrants retain the original magic-link query string
+(?invite=TOKEN&newuser=1) in the URL bar indefinitely after completing
+registration and landing on their dashboard. Confirmed inert — traced
+Aug 5 2026 during the Bug 7 investigation above, doesn't affect any
+dashboard/IC data-fetch logic. checkInviteToken() and checkMatchToken()
+(app.js:11892, 7895) are the only functions that read these params,
+both wired to one-shot document.addEventListener('DOMContentLoaded')
+setTimeouts (app.js:12861-12864, 8961-8964) — they never re-run on SPA
+navigation, and their only side effects are gated behind
+if(!SESSION_PLAYER?.id).
+
+Root cause: restoreSession()'s existing URL-cleanup code
+(app.js:9285-9292, history.replaceState(null,'',window.location.pathname))
+only runs inside its if(player) branch — i.e. only for an EXISTING
+registration row. A brand-new registrant hits the !player branch
+instead, which calls startNewRegistration(email) and never strips the
+URL.
+
+Same class of issue as Known Bug #21 (CLAUDE.md) — a lingering
+auth-flow artifact left in the URL bar, not a functional bug.
+
+Status: not fixed, not scheduled, low priority. Likely fix: add the
+same history.replaceState(null,'',window.location.pathname) call
+somewhere in the post-registration completion path (e.g. end of
+startNewRegistration() or handlePostRegistrationInvite()).
 
 ## Full Profile flow (confirmed working / reference sequence)
 
