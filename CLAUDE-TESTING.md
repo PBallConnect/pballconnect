@@ -123,6 +123,9 @@ UNION ALL SELECT 'registrations', count(*) FROM registrations WHERE email = ANY(
   decelectron@gmail.com, sweetpeaven@gmail.com, lindsybbmm@yahoo.com
   wiped and verified (0 rows, all 19 tables) — confirmed by user as
   test-only accounts, no real match activity.
+- Aug 5 2026: david@prosperci.com, rippleofhope777@gmail.com,
+  david@dealdonebb.com — re-registered after the Aug 2 wipe (for further
+  testing), wiped again and verified (0 rows, all 19 tables).
 
 ## Registration flow — bugs found (Aug 2 2026 testing session)
 
