@@ -516,6 +516,16 @@ waitlist, not a fabricated "you're in." This is purely a misleading-
 display bug — the card can show stale numbers, but the write path is
 already correct.
 
+Reproduced independently Aug 5/6 2026 with a different organizer/invitee
+pair, confirming this is a consistent, reproducible pattern, not a
+one-off. Deally (david@dealdonebb.com) created a new singles match and
+invited dippa777@gmail.com. Deally's own "My Match Invites" organizer
+view correctly shows 1 IN / 1 PENDING / 1 NEEDED (David DiPerri
+pending). But dippa777's "Pending Matches" invitee view of the SAME
+match shows 0 IN / 1 PENDING / 2 NEEDED — the organizer's own 'in' row
+is invisible to the invitee's RLS-scoped session, same mechanism as the
+original finding above.
+
 Status: not fixed, not scheduled. Fix: migrate
 loadInvitedByOthersPage()'s roster count to the same
 /api/check-match-status endpoint, same pattern as the other three call
