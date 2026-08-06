@@ -421,15 +421,15 @@ Needs a manual one-off correction (or triggering the new endpoint
 against that specific match_id) once the fix is live, plus a direct
 follow-up with Tyler once it's actually confirmed working.
 
-STATUS: items 1-3 SHIPPED (commit 58c7c40, Aug 4 2026) — (1) the new
-/api/check-match-status Function, (2) the three app.js call-site
-changes (respondToMatch()'s pre-check and post-accept check,
-loadMyInvitesPage()'s background reconciliation), (3) removal of the
-old checkAndUpdateMatchStatus() function. (5) live verification with a
-real second match — FULLY VERIFIED, both branches, see note below.
-Still open: (4) the one-off correction for Tyler/David's stuck match
-(match_id f6574a23-b777-4ba2-bd0a-7372b51dd9f5) — a data correction,
-not a code fix, unaffected by the verification below.
+STATUS: ALL FIVE ITEMS RESOLVED. (1-3) SHIPPED (commit 58c7c40, Aug 4
+2026) — the new /api/check-match-status Function, the three app.js
+call-site changes (respondToMatch()'s pre-check and post-accept check,
+loadMyInvitesPage()'s background reconciliation), and removal of the
+old checkAndUpdateMatchStatus() function. (4) the one-off correction
+for Tyler/David's stuck match (match_id
+f6574a23-b777-4ba2-bd0a-7372b51dd9f5) — CLOSED, MOOT, not done (see
+note below, no data fix applied). (5) live verification with a real
+second match — FULLY VERIFIED, both branches, see note below.
 
 Live verification (5) — FULLY VERIFIED, Aug 5/6 2026. Both branches of
 the fix now exercised live:
@@ -458,8 +458,21 @@ Bug 13 below. It does not affect this verification: the underlying
 write and status flip are confirmed correct at the database level,
 independent of what any client page displays afterward.
 
-Item (4) (the Tyler/David stuck-match one-off correction) is the only
-remaining open piece for Bug 9.
+Item (4) — the Tyler/David stuck-match one-off correction — CLOSED,
+MOOT, Aug 5/6 2026. Confirmed via direct query: match
+f6574a23-b777-4ba2-bd0a-7372b51dd9f5 has match_date=2026-08-04 (now in
+the past) and status='open' despite both match_responses rows (David
+DiPerri, Tyler Brenneman) showing response='in' — the original Bug 9
+symptom, preserved unchanged in this one record. Since the match date
+has passed, it is filtered out of every active match view
+(Confirmed/Pending/Waitlist all exclude past matches) regardless of
+its status value — no one will ever see this record in normal use, so
+a status correction has no functional benefit. Closed without a data
+fix.
+
+All five items of Bug 9's checklist are now resolved: (1-3) shipped
+and verified live, (4) moot/closed, (5) fully verified. No further
+action needed on Bug 9.
 
 ### Bug 10 — Lingering ?invite=TOKEN / ?newuser=1 in URL bar after registration completes (cosmetic)
 
