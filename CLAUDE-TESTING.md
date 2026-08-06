@@ -458,6 +458,47 @@ same history.replaceState(null,'',window.location.pathname) call
 somewhere in the post-registration completion path (e.g. end of
 startNewRegistration() or handlePostRegistrationInvite()).
 
+### Bug 11 — loadInvitedByOthersPage()'s IN/PENDING/WAITLIST/OUT/NEEDED card undercounts (same RLS cause as Bug 9, unmigrated call site)
+
+loadInvitedByOthersPage() (app.js:6141, the "Pending Matches" page /
+page-invitedByOthers) fetches roster counts for its IN/PENDING/WAITLIST/
+OUT/NEEDED pills via a direct client-side match_responses query
+(app.js:6205-6207), under the viewing invitee's own RLS-scoped session
+token — the exact same "Users can read relevant match responses" policy
+(auth.email() = player_email OR caller organizes the match) that caused
+Bug 9. A not-yet-responded invitee's own row is the only one that
+policy lets them see, so the card's IN/remaining counts are undercounted
+for every match on the page whenever other participants have already
+accepted.
+
+Confirmed live Aug 5/6 2026: a real match (organizer David DiPerri,
+singles, needs 2) already showed 2/2 CONFIRMED on the organizer's
+dashboard (David + a second account "zorro"), but the invited,
+not-yet-responded participant (rippleofhope777@gmail.com) still saw
+"0 IN / 1 PENDING / 2 NEEDED" on this exact card.
+
+This is the fourth call site reading match_responses under a
+non-organizer's RLS-scoped session for a roster-fill purpose — Bug 9's
+migration (commit 58c7c40) only covered three: respondToMatch()'s
+pre-check, respondToMatch()'s post-accept check, and
+loadMyInvitesPage()'s background reconciliation.
+loadInvitedByOthersPage() was not one of them.
+
+Confirmed NOT a safety issue — traced precisely, not inferred.
+respondToMatch() (app.js:8104) never reuses this card's stale numbers;
+it independently re-checks via checkMatchStatusServer() (the same
+service-role /api/check-match-status endpoint Bug 9 introduced) at the
+moment Accept is tapped. With a real confirmedCount/needed of 2/2, that
+check correctly routes the tap through handleMatchFullRace() to the
+waitlist, not a fabricated "you're in." This is purely a misleading-
+display bug — the card can show stale numbers, but the write path is
+already correct.
+
+Status: not fixed, not scheduled. Fix: migrate
+loadInvitedByOthersPage()'s roster count to the same
+/api/check-match-status endpoint, same pattern as the other three call
+sites.
+
 ## Full Profile flow (confirmed working / reference sequence)
 
 Verified coherent by trace, Aug 2 2026 — this is the "good" path,
