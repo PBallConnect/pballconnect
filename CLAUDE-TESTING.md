@@ -425,14 +425,14 @@ STATUS: items 1-3 SHIPPED (commit 58c7c40, Aug 4 2026) — (1) the new
 /api/check-match-status Function, (2) the three app.js call-site
 changes (respondToMatch()'s pre-check and post-accept check,
 loadMyInvitesPage()'s background reconciliation), (3) removal of the
-old checkAndUpdateMatchStatus() function. Still open: (4) the one-off
-correction for Tyler/David's stuck match (match_id
-f6574a23-b777-4ba2-bd0a-7372b51dd9f5). (5) live verification with a
-real second match — PARTIALLY confirmed, see note below (one of two
-branches verified).
+old checkAndUpdateMatchStatus() function. (5) live verification with a
+real second match — FULLY VERIFIED, both branches, see note below.
+Still open: (4) the one-off correction for Tyler/David's stuck match
+(match_id f6574a23-b777-4ba2-bd0a-7372b51dd9f5) — a data correction,
+not a code fix, unaffected by the verification below.
 
-Live verification (5) — PARTIALLY CONFIRMED, Aug 5/6 2026. Two distinct
-branches of the fix, only one exercised so far:
+Live verification (5) — FULLY VERIFIED, Aug 5/6 2026. Both branches of
+the fix now exercised live:
 - Waitlist-routing branch — VERIFIED LIVE: Ripply
   (rippleofhope777@gmail.com) tapped Accept on David's already-full
   (2/2) singles match. Despite the invitee-facing card still showing
@@ -443,14 +443,23 @@ branches of the fix, only one exercised so far:
 - Fill-to-Confirmed branch (the original Bug 9 symptom — a match
   filling to capacity via the in-app Accept button and flipping
   matches.status from 'open' to 'full', the wasJustFilled path in
-  checkMatchStatusServer()) — NOT YET verified live. Still needs its
-  own test: a match that is NOT already full, where the in-app Accept
-  tap is the one that brings it to capacity, confirming status actually
-  flips and the match moves to Confirmed Matches on both sides.
+  checkMatchStatusServer()) — VERIFIED LIVE: dippa777@gmail.com tapped
+  Accept on Deally's (david@dealdonebb.com) new Owl's Nest Resort
+  singles match, the last open spot. Confirmed directly via a live
+  Supabase query (not inferred): matches.status = 'full' for the match
+  (id 74e9d7bd-6c4a-4a68-8a16-f97098329d39), and both match_responses
+  rows are 'in' — Deally as organizer, dippa777 with a real
+  responded_at timestamp from his Accept tap. The in-app Accept button
+  genuinely flips status and fills the roster, closing the original
+  Bug 9 symptom for good.
 
-Item (4) (the Tyler/David stuck-match one-off correction) and the
-fill-to-Confirmed branch above are the remaining open pieces before
-Bug 9 can be marked fully verified.
+A separate display bug was found while verifying this branch — see
+Bug 13 below. It does not affect this verification: the underlying
+write and status flip are confirmed correct at the database level,
+independent of what any client page displays afterward.
+
+Item (4) (the Tyler/David stuck-match one-off correction) is the only
+remaining open piece for Bug 9.
 
 ### Bug 10 — Lingering ?invite=TOKEN / ?newuser=1 in URL bar after registration completes (cosmetic)
 
@@ -568,6 +577,60 @@ handleMatchFullRace() is missing — either have it also trigger
 loadInvitedByOthersPage() on the invitedByOthers page (mirroring
 respondToMatch()'s existing pattern at 8257-8259), or move that
 refresh logic so it runs regardless of which return path was taken.
+
+### Bug 13 — loadConfirmedMatches()'s roster re-verification undercounts for non-organizer participants, can drop a genuinely-full match from their own Confirmed Matches page
+
+Found while live-verifying Bug 9's fill-to-Confirmed branch (see Bug 9
+STATUS above). A fifth RLS-undercount call site — same root mechanism
+as Bug 9/Bug 11, distinct from Bug 12's stale-closure pattern.
+
+loadConfirmedMatches() (app.js:4820) correctly unions organizer matches
+AND matches where the viewer has a match_responses row with
+response='in' (app.js:4827-4842) — it is NOT organizer-only in scope.
+But it then re-verifies each match's roster with a second query, under
+the viewer's own RLS-scoped session token:
+
+  app.js:4853-4864 — fetches match_responses for all candidate match
+  ids (response in ('in','waitlist')), then filters allMatches down to
+  only those where `confirmed >= needed`, where confirmed is computed
+  from that same RLS-scoped read.
+
+The live match_responses SELECT policy ("Users can read relevant match
+responses") only lets a caller see their OWN row for a match they
+didn't organize. So for any match where the viewer is a participant
+(not organizer), this re-verification read undercounts exactly like
+Bug 9/Bug 11 — the viewer's own row is all they see, so `confirmed`
+comes back as 1 even when the real count is 2. `confirmed >= needed`
+then evaluates false, and the filter on app.js:4860 silently drops a
+genuinely status='full' match from allMatches — it never renders on
+the page at all, for the participant side only (the organizer's own
+view of the same match is unaffected, since their RLS-scoped read of
+a match they organize sees the full roster correctly).
+
+Confirmed live Aug 5/6 2026: dippa777@gmail.com, a confirmed
+participant (not organizer) on Deally's Owl's Nest match, does not see
+that match on his own Confirmed Matches page at all, despite
+matches.status='full' and both match_responses rows being 'in' —
+verified directly via a live Supabase query (see Bug 9 STATUS above),
+not inferred.
+
+Also explains a related symptom: the confirmedMatchesBadge briefly
+showed the correct count then reverted to a lower one. Two different
+functions write this badge independently — loadAllMatchBadges()
+(app.js:5675-5698) computes confirmedCount by trusting
+matches.status='full' directly, with no roster re-verification step,
+so it is not affected by this undercount. loadConfirmedMatches() then
+overwrites the badge (app.js:4865, updateConfirmedBadge(allMatches.length))
+with the undercount-filtered value once it runs — whichever of the two
+resolves last wins, producing the observed flash from a correct count
+down to a wrong one.
+
+Status: not fixed, not scheduled. Fix: migrate the roster
+re-verification step (app.js:4853-4864) to the same
+/api/check-match-status service-role endpoint the Bug 9 fix
+introduced, same pattern as the other call sites (or, since this loop
+already has all candidate match ids in hand, a batched service-role
+equivalent) rather than a client-side RLS-scoped match_responses read.
 
 ## Full Profile flow (confirmed working / reference sequence)
 
