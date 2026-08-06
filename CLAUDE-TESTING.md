@@ -427,8 +427,30 @@ changes (respondToMatch()'s pre-check and post-accept check,
 loadMyInvitesPage()'s background reconciliation), (3) removal of the
 old checkAndUpdateMatchStatus() function. Still open: (4) the one-off
 correction for Tyler/David's stuck match (match_id
-f6574a23-b777-4ba2-bd0a-7372b51dd9f5), (5) live verification with a
-real second match.
+f6574a23-b777-4ba2-bd0a-7372b51dd9f5). (5) live verification with a
+real second match — PARTIALLY confirmed, see note below (one of two
+branches verified).
+
+Live verification (5) — PARTIALLY CONFIRMED, Aug 5/6 2026. Two distinct
+branches of the fix, only one exercised so far:
+- Waitlist-routing branch — VERIFIED LIVE: Ripply
+  (rippleofhope777@gmail.com) tapped Accept on David's already-full
+  (2/2) singles match. Despite the invitee-facing card still showing
+  stale "0 IN / 2 NEEDED" (Bug 11, known/logged, unrelated call site),
+  the actual write correctly triggered handleMatchFullRace() -> "Spot
+  Already Taken — Join Waitlist / No thanks." No false "you're in" was
+  shown on a full match, even with the surrounding display stale.
+- Fill-to-Confirmed branch (the original Bug 9 symptom — a match
+  filling to capacity via the in-app Accept button and flipping
+  matches.status from 'open' to 'full', the wasJustFilled path in
+  checkMatchStatusServer()) — NOT YET verified live. Still needs its
+  own test: a match that is NOT already full, where the in-app Accept
+  tap is the one that brings it to capacity, confirming status actually
+  flips and the match moves to Confirmed Matches on both sides.
+
+Item (4) (the Tyler/David stuck-match one-off correction) and the
+fill-to-Confirmed branch above are the remaining open pieces before
+Bug 9 can be marked fully verified.
 
 ### Bug 10 — Lingering ?invite=TOKEN / ?newuser=1 in URL bar after registration completes (cosmetic)
 
@@ -498,6 +520,44 @@ Status: not fixed, not scheduled. Fix: migrate
 loadInvitedByOthersPage()'s roster count to the same
 /api/check-match-status endpoint, same pattern as the other three call
 sites.
+
+### Bug 12 — loadInvitedByOthersPage()'s card never re-renders after a response via the full-match/waitlist race path
+
+Distinct from Bug 11 though the two compound on the same screen.
+loadInvitedByOthersPage()'s card never re-renders or re-fetches after a
+response is submitted via the full-match/waitlist race path
+(handleMatchFullRace()). Root cause, traced precisely Aug 5/6 2026:
+
+1. The pending/in/waitlist/out pill counts and roster-name lists are
+   computed once at initial card render (app.js:6259-6265) from the
+   allInResps fetch captured in a closure — never re-fetched on
+   expand/collapse or after any response.
+2. respondToMatch()'s only refresh trigger (app.js:8257-8259,
+   loadInvitedByOthersPage() re-call) sits at the tail of the
+   function's NORMAL path — but handleMatchFullRace()
+   (app.js:8037-8087) returns directly from its own early-exit branch
+   (line 8143), bypassing that refresh entirely.
+3. The "You're on the waitlist" success banner is NOT data-driven —
+   it's a hardcoded string swapped into the button row based purely on
+   respondToMatch()'s return value (app.js:6542-6574). This is why the
+   banner is correct (driven by the write's known outcome) while the
+   pills/roster above it are stale (never re-fetched at all).
+
+Confirmed via a separate live check: "My Waitlist" page independently
+shows the correct state (Waitlist position #1, etc.) — proving the
+underlying match_responses write is correct. This is purely a missed
+re-render on one specific card, not a data problem.
+
+Note: fixing this refresh gap does NOT fix Bug 11 — even with a fresh
+re-fetch, the pill counts would still undercount other players'
+responses due to the RLS scoping Bug 11 already documents. Both bugs
+need fixing for this card to be fully correct.
+
+Status: not fixed, not scheduled. Fix: add the same refresh call
+handleMatchFullRace() is missing — either have it also trigger
+loadInvitedByOthersPage() on the invitedByOthers page (mirroring
+respondToMatch()'s existing pattern at 8257-8259), or move that
+refresh logic so it runs regardless of which return path was taken.
 
 ## Full Profile flow (confirmed working / reference sequence)
 
