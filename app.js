@@ -1295,6 +1295,7 @@ async function doSaveProfile(){
       if(_confirmTransitionDone) return;
       _confirmTransitionDone = true;
       clearTimeout(window._confirmTransitionTimer);
+      clearInterval(window._confirmCountdownInterval);
       document.getElementById('confirmOverlay').style.display='none';
       if(PENDING_INVITE){
         handlePostRegistrationInvite(newEmail, newName);
@@ -1303,9 +1304,34 @@ async function doSaveProfile(){
       }
     };
     showFoundingMemberOverlay(()=>{
-      window._confirmTransitionTimer = setTimeout(window._completeRegistrationTransition, 2500);
+      // Guarantee confirmOverlay has actually painted before the countdown starts —
+      // a same-tick dismiss (pb_founding_seen already set) would otherwise start
+      // the clock before the browser ever painted the card. Double rAF waits for
+      // the next real paint regardless of which path (skip or dismiss) got here.
+      requestAnimationFrame(()=>{
+        requestAnimationFrame(startConfirmCountdown);
+      });
     });
   }
+}
+
+function startConfirmCountdown(){
+  const CONFIRM_SECONDS = 7;
+  let secondsLeft = CONFIRM_SECONDS;
+  const noteEl = document.getElementById('confirmNote');
+  const btnEl  = document.getElementById('confirmDashboardBtn');
+  if(btnEl) btnEl.classList.remove('confirm-btn-pulse');
+  if(noteEl) noteEl.textContent = 'Taking you to your dashboard in '+secondsLeft+'…';
+  window._confirmCountdownInterval = setInterval(()=>{
+    secondsLeft--;
+    if(secondsLeft <= 3 && btnEl) btnEl.classList.add('confirm-btn-pulse');
+    if(secondsLeft > 0){
+      if(noteEl) noteEl.textContent = 'Taking you to your dashboard in '+secondsLeft+'…';
+    } else {
+      clearInterval(window._confirmCountdownInterval);
+    }
+  }, 1000);
+  window._confirmTransitionTimer = setTimeout(window._completeRegistrationTransition, CONFIRM_SECONDS*1000);
 }
 
 function resetForm(){
