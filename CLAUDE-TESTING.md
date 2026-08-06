@@ -337,15 +337,21 @@ active. Net effect: the user taps through to Dashboard, starts looking
 at real content, and ~2.5s later an unexplained invite-accept prompt
 appears on top of it with no visible cause.
 
-Status: not fixed, not scheduled. Same root class as Bug 1 (an overlay
-appearing on a page the user already navigated away from) but a
-distinct cause -- an uncancelled timer racing a manual escape hatch,
-not an automatic stacking order. Fix scope: capture the setTimeout's ID
-and clearTimeout() it if the user taps "Go to Dashboard" early
-(preferred -- lets the user skip the wait AND still get the invite
-prompt immediately instead of losing it or having it ambush them later),
-or alternatively disable/hide the button during the wait so it can't be
-tapped until the timer's own logic has run.
+Status: FIXED — commit ba02602 (Aug 3 2026, predates this file's Aug
+5/6 session entries — this status line was simply never updated when
+the fix shipped until caught during an Aug 6 bug_tracker cross-check).
+Same root class as Bug 1 (an overlay appearing on a page the user
+already navigated away from) but a distinct cause -- an uncancelled
+timer racing a manual escape hatch, not an automatic stacking order.
+Fixed via the preferred option scoped above: doSaveProfile()'s timer
+ID and the button's onclick were unified into one idempotent function,
+window._completeRegistrationTransition() (still in place, see Bug 5),
+guarded against double-firing and clearTimeout()'d on whichever path
+(timer or button) wins first. Tapping "Go to Dashboard" early now
+fast-forwards the same logic — shows the invite prompt immediately if
+one is pending — instead of orphaning the timer to ambush the user
+later. The Bug 5 redesign (commit aae6847, this session) built directly
+on top of this fix and did not reopen it — see Bug 5's CORRECTION note.
 
 ### Bug 9 — HIGH PRIORITY — in-app match confirmation structurally broken by RLS read-scoping
 
