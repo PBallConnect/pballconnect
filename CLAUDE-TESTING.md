@@ -223,18 +223,32 @@ registration) — on repeat test registrations on the same phone, the
 founding modal never appears at all, and the 2.5s bare-confirmOverlay
 state begins immediately after tapping "Complete Registration."
 
-Status: not fixed, not scheduled. Fix scope: remove or significantly
-shorten the delay; if it's meant to give the user a moment to read
-"You're In!", consider keeping content on screen instead of blank
-waiting, or removing the pause entirely and transitioning immediately.
+Status: FIXED — commit aae6847. Redesigned rather than just shortened:
+- Timer extended 2500ms -> 7000ms (a real, readable beat rather than a
+  bare pause).
+- Countdown start decoupled from showFoundingMemberOverlay()'s dismiss
+  callback timing — now gated behind a double requestAnimationFrame so
+  it only begins once confirmOverlay has actually painted, closing the
+  same-tick-skip gap described above (pb_founding_seen already set ->
+  onDismiss() firing synchronously with no guaranteed paint first).
+- New startConfirmCountdown() (app.js:1318-1335): confirmNote now
+  ticks "Taking you to your dashboard in 7…" down to "…in 1…" once
+  per second, so the wait is visibly counting down instead of static.
+- At 3 seconds remaining, the "Go to Dashboard" button (only the
+  button, not the rest of the card) gets a green ring-pulse
+  (.confirm-btn-pulse, styles.css) signaling auto-advance is imminent.
 
 CORRECTION (found while building a visual mockup of #confirmOverlay):
 this card includes a live, visible "Go to Dashboard ->" button
-(app.html:2308-2309) throughout the 2.5s wait — the original write-up
-above was wrong to describe this window as buttonless. Tapping that
-button during the wait creates a separate race condition — see Bug 8.
-This means Full Profile's sequencing is only clean if the user waits
-passively; a real, app-provided interaction path breaks it.
+(app.html:2308-2309) throughout the wait — the original write-up above
+was wrong to describe this window as buttonless. Tapping that button
+during the wait creates a separate race condition — see Bug 8. This
+was true of the original 2.5s design; SUPERSEDED by the aae6847 fix
+above — window._completeRegistrationTransition() (ba02602's idempotent,
+clearTimeout-guarded single entry point) is unchanged in shape and
+still the only way either the button or the timer can complete the
+transition, now also clearing the new countdown interval on whichever
+path wins first. No open race between the button and the timer.
 
 ### Bug 6 — Dashboard can render scrolled/cut off after registration or reload
 
