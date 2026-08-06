@@ -9,6 +9,7 @@ _Last updated: July 3, 2026_
 - [CLAUDE-SCHEMA.md](CLAUDE-SCHEMA.md) — full database schema, architecture patterns, feature behavior specs, UI patterns
 - [CLAUDE-SMS.md](CLAUDE-SMS.md) — SMS infrastructure and match invite SMS system architecture
 - [CLAUDE-FLOWS.md](CLAUDE-FLOWS.md) — all user flow definitions, regression checklist
+- [CLAUDE-TESTING.md](CLAUDE-TESTING.md) — testing session logs, the numbered Bug N technical record (root cause, code traces, live-verification notes), and reusable utilities (player wipe script). The `bug_tracker` Supabase table (see CLAUDE-SCHEMA.md) mirrors this file's bug statuses as a quick-glance view — CLAUDE-TESTING.md remains the authoritative detailed record; keep both in sync on every status change.
 - [CLAUDE-ARCHIVE.md](CLAUDE-ARCHIVE.md) — resolved session learnings from May–June 2026, archived for historical reference
 
 ---
