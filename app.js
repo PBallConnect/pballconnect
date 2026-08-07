@@ -12704,19 +12704,29 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
 
   console.log('[HPRI] start | newPlayerEmail:', newPlayerEmail, '| invite_type:', inv.invite_type, '| invite_token:', inv.invite_token, '| inv.inviter_email:', inv.inviter_email);
 
-  // invite_tokens VIEW doesn't expose inviter_email — look it up from invites table directly
+  // invite_tokens VIEW doesn't expose inviter_email, and a direct client-side read of
+  // the invites table is RLS-blocked here — a link invite never stores invitee_email
+  // (no known recipient at creation time), so the caller can't match either side of
+  // the "Authenticated users can read invites" policy yet. Resolve via the service-role
+  // /api/resolve-invite endpoint instead, which bypasses RLS at the endpoint level
+  // without loosening any policy on the table itself.
   let inviterEmail = inv.inviter_email || null;
   if(!inviterEmail && inv.invite_token){
     try{
-      const r = await fetch(
-        `${SUPABASE_URL}/rest/v1/invites?invite_token=eq.${encodeURIComponent(inv.invite_token)}&select=inviter_email`,
-        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}}
-      );
-      const rows = r.ok ? await r.json() : [];
-      console.log('[HPRI] invites lookup → status:', r.status, '| rows:', JSON.stringify(rows));
-      if(rows.length) inviterEmail = rows[0].inviter_email;
+      const r = await fetch('/api/resolve-invite',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN},
+        body:JSON.stringify({inviteToken: inv.invite_token})
+      });
+      if(r.ok){
+        const data = await r.json();
+        console.log('[HPRI] resolve-invite → status:', r.status, '| data:', JSON.stringify(data));
+        inviterEmail = data.inviter_email || null;
+      } else {
+        console.warn('[HPRI] resolve-invite found no matching invite (status '+r.status+') — invite_token likely invalid/expired, not the RLS-lookup bug');
+      }
     }catch(e){
-      console.error('[HPRI] invites lookup exception:', e);
+      console.error('[HPRI] resolve-invite exception:', e);
     }
   }
   console.log('[HPRI] inviterEmail resolved to:', inviterEmail);
