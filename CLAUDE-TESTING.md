@@ -775,6 +775,34 @@ properly-encoded values throughout — unaffected by either bug in this
 entry. DEC-2 accepting from that page will correctly resolve the
 stuck row.
 
+Post-fix verification (Aug 7 2026 session, after debug logging was
+added to functions/api/approve-connection.js): two clean, independently
+confirmed successes since the fix deployed —
+
+- DEC-7 (decelectron+overlay7@gmail.com): connections row
+  ba4d1726-0f6f-46dd-af92-56ef6a65904b confirmed status='approved' via
+  direct SQL query. Cross-verified from David's side too: "My IC"
+  count correctly incremented 17→18 at the moment of approval, and the
+  reciprocal invite correctly appeared under David's "Inner Circle
+  Invites to Me" pending list until he accepted it.
+- DEC-5 (decelectron+overlay5@gmail.com): confirmed mutual/approved on
+  both sides via each account's own Inner Circle page (David's IC list
+  showing "DEC-5 Message"; DEC-5's IC list showing "David DiPerri").
+
+One earlier failure (DEC-4, decelectron+overlay4@gmail.com,
+connections row 0c33dc7d) occurred BEFORE the debug logging was
+deployed, so no runtime evidence was captured for it. Root cause
+remains unknown/unreproduced. The stuck row was manually resolved via
+the icRespond() workaround (Inner Circle → Pending Requests → Accept),
+same as Bug 15's original DEC-2 case — not by any code change.
+
+Given two consecutive clean successes with database-level confirmation
+after the debug logging shipped, /api/approve-connection is considered
+working. The DEC-4 incident is logged here for reference but not
+treated as an open, reproducing bug. TEMP-DEBUG logging in
+approve-connection.js should be left in place for now (low cost, and
+useful if this ever recurs) rather than stripped immediately.
+
 ## Full Profile flow (confirmed working / reference sequence)
 
 Verified coherent by trace, Aug 2 2026 — this is the "good" path,
