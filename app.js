@@ -12410,11 +12410,11 @@ async function showFoundingMemberOverlay(onDismiss){
   overlay.id = 'foundingMemberOverlay';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px;';
   overlay.innerHTML =
-    '<div style="background:#0f1f12;border:1px solid rgba(245,158,11,0.4);border-radius:20px;'+
+    '<div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,0.08);'+
     'padding:32px 28px;max-width:440px;width:92%;text-align:center;">'+
       '<div style="margin-bottom:12px;"><img src="/icon-192.png" style="width:48px;height:48px;object-fit:contain;"/></div>'+
-      '<h2 style="color:#fff;font-size:20px;font-weight:800;margin:0 0 12px;">Welcome to PBallConnect!</h2>'+
-      '<p style="color:rgba(255,255,255,0.7);font-size:14px;line-height:1.7;margin:0 0 24px;">'+
+      '<h2 style="color:#1f2937;font-size:20px;font-weight:800;margin:0 0 12px;">Welcome to PBallConnect!</h2>'+
+      '<p style="color:#374151;font-weight:600;font-size:14px;line-height:1.7;margin:0 0 24px;">'+
         'You\'re one of '+countStr+' helping shape PBallConnect. Your feedback matters — use the 💬 button anytime.'+
       '</p>'+
       '<button id="foundingMemberBtn" style="width:100%;padding:14px;border-radius:12px;border:none;'+
@@ -12757,17 +12757,17 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
     o2.id = 'inviteReciprocateOverlay';
     o2.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);display:flex;align-items:center;justify-content:center;padding:20px;z-index:700;';
     o2.innerHTML =
-      '<div style="background:#0f1f12;border:1px solid rgba(76,175,125,0.4);border-radius:20px;padding:28px 24px;max-width:420px;width:100%;text-align:center;">'+
+      '<div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,0.08);padding:28px 24px;max-width:420px;width:100%;text-align:center;">'+
         '<div style="font-size:48px;margin-bottom:12px;">➕</div>'+
-        '<div style="font-size:19px;font-weight:800;color:#fff;margin-bottom:8px;">Add '+shortName+' to your IC?</div>'+
-        '<div style="font-size:13px;color:var(--dim);margin-bottom:20px;line-height:1.6;">'+
+        '<div style="font-size:19px;font-weight:800;color:#1f2937;margin-bottom:8px;">Add '+shortName+' to your IC?</div>'+
+        '<div style="font-size:13px;color:#374151;font-weight:600;margin-bottom:20px;line-height:1.6;">'+
           'Want to add '+shortName+' to YOUR Inner Circle too? They\'ll get a request to confirm.'+
         '</div>'+
         '<div style="display:flex;gap:10px;">'+
           '<button id="icRecipYes" style="flex:1;padding:13px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:14px;cursor:pointer;">'+
             'Yes — Add '+shortName+' to My IC'+
           '</button>'+
-          '<button id="icRecipNo" style="flex:1;padding:13px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;">'+
+          '<button id="icRecipNo" style="flex:1;padding:13px;border-radius:10px;border:1px solid #e5e7eb;background:transparent;color:#6b7280;font-size:13px;cursor:pointer;">'+
             'Maybe Later'+
           '</button>'+
         '</div>'+
@@ -12808,18 +12808,18 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
   overlay.id = 'inviteAcceptOverlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);display:flex;align-items:center;justify-content:center;padding:20px;z-index:700;';
   overlay.innerHTML =
-    '<div style="background:#0f1f12;border:1px solid rgba(76,175,125,0.4);border-radius:20px;padding:28px 24px;max-width:420px;width:100%;text-align:center;">'+
+    '<div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,0.08);padding:28px 24px;max-width:420px;width:100%;text-align:center;">'+
       '<div style="font-size:48px;margin-bottom:12px;">🤝</div>'+
-      '<div style="font-size:19px;font-weight:800;color:#fff;margin-bottom:8px;">You\'re in, '+newPlayerName.split(' ')[0]+'!</div>'+
-      '<div style="font-size:13px;color:var(--dim);margin-bottom:6px;line-height:1.6;">'+
+      '<div style="font-size:19px;font-weight:800;color:#1f2937;margin-bottom:8px;">You\'re in, '+newPlayerName.split(' ')[0]+'!</div>'+
+      '<div style="font-size:13px;color:#374151;font-weight:600;margin-bottom:6px;line-height:1.6;">'+
         shortName+' invited you to PBallConnect. Would you like to join '+shortName+'\'s Inner Circle?'+
       '</div>'+
-      '<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:20px;">Inner Circle lets you set up matches, see schedules, and connect on the court.</div>'+
+      '<div style="font-size:12px;color:#4b5563;font-weight:500;margin-bottom:20px;">Inner Circle lets you set up matches, see schedules, and connect on the court.</div>'+
       '<div style="display:flex;gap:10px;">'+
         '<button id="icJoinYes" style="flex:1;padding:13px;border-radius:10px;border:none;background:var(--green);color:var(--dark);font-weight:700;font-size:14px;cursor:pointer;">'+
           '✅ Yes — Join '+shortName+'\'s IC!'+
         '</button>'+
-        '<button id="icJoinNo" style="flex:1;padding:13px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:13px;cursor:pointer;">'+
+        '<button id="icJoinNo" style="flex:1;padding:13px;border-radius:10px;border:1px solid #e5e7eb;background:transparent;color:#6b7280;font-size:13px;cursor:pointer;">'+
           'Maybe Later'+
         '</button>'+
       '</div>'+
