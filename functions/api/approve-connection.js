@@ -23,6 +23,13 @@
 // return=representation) so it can tell a real update from a zero-match no-op and
 // report that truthfully to the client, instead of inferring "success" from HTTP status
 // alone.
+//
+// TEMPORARY DEBUG LOGGING (added to chase a live report of success:true being
+// returned with NO row actually updated — DEC-4/connections row 0c33dc7d, Aug 7 2026;
+// live query ruled out both the case-mismatch and duplicate-row theories, so this
+// needs real runtime evidence). Every [DEBUG approve-connection] line below is new
+// and should be removed once the root cause is found — grep for that tag to strip
+// them all.
 import { verifyCaller } from '../_shared/verify-caller.js';
 
 export async function onRequestPost(context) {
@@ -38,6 +45,7 @@ export async function onRequestPost(context) {
   catch (_) { return err('Invalid request body.', 400, corsHeaders); }
 
   const { inviterEmail, newPlayerEmail, inviteToken } = body || {};
+  console.log('[DEBUG approve-connection] request body received:', JSON.stringify({ inviterEmail, newPlayerEmail, inviteToken })); // TEMP-DEBUG
   if (!inviterEmail || !newPlayerEmail) return err('inviterEmail and newPlayerEmail are required.', 400, corsHeaders);
 
   if (!context.env.SUPABASE_URL || !context.env.SUPABASE_SERVICE_KEY || !context.env.SUPABASE_ANON_KEY)
@@ -45,6 +53,7 @@ export async function onRequestPost(context) {
 
   // ── 2. AUTHORIZE — caller must be the person accepting (newPlayerEmail) ────
   const callerEmail = await verifyCaller(context.env, context.request);
+  console.log('[DEBUG approve-connection] verifyCaller resolved to:', callerEmail); // TEMP-DEBUG
   if (!callerEmail) return err('Authentication required.', 401, corsHeaders);
   if (callerEmail.toLowerCase() !== String(newPlayerEmail).toLowerCase())
     return err('Not authorized to approve this connection.', 401, corsHeaders);
@@ -63,49 +72,69 @@ export async function onRequestPost(context) {
     const primaryUrl = `${context.env.SUPABASE_URL}/rest/v1/connections`
       + `?requester_email=eq.${encodeURIComponent(inviterEmail)}`
       + `&recipient_email=eq.${encodeURIComponent(newPlayerEmail)}`;
+    console.log('[DEBUG approve-connection] attempting PRIMARY match, url:', primaryUrl); // TEMP-DEBUG
     const primaryRes = await fetch(primaryUrl, {
       method: 'PATCH',
       headers: svcHdrs,
       body: JSON.stringify({ status: 'approved' }),
     });
+    const primaryText = await primaryRes.text();
+    console.log('[DEBUG approve-connection] PRIMARY response → status:', primaryRes.status, '| ok:', primaryRes.ok, '| body:', primaryText || '(empty)'); // TEMP-DEBUG
     if (primaryRes.ok) {
-      const rows = await primaryRes.json();
+      let rows = [];
+      try { rows = JSON.parse(primaryText); } catch (parseErr) {
+        console.log('[DEBUG approve-connection] PRIMARY response body failed to parse as JSON:', parseErr); // TEMP-DEBUG
+      }
+      console.log('[DEBUG approve-connection] PRIMARY parsed rows:', JSON.stringify(rows), '| Array.isArray:', Array.isArray(rows), '| length:', Array.isArray(rows) ? rows.length : 'n/a'); // TEMP-DEBUG
       if (Array.isArray(rows) && rows.length > 0) {
+        console.log('[DEBUG approve-connection] PRIMARY matched — returning success:true, matchedVia:primary. Matched row(s):', JSON.stringify(rows)); // TEMP-DEBUG
         return ok({ success: true, matchedVia: 'primary' }, corsHeaders);
       }
     } else {
-      console.error('approve-connection: primary PATCH failed', primaryRes.status, await primaryRes.text());
+      console.error('approve-connection: primary PATCH failed', primaryRes.status, primaryText);
     }
   } catch (e) {
     console.error('approve-connection: primary PATCH threw', e);
+    console.log('[DEBUG approve-connection] PRIMARY attempt threw an exception:', e && e.stack ? e.stack : e); // TEMP-DEBUG
   }
 
   // ── 4. FALLBACK MATCH — row still keyed on the 'pending_<token>' placeholder ──
+  console.log('[DEBUG approve-connection] PRIMARY did not return success — inviteToken present?', !!inviteToken); // TEMP-DEBUG
   if (inviteToken) {
     try {
       const pendingKey = 'pending_' + inviteToken;
       const fallbackUrl = `${context.env.SUPABASE_URL}/rest/v1/connections`
         + `?requester_email=eq.${encodeURIComponent(inviterEmail)}`
         + `&recipient_email=eq.${encodeURIComponent(pendingKey)}`;
+      console.log('[DEBUG approve-connection] attempting FALLBACK match, pendingKey:', pendingKey, '| url:', fallbackUrl); // TEMP-DEBUG
       const fallbackRes = await fetch(fallbackUrl, {
         method: 'PATCH',
         headers: svcHdrs,
         body: JSON.stringify({ recipient_email: newPlayerEmail, status: 'approved' }),
       });
+      const fallbackText = await fallbackRes.text();
+      console.log('[DEBUG approve-connection] FALLBACK response → status:', fallbackRes.status, '| ok:', fallbackRes.ok, '| body:', fallbackText || '(empty)'); // TEMP-DEBUG
       if (fallbackRes.ok) {
-        const rows = await fallbackRes.json();
+        let rows = [];
+        try { rows = JSON.parse(fallbackText); } catch (parseErr) {
+          console.log('[DEBUG approve-connection] FALLBACK response body failed to parse as JSON:', parseErr); // TEMP-DEBUG
+        }
+        console.log('[DEBUG approve-connection] FALLBACK parsed rows:', JSON.stringify(rows), '| Array.isArray:', Array.isArray(rows), '| length:', Array.isArray(rows) ? rows.length : 'n/a'); // TEMP-DEBUG
         if (Array.isArray(rows) && rows.length > 0) {
+          console.log('[DEBUG approve-connection] FALLBACK matched — returning success:true, matchedVia:fallback. Matched row(s):', JSON.stringify(rows)); // TEMP-DEBUG
           return ok({ success: true, matchedVia: 'fallback' }, corsHeaders);
         }
       } else {
-        console.error('approve-connection: fallback PATCH failed', fallbackRes.status, await fallbackRes.text());
+        console.error('approve-connection: fallback PATCH failed', fallbackRes.status, fallbackText);
       }
     } catch (e) {
       console.error('approve-connection: fallback PATCH threw', e);
+      console.log('[DEBUG approve-connection] FALLBACK attempt threw an exception:', e && e.stack ? e.stack : e); // TEMP-DEBUG
     }
   }
 
   // ── 5. NEITHER MATCHED — report honestly, don't fake success ───────────────
+  console.log('[DEBUG approve-connection] neither PRIMARY nor FALLBACK matched — returning 404 success:false'); // TEMP-DEBUG
   return err('No matching connection request found for this invite.', 404, corsHeaders, { success: false });
 }
 
