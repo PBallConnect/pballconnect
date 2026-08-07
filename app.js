@@ -12836,52 +12836,39 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
     '</div>';
   document.body.appendChild(overlay);
 
-  // Step 2 — PATCH inviter's connection row to approved (single DB write, no reciprocal yet)
+  // Step 2 — approve the inviter's connection row via the service-role endpoint
+  // (bypasses the RLS gap + raw-URL '+'-encoding bug that made the old direct
+  // client-side PATCHes silently no-op while still reporting success)
   const showStep2 = async (accepted)=>{
     overlay.remove();
     if(accepted && inviterEmail){
-      // Primary PATCH: email invite path stores recipient_email as the real email
-      // URL uses raw (unencoded) email values — PostgREST eq. filter expects plain text
-      const primaryUrl = `${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${inviterEmail}&recipient_email=eq.${newPlayerEmail}`;
-      console.log('[HPRI] PATCH URL (primary):', primaryUrl);
+      let approveOk = false;
       try{
-        const pRes = await fetch(primaryUrl,{
-          method:'PATCH',
-          headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
-          body:JSON.stringify({status:'approved'})
+        const r = await fetch('/api/approve-connection',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN},
+          body:JSON.stringify({inviterEmail, newPlayerEmail, inviteToken: inv.invite_token})
         });
-        const pText = await pRes.text();
-        console.log('[HPRI] PATCH (primary) → HTTP', pRes.status, '| response body:', pText || '(empty)');
-        if(!pRes.ok) console.error('[HPRI] PATCH (primary) FAILED:', pRes.status, pText);
-        else console.log('[HPRI] PATCH (primary) succeeded');
+        const data = await r.json().catch(()=>({}));
+        console.log('[HPRI] approve-connection → status:', r.status, '| data:', JSON.stringify(data));
+        approveOk = !!(r.ok && data.success);
+        if(!approveOk) console.error('[HPRI] approve-connection FAILED:', r.status, JSON.stringify(data));
       }catch(e){
-        console.error('[HPRI] PATCH (primary) exception:', e);
+        console.error('[HPRI] approve-connection exception:', e);
       }
 
-      // Fallback PATCH: link/text invite paths store recipient_email as 'pending_TOKEN'
-      // Also writes the real email into recipient_email so the row is queryable going forward
-      if(inv.invite_token){
-        const pendingKey = 'pending_' + inv.invite_token;
-        const fallbackUrl = `${SUPABASE_URL}/rest/v1/connections?requester_email=eq.${inviterEmail}&recipient_email=eq.${pendingKey}`;
-        console.log('[HPRI] PATCH URL (fallback):', fallbackUrl);
-        const fallbackBody = {recipient_email:newPlayerEmail, status:'approved'};
-        try{
-          const fRes = await fetch(fallbackUrl,{
-            method:'PATCH',
-            headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN,'Prefer':'return=minimal'},
-            body:JSON.stringify(fallbackBody)
-          });
-          const fText = await fRes.text();
-          console.log('[HPRI] PATCH (fallback) → HTTP', fRes.status, '| response body:', fText || '(empty)');
-          if(!fRes.ok) console.error('[HPRI] PATCH (fallback) FAILED:', fRes.status, fText);
-          else console.log('[HPRI] PATCH (fallback) succeeded');
-        }catch(e){
-          console.error('[HPRI] PATCH (fallback) exception:', e);
-        }
+      if(approveOk){
+        showToast('You joined '+shortName+'\'s IC!','#4CAF7D');
+        showStep3();
+      } else {
+        // Don't claim success the write never achieved — be honest and point to a
+        // path that still works (Pending Requests uses its own row-id PATCH, unaffected
+        // by this bug).
+        showToast("⚠️ Couldn't confirm your connection with "+shortName+" — you can accept it from Inner Circle → Pending Requests.",'#f59e0b');
+        document.getElementById('confirmOverlay').style.display='none';
+        if(!SESSION_PLAYER) SESSION_PLAYER = { email: newPlayerEmail, first_name: (newPlayerName||'').split(' ')[0] };
+        showPage('dashboard');
       }
-
-      showToast('You joined '+shortName+'\'s IC!','#4CAF7D');
-      showStep3();
     } else {
       // Declined: original row stays pending — new user can accept from IC → Requests later
       document.getElementById('confirmOverlay').style.display='none';
