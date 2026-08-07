@@ -185,10 +185,22 @@ elsewhere for gray-text-on-white-card contexts (e.g. .header p,
 .confirm-email), not dark cards. Titles (color:#fff) read fine; body
 text is very low contrast against the dark background.
 
-Status: not fixed, not scheduled. Fix scope: replace the description
-text colors on these two overlays specifically with light colors
-appropriate for a dark card — do not change the global --dim variable,
-which is correctly used elsewhere on light backgrounds.
+Status: FIXED — commit cb339db (Aug 7 2026 session). Scope expanded
+during implementation beyond the two overlays identified above: the
+founding-member overlay and #confirmOverlay had the same dark-card/
+low-contrast problem and were fixed in the same pass, for a total of 4
+overlays — founding-member, #confirmOverlay, #inviteAcceptOverlay,
+#inviteReciprocateOverlay. All four converted to a light-card pattern
+(white background, #e5e7eb border, 0 8px 24px rgba(0,0,0,0.08) shadow,
+#1f2937 headings, #374151 primary body text at 600 weight, #4b5563
+secondary/note text at 500 weight) instead of reusing --dim/white-on-
+dark values meant for light backgrounds. #confirmOverlay's styling
+lives in styles.css classes (.confirm-card, .confirm-card h2,
+.confirm-email, .confirm-note, .cs-v, .btn-again) rather than inline
+app.js styles like the other three — confirmed single-use (not
+actually shared with anything else) before converting; the global
+--dim variable itself was not touched. Live-verified via a real DEC-2
+test registration.
 
 ### Bug 4 — Page renders wider than viewport on real iOS (pinch-to-zoom needed)
 
@@ -664,6 +676,104 @@ re-verification step (app.js:4853-4864) to the same
 introduced, same pattern as the other call sites (or, since this loop
 already has all candidate match ids in hand, a batched service-role
 equivalent) rather than a client-side RLS-scoped match_responses read.
+
+### Bug 14 — Link-invite reciprocation silently failed: RLS-blocked inviterEmail lookup (fix commit references this as "Bug #1")
+
+Found live-testing the Bug 3 fix (Aug 7 2026 session, DEC test via
+David's link invite). handlePostRegistrationInvite() (app.js) resolves
+inviterEmail for invites where inv.inviter_email isn't already known
+(true for invite_method:'link', which never stores invitee_email at
+creation) via a direct client-side SELECT against the invites table,
+under the new user's own session token. The live "Authenticated users
+can read invites" RLS policy (auth.email() = inviter_email OR
+(invitee_email is not null and auth.email() = invitee_email)) can
+never be satisfied by a brand-new invitee on a link invite — they're
+not the inviter, and invitee_email is null on the row — so the SELECT
+silently returns zero rows (no error), inviterEmail stays null, and
+the entire downstream chain (connection-approval PATCHes, "You joined
+X's IC!" toast, and #inviteReciprocateOverlay) is silently skipped.
+The user sees a fully successful-looking flow that ends at the
+dashboard, but no reciprocal overlay ever appears — and (see Bug 15)
+the underlying connection may not be approved either.
+
+Confirmed via code trace, not inferred — traced the exact fallback
+SELECT (app.js, then at ~line 12707-12721), the RLS policy text
+(supabase_rls_policies.sql:586-589), and the invites row's
+invite_method:'link' creation path (app.js ~11843-11847, no
+invitee_email ever set).
+
+Status: FIXED — commit a37d5d4. New service-role endpoint
+/api/resolve-invite (functions/api/resolve-invite.js) resolves
+inviter_email/inviter_name by invite_token under
+SUPABASE_SERVICE_KEY, bypassing RLS at the endpoint level (no RLS
+policy changes). Requires a verified caller (verifyCaller()) but no
+relationship check — none can exist yet for this case, the
+invite_token itself is the proof, same trust model already used by
+the anon-readable invite_tokens view. handlePostRegistrationInvite()'s
+client-side fallback now calls this endpoint instead of querying
+invites directly. Live-verified: #inviteReciprocateOverlay now
+correctly appears and completes end-to-end.
+
+### Bug 15 — IC-invite approval PATCH silently failed (RLS gap + separate '+'-in-email encoding bug), UI showed false success (fix commit references this as "Bug #2")
+
+Found immediately after Bug 14's fix shipped, live-testing with a
+fresh DEC-2 test account (decelectron+overlay2@gmail.com). Once
+inviterEmail correctly resolved, showStep2() (inside
+handlePostRegistrationInvite(), app.js) ran its two client-side
+PATCHes to approve the inviter's connections row for the first time
+in live testing — and both silently no-op'd:
+
+1. RLS gap (same shape as Bug 14, different table/operation): the
+   fallback PATCH targets a row still keyed on the 'pending_<token>'
+   placeholder in recipient_email. The live connections UPDATE policy
+   (auth.email() = requester_email OR auth.email() = recipient_email)
+   can never be satisfied by the accepting user at that moment —
+   they're not the requester, and recipient_email is a placeholder
+   string, not their email. Establishing that match IS the write; the
+   policy can't authorize the write meant to establish it.
+2. Separate, independent bug: the primary PATCH interpolated the
+   recipient email RAW (unencoded) into the query string. A literal
+   '+' in an unencoded query string is decoded as a space by standard
+   URL parsing, so any '+'-tagged email (e.g.
+   decelectron+overlay2@gmail.com, this test account's address)
+   silently matched zero rows regardless of RLS.
+
+Both failure modes returned HTTP 200/204 with Prefer:return=minimal,
+which never reveals rows-affected — the client had no way to
+distinguish "0 rows matched" from "1 row updated," and unconditionally
+showed the "You joined [Name]'s IC!" toast and advanced to
+#inviteReciprocateOverlay regardless of what actually happened in the
+database. Confirmed live via direct Supabase query: David's original
+connections row for DEC-2 (requester_email: dippa777@gmail.com,
+recipient_email: decelectron+overlay2@gmail.com) remained
+status='pending' over 30 minutes after DEC-2 saw the success toast.
+
+Status: FIXED — commit 96c001a. New service-role endpoint
+/api/approve-connection (functions/api/approve-connection.js) requires
+the caller to be the accepting player (verifyCaller()), percent-
+encodes every filter value (fixes the '+'-encoding bug independently
+of the RLS fix), tries the primary match then the placeholder fallback
+under SUPABASE_SERVICE_KEY (bypasses RLS, no policy changes), and
+requests the updated row back (Prefer:return=representation) so it can
+report a truthful success/failure instead of inferring success from
+HTTP status alone. showStep2() now only shows the "joined IC" toast
+and advances to #inviteReciprocateOverlay when the endpoint reports
+success:true; on failure it shows an honest error toast pointing to
+Inner Circle → Pending Requests (icRespond(), a separate row-id-based
+PATCH path unaffected by either bug) instead of silently landing on
+the dashboard.
+
+Known follow-up, NOT part of this fix: DEC-2's specific stuck
+connections row (David → DEC-2, created ~18:21 UTC Aug 7 2026) is not
+retroactively repaired by this fix — nothing in the app re-invokes
+handlePostRegistrationInvite()/showStep2() for an already-registered
+user (PENDING_INVITE is a one-shot runtime variable). However, the row
+does NOT need a manual SQL correction either: icRespond() (Inner
+Circle → Pending Requests "Accept" button) is a separate code path
+that PATCHes by the row's own id after an RLS-compliant SELECT, using
+properly-encoded values throughout — unaffected by either bug in this
+entry. DEC-2 accepting from that page will correctly resolve the
+stuck row.
 
 ## Full Profile flow (confirmed working / reference sequence)
 
