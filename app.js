@@ -5446,7 +5446,7 @@ async function cancelMatch(matchId){
     showToast('Match cancelled — players notified.','#6b7280');
     loadConfirmedMatches();
     loadMyInvitesPage();
-    loadDashboard();
+    loadAllMatchBadges();
 
   }catch(e){
     showToast('Could not cancel: '+e.message,'#f87171');
@@ -8269,6 +8269,7 @@ async function respondToMatch(matchId, response){
       const waitlist = wRes.ok ? await wRes.json() : [];
       const pos = waitlist.findIndex(r=>r.player_email===myEmail)+1;
       showToast('On the waitlist - position #'+pos,'#f59e0b');
+      loadAllMatchBadges();
     } else {
       showToast('Declined','var(--dim)');
       if(wasWaitlistFill){
@@ -8279,6 +8280,7 @@ async function respondToMatch(matchId, response){
       const wasIn = alreadyIn;
       const newInCount = wasIn ? confirmedCount - 1 : confirmedCount;
       if(newInCount < needed) await promoteFromWaitlist(matchId, match);
+      loadAllMatchBadges();
     }
     // Refresh current page
     const activePage = document.querySelector('.page-section.active')?.id?.replace('page-','');
@@ -10773,6 +10775,7 @@ async function loadIcInvites(){
             await fetch(`${SUPABASE_URL}/rest/v1/connections?id=eq.${conn.id}`,{method:'DELETE',headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ACCESS_TOKEN}});
             showToast('Invite cancelled','#f59e0b');
             loadIcInvites();
+            loadInnerCircle();
           };
           row.appendChild(cancelBtn);
         }
@@ -11589,6 +11592,7 @@ async function sendIcEmailInvite(){
     if(nameEl){ nameEl.value=''; nameEl.style.borderColor='#9ca3af'; }
     if(emailEl){ emailEl.value=''; emailEl.style.borderColor='#9ca3af'; }
     loadIcInvites();
+    loadInnerCircle();
   }catch(e){
     showToast('Could not send — try again','#f87171');
   }finally{
@@ -11639,6 +11643,7 @@ async function sendIcTextInvite(){
     showToast('💬 Messages opened for '+name,'#60a5fa');
     if(nameEl){ nameEl.value=''; nameEl.style.borderColor='#9ca3af'; }
     loadIcInvites();
+    loadInnerCircle();
   }catch(e){ showToast('Could not send invite — please try again','#f87171'); }
 }
 window.sendIcTextInvite = sendIcTextInvite;
@@ -12806,6 +12811,7 @@ async function handlePostRegistrationInvite(newPlayerEmail, newPlayerName){
       }
       document.getElementById('confirmOverlay').style.display='none';
       if(!SESSION_PLAYER) SESSION_PLAYER = { email: newPlayerEmail, first_name: (newPlayerName||'').split(' ')[0] };
+      loadInnerCircle();
       showPage('dashboard');
     };
 
