@@ -348,6 +348,12 @@ This is a clear communication/respect-for-organizer-time feature — the guiding
 
 ---
 
+## Known Follow-Ups
+
+**Manual testing overhead.** Live testing sessions currently require a slow, fragile manual process per test case (fresh incognito window, new email alias, email/magic-link round-trip, hand-filled registration form, manual Supabase SQL checks since the UI alone can't be trusted) — roughly 5–10 minutes per test case, and a real source of lost time on top of actual bug-fixing work. This is a known, documented cost, not a surprise — see [CLAUDE-TESTING-INFRA.md](CLAUDE-TESTING-INFRA.md) for the full writeup and recommended tooling (seed/reset script, test-user factory, dev-only impersonation, automated assertions, dedicated staging environment).
+
+---
+
 ## Admin Registration Alerts
 
 An alert email fires to `david@pballconnect.com` on every new player registration, regardless of path. Three code paths:
