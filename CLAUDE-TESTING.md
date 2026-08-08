@@ -305,12 +305,6 @@ loadInnerCircle() either. Net effect: dashboard IC tiles are populated
 once at login and never refreshed by anything short of a full page
 reload.
 
-Status: not fixed, not scheduled. Fix scope: (1) add a dashboard entry
-to refreshCurrentPage()'s loaders map that actually re-fetches dashboard
-+ IC tile data; (2) have the reciprocal-invite acceptance flow refresh
-the relevant IC counts (or just re-call loadInnerCircle()) after its
-PATCH/POST succeeds, instead of relying on a full reload.
-
 Scope confirmed to cover BOTH directions of staleness, not just the
 "my own action didn't refresh my counts" case above — live-tested and
 traced Aug 5 2026 via a real IC accept between two test accounts
@@ -324,6 +318,53 @@ restoreSession()) or on manual navigation to the Inner Circle page, never
 on a timer/poll/push. Since Ripply's session has no live-update mechanism
 at all, this is true regardless of whose action changed the underlying
 connections data — her own or someone else's.
+
+Status: FIXED — two-part fix, two commits (Aug 7-8 2026 session).
+
+Part 1 — six additive loader-call fixes at the specific action sites
+that change IC/match data, so the acting user's own screen refreshes
+without a full reload: reciprocal IC accept
+(handlePostRegistrationInvite()'s finalize() now calls loadInnerCircle()
+before showPage('dashboard')), send IC invite (sendIcEmailInvite() and
+sendIcTextInvite() now call loadInnerCircle() after their existing
+loadIcInvites() call), cancel a sent IC invite (loadIcInvites()'s
+cancel handler now also calls loadInnerCircle()), match decline and
+match->waitlist response (respondToMatch()'s decline and waitlist
+branches now call loadAllMatchBadges(), matching what the accept
+branch already did), and cancel a match (cancelMatch() now calls
+loadAllMatchBadges() instead of loadDashboard(), which never touched
+these tiles). Commit 3a615d5.
+
+Part 2 — the structural fix. Root cause: even a real page navigation
+to the dashboard (clicking "Dashboard" in the nav) never refreshed the
+IC tiles, because loadDashboard() itself never called loadInnerCircle()
+at all — only login/session-restore or a manual visit to the Inner
+Circle page did. This is why Part 1 alone was insufficient for the most
+common real-world case matching this bug's Ripply/David scope note
+above: User A's dashboard staying stale when User B's action (not User
+A's own) changed a count relevant to User A. Fixed by making
+loadDashboard() `await loadInnerCircle()` as its first line, sequenced
+before its four existing parallel loaders (loadDashTileCounts,
+loadDashNextMatch, loadDashPendingInvites, loadDashInvitedToPlay).
+This sequencing was necessary, not cosmetic: IC_INCOMING_COUNT is a
+shared module-global, and loadDashTileCounts() reads it synchronously
+to paint dashTileIC/dashIcIncomingCount. Firing loadInnerCircle() as a
+fifth unawaited "parallel" loader alongside the other four (the
+naive/consistent-looking option) would only narrow the race, not close
+it — loadDashTileCounts() could still read the global before
+loadInnerCircle()'s fetch chain finished writing it, producing an
+intermittent version of the same staleness bug instead of a real fix.
+Trade-off accepted: dashboard load is ~100-300ms slower on every visit,
+and landing on the dashboard now also silently resets the Inner Circle
+page's grid/list view toggle (a pre-existing side effect of
+loadInnerCircle()'s own renderInnerCircleList() call — harmless, low
+visibility). Commit 776cd6c.
+
+Live-verified today: with one user accepting/reciprocating an invite
+and a second, already-logged-in user then clicking "Dashboard" (no
+manual refresh), the second user's dashboard counts updated correctly
+and immediately — the exact Ripply/David scope-note scenario above, now
+closed.
 
 ### Bug 8 — "Go to Dashboard" button races against the pending invite-accept overlay
 
