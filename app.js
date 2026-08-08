@@ -13307,7 +13307,11 @@ async function loadDashboard(){
     if(emojiEl) emojiEl.textContent = SESSION_PLAYER.avatar_emoji || '';
   }
 
-  // Load everything in parallel
+  // Refresh IC data first so IC_INCOMING_COUNT is current before loadDashTileCounts()
+  // reads it below — avoids a stale-count race against another user's action.
+  await loadInnerCircle();
+
+  // Load everything else in parallel
   loadDashTileCounts(myEmail);
   loadDashNextMatch(myEmail);
   loadDashPendingInvites(myEmail);
